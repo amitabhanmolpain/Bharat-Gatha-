@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 export default function MughalGameScreen() {
   const [isLoading, setIsLoading] = useState(true);
-  const [playerPos, setPlayerPos] = useState({ x: 48, y: 58 });
+  const [playerPos, setPlayerPos] = useState({ x: 50, y: 82 });
   const [facingLeft, setFacingLeft] = useState(false);
   const [isMoving, setIsMoving] = useState(false);
   const router = useRouter();
@@ -23,24 +23,24 @@ export default function MughalGameScreen() {
     if (isLoading) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      const step = 2.5;
+      const step = 2.0;
       setPlayerPos((prev) => {
         let newX = prev.x;
         let newY = prev.y;
 
         if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") {
-          newX = Math.max(22, prev.x - step);
+          newX = Math.max(38, prev.x - step);
           setFacingLeft(true);
           setIsMoving(true);
         } else if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") {
-          newX = Math.min(78, prev.x + step);
+          newX = Math.min(62, prev.x + step);
           setFacingLeft(false);
           setIsMoving(true);
         } else if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") {
-          newY = Math.max(38, prev.y - step);
+          newY = Math.max(54, prev.y - step);
           setIsMoving(true);
         } else if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") {
-          newY = Math.min(82, prev.y + step);
+          newY = Math.min(92, prev.y + step);
           setIsMoving(true);
         }
 
