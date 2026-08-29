@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 
 export default function MughalGameScreen() {
   const [isLoading, setIsLoading] = useState(true);
+  const [scene, setScene] = useState<"gate" | "passage">("gate");
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const [playerPos, setPlayerPos] = useState({ x: 50, y: 85 });
   const [facingLeft, setFacingLeft] = useState(false);
   const [isWalking, setIsWalking] = useState(false);
@@ -14,14 +16,14 @@ export default function MughalGameScreen() {
   const [cluesFound, setCluesFound] = useState(0);
   const router = useRouter();
 
-  // Guard NPC Position (Standing firmly on the bridge stone pavement to the left of the gate)
+  // Guard NPC Position (In 'gate' scene)
   const guardPos = { x: 43.5, y: 72.0 };
 
   // Calculate distance to guard for interaction prompt
   const distToGuard = Math.sqrt(
     Math.pow(playerPos.x - guardPos.x, 2) + Math.pow(playerPos.y - guardPos.y, 2)
   );
-  const isNearGuard = distToGuard < 9.0;
+  const isNearGuard = scene === "gate" && distToGuard < 9.0;
 
   useEffect(() => {
     // Simulate loading screen
@@ -33,7 +35,7 @@ export default function MughalGameScreen() {
 
   // Smooth continuous 60fps movement game loop
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || isTransitioning) return;
 
     const keysHeld = new Set<string>();
 
@@ -81,14 +83,48 @@ export default function MughalGameScreen() {
         setWalkPhase(localWalkTimer);
 
         setPlayerPos((prev) => {
-          // Dynamic bridge width along perspective ramp
-          const rampProgress = Math.max(0, Math.min(1, (prev.y - 71.5) / (92.0 - 71.5)));
-          const minX = 42.0 - rampProgress * 4.0;
-          const maxX = 58.0 + rampProgress * 4.0;
+          if (scene === "gate") {
+            // Dynamic bridge width along perspective ramp
+            const rampProgress = Math.max(0, Math.min(1, (prev.y - 71.5) / (92.0 - 71.5)));
+            const minX = 42.0 - rampProgress * 4.0;
+            const maxX = 58.0 + rampProgress * 4.0;
 
-          const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
-          const nextY = Math.max(71.5, Math.min(92.0, prev.y + dy));
-          return { x: nextX, y: nextY };
+            const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
+            const nextY = Math.max(71.0, Math.min(92.0, prev.y + dy));
+
+            // Check trigger to enter passage through the archway
+            if (nextY <= 71.8 && nextX >= 47.0 && nextX <= 53.0) {
+              setIsTransitioning(true);
+              setTimeout(() => {
+                setScene("passage");
+                setPlayerPos({ x: 55.0, y: 88.0 });
+                setIsTransitioning(false);
+                if (cluesFound < 2) setCluesFound(2);
+              }, 400);
+            }
+
+            return { x: nextX, y: nextY };
+          } else {
+            // In Inner Passage Scene: Sloping ramp towards Hathi Pol archway
+            const rampProgress = Math.max(0, Math.min(1, (prev.y - 62.0) / (90.0 - 62.0)));
+            const minX = 48.0 - rampProgress * 10.0;
+            const maxX = 64.0 + rampProgress * 8.0;
+
+            const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
+            const nextY = Math.max(62.0, Math.min(91.0, prev.y + dy));
+
+            // Walk back down to return to gate
+            if (nextY >= 90.5) {
+              setIsTransitioning(true);
+              setTimeout(() => {
+                setScene("gate");
+                setPlayerPos({ x: 50.0, y: 73.5 });
+                setIsTransitioning(false);
+              }, 400);
+            }
+
+            return { x: nextX, y: nextY };
+          }
         });
       }
 
@@ -102,7 +138,7 @@ export default function MughalGameScreen() {
       window.removeEventListener("keyup", onKeyUp);
       cancelAnimationFrame(animationFrameId);
     };
-  }, [isLoading, isNearGuard, cluesFound]);
+  }, [isLoading, isTransitioning, scene, isNearGuard, cluesFound]);
 
   if (isLoading) {
     return (
@@ -122,55 +158,83 @@ export default function MughalGameScreen() {
     );
   }
 
-  // Perspective depth scaling based on bridge depth
-  const depthScale = 0.90 + ((playerPos.y - 71.5) / 20.5) * 0.20;
+  // Perspective depth scaling
+  const depthScale = scene === "gate"
+    ? 0.90 + ((playerPos.y - 71.5) / 20.5) * 0.20
+    : 0.78 + ((playerPos.y - 62.0) / 28.0) * 0.30;
+
   const walkBob = isWalking ? Math.sin(walkPhase) * 1.8 : 0;
   const walkSway = isWalking ? Math.sin(walkPhase * 0.5) * 1.5 : 0;
 
   return (
     <div className="w-full h-screen relative overflow-hidden font-sans select-none bg-black">
       
-      {/* Game Background (Agra Fort RPG) */}
+      {/* Game Background (Agra Fort Gate or Inner Passage) */}
       <img 
-        src="/bg-agra-fort.jpg" 
+        src={scene === "gate" ? "/bg-agra-fort.jpg" : "/bg-agra-passage.jpg"} 
         alt="Agra Fort Game World" 
-        className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none"
+        className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none transition-opacity duration-300"
       />
 
       {/* Screen Darkening/Vignette Overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/30 pointer-events-none"></div>
 
-      {/* --- MUGHAL ROYAL GUARD NPC (Standing on Ground at Gate Entrance) --- */}
-      <div
-        className="absolute pointer-events-auto cursor-pointer z-10 flex flex-col items-center"
-        style={{
-          left: `${guardPos.x}%`,
-          top: `${guardPos.y}%`,
-          transform: `translate(-50%, -96%) scale(0.92)`,
-        }}
-        onClick={() => {
-          setShowDialogue((prev) => {
-            if (!prev && cluesFound === 0) setCluesFound(1);
-            return !prev;
-          });
-        }}
-      >
-        {/* Guard Proximity Indicator / Speech Bubble */}
-        {isNearGuard && !showDialogue && (
-          <div className="animate-bounce mb-2 bg-[#fff9ea] border-2 border-black rounded-lg px-2.5 py-1 shadow-[2px_2px_0_0_rgba(0,0,0,1)] text-[11px] font-bold text-black flex items-center gap-1.5 whitespace-nowrap">
-            <span className="bg-amber-400 border border-black rounded px-1 text-[9px]">E</span>
-            Talk to Royal Guard
-          </div>
-        )}
+      {/* Fade Transition Overlay */}
+      {isTransitioning && (
+        <div className="absolute inset-0 bg-black animate-in fade-in duration-300 z-40 pointer-events-none flex items-center justify-center">
+          <span className="text-amber-300 text-sm font-serif tracking-widest uppercase">
+            {scene === "gate" ? "Entering Inner Ramp Passage..." : "Returning to Outer Gate..."}
+          </span>
+        </div>
+      )}
 
-        {/* Guard Sprite */}
-        <img
-          src="/guard.png"
-          alt="Mughal Guard NPC"
-          className="w-24 h-24 object-contain"
-          style={{ imageRendering: "pixelated" }}
-        />
-      </div>
+      {/* --- MUGHAL ROYAL GUARD NPC (Only in Gate Scene) --- */}
+      {scene === "gate" && (
+        <div
+          className="absolute pointer-events-auto cursor-pointer z-10 flex flex-col items-center"
+          style={{
+            left: `${guardPos.x}%`,
+            top: `${guardPos.y}%`,
+            transform: `translate(-50%, -96%) scale(0.92)`,
+          }}
+          onClick={() => {
+            setShowDialogue((prev) => {
+              if (!prev && cluesFound === 0) setCluesFound(1);
+              return !prev;
+            });
+          }}
+        >
+          {/* Guard Proximity Indicator / Speech Bubble */}
+          {isNearGuard && !showDialogue && (
+            <div className="animate-bounce mb-2 bg-[#fff9ea] border-2 border-black rounded-lg px-2.5 py-1 shadow-[2px_2px_0_0_rgba(0,0,0,1)] text-[11px] font-bold text-black flex items-center gap-1.5 whitespace-nowrap">
+              <span className="bg-amber-400 border border-black rounded px-1 text-[9px]">E</span>
+              Talk to Royal Guard
+            </div>
+          )}
+
+          {/* Guard Sprite */}
+          <img
+            src="/guard.png"
+            alt="Mughal Guard NPC"
+            className="w-24 h-24 object-contain"
+            style={{ imageRendering: "pixelated" }}
+          />
+        </div>
+      )}
+
+      {/* Gate Entrance Prompt when player approaches arch in gate scene */}
+      {scene === "gate" && playerPos.y <= 74.0 && (
+        <div className="absolute top-[63%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          ▲ Walk forward into the archway
+        </div>
+      )}
+
+      {/* Passage Exit Prompt when near bottom in passage scene */}
+      {scene === "passage" && playerPos.y >= 88.0 && (
+        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          ▼ Walk down to return to Amar Singh Gate
+        </div>
+      )}
 
       {/* --- MAIN GUY PLAYER CHARACTER SPRITE --- */}
       <div 
@@ -181,7 +245,7 @@ export default function MughalGameScreen() {
           transform: `translate(-50%, -96%) scale(${depthScale}) scaleX(${facingLeft ? -1 : 1})`,
         }}
       >
-        {/* Character Sprite Image with smooth footstep cadence (No grey background artifacts) */}
+        {/* Character Sprite Image with smooth footstep cadence */}
         <img 
           src="/player.png" 
           alt="Main Hero" 
@@ -195,7 +259,7 @@ export default function MughalGameScreen() {
       </div>
 
       {/* --- GUARD DIALOGUE MODAL --- */}
-      {showDialogue && (
+      {showDialogue && scene === "gate" && (
         <div className="absolute inset-0 bg-black/40 backdrop-blur-xs flex items-end justify-center pb-24 z-30 pointer-events-auto">
           <div className="bg-[#fff9ea] border-3 border-black rounded-xl p-5 shadow-[6px_6px_0_0_rgba(0,0,0,1)] max-w-xl w-full mx-4 flex gap-4 items-start relative animate-in fade-in zoom-in-95 duration-150">
             {/* Guard Avatar */}
@@ -215,7 +279,7 @@ export default function MughalGameScreen() {
                 </button>
               </div>
               <p className="text-black font-semibold text-[13px] leading-relaxed mb-3">
-                &ldquo;Halt, traveler! Beyond this Amar Singh Gate lies the imperial court of the Great Mughal. You speak of your missing companion? A figure matching that description was escorted past the inner ramparts earlier at dawn...&rdquo;
+                &ldquo;Halt, traveler! Beyond this Amar Singh Gate lies the imperial ramp passage leading to the Elephant Gate (Hathi Pol). Your missing companion was seen ascending the ramp toward the upper court! You may proceed through the arch.&rdquo;
               </p>
               <div className="flex gap-2">
                 <button 
@@ -237,10 +301,14 @@ export default function MughalGameScreen() {
         {/* Main Quest Box */}
         <div className="bg-[#fff9ea] border-2 border-black rounded-lg p-4 shadow-[4px_4px_0_0_rgba(0,0,0,1)] w-80">
           <div className="text-[10px] font-bold text-gray-500 tracking-wider uppercase mb-2">
-            Mughal Empire - The Agra Fort..
+            Mughal Empire - {scene === "gate" ? "Amar Singh Gate" : "Inner Ramp Passage"}
           </div>
           <div className="text-[15px] font-bold text-black leading-snug">
-            {cluesFound === 0 ? "Go talk with the guard." : "Proceed through the Amar Singh Gate to find your friend."}
+            {scene === "gate"
+              ? cluesFound === 0
+                ? "Go talk with the guard."
+                : "Walk into the archway to ascend the fort passage."
+              : "Ascend the royal ramp towards the upper palaces (Hathi Pol)."}
           </div>
         </div>
 
