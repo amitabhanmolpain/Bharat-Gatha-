@@ -97,7 +97,7 @@ export default function MughalGameScreen() {
               setIsTransitioning(true);
               setTimeout(() => {
                 setScene("passage");
-                setPlayerPos({ x: 50.0, y: 88.0 });
+                setPlayerPos({ x: 33.0, y: 90.0 });
                 setIsTransitioning(false);
                 if (cluesFound < 2) setCluesFound(2);
               }, 400);
@@ -105,16 +105,19 @@ export default function MughalGameScreen() {
 
             return { x: nextX, y: nextY };
           } else {
-            // In Inner Passage Scene: Sloping ramp towards Hathi Pol archway
-            const rampProgress = Math.max(0, Math.min(1, (prev.y - 63.0) / (90.0 - 63.0)));
-            const minX = 46.0 - rampProgress * 12.0;
-            const maxX = 54.0 + rampProgress * 12.0;
+            // In Inner Passage Scene: Curving stone ramp ascending towards Elephant Gate
+            const t = Math.max(0, Math.min(1, (prev.y - 58.0) / (91.0 - 58.0))); // 0 at top gate, 1 at bottom
+            const centerX = 52.0 - (1.0 - Math.pow(1.0 - t, 1.6)) * 19.0;
+            const halfWidth = 4.0 + t * 8.0;
+
+            const minX = centerX - halfWidth;
+            const maxX = centerX + halfWidth;
 
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
-            const nextY = Math.max(63.0, Math.min(91.0, prev.y + dy));
+            const nextY = Math.max(58.0, Math.min(92.0, prev.y + dy));
 
             // Walk back down to return to gate
-            if (nextY >= 90.5) {
+            if (nextY >= 91.5) {
               setIsTransitioning(true);
               setTimeout(() => {
                 setScene("gate");
@@ -161,7 +164,7 @@ export default function MughalGameScreen() {
   // Perspective depth scaling
   const depthScale = scene === "gate"
     ? 0.90 + ((playerPos.y - 71.5) / 20.5) * 0.20
-    : 0.78 + ((playerPos.y - 62.0) / 28.0) * 0.30;
+    : 0.65 + ((playerPos.y - 58.0) / 33.0) * 0.48;
 
   const walkBob = isWalking ? Math.sin(walkPhase) * 1.8 : 0;
   const walkSway = isWalking ? Math.sin(walkPhase * 0.5) * 1.5 : 0;
