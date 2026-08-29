@@ -18,22 +18,38 @@ export default function GamesDashboard() {
         </div>
       </div>
       
-      <div className={`flex-1 backdrop-blur-sm border-[1.5px] rounded-2xl p-8 md:p-16 flex flex-col items-center justify-center text-center relative overflow-hidden group transition-colors duration-500 ${isDark ? 'bg-[#0a0806]/60 border-[#3a2d1d] shadow-[0_8px_32px_rgba(0,0,0,0.8)]' : 'bg-white/60 border-[#e3d5c1] shadow-[0_8px_32px_rgba(0,0,0,0.05)]'}`}>
-        {/* Top Accent Line */}
-        <div className={`absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent to-transparent opacity-50 transition-colors duration-500 ${isDark ? 'via-[#91714b]' : 'via-[#c9a776]'}`}></div>
-        
-        <div className="relative mb-8">
-          <div className={`absolute inset-0 blur-2xl rounded-full group-hover:opacity-20 transition-opacity duration-700 ${isDark ? 'bg-[#91714b] opacity-10' : 'bg-[#c9a776] opacity-15'}`}></div>
-          <svg className={`w-20 h-20 mx-auto relative z-10 drop-shadow-md transition-colors duration-500 ${isDark ? 'text-[#5a4834]' : 'text-[#d6c5b3]'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-        </div>
-        
-        <h3 className={`text-2xl font-serif mb-3 tracking-wide transition-colors duration-500 ${isDark ? 'text-[#e4c794]' : 'text-[#8a6835]'}`}>No active games</h3>
-        <p className={`text-[14px] leading-relaxed mb-10 max-w-md mx-auto transition-colors duration-500 ${isDark ? 'text-[#a89985]' : 'text-[#7a6f5e]'}`}>You don't have any ongoing stories. Start a new game to begin your adventure in India.</p>
-        
-        <button className={`flex items-center gap-3 py-3.5 px-8 border-[1.5px] rounded shadow-[0_4px_12px_rgba(0,0,0,0.5)] transition-all font-bold text-[12px] tracking-[0.1em] uppercase ${isDark ? 'bg-gradient-to-b from-[#a76a26] to-[#6a3809] hover:from-[#b8762e] hover:to-[#7a420b] border-[#482806] text-[#ffeccc]' : 'bg-gradient-to-b from-[#c28f52] to-[#996225] hover:from-[#cc9c63] hover:to-[#a86e2b] border-[#8a551c] text-white'}`}>
-          <svg className="w-4 h-4 text-[#ffdda3] opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
-          Start New Game
-        </button>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl">
+        {[
+          { region: "Agra/Delhi", title: "Great Mughal Empire", description: "Step into the grand courts of Agra and shape the destiny of an empire. Intrigues, alliances, and conquests await.", image: "/bg-mughal.jpg" },
+          { region: "Rajasthan", title: "Great Rajputana", description: "Defend your honor in the desert forts of Rajasthan. A tale of valor, sacrifice, and legendary warriors.", image: "/bg-rajputana.jpg" },
+          { region: "Karnataka", title: "Great Vijayanagara", description: "Explore the wealthy and culturally rich capital of the southern peninsula. Navigate trade, art, and warfare.", image: "/bg-vijayanagara.jpg" }
+        ].map((campaign, idx) => (
+          <div key={idx} className={`group flex flex-col p-6 backdrop-blur-sm border-[1.5px] rounded-2xl relative overflow-hidden transition-all duration-500 hover:-translate-y-1 ${isDark ? 'bg-[#0a0806]/60 border-[#3a2d1d] hover:border-[#5a4834] shadow-[0_8px_32px_rgba(0,0,0,0.8)]' : 'bg-white/60 border-[#e3d5c1] hover:border-[#c9a776] shadow-[0_8px_32px_rgba(0,0,0,0.05)]'}`}>
+            
+            {/* Top Accent Line */}
+            <div className={`absolute top-0 left-0 w-full h-[3px] opacity-70 transition-colors duration-500 z-20 ${isDark ? 'bg-gradient-to-r from-transparent via-[#91714b] to-transparent' : 'bg-gradient-to-r from-transparent via-[#c9a776] to-transparent'}`}></div>
+            
+            {/* Image Header */}
+            <div className="w-full h-36 mb-5 rounded-lg overflow-hidden relative z-10 shadow-inner">
+              <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors duration-500 z-10"></div>
+              <img src={campaign.image} alt={campaign.title} className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700" />
+            </div>
+
+            <div className="flex flex-col flex-1 text-left w-full z-10">
+              <div className={`text-[11px] uppercase tracking-widest font-bold mb-2 transition-colors duration-500 ${isDark ? 'text-[#91714b]' : 'text-[#c9a776]'}`}>{campaign.region}</div>
+              <h3 className={`text-xl font-serif mb-3 tracking-wide transition-colors duration-500 ${isDark ? 'text-[#e4c794]' : 'text-[#8a6835]'}`}>{campaign.title}</h3>
+              <p className={`text-[13px] leading-relaxed mb-6 flex-1 transition-colors duration-500 ${isDark ? 'text-[#a89985]' : 'text-[#7a6f5e]'}`}>{campaign.description}</p>
+            </div>
+
+            <button className={`w-full mt-auto flex items-center justify-center gap-2 py-3 px-6 border-[1.5px] rounded-lg shadow-md transition-all font-bold text-[11px] tracking-[0.1em] uppercase z-10 ${isDark ? 'bg-[#16120e] hover:bg-[#1a1510] border-[#483824] hover:border-[#91714b] text-[#e4c794]' : 'bg-[#fcf8f2] hover:bg-[#f5ebd9] border-[#e3d5c1] hover:border-[#c9a776] text-[#8a6835]'}`}>
+              <svg className="w-4 h-4 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              Play Story
+            </button>
+
+            {/* Decorative background blur */}
+            <div className={`absolute inset-0 blur-3xl rounded-full opacity-0 group-hover:opacity-10 transition-opacity duration-700 pointer-events-none ${isDark ? 'bg-[#91714b]' : 'bg-[#c9a776]'}`}></div>
+          </div>
+        ))}
       </div>
     </>
   );
