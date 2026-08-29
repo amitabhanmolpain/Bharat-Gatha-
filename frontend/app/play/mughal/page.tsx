@@ -161,10 +161,10 @@ export default function MughalGameScreen() {
     );
   }
 
-  // Perspective depth scaling
+  // Perspective depth scaling (Enlarged for clear prominence and hero presence)
   const depthScale = scene === "gate"
-    ? 0.90 + ((playerPos.y - 71.5) / 20.5) * 0.20
-    : 0.65 + ((playerPos.y - 58.0) / 33.0) * 0.48;
+    ? 1.22 + ((playerPos.y - 71.5) / 20.5) * 0.28
+    : 1.05 + ((playerPos.y - 58.0) / 33.0) * 0.65;
 
   const walkBob = isWalking ? Math.sin(walkPhase) * 1.8 : 0;
   const walkSway = isWalking ? Math.sin(walkPhase * 0.5) * 1.5 : 0;
@@ -198,7 +198,7 @@ export default function MughalGameScreen() {
           style={{
             left: `${guardPos.x}%`,
             top: `${guardPos.y}%`,
-            transform: `translate(-50%, -96%) scale(0.92)`,
+            transform: `translate(-50%, -96%) scale(1.15)`,
           }}
           onClick={() => {
             setShowDialogue((prev) => {
@@ -219,7 +219,7 @@ export default function MughalGameScreen() {
           <img
             src="/guard.png"
             alt="Mughal Guard NPC"
-            className="w-24 h-24 object-contain"
+            className="w-32 h-32 object-contain"
             style={{ imageRendering: "pixelated" }}
           />
         </div>
@@ -252,7 +252,7 @@ export default function MughalGameScreen() {
         <img 
           src="/player.png" 
           alt="Main Hero" 
-          className="w-28 h-28 object-contain"
+          className="w-36 h-36 object-contain"
           style={{
             imageRendering: "pixelated",
             transform: `translateY(${walkBob}px) rotate(${walkSway}deg)`,
