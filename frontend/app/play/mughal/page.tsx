@@ -6,6 +6,9 @@ import { useRouter } from "next/navigation";
 
 export default function MughalGameScreen() {
   const [isLoading, setIsLoading] = useState(true);
+  const [playerPos, setPlayerPos] = useState({ x: 48, y: 58 });
+  const [facingLeft, setFacingLeft] = useState(false);
+  const [isMoving, setIsMoving] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -15,6 +18,47 @@ export default function MughalGameScreen() {
     }, 2500);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const step = 2.5;
+      setPlayerPos((prev) => {
+        let newX = prev.x;
+        let newY = prev.y;
+
+        if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") {
+          newX = Math.max(22, prev.x - step);
+          setFacingLeft(true);
+          setIsMoving(true);
+        } else if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") {
+          newX = Math.min(78, prev.x + step);
+          setFacingLeft(false);
+          setIsMoving(true);
+        } else if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") {
+          newY = Math.max(38, prev.y - step);
+          setIsMoving(true);
+        } else if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") {
+          newY = Math.min(82, prev.y + step);
+          setIsMoving(true);
+        }
+
+        return { x: newX, y: newY };
+      });
+    };
+
+    const handleKeyUp = () => {
+      setIsMoving(false);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, [isLoading]);
 
   if (isLoading) {
     return (
@@ -46,6 +90,27 @@ export default function MughalGameScreen() {
 
       {/* Screen Darkening/Vignette Overlay (subtle to match reference aesthetic) */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/30 pointer-events-none"></div>
+
+      {/* Main Guy Player Character Sprite */}
+      <div 
+        className="absolute transition-all duration-100 ease-out pointer-events-none flex flex-col items-center z-10"
+        style={{
+          left: `${playerPos.x}%`,
+          top: `${playerPos.y}%`,
+          transform: `translate(-50%, -100%) scaleX(${facingLeft ? -1 : 1})`,
+        }}
+      >
+        {/* Foot Shadow */}
+        <div className="absolute bottom-1 w-12 h-3 bg-black/40 rounded-full blur-[1px]"></div>
+
+        {/* Character Sprite Image */}
+        <img 
+          src="/player.png" 
+          alt="Main Hero" 
+          className={`w-28 h-28 object-contain drop-shadow-md ${isMoving ? "animate-bounce" : ""}`}
+          style={{ imageRendering: "pixelated" }}
+        />
+      </div>
 
       {/* --- UI OVERLAYS (Light Neo-Brutalism) --- */}
       
