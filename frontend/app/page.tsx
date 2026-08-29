@@ -1,14 +1,36 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 
+const backgrounds = [
+  "/bg-pixel.jpg",
+  "/bg-indus.jpg",
+  "/bg-mughal.jpg",
+  "/bg-british.jpg",
+];
+
 export default function Home() {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prev) => (prev + 1) % backgrounds.length);
+    }, 6000); // Change image every 6 seconds
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center md:justify-start px-4 sm:px-8 md:pl-16 lg:pl-24 py-6 overflow-hidden bg-black font-sans">
-      {/* Background Image */}
-      <div 
-        className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat transition-opacity duration-1000"
-        style={{ backgroundImage: "url('/bg-pixel.jpg')", opacity: 0.85 }}
-      ></div>
+      {/* Background Images Slideshow */}
+      {backgrounds.map((bg, index) => (
+        <div 
+          key={bg}
+          className={`absolute inset-0 z-0 bg-cover bg-center bg-no-repeat transition-opacity duration-[2000ms] ease-in-out ${index === currentImageIndex ? 'opacity-90' : 'opacity-0'}`}
+          style={{ backgroundImage: `url('${bg}')` }}
+        ></div>
+      ))}
       
       {/* Vignette effect */}
       <div className="absolute inset-0 z-0 bg-gradient-to-r from-black/80 via-black/20 to-transparent pointer-events-none"></div>
