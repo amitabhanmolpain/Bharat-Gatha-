@@ -97,7 +97,7 @@ export default function MughalGameScreen() {
               setIsTransitioning(true);
               setTimeout(() => {
                 setScene("passage");
-                setPlayerPos({ x: 55.0, y: 88.0 });
+                setPlayerPos({ x: 50.0, y: 88.0 });
                 setIsTransitioning(false);
                 if (cluesFound < 2) setCluesFound(2);
               }, 400);
@@ -106,12 +106,12 @@ export default function MughalGameScreen() {
             return { x: nextX, y: nextY };
           } else {
             // In Inner Passage Scene: Sloping ramp towards Hathi Pol archway
-            const rampProgress = Math.max(0, Math.min(1, (prev.y - 62.0) / (90.0 - 62.0)));
-            const minX = 48.0 - rampProgress * 10.0;
-            const maxX = 64.0 + rampProgress * 8.0;
+            const rampProgress = Math.max(0, Math.min(1, (prev.y - 63.0) / (90.0 - 63.0)));
+            const minX = 46.0 - rampProgress * 12.0;
+            const maxX = 54.0 + rampProgress * 12.0;
 
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
-            const nextY = Math.max(62.0, Math.min(91.0, prev.y + dy));
+            const nextY = Math.max(63.0, Math.min(91.0, prev.y + dy));
 
             // Walk back down to return to gate
             if (nextY >= 90.5) {
