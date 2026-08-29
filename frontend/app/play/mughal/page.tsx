@@ -6,13 +6,14 @@ import { useRouter } from "next/navigation";
 
 export default function MughalGameScreen() {
   const [isLoading, setIsLoading] = useState(true);
-  const [scene, setScene] = useState<"gate" | "passage" | "courtyard">("gate");
+  const [scene, setScene] = useState<"gate" | "passage" | "courtyard" | "interior">("gate");
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [playerPos, setPlayerPos] = useState({ x: 50, y: 85 });
   const [facingLeft, setFacingLeft] = useState(false);
   const [isWalking, setIsWalking] = useState(false);
   const [walkPhase, setWalkPhase] = useState(0);
   const [showDialogue, setShowDialogue] = useState(false);
+  const [showThroneScroll, setShowThroneScroll] = useState(false);
   const [cluesFound, setCluesFound] = useState(0);
   const router = useRouter();
 
@@ -24,6 +25,9 @@ export default function MughalGameScreen() {
     Math.pow(playerPos.x - guardPos.x, 2) + Math.pow(playerPos.y - guardPos.y, 2)
   );
   const isNearGuard = scene === "gate" && distToGuard < 9.0;
+
+  // Calculate distance to Royal Throne in interior scene
+  const isNearThrone = scene === "interior" && playerPos.y <= 65.0 && playerPos.x >= 44.0 && playerPos.x <= 56.0;
 
   useEffect(() => {
     // Simulate loading screen
@@ -41,14 +45,23 @@ export default function MughalGameScreen() {
 
     const onKeyDown = (e: KeyboardEvent) => {
       keysHeld.add(e.key.toLowerCase());
-      if (e.key.toLowerCase() === "e" && isNearGuard) {
-        setShowDialogue((prev) => {
-          if (!prev && cluesFound === 0) setCluesFound(1);
-          return !prev;
-        });
+      if (e.key.toLowerCase() === "e") {
+        if (isNearGuard) {
+          setShowDialogue((prev) => {
+            if (!prev && cluesFound === 0) setCluesFound(1);
+            return !prev;
+          });
+        }
+        if (isNearThrone) {
+          setShowThroneScroll((prev) => {
+            if (!prev && cluesFound < 3) setCluesFound(3);
+            return !prev;
+          });
+        }
       }
       if (e.key === "Escape") {
         setShowDialogue(false);
+        setShowThroneScroll(false);
       }
     };
 
@@ -123,7 +136,6 @@ export default function MughalGameScreen() {
                 setScene("courtyard");
                 setPlayerPos({ x: 18.0, y: 72.0 });
                 setIsTransitioning(false);
-                if (cluesFound < 3) setCluesFound(3);
               }, 400);
             }
 
@@ -138,7 +150,7 @@ export default function MughalGameScreen() {
             }
 
             return { x: nextX, y: nextY };
-          } else {
+          } else if (scene === "courtyard") {
             // In Courtyard Scene (Diwan-i-Aam & Anguri Bagh Garden)
             const minX = 8.0;
             const maxX = 92.0;
@@ -148,12 +160,43 @@ export default function MughalGameScreen() {
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
 
+            // Walk up the marble pavilion stairs into Diwan-i-Aam interior
+            if (nextX <= 32.0 && nextY <= 43.5) {
+              setIsTransitioning(true);
+              setTimeout(() => {
+                setScene("interior");
+                setPlayerPos({ x: 50.0, y: 86.0 });
+                setIsTransitioning(false);
+              }, 400);
+            }
+
             // Walk to bottom-left entrance edge to return to passage ramp
             if (nextX <= 9.0 && nextY >= 68.0) {
               setIsTransitioning(true);
               setTimeout(() => {
                 setScene("passage");
                 setPlayerPos({ x: 51.0, y: 61.0 });
+                setIsTransitioning(false);
+              }, 400);
+            }
+
+            return { x: nextX, y: nextY };
+          } else {
+            // In Diwan-i-Aam Interior Scene (Throne Room)
+            const minX = 22.0;
+            const maxX = 78.0;
+            const minY = 62.0; // At foot of imperial throne
+            const maxY = 88.0; // Entrance carpet
+
+            const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
+            const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
+
+            // Walk down to exit back to garden courtyard
+            if (nextY >= 87.5) {
+              setIsTransitioning(true);
+              setTimeout(() => {
+                setScene("courtyard");
+                setPlayerPos({ x: 26.0, y: 46.0 });
                 setIsTransitioning(false);
               }, 400);
             }
@@ -173,7 +216,7 @@ export default function MughalGameScreen() {
       window.removeEventListener("keyup", onKeyUp);
       cancelAnimationFrame(animationFrameId);
     };
-  }, [isLoading, isTransitioning, scene, isNearGuard, cluesFound]);
+  }, [isLoading, isTransitioning, scene, isNearGuard, isNearThrone, cluesFound]);
 
   if (isLoading) {
     return (
@@ -198,7 +241,9 @@ export default function MughalGameScreen() {
     ? 1.22 + ((playerPos.y - 71.5) / 20.5) * 0.28
     : scene === "passage"
     ? 1.05 + ((playerPos.y - 58.0) / 33.0) * 0.65
-    : 0.90 + ((playerPos.y - 40.0) / 36.0) * 0.50;
+    : scene === "courtyard"
+    ? 0.90 + ((playerPos.y - 40.0) / 36.0) * 0.50
+    : 0.95 + ((playerPos.y - 62.0) / 26.0) * 0.45;
 
   const walkBob = isWalking ? Math.sin(walkPhase) * 1.8 : 0;
   const walkSway = isWalking ? Math.sin(walkPhase * 0.5) * 1.5 : 0;
@@ -206,19 +251,21 @@ export default function MughalGameScreen() {
   const getBackgroundSrc = () => {
     if (scene === "gate") return "/bg-agra-fort.jpg";
     if (scene === "passage") return "/bg-agra-passage.jpg";
-    return "/bg-agra-courtyard.jpg";
+    if (scene === "courtyard") return "/bg-agra-courtyard.jpg";
+    return "/bg-agra-interior.jpg";
   };
 
   const getTransitionLabel = () => {
     if (scene === "gate") return "Entering Inner Ramp Passage...";
     if (scene === "passage") return playerPos.y <= 62 ? "Entering Diwan-i-Aam & Anguri Bagh..." : "Returning to Outer Gate...";
-    return "Returning to Inner Passage...";
+    if (scene === "courtyard") return playerPos.y <= 45 ? "Entering Diwan-i-Aam Throne Hall..." : "Returning to Inner Passage...";
+    return "Returning to Anguri Bagh Garden...";
   };
 
   return (
     <div className="w-full h-screen relative overflow-hidden font-sans select-none bg-black">
       
-      {/* Game Background (Agra Fort Gate, Passage, or Courtyard) */}
+      {/* Game Background (Agra Fort Gate, Passage, Courtyard, or Interior) */}
       <img 
         src={getBackgroundSrc()} 
         alt="Agra Fort Game World" 
@@ -271,6 +318,17 @@ export default function MughalGameScreen() {
         </div>
       )}
 
+      {/* Throne Inspection Prompt (Interior Scene) */}
+      {scene === "interior" && isNearThrone && !showThroneScroll && (
+        <div 
+          className="absolute top-[52%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 cursor-pointer z-10 animate-bounce"
+          onClick={() => setShowThroneScroll(true)}
+        >
+          <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
+          Inspect Imperial Throne Dais
+        </div>
+      )}
+
       {/* Navigation Prompts */}
       {scene === "gate" && playerPos.y <= 74.0 && (
         <div className="absolute top-[63%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
@@ -290,9 +348,21 @@ export default function MughalGameScreen() {
         </div>
       )}
 
-      {scene === "courtyard" && playerPos.x <= 20.0 && (
+      {scene === "courtyard" && playerPos.x <= 35.0 && playerPos.y <= 48.0 && (
+        <div className="absolute top-[34%] left-[24%] -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          ▲ Walk up the stairs into Diwan-i-Aam
+        </div>
+      )}
+
+      {scene === "courtyard" && playerPos.x <= 16.0 && (
         <div className="absolute bottom-[20%] left-6 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
           ◄ Walk left to return to passage ramp
+        </div>
+      )}
+
+      {scene === "interior" && playerPos.y >= 84.0 && (
+        <div className="absolute bottom-[8%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          ▼ Walk down to exit to garden courtyard
         </div>
       )}
 
@@ -317,6 +387,39 @@ export default function MughalGameScreen() {
           }}
         />
       </div>
+
+      {/* --- ROYAL SCROLL / CLUE MODAL (Throne Room Discovery) --- */}
+      {showThroneScroll && scene === "interior" && (
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-6 z-30 pointer-events-auto">
+          <div className="bg-[#fff9ea] border-3 border-black rounded-2xl p-6 shadow-[8px_8px_0_0_rgba(0,0,0,1)] max-w-lg w-full flex flex-col gap-4 relative animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b-2 border-amber-200 pb-2">
+              <span className="text-[12px] font-bold text-amber-900 uppercase tracking-widest flex items-center gap-2">
+                <span>📜</span> Imperial Mughal Farman
+              </span>
+              <button 
+                onClick={() => setShowThroneScroll(false)}
+                className="text-gray-500 hover:text-black font-bold text-sm"
+              >
+                ✕ Close
+              </button>
+            </div>
+            <div className="text-black font-serif text-[14px] leading-relaxed">
+              <p className="mb-2 italic text-amber-950 font-bold">
+                &ldquo;By Imperial Decree: The traveler from the eastern lands has been granted audience and awaits in the private quarters of the royal pavilion.&rdquo;
+              </p>
+              <p className="text-xs font-sans text-gray-700">
+                ★ <strong className="text-black">Quest Milestone Completed:</strong> You have traced your missing friend through the Agra Fort gates, up the fortified ramp, and into the grand Diwan-i-Aam!
+              </p>
+            </div>
+            <button 
+              onClick={() => setShowThroneScroll(false)}
+              className="bg-amber-400 hover:bg-amber-300 border-2 border-black rounded-lg py-2 text-xs font-bold text-black shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5"
+            >
+              Close Record & Continue Exploring
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* --- GUARD DIALOGUE MODAL --- */}
       {showDialogue && scene === "gate" && (
@@ -359,9 +462,9 @@ export default function MughalGameScreen() {
       {/* Top Left: Quest Panel */}
       <div className="absolute top-6 left-6 flex flex-col gap-3">
         {/* Main Quest Box */}
-        <div className="bg-[#fff9ea] border-2 border-black rounded-lg p-4 shadow-[4px_4px_0_0_rgba(0,0,0,1)] w-80">
+        <div className="bg-[#fff9ea] border-2 border-black rounded-lg p-4 shadow-[4px_4px_0_0_rgba(0,0,0,1)] w-84">
           <div className="text-[10px] font-bold text-gray-500 tracking-wider uppercase mb-2">
-            Mughal Empire - {scene === "gate" ? "Amar Singh Gate" : scene === "passage" ? "Inner Ramp Passage" : "Diwan-i-Aam & Anguri Bagh"}
+            Mughal Empire - {scene === "gate" ? "Amar Singh Gate" : scene === "passage" ? "Inner Ramp Passage" : scene === "courtyard" ? "Diwan-i-Aam & Anguri Bagh" : "Imperial Throne Hall (Diwan-i-Aam)"}
           </div>
           <div className="text-[15px] font-bold text-black leading-snug">
             {scene === "gate"
@@ -370,7 +473,9 @@ export default function MughalGameScreen() {
                 : "Walk into the archway to ascend the fort passage."
               : scene === "passage"
               ? "Ascend the royal ramp towards the upper palaces (Hathi Pol)."
-              : "Explore the imperial garden courtyard and inspect the marble pavilion."}
+              : scene === "courtyard"
+              ? "Walk up the marble stairs to enter the Diwan-i-Aam throne hall."
+              : "Approach and inspect the imperial golden throne dais."}
           </div>
         </div>
 
@@ -409,10 +514,15 @@ export default function MughalGameScreen() {
           <div className="flex-1 grid grid-cols-4 grid-rows-4 gap-1 p-1 bg-amber-50/50 rounded">
              {/* Dynamic Minimap based on current scene */}
              <div className="bg-transparent"></div>
-             <div className={scene === "courtyard" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div> {/* Diwan-i-Aam / Courtyard */}
+             <div className={scene === "interior" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div> {/* Diwan-i-Aam Interior */}
              <div className="bg-amber-100 rounded-sm"></div>
              <div className="bg-transparent"></div>
              
+             <div className="bg-transparent"></div>
+             <div className={scene === "courtyard" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div> {/* Diwan-i-Aam Courtyard */}
+             <div className="bg-amber-100 rounded-sm"></div>
+             <div className="bg-transparent"></div>
+
              <div className="bg-transparent"></div>
              <div className={scene === "passage" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div> {/* Ramp Passage */}
              <div className="bg-amber-100 rounded-sm"></div>
@@ -420,11 +530,6 @@ export default function MughalGameScreen() {
 
              <div className="bg-transparent"></div>
              <div className={scene === "gate" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div> {/* Amar Singh Gate */}
-             <div className="bg-amber-100 rounded-sm"></div>
-             <div className="bg-transparent"></div>
-
-             <div className="bg-transparent"></div>
-             <div className="bg-transparent"></div>
              <div className="bg-transparent"></div>
              <div className="bg-transparent"></div>
           </div>
@@ -447,10 +552,10 @@ export default function MughalGameScreen() {
           <span className="text-[11px] font-bold text-black"><span className="text-amber-600 mr-1">⚡</span>33 generations</span>
         </div>
         <div className="bg-[#fff9ea] border-2 border-black rounded px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)]">
-          <span className="text-[11px] font-bold text-black"><span className="text-amber-600 mr-1">👁</span>7 screens</span>
+          <span className="text-[11px] font-bold text-black"><span className="text-amber-600 mr-1">👁</span>8 screens</span>
         </div>
         <div className="bg-[#fff9ea] border-2 border-black rounded px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)]">
-          <span className="text-[11px] font-bold text-black"><span className="text-amber-600 mr-1">🚪</span>rooms 3/3</span>
+          <span className="text-[11px] font-bold text-black"><span className="text-amber-600 mr-1">🚪</span>rooms 4/4</span>
         </div>
       </div>
 
