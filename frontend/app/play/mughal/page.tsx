@@ -8,57 +8,94 @@ export default function MughalGameScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [playerPos, setPlayerPos] = useState({ x: 50, y: 82 });
   const [facingLeft, setFacingLeft] = useState(false);
-  const [isMoving, setIsMoving] = useState(false);
+  const [isWalking, setIsWalking] = useState(false);
+  const [walkPhase, setWalkPhase] = useState(0);
+  const [showDialogue, setShowDialogue] = useState(false);
   const router = useRouter();
 
+  // Guard NPC Position (Left of the arched entrance gate)
+  const guardPos = { x: 44.5, y: 55.5 };
+
+  // Calculate distance to guard for interaction prompt
+  const distToGuard = Math.sqrt(
+    Math.pow(playerPos.x - guardPos.x, 2) + Math.pow(playerPos.y - guardPos.y, 2)
+  );
+  const isNearGuard = distToGuard < 11;
+
   useEffect(() => {
-    // Simulate a loading time to show the immersive loading screen
+    // Simulate loading screen
     const timer = setTimeout(() => {
       setIsLoading(false);
     }, 2500);
     return () => clearTimeout(timer);
   }, []);
 
+  // Smooth continuous 60fps movement game loop
   useEffect(() => {
     if (isLoading) return;
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const step = 2.0;
-      setPlayerPos((prev) => {
-        let newX = prev.x;
-        let newY = prev.y;
+    const keysHeld = new Set<string>();
 
-        if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") {
-          newX = Math.max(38, prev.x - step);
-          setFacingLeft(true);
-          setIsMoving(true);
-        } else if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") {
-          newX = Math.min(62, prev.x + step);
-          setFacingLeft(false);
-          setIsMoving(true);
-        } else if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") {
-          newY = Math.max(54, prev.y - step);
-          setIsMoving(true);
-        } else if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") {
-          newY = Math.min(92, prev.y + step);
-          setIsMoving(true);
-        }
-
-        return { x: newX, y: newY };
-      });
+    const onKeyDown = (e: KeyboardEvent) => {
+      keysHeld.add(e.key.toLowerCase());
+      if (e.key.toLowerCase() === "e" && isNearGuard) {
+        setShowDialogue((prev) => !prev);
+      }
     };
 
-    const handleKeyUp = () => {
-      setIsMoving(false);
+    const onKeyUp = (e: KeyboardEvent) => {
+      keysHeld.delete(e.key.toLowerCase());
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+
+    let animationFrameId: number;
+    let localWalkTimer = 0;
+
+    const gameLoop = () => {
+      let dx = 0;
+      let dy = 0;
+      const speed = 0.35; // Smooth movement speed per frame
+
+      if (keysHeld.has("arrowleft") || keysHeld.has("a")) dx -= speed;
+      if (keysHeld.has("arrowright") || keysHeld.has("d")) dx += speed;
+      if (keysHeld.has("arrowup") || keysHeld.has("w")) dy -= speed * 0.85;
+      if (keysHeld.has("arrowdown") || keysHeld.has("s")) dy += speed * 0.85;
+
+      const moving = dx !== 0 || dy !== 0;
+      setIsWalking(moving);
+
+      if (dx < 0) setFacingLeft(true);
+      if (dx > 0) setFacingLeft(false);
+
+      if (moving) {
+        localWalkTimer += 0.25;
+        setWalkPhase(localWalkTimer);
+
+        setPlayerPos((prev) => {
+          // Dynamic bridge width: narrower towards gate (y: 54), wider towards bottom (y: 92)
+          const rampProgress = (prev.y - 54) / (92 - 54); // 0 at gate, 1 at bottom
+          const minX = 40 - rampProgress * 3;
+          const maxX = 60 + rampProgress * 3;
+
+          const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
+          const nextY = Math.max(54, Math.min(92, prev.y + dy));
+          return { x: nextX, y: nextY };
+        });
+      }
+
+      animationFrameId = requestAnimationFrame(gameLoop);
+    };
+
+    animationFrameId = requestAnimationFrame(gameLoop);
+
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      cancelAnimationFrame(animationFrameId);
     };
-  }, [isLoading]);
+  }, [isLoading, isNearGuard]);
 
   if (isLoading) {
     return (
@@ -78,6 +115,11 @@ export default function MughalGameScreen() {
     );
   }
 
+  // Perspective scale: scale slightly down when further away near gate
+  const depthScale = 0.85 + ((playerPos.y - 54) / 38) * 0.22;
+  const walkBob = isWalking ? Math.sin(walkPhase) * 2.0 : 0;
+  const walkSway = isWalking ? Math.sin(walkPhase * 0.5) * 1.8 : 0;
+
   return (
     <div className="w-full h-screen relative overflow-hidden font-sans select-none bg-black">
       
@@ -88,29 +130,99 @@ export default function MughalGameScreen() {
         className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none"
       />
 
-      {/* Screen Darkening/Vignette Overlay (subtle to match reference aesthetic) */}
+      {/* Screen Darkening/Vignette Overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/30 pointer-events-none"></div>
 
-      {/* Main Guy Player Character Sprite */}
-      <div 
-        className="absolute transition-all duration-100 ease-out pointer-events-none flex flex-col items-center z-10"
+      {/* --- MUGHAL ROYAL GUARD NPC (Near Entrance Gate) --- */}
+      <div
+        className="absolute pointer-events-auto cursor-pointer z-10 flex flex-col items-center"
         style={{
-          left: `${playerPos.x}%`,
-          top: `${playerPos.y}%`,
-          transform: `translate(-50%, -100%) scaleX(${facingLeft ? -1 : 1})`,
+          left: `${guardPos.x}%`,
+          top: `${guardPos.y}%`,
+          transform: `translate(-50%, -96%) scale(0.88)`,
         }}
+        onClick={() => setShowDialogue((prev) => !prev)}
       >
-        {/* Foot Shadow */}
-        <div className="absolute bottom-1 w-12 h-3 bg-black/40 rounded-full blur-[1px]"></div>
+        {/* Guard Proximity Indicator / Speech Bubble */}
+        {isNearGuard && !showDialogue && (
+          <div className="animate-bounce mb-2 bg-[#fff9ea] border-2 border-black rounded-lg px-2.5 py-1 shadow-[2px_2px_0_0_rgba(0,0,0,1)] text-[11px] font-bold text-black flex items-center gap-1.5 whitespace-nowrap">
+            <span className="bg-amber-400 border border-black rounded px-1 text-[9px]">E</span>
+            Talk to Royal Guard
+          </div>
+        )}
 
-        {/* Character Sprite Image */}
-        <img 
-          src="/player.png" 
-          alt="Main Hero" 
-          className={`w-28 h-28 object-contain drop-shadow-md ${isMoving ? "animate-bounce" : ""}`}
+        {/* Foot Shadow */}
+        <div className="absolute bottom-1 w-10 h-2.5 bg-black/45 rounded-full blur-[1px]"></div>
+
+        {/* Guard Sprite */}
+        <img
+          src="/guard.png"
+          alt="Mughal Guard NPC"
+          className="w-24 h-24 object-contain drop-shadow-md"
           style={{ imageRendering: "pixelated" }}
         />
       </div>
+
+      {/* --- MAIN GUY PLAYER CHARACTER SPRITE --- */}
+      <div 
+        className="absolute pointer-events-none flex flex-col items-center z-20"
+        style={{
+          left: `${playerPos.x}%`,
+          top: `${playerPos.y}%`,
+          transform: `translate(-50%, -98%) scale(${depthScale}) scaleX(${facingLeft ? -1 : 1})`,
+        }}
+      >
+        {/* Soft Dynamic Foot Shadow (No grey background artifacts) */}
+        <div className="absolute bottom-1 w-11 h-2.5 bg-black/40 rounded-full blur-[1px]"></div>
+
+        {/* Character Sprite Image with smooth footstep cadence */}
+        <img 
+          src="/player.png" 
+          alt="Main Hero" 
+          className="w-28 h-28 object-contain"
+          style={{
+            imageRendering: "pixelated",
+            transform: `translateY(${walkBob}px) rotate(${walkSway}deg)`,
+            transition: isWalking ? "none" : "transform 0.15s ease-out",
+          }}
+        />
+      </div>
+
+      {/* --- GUARD DIALOGUE MODAL --- */}
+      {showDialogue && (
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-xs flex items-end justify-center pb-24 z-30 pointer-events-auto">
+          <div className="bg-[#fff9ea] border-3 border-black rounded-xl p-5 shadow-[6px_6px_0_0_rgba(0,0,0,1)] max-w-xl w-full mx-4 flex gap-4 items-start relative animate-in fade-in zoom-in-95 duration-150">
+            {/* Guard Avatar */}
+            <div className="w-16 h-16 bg-amber-100 border-2 border-black rounded-lg overflow-hidden shrink-0 flex items-center justify-center shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
+              <img src="/guard.png" alt="Guard Avatar" className="w-24 h-24 object-contain translate-y-3" style={{ imageRendering: "pixelated" }} />
+            </div>
+
+            {/* Dialogue Content */}
+            <div className="flex-1">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[11px] font-bold text-amber-800 tracking-wider uppercase">Amar Singh Gate Sentry</span>
+                <button 
+                  onClick={() => setShowDialogue(false)}
+                  className="text-gray-500 hover:text-black font-bold text-xs"
+                >
+                  ✕ Close (Esc)
+                </button>
+              </div>
+              <p className="text-black font-semibold text-[13px] leading-relaxed mb-3">
+                &ldquo;Halt, traveler! Beyond this Amar Singh Gate lies the imperial court of the Great Mughal. You speak of your missing companion? A figure matching that description was escorted past the inner ramparts earlier at dawn...&rdquo;
+              </p>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setShowDialogue(false)}
+                  className="bg-amber-400 hover:bg-amber-300 border-2 border-black rounded-md px-3 py-1 text-xs font-bold text-black shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-0.5"
+                >
+                  &ldquo;Thank you, guard. I must enter.&rdquo;
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* --- UI OVERLAYS (Light Neo-Brutalism) --- */}
       
