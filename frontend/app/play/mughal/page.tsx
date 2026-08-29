@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 export default function MughalGameScreen() {
   const [isLoading, setIsLoading] = useState(true);
-  const [scene, setScene] = useState<"gate" | "passage" | "courtyard" | "interior">("gate");
+  const [scene, setScene] = useState<"gate" | "passage" | "courtyard" | "interior" | "sheesh_passage" | "sheesh_mahal">("gate");
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [playerPos, setPlayerPos] = useState({ x: 50, y: 85 });
   const [facingLeft, setFacingLeft] = useState(false);
@@ -14,6 +14,7 @@ export default function MughalGameScreen() {
   const [walkPhase, setWalkPhase] = useState(0);
   const [showDialogue, setShowDialogue] = useState(false);
   const [showThroneScroll, setShowThroneScroll] = useState(false);
+  const [showMirrorModal, setShowMirrorModal] = useState(false);
   const [cluesFound, setCluesFound] = useState(0);
   const router = useRouter();
 
@@ -28,6 +29,9 @@ export default function MughalGameScreen() {
 
   // Calculate distance to Royal Throne in interior scene
   const isNearThrone = scene === "interior" && playerPos.y <= 65.0 && playerPos.x >= 44.0 && playerPos.x <= 56.0;
+
+  // Calculate distance to Mirror Fountain in Sheesh Mahal scene
+  const isNearMirrorFountain = scene === "sheesh_mahal" && playerPos.y <= 78.0 && playerPos.y >= 63.0 && playerPos.x >= 40.0 && playerPos.x <= 60.0;
 
   useEffect(() => {
     // Simulate loading screen
@@ -54,6 +58,12 @@ export default function MughalGameScreen() {
         }
         if (isNearThrone) {
           setShowThroneScroll((prev) => {
+            if (!prev && cluesFound < 2) setCluesFound(2);
+            return !prev;
+          });
+        }
+        if (isNearMirrorFountain) {
+          setShowMirrorModal((prev) => {
             if (!prev && cluesFound < 3) setCluesFound(3);
             return !prev;
           });
@@ -62,6 +72,7 @@ export default function MughalGameScreen() {
       if (e.key === "Escape") {
         setShowDialogue(false);
         setShowThroneScroll(false);
+        setShowMirrorModal(false);
       }
     };
 
@@ -112,7 +123,7 @@ export default function MughalGameScreen() {
                 setScene("passage");
                 setPlayerPos({ x: 33.0, y: 90.0 });
                 setIsTransitioning(false);
-                if (cluesFound < 2) setCluesFound(2);
+                if (cluesFound < 1) setCluesFound(1);
               }, 400);
             }
 
@@ -181,9 +192,9 @@ export default function MughalGameScreen() {
             }
 
             return { x: nextX, y: nextY };
-          } else {
+          } else if (scene === "interior") {
             // In Diwan-i-Aam Interior Scene (Throne Room)
-            const minX = 22.0;
+            const minX = 20.0;
             const maxX = 78.0;
             const minY = 62.0; // At foot of imperial throne
             const maxY = 88.0; // Entrance carpet
@@ -191,12 +202,74 @@ export default function MughalGameScreen() {
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
 
+            // Walk to the right colonnade passage to enter Sheesh Mahal corridor
+            if (nextX >= 74.0 && nextY <= 74.0) {
+              setIsTransitioning(true);
+              setTimeout(() => {
+                setScene("sheesh_passage");
+                setPlayerPos({ x: 50.0, y: 86.0 });
+                setIsTransitioning(false);
+              }, 400);
+            }
+
             // Walk down to exit back to garden courtyard
             if (nextY >= 87.5) {
               setIsTransitioning(true);
               setTimeout(() => {
                 setScene("courtyard");
                 setPlayerPos({ x: 26.0, y: 46.0 });
+                setIsTransitioning(false);
+              }, 400);
+            }
+
+            return { x: nextX, y: nextY };
+          } else if (scene === "sheesh_passage") {
+            // In Sheesh Mahal Royal Corridor Scene
+            const minX = 32.0;
+            const maxX = 68.0;
+            const minY = 58.0; // At golden archway at end of corridor
+            const maxY = 88.0; // Entrance from Diwan-i-Aam
+
+            const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
+            const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
+
+            // Walk into the golden archway to enter Sheesh Mahal (Palace of Mirrors)
+            if (nextY <= 60.0 && nextX >= 44.0 && nextX <= 56.0) {
+              setIsTransitioning(true);
+              setTimeout(() => {
+                setScene("sheesh_mahal");
+                setPlayerPos({ x: 50.0, y: 86.0 });
+                setIsTransitioning(false);
+              }, 400);
+            }
+
+            // Walk down to return to Diwan-i-Aam interior
+            if (nextY >= 87.5) {
+              setIsTransitioning(true);
+              setTimeout(() => {
+                setScene("interior");
+                setPlayerPos({ x: 70.0, y: 70.0 });
+                setIsTransitioning(false);
+              }, 400);
+            }
+
+            return { x: nextX, y: nextY };
+          } else {
+            // In Sheesh Mahal (Palace of Mirrors) Scene
+            const minX = 18.0;
+            const maxX = 82.0;
+            const minY = 60.0;
+            const maxY = 88.0;
+
+            const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
+            const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
+
+            // Walk down to exit back to the corridor
+            if (nextY >= 87.5) {
+              setIsTransitioning(true);
+              setTimeout(() => {
+                setScene("sheesh_passage");
+                setPlayerPos({ x: 50.0, y: 64.0 });
                 setIsTransitioning(false);
               }, 400);
             }
@@ -216,7 +289,7 @@ export default function MughalGameScreen() {
       window.removeEventListener("keyup", onKeyUp);
       cancelAnimationFrame(animationFrameId);
     };
-  }, [isLoading, isTransitioning, scene, isNearGuard, isNearThrone, cluesFound]);
+  }, [isLoading, isTransitioning, scene, isNearGuard, isNearThrone, isNearMirrorFountain, cluesFound]);
 
   if (isLoading) {
     return (
@@ -243,7 +316,11 @@ export default function MughalGameScreen() {
     ? 1.05 + ((playerPos.y - 58.0) / 33.0) * 0.65
     : scene === "courtyard"
     ? 0.90 + ((playerPos.y - 40.0) / 36.0) * 0.50
-    : 0.95 + ((playerPos.y - 62.0) / 26.0) * 0.45;
+    : scene === "interior"
+    ? 0.95 + ((playerPos.y - 62.0) / 26.0) * 0.45
+    : scene === "sheesh_passage"
+    ? 0.90 + ((playerPos.y - 58.0) / 30.0) * 0.50
+    : 0.95 + ((playerPos.y - 60.0) / 28.0) * 0.45;
 
   const walkBob = isWalking ? Math.sin(walkPhase) * 1.8 : 0;
   const walkSway = isWalking ? Math.sin(walkPhase * 0.5) * 1.5 : 0;
@@ -252,20 +329,24 @@ export default function MughalGameScreen() {
     if (scene === "gate") return "/bg-agra-fort.jpg";
     if (scene === "passage") return "/bg-agra-passage.jpg";
     if (scene === "courtyard") return "/bg-agra-courtyard.jpg";
-    return "/bg-agra-interior.jpg";
+    if (scene === "interior") return "/bg-agra-interior.jpg";
+    if (scene === "sheesh_passage") return "/bg-agra-sheesh-passage.jpg";
+    return "/bg-agra-sheesh-mahal.jpg";
   };
 
   const getTransitionLabel = () => {
     if (scene === "gate") return "Entering Inner Ramp Passage...";
     if (scene === "passage") return playerPos.y <= 62 ? "Entering Diwan-i-Aam & Anguri Bagh..." : "Returning to Outer Gate...";
     if (scene === "courtyard") return playerPos.y <= 45 ? "Entering Diwan-i-Aam Throne Hall..." : "Returning to Inner Passage...";
-    return "Returning to Anguri Bagh Garden...";
+    if (scene === "interior") return playerPos.x >= 70 ? "Entering Sheesh Mahal Corridor..." : "Returning to Anguri Bagh Garden...";
+    if (scene === "sheesh_passage") return playerPos.y <= 62 ? "Entering Sheesh Mahal (Palace of Mirrors)..." : "Returning to Diwan-i-Aam...";
+    return "Returning to Sheesh Mahal Corridor...";
   };
 
   return (
     <div className="w-full h-screen relative overflow-hidden font-sans select-none bg-black">
       
-      {/* Game Background (Agra Fort Gate, Passage, Courtyard, or Interior) */}
+      {/* Game Background */}
       <img 
         src={getBackgroundSrc()} 
         alt="Agra Fort Game World" 
@@ -329,6 +410,17 @@ export default function MughalGameScreen() {
         </div>
       )}
 
+      {/* Mirror Fountain Inspection Prompt (Sheesh Mahal Scene) */}
+      {scene === "sheesh_mahal" && isNearMirrorFountain && !showMirrorModal && (
+        <div 
+          className="absolute top-[62%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 cursor-pointer z-10 animate-bounce"
+          onClick={() => setShowMirrorModal(true)}
+        >
+          <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
+          Examine Fountain & Mirror Mosaics
+        </div>
+      )}
+
       {/* Navigation Prompts */}
       {scene === "gate" && playerPos.y <= 74.0 && (
         <div className="absolute top-[63%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
@@ -360,9 +452,33 @@ export default function MughalGameScreen() {
         </div>
       )}
 
+      {scene === "interior" && playerPos.x >= 70.0 && (
+        <div className="absolute top-[50%] right-6 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          ► Walk right to Sheesh Mahal corridor
+        </div>
+      )}
+
       {scene === "interior" && playerPos.y >= 84.0 && (
         <div className="absolute bottom-[8%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
           ▼ Walk down to exit to garden courtyard
+        </div>
+      )}
+
+      {scene === "sheesh_passage" && playerPos.y <= 62.0 && (
+        <div className="absolute top-[46%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          ▲ Enter Sheesh Mahal (Palace of Mirrors)
+        </div>
+      )}
+
+      {scene === "sheesh_passage" && playerPos.y >= 84.0 && (
+        <div className="absolute bottom-[8%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          ▼ Walk down to return to Diwan-i-Aam
+        </div>
+      )}
+
+      {scene === "sheesh_mahal" && playerPos.y >= 84.0 && (
+        <div className="absolute bottom-[8%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          ▼ Walk down to exit Sheesh Mahal
         </div>
       )}
 
@@ -405,17 +521,50 @@ export default function MughalGameScreen() {
             </div>
             <div className="text-black font-serif text-[14px] leading-relaxed">
               <p className="mb-2 italic text-amber-950 font-bold">
-                &ldquo;By Imperial Decree: The traveler from the eastern lands has been granted audience and awaits in the private quarters of the royal pavilion.&rdquo;
+                &ldquo;By Imperial Decree: The traveler was escorted through the eastern passage towards the Sheesh Mahal (Palace of Mirrors) for private consultation.&rdquo;
               </p>
               <p className="text-xs font-sans text-gray-700">
-                ★ <strong className="text-black">Quest Milestone Completed:</strong> You have traced your missing friend through the Agra Fort gates, up the fortified ramp, and into the grand Diwan-i-Aam!
+                ★ <strong className="text-black">New Objective:</strong> Head right through the colonnade archway to enter the Sheesh Mahal corridor!
               </p>
             </div>
             <button 
               onClick={() => setShowThroneScroll(false)}
               className="bg-amber-400 hover:bg-amber-300 border-2 border-black rounded-lg py-2 text-xs font-bold text-black shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5"
             >
-              Close Record & Continue Exploring
+              Continue to Sheesh Mahal
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* --- SHEESH MAHAL / MIRROR MOSAIC MODAL --- */}
+      {showMirrorModal && scene === "sheesh_mahal" && (
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-6 z-30 pointer-events-auto">
+          <div className="bg-[#fff9ea] border-3 border-black rounded-2xl p-6 shadow-[8px_8px_0_0_rgba(0,0,0,1)] max-w-lg w-full flex flex-col gap-4 relative animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b-2 border-amber-200 pb-2">
+              <span className="text-[12px] font-bold text-amber-900 uppercase tracking-widest flex items-center gap-2">
+                <span>✨</span> Sheesh Mahal - Palace of Mirrors
+              </span>
+              <button 
+                onClick={() => setShowMirrorModal(false)}
+                className="text-gray-500 hover:text-black font-bold text-sm"
+              >
+                ✕ Close
+              </button>
+            </div>
+            <div className="text-black font-serif text-[14px] leading-relaxed">
+              <p className="mb-2 text-amber-950 font-bold">
+                &ldquo;Thousands of imported Syrian convex glass mirrors glitter across the ceiling like a cosmic starry sky. In the reflection of the tranquil marble fountain, you discover the final royal signet of the Mughal dynasty!&rdquo;
+              </p>
+              <p className="text-xs font-sans text-emerald-800 font-bold bg-emerald-50 border border-emerald-300 p-2 rounded">
+                🏆 Quest Complete: You have fully explored the royal chambers of Agra Fort and uncovered the mystery of the Mughal court!
+              </p>
+            </div>
+            <button 
+              onClick={() => setShowMirrorModal(false)}
+              className="bg-amber-400 hover:bg-amber-300 border-2 border-black rounded-lg py-2 text-xs font-bold text-black shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5"
+            >
+              Admire the Palace of Mirrors
             </button>
           </div>
         </div>
@@ -464,9 +613,16 @@ export default function MughalGameScreen() {
         {/* Main Quest Box */}
         <div className="bg-[#fff9ea] border-2 border-black rounded-lg p-4 shadow-[4px_4px_0_0_rgba(0,0,0,1)] w-84">
           <div className="text-[10px] font-bold text-gray-500 tracking-wider uppercase mb-2">
-            Mughal Empire - {scene === "gate" ? "Amar Singh Gate" : scene === "passage" ? "Inner Ramp Passage" : scene === "courtyard" ? "Diwan-i-Aam & Anguri Bagh" : "Imperial Throne Hall (Diwan-i-Aam)"}
+            Mughal Empire - {
+              scene === "gate" ? "Amar Singh Gate" :
+              scene === "passage" ? "Inner Ramp Passage" :
+              scene === "courtyard" ? "Diwan-i-Aam & Anguri Bagh" :
+              scene === "interior" ? "Imperial Throne Hall (Diwan-i-Aam)" :
+              scene === "sheesh_passage" ? "Royal Marble Corridor" :
+              "Sheesh Mahal (Palace of Mirrors)"
+            }
           </div>
-          <div className="text-[15px] font-bold text-black leading-snug">
+          <div className="text-[14px] font-bold text-black leading-snug">
             {scene === "gate"
               ? cluesFound === 0
                 ? "Go talk with the guard."
@@ -475,7 +631,11 @@ export default function MughalGameScreen() {
               ? "Ascend the royal ramp towards the upper palaces (Hathi Pol)."
               : scene === "courtyard"
               ? "Walk up the marble stairs to enter the Diwan-i-Aam throne hall."
-              : "Approach and inspect the imperial golden throne dais."}
+              : scene === "interior"
+              ? "Inspect the golden throne, then proceed right to the Sheesh Mahal corridor."
+              : scene === "sheesh_passage"
+              ? "Walk through the arched gallery towards the golden entrance of Sheesh Mahal."
+              : "Approach and examine the central marble fountain and glittering mirror ceiling."}
           </div>
         </div>
 
@@ -510,28 +670,20 @@ export default function MughalGameScreen() {
         </div>
 
         {/* Minimap Box */}
-        <div className="bg-[#fff9ea] border-2 border-black rounded-lg p-3 w-40 h-32 shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex flex-col">
-          <div className="flex-1 grid grid-cols-4 grid-rows-4 gap-1 p-1 bg-amber-50/50 rounded">
-             {/* Dynamic Minimap based on current scene */}
-             <div className="bg-transparent"></div>
-             <div className={scene === "interior" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div> {/* Diwan-i-Aam Interior */}
-             <div className="bg-amber-100 rounded-sm"></div>
+        <div className="bg-[#fff9ea] border-2 border-black rounded-lg p-3 w-44 h-36 shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex flex-col">
+          <div className="flex-1 grid grid-cols-3 grid-rows-3 gap-1 p-1 bg-amber-50/50 rounded">
+             {/* Dynamic Minimap of Agra Fort complex */}
+             <div className={scene === "sheesh_mahal" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div> {/* Sheesh Mahal */}
+             <div className={scene === "sheesh_passage" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div> {/* Sheesh Corridor */}
              <div className="bg-transparent"></div>
              
              <div className="bg-transparent"></div>
-             <div className={scene === "courtyard" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div> {/* Diwan-i-Aam Courtyard */}
-             <div className="bg-amber-100 rounded-sm"></div>
-             <div className="bg-transparent"></div>
+             <div className={scene === "interior" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div> {/* Diwan-i-Aam Interior */}
+             <div className={scene === "courtyard" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div> {/* Courtyard */}
 
              <div className="bg-transparent"></div>
              <div className={scene === "passage" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div> {/* Ramp Passage */}
-             <div className="bg-amber-100 rounded-sm"></div>
-             <div className="bg-transparent"></div>
-
-             <div className="bg-transparent"></div>
              <div className={scene === "gate" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div> {/* Amar Singh Gate */}
-             <div className="bg-transparent"></div>
-             <div className="bg-transparent"></div>
           </div>
         </div>
       </div>
@@ -542,7 +694,7 @@ export default function MughalGameScreen() {
           <span className="text-white text-[12px] font-bold tracking-wider">WASD / arrows</span>
           <span className="text-gray-400 text-[10px]">- move -</span>
           <span className="text-white text-[12px] font-bold tracking-wider">E</span>
-          <span className="text-gray-400 text-[10px]">- enter/talk</span>
+          <span className="text-gray-400 text-[10px]">- enter/inspect</span>
         </div>
       </div>
 
@@ -552,10 +704,10 @@ export default function MughalGameScreen() {
           <span className="text-[11px] font-bold text-black"><span className="text-amber-600 mr-1">⚡</span>33 generations</span>
         </div>
         <div className="bg-[#fff9ea] border-2 border-black rounded px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)]">
-          <span className="text-[11px] font-bold text-black"><span className="text-amber-600 mr-1">👁</span>8 screens</span>
+          <span className="text-[11px] font-bold text-black"><span className="text-amber-600 mr-1">👁</span>10 screens</span>
         </div>
         <div className="bg-[#fff9ea] border-2 border-black rounded px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)]">
-          <span className="text-[11px] font-bold text-black"><span className="text-amber-600 mr-1">🚪</span>rooms 4/4</span>
+          <span className="text-[11px] font-bold text-black"><span className="text-amber-600 mr-1">🚪</span>rooms 6/6</span>
         </div>
       </div>
 
