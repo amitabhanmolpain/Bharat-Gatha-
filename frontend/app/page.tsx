@@ -106,7 +106,7 @@ export default function Home() {
 
             {/* Magic Link Button */}
             <Link href="/dashboard" className="w-full flex items-center justify-between py-3 px-4 bg-gradient-to-b from-[#a76a26] to-[#6a3809] hover:from-[#b8762e] hover:to-[#7a420b] border-[1.5px] border-[#482806] rounded shadow-[0_4px_12px_rgba(0,0,0,0.5)] transition-all font-bold text-[#ffeccc] text-[12px] tracking-[0.1em] uppercase">
-              <span className="flex-1 text-center pl-4">Send Magic Link</span>
+              <span className="flex-1 text-center pl-4">Sign Up</span>
               <svg className="w-4 h-4 text-[#ffdda3] opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 19v-8.93a2 2 0 01.89-1.664l7-4.666a2 2 0 012.22 0l7 4.666A2 2 0 0121 10.07V19M3 19a2 2 0 002 2h14a2 2 0 002-2M3 19l6.75-4.5M21 19l-6.75-4.5M3 10l6.75 4.5M21 10l-6.75 4.5m0 0l-1.14.76a2 2 0 01-2.22 0l-1.14-.76"></path></svg>
             </Link>
           </div>
