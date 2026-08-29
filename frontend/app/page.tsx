@@ -27,7 +27,7 @@ export default function Home() {
       {backgrounds.map((bg, index) => (
         <div 
           key={bg}
-          className={`absolute inset-0 z-0 bg-cover bg-center bg-no-repeat transition-opacity duration-[2000ms] ease-in-out ${index === currentImageIndex ? 'opacity-90' : 'opacity-0'}`}
+          className={`absolute inset-0 z-0 bg-cover bg-[center_top] bg-no-repeat transition-opacity duration-[2000ms] ease-in-out ${index === currentImageIndex ? 'opacity-90' : 'opacity-0'}`}
           style={{ backgroundImage: `url('${bg}')` }}
         ></div>
       ))}
