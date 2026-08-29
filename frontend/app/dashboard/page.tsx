@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useTheme } from "./ThemeContext";
 
 export default function GamesDashboard() {
@@ -20,7 +21,7 @@ export default function GamesDashboard() {
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl">
         {[
-          { region: "Agra/Delhi", title: "Great Mughal Empire", description: "Step into the grand courts of Agra and shape the destiny of an empire. Intrigues, alliances, and conquests await.", image: "/bg-mughal.jpg" },
+          { region: "Agra/Delhi", title: "Great Mughal Empire", description: "Step into the grand courts of Agra and shape the destiny of an empire. Intrigues, alliances, and conquests await.", image: "/bg-mughal.jpg", href: "/play/mughal" },
           { region: "Rajasthan", title: "Great Rajputana", description: "Defend your honor in the desert forts of Rajasthan. A tale of valor, sacrifice, and legendary warriors.", image: "/bg-rajputana.jpg" },
           { region: "Karnataka", title: "Great Vijayanagara", description: "Explore the wealthy and culturally rich capital of the southern peninsula. Navigate trade, art, and warfare.", image: "/bg-vijayanagara.jpg" }
         ].map((campaign, idx) => (
@@ -41,10 +42,16 @@ export default function GamesDashboard() {
               <p className={`text-[13px] leading-relaxed mb-6 flex-1 transition-colors duration-500 ${isDark ? 'text-[#a89985]' : 'text-[#7a6f5e]'}`}>{campaign.description}</p>
             </div>
 
-            <button className={`w-full mt-auto flex items-center justify-center gap-2 py-3 px-6 border-[1.5px] rounded-lg shadow-md transition-all font-bold text-[11px] tracking-[0.1em] uppercase z-10 ${isDark ? 'bg-[#16120e] hover:bg-[#1a1510] border-[#483824] hover:border-[#91714b] text-[#e4c794]' : 'bg-[#fcf8f2] hover:bg-[#f5ebd9] border-[#e3d5c1] hover:border-[#c9a776] text-[#8a6835]'}`}>
-              <svg className="w-4 h-4 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-              Play Story
-            </button>
+            {campaign.href ? (
+              <Link href={campaign.href} className={`w-full mt-auto flex items-center justify-center gap-2 py-3 px-6 border-[1.5px] rounded-lg shadow-md transition-all font-bold text-[11px] tracking-[0.1em] uppercase z-10 ${isDark ? 'bg-[#16120e] hover:bg-[#1a1510] border-[#483824] hover:border-[#91714b] text-[#e4c794]' : 'bg-[#fcf8f2] hover:bg-[#f5ebd9] border-[#e3d5c1] hover:border-[#c9a776] text-[#8a6835]'}`}>
+                <svg className="w-4 h-4 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Play Story
+              </Link>
+            ) : (
+              <button className={`w-full mt-auto flex items-center justify-center gap-2 py-3 px-6 border-[1.5px] rounded-lg shadow-md transition-all font-bold text-[11px] tracking-[0.1em] uppercase z-10 ${isDark ? 'bg-[#16120e] hover:bg-[#1a1510] border-[#483824] hover:border-[#5a4834] text-[#a89985] cursor-not-allowed' : 'bg-[#fcf8f2] border-[#e3d5c1] text-[#a89985] cursor-not-allowed'}`} disabled>
+                Coming Soon
+              </button>
+            )}
 
             {/* Decorative background blur */}
             <div className={`absolute inset-0 blur-3xl rounded-full opacity-0 group-hover:opacity-10 transition-opacity duration-700 pointer-events-none ${isDark ? 'bg-[#91714b]' : 'bg-[#c9a776]'}`}></div>
