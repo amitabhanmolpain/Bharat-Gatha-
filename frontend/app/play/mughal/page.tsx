@@ -6,21 +6,22 @@ import { useRouter } from "next/navigation";
 
 export default function MughalGameScreen() {
   const [isLoading, setIsLoading] = useState(true);
-  const [playerPos, setPlayerPos] = useState({ x: 50, y: 82 });
+  const [playerPos, setPlayerPos] = useState({ x: 50, y: 85 });
   const [facingLeft, setFacingLeft] = useState(false);
   const [isWalking, setIsWalking] = useState(false);
   const [walkPhase, setWalkPhase] = useState(0);
   const [showDialogue, setShowDialogue] = useState(false);
+  const [cluesFound, setCluesFound] = useState(0);
   const router = useRouter();
 
-  // Guard NPC Position (Left of the arched entrance gate)
-  const guardPos = { x: 44.5, y: 55.5 };
+  // Guard NPC Position (Standing firmly on the bridge stone pavement to the left of the gate)
+  const guardPos = { x: 43.5, y: 72.0 };
 
   // Calculate distance to guard for interaction prompt
   const distToGuard = Math.sqrt(
     Math.pow(playerPos.x - guardPos.x, 2) + Math.pow(playerPos.y - guardPos.y, 2)
   );
-  const isNearGuard = distToGuard < 11;
+  const isNearGuard = distToGuard < 9.0;
 
   useEffect(() => {
     // Simulate loading screen
@@ -39,7 +40,13 @@ export default function MughalGameScreen() {
     const onKeyDown = (e: KeyboardEvent) => {
       keysHeld.add(e.key.toLowerCase());
       if (e.key.toLowerCase() === "e" && isNearGuard) {
-        setShowDialogue((prev) => !prev);
+        setShowDialogue((prev) => {
+          if (!prev && cluesFound === 0) setCluesFound(1);
+          return !prev;
+        });
+      }
+      if (e.key === "Escape") {
+        setShowDialogue(false);
       }
     };
 
@@ -56,7 +63,7 @@ export default function MughalGameScreen() {
     const gameLoop = () => {
       let dx = 0;
       let dy = 0;
-      const speed = 0.35; // Smooth movement speed per frame
+      const speed = 0.35; // Smooth 60fps movement speed
 
       if (keysHeld.has("arrowleft") || keysHeld.has("a")) dx -= speed;
       if (keysHeld.has("arrowright") || keysHeld.has("d")) dx += speed;
@@ -74,13 +81,13 @@ export default function MughalGameScreen() {
         setWalkPhase(localWalkTimer);
 
         setPlayerPos((prev) => {
-          // Dynamic bridge width: narrower towards gate (y: 54), wider towards bottom (y: 92)
-          const rampProgress = (prev.y - 54) / (92 - 54); // 0 at gate, 1 at bottom
-          const minX = 40 - rampProgress * 3;
-          const maxX = 60 + rampProgress * 3;
+          // Dynamic bridge width along perspective ramp
+          const rampProgress = Math.max(0, Math.min(1, (prev.y - 71.5) / (92.0 - 71.5)));
+          const minX = 42.0 - rampProgress * 4.0;
+          const maxX = 58.0 + rampProgress * 4.0;
 
           const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
-          const nextY = Math.max(54, Math.min(92, prev.y + dy));
+          const nextY = Math.max(71.5, Math.min(92.0, prev.y + dy));
           return { x: nextX, y: nextY };
         });
       }
@@ -95,7 +102,7 @@ export default function MughalGameScreen() {
       window.removeEventListener("keyup", onKeyUp);
       cancelAnimationFrame(animationFrameId);
     };
-  }, [isLoading, isNearGuard]);
+  }, [isLoading, isNearGuard, cluesFound]);
 
   if (isLoading) {
     return (
@@ -115,10 +122,10 @@ export default function MughalGameScreen() {
     );
   }
 
-  // Perspective scale: scale slightly down when further away near gate
-  const depthScale = 0.85 + ((playerPos.y - 54) / 38) * 0.22;
-  const walkBob = isWalking ? Math.sin(walkPhase) * 2.0 : 0;
-  const walkSway = isWalking ? Math.sin(walkPhase * 0.5) * 1.8 : 0;
+  // Perspective depth scaling based on bridge depth
+  const depthScale = 0.90 + ((playerPos.y - 71.5) / 20.5) * 0.20;
+  const walkBob = isWalking ? Math.sin(walkPhase) * 1.8 : 0;
+  const walkSway = isWalking ? Math.sin(walkPhase * 0.5) * 1.5 : 0;
 
   return (
     <div className="w-full h-screen relative overflow-hidden font-sans select-none bg-black">
@@ -133,15 +140,20 @@ export default function MughalGameScreen() {
       {/* Screen Darkening/Vignette Overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/30 pointer-events-none"></div>
 
-      {/* --- MUGHAL ROYAL GUARD NPC (Near Entrance Gate) --- */}
+      {/* --- MUGHAL ROYAL GUARD NPC (Standing on Ground at Gate Entrance) --- */}
       <div
         className="absolute pointer-events-auto cursor-pointer z-10 flex flex-col items-center"
         style={{
           left: `${guardPos.x}%`,
           top: `${guardPos.y}%`,
-          transform: `translate(-50%, -96%) scale(0.88)`,
+          transform: `translate(-50%, -96%) scale(0.92)`,
         }}
-        onClick={() => setShowDialogue((prev) => !prev)}
+        onClick={() => {
+          setShowDialogue((prev) => {
+            if (!prev && cluesFound === 0) setCluesFound(1);
+            return !prev;
+          });
+        }}
       >
         {/* Guard Proximity Indicator / Speech Bubble */}
         {isNearGuard && !showDialogue && (
@@ -151,14 +163,11 @@ export default function MughalGameScreen() {
           </div>
         )}
 
-        {/* Foot Shadow */}
-        <div className="absolute bottom-1 w-10 h-2.5 bg-black/45 rounded-full blur-[1px]"></div>
-
         {/* Guard Sprite */}
         <img
           src="/guard.png"
           alt="Mughal Guard NPC"
-          className="w-24 h-24 object-contain drop-shadow-md"
+          className="w-24 h-24 object-contain"
           style={{ imageRendering: "pixelated" }}
         />
       </div>
@@ -169,13 +178,10 @@ export default function MughalGameScreen() {
         style={{
           left: `${playerPos.x}%`,
           top: `${playerPos.y}%`,
-          transform: `translate(-50%, -98%) scale(${depthScale}) scaleX(${facingLeft ? -1 : 1})`,
+          transform: `translate(-50%, -96%) scale(${depthScale}) scaleX(${facingLeft ? -1 : 1})`,
         }}
       >
-        {/* Soft Dynamic Foot Shadow (No grey background artifacts) */}
-        <div className="absolute bottom-1 w-11 h-2.5 bg-black/40 rounded-full blur-[1px]"></div>
-
-        {/* Character Sprite Image with smooth footstep cadence */}
+        {/* Character Sprite Image with smooth footstep cadence (No grey background artifacts) */}
         <img 
           src="/player.png" 
           alt="Main Hero" 
@@ -216,7 +222,7 @@ export default function MughalGameScreen() {
                   onClick={() => setShowDialogue(false)}
                   className="bg-amber-400 hover:bg-amber-300 border-2 border-black rounded-md px-3 py-1 text-xs font-bold text-black shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-0.5"
                 >
-                  &ldquo;Thank you, guard. I must enter.&rdquo;
+                  &ldquo;Thank you, guard. I will proceed.&rdquo;
                 </button>
               </div>
             </div>
@@ -233,8 +239,8 @@ export default function MughalGameScreen() {
           <div className="text-[10px] font-bold text-gray-500 tracking-wider uppercase mb-2">
             Mughal Empire - The Agra Fort..
           </div>
-          <div className="text-[14px] font-bold text-black leading-snug">
-            Find the true identity and secret location of your missing friend.
+          <div className="text-[15px] font-bold text-black leading-snug">
+            {cluesFound === 0 ? "Go talk with the guard." : "Proceed through the Amar Singh Gate to find your friend."}
           </div>
         </div>
 
@@ -242,11 +248,11 @@ export default function MughalGameScreen() {
         <div className="bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 w-max shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex items-center gap-3">
           <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
           <div className="flex gap-1">
-            <div className="w-3 h-1 bg-amber-400"></div>
-            <div className="w-3 h-1 bg-amber-200"></div>
-            <div className="w-3 h-1 bg-amber-200"></div>
+            <div className={`w-3 h-1 ${cluesFound >= 1 ? "bg-amber-500" : "bg-amber-200"}`}></div>
+            <div className={`w-3 h-1 ${cluesFound >= 2 ? "bg-amber-500" : "bg-amber-200"}`}></div>
+            <div className={`w-3 h-1 ${cluesFound >= 3 ? "bg-amber-500" : "bg-amber-200"}`}></div>
           </div>
-          <span className="text-[12px] font-bold text-black">0/3 clues</span>
+          <span className="text-[12px] font-bold text-black">{cluesFound}/3 clues</span>
         </div>
       </div>
 
