@@ -121,7 +121,7 @@ export default function MughalGameScreen() {
               setIsTransitioning(true);
               setTimeout(() => {
                 setScene("courtyard");
-                setPlayerPos({ x: 22.0, y: 55.0 });
+                setPlayerPos({ x: 18.0, y: 72.0 });
                 setIsTransitioning(false);
                 if (cluesFound < 3) setCluesFound(3);
               }, 400);
@@ -140,16 +140,16 @@ export default function MughalGameScreen() {
             return { x: nextX, y: nextY };
           } else {
             // In Courtyard Scene (Diwan-i-Aam & Anguri Bagh Garden)
-            const minX = 14.0;
-            const maxX = 88.0;
-            const minY = 45.0; // Terrace steps
-            const maxY = 64.0; // Lower garden walkway
+            const minX = 8.0;
+            const maxX = 92.0;
+            const minY = 40.0; // White marble palace terrace
+            const maxY = 76.0; // Foreground marble avenue
 
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
 
-            // Walk to left edge to return to passage
-            if (nextX <= 15.0 && nextY >= 58.0) {
+            // Walk to bottom-left entrance edge to return to passage ramp
+            if (nextX <= 9.0 && nextY >= 68.0) {
               setIsTransitioning(true);
               setTimeout(() => {
                 setScene("passage");
@@ -198,7 +198,7 @@ export default function MughalGameScreen() {
     ? 1.22 + ((playerPos.y - 71.5) / 20.5) * 0.28
     : scene === "passage"
     ? 1.05 + ((playerPos.y - 58.0) / 33.0) * 0.65
-    : 1.10 + ((playerPos.y - 45.0) / 19.0) * 0.35;
+    : 0.90 + ((playerPos.y - 40.0) / 36.0) * 0.50;
 
   const walkBob = isWalking ? Math.sin(walkPhase) * 1.8 : 0;
   const walkSway = isWalking ? Math.sin(walkPhase * 0.5) * 1.5 : 0;
