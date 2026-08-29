@@ -692,7 +692,7 @@ export default function MughalGameScreen() {
           <div className="bg-[#fff9ea] border-3 border-black rounded-2xl p-6 shadow-[8px_8px_0_0_rgba(0,0,0,1)] max-w-lg w-full flex flex-col gap-4 relative animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b-2 border-amber-200 pb-2">
               <span className="text-[12px] font-bold text-amber-900 uppercase tracking-widest flex items-center gap-2">
-                <span>🏛️</span> Khas Mahal - Aramgah-i-Muqaddas
+                <span>🏛️</span> Khas Mahal — Yamuna River & Taj Mahal View
               </span>
               <button 
                 onClick={() => setShowKhasModal(false)}
@@ -702,18 +702,21 @@ export default function MughalGameScreen() {
               </button>
             </div>
             <div className="text-black font-serif text-[14px] leading-relaxed">
-              <p className="mb-2 text-amber-950 font-bold">
-                &ldquo;From this pristine white marble pavilion flanked by curved golden Bangaldar domes, you gaze across the Yamuna River at the distant silhouette of the Taj Mahal! Beside the lotus pool lies an ancient royal astrolabe.&rdquo;
+              <p className="mb-2 text-amber-950">
+                &ldquo;As you gaze out across the tranquil Yamuna River from the royal pavilion, the shimmering white domes of the Taj Mahal appear across the water. A message left on the carved marble balustrade reads:&rdquo;
               </p>
-              <p className="text-xs font-sans text-amber-900 font-semibold bg-amber-100/70 border border-amber-300 p-2 rounded">
-                ★ Imperial Discovery: Shah Jahan&apos;s private palace offers the ultimate view of the empire&apos;s heart and riverbanks.
+              <div className="my-3 p-3 bg-amber-100 border-2 border-amber-500 rounded-xl text-amber-950 font-bold text-center text-[15px] shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
+                &ldquo;Go outside across the river to the Taj Mahal for your next clue!&rdquo;
+              </div>
+              <p className="text-xs font-sans text-amber-900 font-semibold bg-amber-50 border border-amber-300 p-2 rounded">
+                ★ <strong className="text-black">Next Quest Milestone:</strong> Your companion has crossed the Yamuna towards the Taj Mahal!
               </p>
             </div>
             <button 
               onClick={() => setShowKhasModal(false)}
-              className="bg-amber-400 hover:bg-amber-300 border-2 border-black rounded-lg py-2 text-xs font-bold text-black shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5"
+              className="bg-amber-400 hover:bg-amber-300 border-2 border-black rounded-lg py-2.5 text-xs font-bold text-black shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5"
             >
-              Enjoy the Yamuna River View
+              Acknowledge Clue & Continue
             </button>
           </div>
         </div>
@@ -790,7 +793,7 @@ export default function MughalGameScreen() {
               ? "Approach and examine the central marble fountain and glittering mirror ceiling."
               : scene === "brown_passage"
               ? "Proceed through the carved red sandstone gallery towards Khas Mahal."
-              : "Explore the royal pavilion overlooking the Yamuna River and inspect the lotus pool."}
+              : "Go outside across the river to the Taj Mahal for your next clue."}
           </div>
         </div>
 
