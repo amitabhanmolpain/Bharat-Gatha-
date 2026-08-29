@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 export default function MughalGameScreen() {
   const [isLoading, setIsLoading] = useState(true);
-  const [scene, setScene] = useState<"gate" | "passage">("gate");
+  const [scene, setScene] = useState<"gate" | "passage" | "courtyard">("gate");
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [playerPos, setPlayerPos] = useState({ x: 50, y: 85 });
   const [facingLeft, setFacingLeft] = useState(false);
@@ -104,7 +104,7 @@ export default function MughalGameScreen() {
             }
 
             return { x: nextX, y: nextY };
-          } else {
+          } else if (scene === "passage") {
             // In Inner Passage Scene: Curving stone ramp ascending towards Elephant Gate
             const t = Math.max(0, Math.min(1, (prev.y - 58.0) / (91.0 - 58.0))); // 0 at top gate, 1 at bottom
             const centerX = 52.0 - (1.0 - Math.pow(1.0 - t, 1.6)) * 19.0;
@@ -116,12 +116,44 @@ export default function MughalGameScreen() {
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             const nextY = Math.max(58.0, Math.min(92.0, prev.y + dy));
 
+            // Walk up into the Elephant Gate arch to enter Diwan-i-Aam & Anguri Bagh
+            if (nextY <= 59.2 && nextX >= 48.0 && nextX <= 56.0) {
+              setIsTransitioning(true);
+              setTimeout(() => {
+                setScene("courtyard");
+                setPlayerPos({ x: 22.0, y: 55.0 });
+                setIsTransitioning(false);
+                if (cluesFound < 3) setCluesFound(3);
+              }, 400);
+            }
+
             // Walk back down to return to gate
             if (nextY >= 91.5) {
               setIsTransitioning(true);
               setTimeout(() => {
                 setScene("gate");
                 setPlayerPos({ x: 50.0, y: 73.5 });
+                setIsTransitioning(false);
+              }, 400);
+            }
+
+            return { x: nextX, y: nextY };
+          } else {
+            // In Courtyard Scene (Diwan-i-Aam & Anguri Bagh Garden)
+            const minX = 14.0;
+            const maxX = 88.0;
+            const minY = 45.0; // Terrace steps
+            const maxY = 64.0; // Lower garden walkway
+
+            const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
+            const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
+
+            // Walk to left edge to return to passage
+            if (nextX <= 15.0 && nextY >= 58.0) {
+              setIsTransitioning(true);
+              setTimeout(() => {
+                setScene("passage");
+                setPlayerPos({ x: 51.0, y: 61.0 });
                 setIsTransitioning(false);
               }, 400);
             }
@@ -164,17 +196,31 @@ export default function MughalGameScreen() {
   // Perspective depth scaling (Enlarged for clear prominence and hero presence)
   const depthScale = scene === "gate"
     ? 1.22 + ((playerPos.y - 71.5) / 20.5) * 0.28
-    : 1.05 + ((playerPos.y - 58.0) / 33.0) * 0.65;
+    : scene === "passage"
+    ? 1.05 + ((playerPos.y - 58.0) / 33.0) * 0.65
+    : 1.10 + ((playerPos.y - 45.0) / 19.0) * 0.35;
 
   const walkBob = isWalking ? Math.sin(walkPhase) * 1.8 : 0;
   const walkSway = isWalking ? Math.sin(walkPhase * 0.5) * 1.5 : 0;
 
+  const getBackgroundSrc = () => {
+    if (scene === "gate") return "/bg-agra-fort.jpg";
+    if (scene === "passage") return "/bg-agra-passage.jpg";
+    return "/bg-agra-courtyard.jpg";
+  };
+
+  const getTransitionLabel = () => {
+    if (scene === "gate") return "Entering Inner Ramp Passage...";
+    if (scene === "passage") return playerPos.y <= 62 ? "Entering Diwan-i-Aam & Anguri Bagh..." : "Returning to Outer Gate...";
+    return "Returning to Inner Passage...";
+  };
+
   return (
     <div className="w-full h-screen relative overflow-hidden font-sans select-none bg-black">
       
-      {/* Game Background (Agra Fort Gate or Inner Passage) */}
+      {/* Game Background (Agra Fort Gate, Passage, or Courtyard) */}
       <img 
-        src={scene === "gate" ? "/bg-agra-fort.jpg" : "/bg-agra-passage.jpg"} 
+        src={getBackgroundSrc()} 
         alt="Agra Fort Game World" 
         className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none transition-opacity duration-300"
       />
@@ -186,7 +232,7 @@ export default function MughalGameScreen() {
       {isTransitioning && (
         <div className="absolute inset-0 bg-black animate-in fade-in duration-300 z-40 pointer-events-none flex items-center justify-center">
           <span className="text-amber-300 text-sm font-serif tracking-widest uppercase">
-            {scene === "gate" ? "Entering Inner Ramp Passage..." : "Returning to Outer Gate..."}
+            {getTransitionLabel()}
           </span>
         </div>
       )}
@@ -225,17 +271,28 @@ export default function MughalGameScreen() {
         </div>
       )}
 
-      {/* Gate Entrance Prompt when player approaches arch in gate scene */}
+      {/* Navigation Prompts */}
       {scene === "gate" && playerPos.y <= 74.0 && (
         <div className="absolute top-[63%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
           ▲ Walk forward into the archway
         </div>
       )}
 
-      {/* Passage Exit Prompt when near bottom in passage scene */}
+      {scene === "passage" && playerPos.y <= 62.0 && (
+        <div className="absolute top-[48%] left-[52%] -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          ▲ Enter Elephant Gate (Hathi Pol)
+        </div>
+      )}
+
       {scene === "passage" && playerPos.y >= 88.0 && (
         <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
           ▼ Walk down to return to Amar Singh Gate
+        </div>
+      )}
+
+      {scene === "courtyard" && playerPos.x <= 20.0 && (
+        <div className="absolute bottom-[20%] left-6 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          ◄ Walk left to return to passage ramp
         </div>
       )}
 
@@ -304,14 +361,16 @@ export default function MughalGameScreen() {
         {/* Main Quest Box */}
         <div className="bg-[#fff9ea] border-2 border-black rounded-lg p-4 shadow-[4px_4px_0_0_rgba(0,0,0,1)] w-80">
           <div className="text-[10px] font-bold text-gray-500 tracking-wider uppercase mb-2">
-            Mughal Empire - {scene === "gate" ? "Amar Singh Gate" : "Inner Ramp Passage"}
+            Mughal Empire - {scene === "gate" ? "Amar Singh Gate" : scene === "passage" ? "Inner Ramp Passage" : "Diwan-i-Aam & Anguri Bagh"}
           </div>
           <div className="text-[15px] font-bold text-black leading-snug">
             {scene === "gate"
               ? cluesFound === 0
                 ? "Go talk with the guard."
                 : "Walk into the archway to ascend the fort passage."
-              : "Ascend the royal ramp towards the upper palaces (Hathi Pol)."}
+              : scene === "passage"
+              ? "Ascend the royal ramp towards the upper palaces (Hathi Pol)."
+              : "Explore the imperial garden courtyard and inspect the marble pavilion."}
           </div>
         </div>
 
@@ -348,20 +407,25 @@ export default function MughalGameScreen() {
         {/* Minimap Box */}
         <div className="bg-[#fff9ea] border-2 border-black rounded-lg p-3 w-40 h-32 shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex flex-col">
           <div className="flex-1 grid grid-cols-4 grid-rows-4 gap-1 p-1 bg-amber-50/50 rounded">
-             {/* Dummy map grid cells */}
+             {/* Dynamic Minimap based on current scene */}
              <div className="bg-transparent"></div>
-             <div className="bg-amber-100 rounded-sm"></div>
+             <div className={scene === "courtyard" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div> {/* Diwan-i-Aam / Courtyard */}
              <div className="bg-amber-100 rounded-sm"></div>
              <div className="bg-transparent"></div>
              
-             <div className="bg-amber-100 rounded-sm"></div>
-             <div className="bg-amber-200 rounded-sm"></div>
+             <div className="bg-transparent"></div>
+             <div className={scene === "passage" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div> {/* Ramp Passage */}
              <div className="bg-amber-100 rounded-sm"></div>
              <div className="bg-transparent"></div>
 
              <div className="bg-transparent"></div>
-             <div className="bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600"></div> {/* Current player location */}
+             <div className={scene === "gate" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div> {/* Amar Singh Gate */}
              <div className="bg-amber-100 rounded-sm"></div>
+             <div className="bg-transparent"></div>
+
+             <div className="bg-transparent"></div>
+             <div className="bg-transparent"></div>
+             <div className="bg-transparent"></div>
              <div className="bg-transparent"></div>
           </div>
         </div>
