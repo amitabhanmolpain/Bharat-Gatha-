@@ -40,6 +40,72 @@ export default function MughalGameScreen() {
   const [showCampaignComplete, setShowCampaignComplete] = useState(false);
   const router = useRouter();
 
+  // Handle URL Endpoints and Save State
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlScene = urlParams.get('scene');
+      const saved = localStorage.getItem('mughal_save');
+      
+      let finalScene = urlScene || 'gate';
+
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (!urlScene) {
+             finalScene = parsed.scene || 'gate';
+             if (parsed.playerPos) setPlayerPos(parsed.playerPos);
+          }
+          if (parsed.cluesFound !== undefined) setCluesFound(parsed.cluesFound);
+          if (parsed.isCalligraphySolved !== undefined) setIsCalligraphySolved(parsed.isCalligraphySolved);
+          if (parsed.isSymmetrySolved !== undefined) setIsSymmetrySolved(parsed.isSymmetrySolved);
+          if (parsed.isMausoleumExplored !== undefined) setIsMausoleumExplored(parsed.isMausoleumExplored);
+          if (parsed.isArchaeologistTalked !== undefined) setIsArchaeologistTalked(parsed.isArchaeologistTalked);
+        } catch (e) {
+          console.error("Failed to load save state", e);
+        }
+      }
+      
+      setScene(finalScene as any);
+    }
+    
+    // Simulate loading screen
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 2500);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Sync endpoint URL on scene change
+  useEffect(() => {
+    if (typeof window !== 'undefined' && scene !== 'gate') {
+      window.history.replaceState(null, '', `?scene=${scene}`);
+    } else if (typeof window !== 'undefined' && scene === 'gate') {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, [scene]);
+
+  // Save game progress automatically on beforeunload
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      const saveState = {
+        scene,
+        playerPos,
+        cluesFound,
+        isCalligraphySolved,
+        isSymmetrySolved,
+        isMausoleumExplored,
+        isArchaeologistTalked
+      };
+      localStorage.setItem('mughal_save', JSON.stringify(saveState));
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [scene, playerPos, cluesFound, isCalligraphySolved, isSymmetrySolved, isMausoleumExplored, isArchaeologistTalked]);
+
+
   // Guard NPC Position (In 'gate' scene)
   const guardPos = { x: 43.5, y: 72.0 };
 
@@ -80,13 +146,7 @@ export default function MughalGameScreen() {
   // Lahori Gate Archway Proximity (In 'red_fort_lahori' scene)
   const isNearLahoriGate = scene === "red_fort_lahori" && playerPos.y <= 58.0 && playerPos.x >= 45.0 && playerPos.x <= 55.0;
 
-  useEffect(() => {
-    // Simulate loading screen
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 2500);
-    return () => clearTimeout(timer);
-  }, []);
+
 
   // Smooth continuous 60fps movement game loop
   useEffect(() => {
@@ -448,20 +508,27 @@ export default function MughalGameScreen() {
           } else if (scene === "taj_charbagh") {
             const minX = 15.0;
             const maxX = 85.0;
-            const minY = 40.0;
+            const minY = 15.0;
             const maxY = 90.0;
 
             let nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             let nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
 
-            // Central water pool obstacle: block moving directly onto it (x in [48, 52] and y in [48, 52])
-            if (nextX >= 48.0 && nextX <= 52.0 && nextY >= 48.0 && nextY <= 52.0) {
-              nextX = prev.x;
-              nextY = prev.y;
+            // Central water pool obstacle: block moving directly onto it (x in [48.5, 51.5] and y in [48.5, 51.5])
+            // Independent axis checking to allow sliding along the edges
+            if (nextX >= 48.5 && nextX <= 51.5 && nextY >= 48.5 && nextY <= 51.5) {
+              if (prev.x < 48.5 || prev.x > 51.5) {
+                nextX = prev.x; // Block horizontal entry
+              } else if (prev.y < 48.5 || prev.y > 51.5) {
+                nextY = prev.y; // Block vertical entry
+              } else {
+                // If somehow spawned inside, push them out
+                nextY = 51.6;
+              }
             }
 
             // Exiting to mausoleum (requires symmetry solved)
-            if (nextY <= 41.0 && nextX >= 45.0 && nextX <= 55.0) {
+            if (nextY <= 16.0 && nextX >= 45.0 && nextX <= 55.0) {
               if (isSymmetrySolved) {
                 setIsTransitioning(true);
                 setTimeout(() => {
@@ -470,7 +537,7 @@ export default function MughalGameScreen() {
                   setIsTransitioning(false);
                 }, 400);
               } else {
-                return { x: prev.x, y: Math.max(42.0, prev.y) };
+                return { x: prev.x, y: Math.max(17.0, prev.y) };
               }
             }
 
@@ -831,8 +898,8 @@ export default function MughalGameScreen() {
         </div>
       )}
 
-      {scene === "taj_charbagh" && playerPos.y <= 42.0 && isSymmetrySolved && (
-        <div className="absolute top-[32%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+      {scene === "taj_charbagh" && playerPos.y <= 20.0 && isSymmetrySolved && (
+        <div className="absolute top-[12%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
           ▲ Walk up to enter the Taj Mahal Mausoleum
         </div>
       )}
