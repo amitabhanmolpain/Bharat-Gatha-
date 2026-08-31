@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 export default function MughalGameScreen() {
   const [isLoading, setIsLoading] = useState(true);
-  const [scene, setScene] = useState<"gate" | "passage" | "courtyard" | "interior" | "sheesh_passage" | "sheesh_mahal" | "brown_passage" | "khas_mahal" | "taj_gate" | "taj_charbagh" | "taj_mausoleum" | "taj_mehtab_bagh" | "red_fort_lahori">("gate");
+  const [scene, setScene] = useState<"gate" | "passage" | "courtyard" | "interior" | "sheesh_passage" | "sheesh_mahal" | "brown_passage" | "khas_mahal" | "taj_gate" | "taj_charbagh" | "taj_exterior" | "taj_mausoleum" | "taj_mehtab_bagh" | "red_fort_lahori">("gate");
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [playerPos, setPlayerPos] = useState({ x: 50, y: 85 });
   const [facingLeft, setFacingLeft] = useState(false);
@@ -137,6 +137,9 @@ export default function MughalGameScreen() {
   // Symmetry Pool Proximity (In 'taj_charbagh' scene)
   const isNearPool = scene === "taj_charbagh" && playerPos.y <= 58.0 && playerPos.y >= 42.0 && playerPos.x >= 42.0 && playerPos.x <= 58.0;
 
+  // Outside Taj Pishtaq Arch Proximity (In 'taj_exterior' scene)
+  const isNearTajPishtaq = scene === "taj_exterior" && playerPos.y <= 75.0 && playerPos.x >= 42.0 && playerPos.x <= 58.0;
+
   // Cenotaphs Proximity (In 'taj_mausoleum' scene)
   const isNearCenotaphs = scene === "taj_mausoleum" && playerPos.y <= 62.0 && playerPos.y >= 38.0 && playerPos.x >= 38.0 && playerPos.x <= 62.0;
 
@@ -183,6 +186,14 @@ export default function MughalGameScreen() {
         }
         if (isNearPool && !isSymmetrySolved) {
           setShowSymmetryPuzzle(true);
+        }
+        if (isNearTajPishtaq) {
+          setIsTransitioning(true);
+          setTimeout(() => {
+            setScene("taj_mausoleum");
+            setPlayerPos({ x: 50.0, y: 86.0 });
+            setIsTransitioning(false);
+          }, 400);
         }
         if (isNearCenotaphs && !isMausoleumExplored) {
           setShowMausoleumModal(true);
@@ -527,13 +538,13 @@ export default function MughalGameScreen() {
               }
             }
 
-            // Exiting to mausoleum (requires symmetry solved)
+            // Exiting to Taj Mahal outside exterior terrace (requires symmetry solved)
             if (nextY <= 16.0 && nextX >= 45.0 && nextX <= 55.0) {
               if (isSymmetrySolved) {
                 setIsTransitioning(true);
                 setTimeout(() => {
-                  setScene("taj_mausoleum");
-                  setPlayerPos({ x: 50.0, y: 86.0 });
+                  setScene("taj_exterior");
+                  setPlayerPos({ x: 50.0, y: 88.0 });
                   setIsTransitioning(false);
                 }, 400);
               } else {
@@ -547,6 +558,36 @@ export default function MughalGameScreen() {
               setTimeout(() => {
                 setScene("taj_gate");
                 setPlayerPos({ x: 50.0, y: 64.0 });
+                setIsTransitioning(false);
+              }, 400);
+            }
+
+            return { x: nextX, y: nextY };
+          } else if (scene === "taj_exterior") {
+            const minX = 15.0;
+            const maxX = 85.0;
+            const minY = 68.0;
+            const maxY = 90.0;
+
+            const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
+            const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
+
+            // Walking into the central Pishtaq arch entrance to enter the Mausoleum
+            if (nextY <= 70.0 && nextX >= 44.0 && nextX <= 56.0) {
+              setIsTransitioning(true);
+              setTimeout(() => {
+                setScene("taj_mausoleum");
+                setPlayerPos({ x: 50.0, y: 86.0 });
+                setIsTransitioning(false);
+              }, 400);
+            }
+
+            // Exiting back down to Charbagh gardens
+            if (nextY >= 89.5) {
+              setIsTransitioning(true);
+              setTimeout(() => {
+                setScene("taj_charbagh");
+                setPlayerPos({ x: 50.0, y: 20.0 });
                 setIsTransitioning(false);
               }, 400);
             }
@@ -567,12 +608,12 @@ export default function MughalGameScreen() {
               nextY = prev.y;
             }
 
-            // Exiting back to Charbagh
+            // Exiting back to Taj Mahal outside exterior terrace
             if (nextY >= 87.5) {
               setIsTransitioning(true);
               setTimeout(() => {
-                setScene("taj_charbagh");
-                setPlayerPos({ x: 50.0, y: 44.0 });
+                setScene("taj_exterior");
+                setPlayerPos({ x: 50.0, y: 74.0 });
                 setIsTransitioning(false);
               }, 400);
             }
@@ -673,6 +714,8 @@ export default function MughalGameScreen() {
     ? 0.95 + ((playerPos.y - 60.0) / 30.0) * 0.40
     : scene === "taj_charbagh"
     ? 0.90 + ((playerPos.y - 40.0) / 50.0) * 0.50
+    : scene === "taj_exterior"
+    ? 0.95 + ((playerPos.y - 68.0) / 24.0) * 0.45
     : scene === "taj_mausoleum"
     ? 0.95 + ((playerPos.y - 35.0) / 53.0) * 0.45
     : scene === "taj_mehtab_bagh"
@@ -693,6 +736,7 @@ export default function MughalGameScreen() {
     if (scene === "khas_mahal") return "/bg-agra-khas-mahal.jpg";
     if (scene === "taj_gate") return "/bg-taj-gate.jpg";
     if (scene === "taj_charbagh") return "/bg-taj-charbagh.jpg";
+    if (scene === "taj_exterior") return "/bg-taj-exterior.jpg";
     if (scene === "taj_mausoleum") return "/bg-taj-mausoleum.jpg";
     if (scene === "taj_mehtab_bagh") return "/bg-taj-mehtab-bagh.jpg";
     return "/bg-red-fort-lahori.jpg";
@@ -711,8 +755,9 @@ export default function MughalGameScreen() {
     if (scene === "brown_passage") return playerPos.y <= 64 ? "Entering Khas Mahal Palace..." : "Returning to Anguri Bagh...";
     if (scene === "khas_mahal") return "Crossing the Yamuna toward the Taj Mahal...";
     if (scene === "taj_gate") return "Entering the Taj Mahal Charbagh Gardens...";
-    if (scene === "taj_charbagh") return playerPos.y <= 45 ? "Entering the Main Taj Mahal Mausoleum..." : "Returning to Great Gate...";
-    if (scene === "taj_mausoleum") return playerPos.y <= 45 ? "Walking outside to Mehtab Bagh..." : "Returning to Charbagh Gardens...";
+    if (scene === "taj_charbagh") return playerPos.y <= 45 ? "Approaching the Taj Mahal Outside Terrace..." : "Returning to Great Gate...";
+    if (scene === "taj_exterior") return playerPos.y <= 75 ? "Entering the Main Taj Mahal Mausoleum..." : "Returning to Charbagh Gardens...";
+    if (scene === "taj_mausoleum") return playerPos.y <= 45 ? "Walking outside to Mehtab Bagh..." : "Returning to Outside Terrace...";
     if (scene === "taj_mehtab_bagh") return "Leaving Agra for Delhi...";
     if (scene === "red_fort_lahori") return "Entering the Red Fort...";
     return "Transitioning...";
@@ -900,13 +945,43 @@ export default function MughalGameScreen() {
 
       {scene === "taj_charbagh" && playerPos.y <= 20.0 && isSymmetrySolved && (
         <div className="absolute top-[12%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
-          ▲ Walk up to enter the Taj Mahal Mausoleum
+          ▲ Walk up to the Taj Mahal Outside Terrace
         </div>
       )}
 
       {scene === "taj_charbagh" && playerPos.y >= 88.0 && (
         <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
           ▼ Walk down to return to Great Gate
+        </div>
+      )}
+
+      {scene === "taj_exterior" && playerPos.y <= 76.0 && (
+        <div className="absolute top-[48%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          ▲ Walk into the Central Pishtaq Archway (Enter Mausoleum)
+        </div>
+      )}
+
+      {scene === "taj_exterior" && playerPos.y >= 86.0 && (
+        <div className="absolute bottom-[10%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          ▼ Walk down to return to Charbagh Gardens
+        </div>
+      )}
+
+      {/* Taj Exterior Pishtaq Interaction Button */}
+      {scene === "taj_exterior" && isNearTajPishtaq && (
+        <div 
+          className="absolute top-[56%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 cursor-pointer z-10 animate-bounce"
+          onClick={() => {
+            setIsTransitioning(true);
+            setTimeout(() => {
+              setScene("taj_mausoleum");
+              setPlayerPos({ x: 50.0, y: 86.0 });
+              setIsTransitioning(false);
+            }, 400);
+          }}
+        >
+          <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
+          Enter Taj Mahal Mausoleum Chamber
         </div>
       )}
 
@@ -918,7 +993,7 @@ export default function MughalGameScreen() {
 
       {scene === "taj_mausoleum" && playerPos.y >= 85.0 && (
         <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
-          ▼ Walk down to return to Charbagh
+          ▼ Walk down to return to Outside Terrace
         </div>
       )}
 
@@ -1120,6 +1195,7 @@ export default function MughalGameScreen() {
               scene === "khas_mahal" ? "Khas Mahal (Private River Palace)" :
               scene === "taj_gate" ? "Darwaza-i-Rauza (Great Gate)" :
               scene === "taj_charbagh" ? "Charbagh Gardens" :
+              scene === "taj_exterior" ? "Taj Mahal Outside Terrace" :
               scene === "taj_mausoleum" ? "Main Taj Mausoleum" :
               scene === "taj_mehtab_bagh" ? "Mehtab Bagh (Moonlight Garden)" :
               "Lahori Gate (Red Fort)"
@@ -1151,7 +1227,9 @@ export default function MughalGameScreen() {
               : scene === "taj_charbagh"
               ? !isSymmetrySolved
                 ? "Approach the central lotus pool and examine the symmetry puzzle (press E)."
-                : "Walk up the central marble path toward the Taj Mahal."
+                : "Walk up the central marble path to the Taj Mahal outside terrace."
+              : scene === "taj_exterior"
+              ? "Walk up to the grand Pishtaq arch entrance (or press E) to enter the Mausoleum."
               : scene === "taj_mausoleum"
               ? !isMausoleumExplored
                 ? "Approach the central jali screen and examine the cenotaphs (press E)."
@@ -1211,13 +1289,16 @@ export default function MughalGameScreen() {
                <div className={scene === "passage" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div> {/* Ramp Passage */}
                <div className={scene === "gate" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div> {/* Amar Singh Gate */}
             </div>
-          ) : ["taj_gate", "taj_charbagh", "taj_mausoleum", "taj_mehtab_bagh"].includes(scene) ? (
-            <div className="flex-1 grid grid-cols-2 grid-rows-2 gap-1.5 p-1 bg-amber-50/50 rounded">
+          ) : ["taj_gate", "taj_charbagh", "taj_exterior", "taj_mausoleum", "taj_mehtab_bagh"].includes(scene) ? (
+            <div className="flex-1 grid grid-cols-3 grid-rows-2 gap-1 p-1 bg-amber-50/50 rounded">
                {/* Minimap of Taj Mahal complex */}
                <div className={scene === "taj_charbagh" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-               <div className={scene === "taj_mehtab_bagh" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-               <div className={scene === "taj_gate" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
+               <div className={scene === "taj_exterior" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
                <div className={scene === "taj_mausoleum" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
+               
+               <div className={scene === "taj_gate" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
+               <div className="bg-transparent"></div>
+               <div className={scene === "taj_mehtab_bagh" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
             </div>
           ) : (
             <div className="flex-1 flex bg-amber-50/50 rounded p-1 items-center justify-center">
@@ -1247,7 +1328,7 @@ export default function MughalGameScreen() {
           <span className="text-[11px] font-bold text-black"><span className="text-amber-600 mr-1">⚡</span>33 generations</span>
         </div>
         <div className="bg-[#fff9ea] border-2 border-black rounded px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)]">
-          <span className="text-[11px] font-bold text-black"><span className="text-amber-600 mr-1">👁</span>12 screens</span>
+          <span className="text-[11px] font-bold text-black"><span className="text-amber-600 mr-1">👁</span>14 screens</span>
         </div>
         <div className="bg-[#fff9ea] border-2 border-black rounded px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)]">
           <span className="text-[11px] font-bold text-black">
@@ -1264,12 +1345,13 @@ export default function MughalGameScreen() {
                 khas_mahal: 8,
                 taj_gate: 9,
                 taj_charbagh: 10,
-                taj_mausoleum: 11,
-                taj_mehtab_bagh: 12,
-                red_fort_lahori: 13
+                taj_exterior: 11,
+                taj_mausoleum: 12,
+                taj_mehtab_bagh: 13,
+                red_fort_lahori: 14
               };
-              const current = rooms[scene] || 1;
-              return `rooms ${current}/13`;
+              const current = (rooms as any)[scene] || 1;
+              return `rooms ${current}/14`;
             })()}
           </span>
         </div>
