@@ -565,7 +565,7 @@ export default function MughalGameScreen() {
             return { x: nextX, y: nextY };
           } else if (scene === "taj_exterior") {
             const minX = 15.0;
-            const maxX = 85.0;
+            const maxX = 88.0;
             const minY = 68.0;
             const maxY = 90.0;
 
@@ -578,6 +578,16 @@ export default function MughalGameScreen() {
               setTimeout(() => {
                 setScene("taj_mausoleum");
                 setPlayerPos({ x: 50.0, y: 86.0 });
+                setIsTransitioning(false);
+              }, 400);
+            }
+
+            // Walking towards the right to cross the river into Mehtab Bagh (Moonlight Garden)
+            if (nextX >= 84.0 && nextY <= 84.0) {
+              setIsTransitioning(true);
+              setTimeout(() => {
+                setScene("taj_mehtab_bagh");
+                setPlayerPos({ x: 50.0, y: 50.0 });
                 setIsTransitioning(false);
               }, 400);
             }
@@ -596,7 +606,7 @@ export default function MughalGameScreen() {
           } else if (scene === "taj_mausoleum") {
             const minX = 15.0;
             const maxX = 85.0;
-            const minY = 35.0;
+            const minY = 42.0;
             const maxY = 88.0;
 
             let nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
@@ -618,33 +628,24 @@ export default function MughalGameScreen() {
               }, 400);
             }
 
-            // Exiting to Mehtab Bagh (requires mausoleum explored)
-            if (nextY <= 38.0 && nextX >= 45.0 && nextX <= 55.0) {
-              if (isMausoleumExplored) {
-                setIsTransitioning(true);
-                setTimeout(() => {
-                  setScene("taj_mehtab_bagh");
-                  setPlayerPos({ x: 20.0, y: 85.0 });
-                  setIsTransitioning(false);
-                }, 400);
-              } else {
-                return { x: prev.x, y: Math.max(39.0, prev.y) };
-              }
-            }
-
             return { x: nextX, y: nextY };
           } else if (scene === "taj_mehtab_bagh") {
             const minX = 10.0;
             const maxX = 90.0;
-            const minY = 40.0;
+            const minY = 46.0;
             const maxY = 88.0;
 
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
 
-            // River blocking
-            if (nextY <= 39.5) {
-              return { x: nextX, y: prev.y };
+            // Walking north on the river pier bridge to return to Taj Mahal exterior
+            if (nextY <= 48.0 && nextX >= 44.0 && nextX <= 56.0) {
+              setIsTransitioning(true);
+              setTimeout(() => {
+                setScene("taj_exterior");
+                setPlayerPos({ x: 80.0, y: 78.0 });
+                setIsTransitioning(false);
+              }, 400);
             }
 
             return { x: nextX, y: nextY };
@@ -756,9 +757,15 @@ export default function MughalGameScreen() {
     if (scene === "khas_mahal") return "Crossing the Yamuna toward the Taj Mahal...";
     if (scene === "taj_gate") return "Entering the Taj Mahal Charbagh Gardens...";
     if (scene === "taj_charbagh") return playerPos.y <= 45 ? "Approaching the Taj Mahal Outside Terrace..." : "Returning to Great Gate...";
-    if (scene === "taj_exterior") return playerPos.y <= 75 ? "Entering the Main Taj Mahal Mausoleum..." : "Returning to Charbagh Gardens...";
-    if (scene === "taj_mausoleum") return playerPos.y <= 45 ? "Walking outside to Mehtab Bagh..." : "Returning to Outside Terrace...";
-    if (scene === "taj_mehtab_bagh") return "Leaving Agra for Delhi...";
+    if (scene === "taj_exterior") {
+      if (playerPos.x >= 78) return "Crossing the Yamuna to Mehtab Bagh (Moonlight Garden)...";
+      return playerPos.y <= 75 ? "Entering the Main Taj Mahal Mausoleum..." : "Returning to Charbagh Gardens...";
+    }
+    if (scene === "taj_mausoleum") return "Exiting to Outside Marble Terrace...";
+    if (scene === "taj_mehtab_bagh") {
+      if (playerPos.y <= 52) return "Returning across the Yamuna to Taj Mahal Exterior...";
+      return "Leaving Agra for Delhi...";
+    }
     if (scene === "red_fort_lahori") return "Entering the Red Fort...";
     return "Transitioning...";
   };
@@ -955,9 +962,15 @@ export default function MughalGameScreen() {
         </div>
       )}
 
-      {scene === "taj_exterior" && playerPos.y <= 76.0 && (
+      {scene === "taj_exterior" && playerPos.y <= 76.0 && playerPos.x >= 40.0 && playerPos.x <= 60.0 && (
         <div className="absolute top-[48%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
           ▲ Walk into the Central Pishtaq Archway (Enter Mausoleum)
+        </div>
+      )}
+
+      {scene === "taj_exterior" && playerPos.x >= 75.0 && (
+        <div className="absolute top-[52%] right-6 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          ► Cross River to Mehtab Bagh (Moonlight Garden)
         </div>
       )}
 
@@ -985,15 +998,15 @@ export default function MughalGameScreen() {
         </div>
       )}
 
-      {scene === "taj_mausoleum" && playerPos.y <= 38.0 && isMausoleumExplored && (
-        <div className="absolute top-[28%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
-          ▲ Exit to Mehtab Bagh (Moonlight Garden)
-        </div>
-      )}
-
       {scene === "taj_mausoleum" && playerPos.y >= 85.0 && (
         <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
           ▼ Walk down to return to Outside Terrace
+        </div>
+      )}
+
+      {scene === "taj_mehtab_bagh" && playerPos.y <= 55.0 && (
+        <div className="absolute top-[28%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          ▲ Cross River Pier back to Taj Mahal Exterior
         </div>
       )}
 
@@ -1229,15 +1242,15 @@ export default function MughalGameScreen() {
                 ? "Approach the central lotus pool and examine the symmetry puzzle (press E)."
                 : "Walk up the central marble path to the Taj Mahal outside terrace."
               : scene === "taj_exterior"
-              ? "Walk up to the grand Pishtaq arch entrance (or press E) to enter the Mausoleum."
+              ? "Enter the Mausoleum through the central arch, or move to the right to cross the Yamuna to Mehtab Bagh."
               : scene === "taj_mausoleum"
               ? !isMausoleumExplored
                 ? "Approach the central jali screen and examine the cenotaphs (press E)."
-                : "Proceed through the exit at the top-center toward Mehtab Bagh."
+                : "Exit back out to the marble terrace."
               : scene === "taj_mehtab_bagh"
               ? !isArchaeologistTalked
                 ? "Explore Mehtab Bagh and talk to the Caretaker Archaeologist (press E)."
-                : "Proceed to the bottom-right and board the carriage to Delhi."
+                : "Proceed to the bottom-right carriage to Delhi, or walk up across the pier to return to Taj exterior."
               : "Walk forward into the monumental Lahori Gate of the Red Fort."}
           </div>
         </div>
