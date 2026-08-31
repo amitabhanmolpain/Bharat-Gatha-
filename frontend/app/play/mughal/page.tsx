@@ -1319,7 +1319,7 @@ export default function MughalGameScreen() {
             
             <div className="text-black font-serif text-[14.5px] leading-relaxed">
               <p className="mb-3 text-amber-950">
-                The massive red sandstone arch of the Darwaza-i-Rauza is inscribed with Quranic calligraphy. To unlock the gates, decipher the final word of the inscription:
+                The massive red sandstone arch of the Darwaza-i-Rauza is inscribed with calligraphy. To unlock the gates, decode the given calligraphy:
               </p>
               <div className="bg-amber-100/70 p-3 rounded-lg border border-amber-300 font-serif italic text-amber-900 text-center my-3 text-[15px]">
                 &ldquo;O Soul, art thou at rest? Return to thy Lord at peace with Him, and He at <strong className="text-amber-600 uppercase underline">[?]</strong> with thee.&rdquo;
