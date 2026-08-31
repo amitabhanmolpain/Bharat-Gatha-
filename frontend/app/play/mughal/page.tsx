@@ -515,6 +515,16 @@ export default function MughalGameScreen() {
               }
             }
 
+            // Walking down to return to Agra Fort (Khas Mahal river pavilion)
+            if (nextY >= 89.0) {
+              setIsTransitioning(true);
+              setTimeout(() => {
+                setScene("khas_mahal");
+                setPlayerPos({ x: 50.0, y: 72.0 });
+                setIsTransitioning(false);
+              }, 400);
+            }
+
             return { x: nextX, y: nextY };
           } else if (scene === "taj_charbagh") {
             const minX = 15.0;
@@ -755,7 +765,9 @@ export default function MughalGameScreen() {
     if (scene === "sheesh_mahal") return "Returning to Sheesh Mahal Corridor...";
     if (scene === "brown_passage") return playerPos.y <= 64 ? "Entering Khas Mahal Palace..." : "Returning to Anguri Bagh...";
     if (scene === "khas_mahal") return "Crossing the Yamuna toward the Taj Mahal...";
-    if (scene === "taj_gate") return "Entering the Taj Mahal Charbagh Gardens...";
+    if (scene === "taj_gate") {
+      return playerPos.y >= 85 ? "Returning across the river to Agra Fort (Khas Mahal)..." : "Entering the Taj Mahal Charbagh Gardens...";
+    }
     if (scene === "taj_charbagh") return playerPos.y <= 45 ? "Approaching the Taj Mahal Outside Terrace..." : "Returning to Great Gate...";
     if (scene === "taj_exterior") {
       if (playerPos.x >= 78) return "Crossing the Yamuna to Mehtab Bagh (Moonlight Garden)...";
@@ -947,6 +959,12 @@ export default function MughalGameScreen() {
       {scene === "taj_gate" && playerPos.y <= 62.0 && isCalligraphySolved && (
         <div className="absolute top-[52%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
           ▲ Walk forward to enter Charbagh Gardens
+        </div>
+      )}
+
+      {scene === "taj_gate" && playerPos.y >= 85.0 && (
+        <div className="absolute bottom-[10%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          ▼ Walk down to return to Agra Fort (Khas Mahal)
         </div>
       )}
 
@@ -1235,8 +1253,8 @@ export default function MughalGameScreen() {
               ? "Gaze out at the Yamuna and read the clue, then continue across the river."
               : scene === "taj_gate"
               ? !isCalligraphySolved
-                ? "Approach the Great Gate and examine the calligraphy puzzle (press E)."
-                : "Walk through the Great Gate archway."
+                ? "Approach the Great Gate and examine the calligraphy puzzle (press E), or walk down to return to Agra Fort."
+                : "Walk through the Great Gate archway, or walk down to return to Agra Fort."
               : scene === "taj_charbagh"
               ? !isSymmetrySolved
                 ? "Approach the central lotus pool and examine the symmetry puzzle (press E)."
