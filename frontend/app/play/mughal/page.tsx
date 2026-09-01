@@ -203,7 +203,7 @@ export default function MughalGameScreen() {
   const isNearMehtabBaghCross = scene === "taj_exterior" && playerPos.x >= 73.0 && playerPos.y <= 84.0;
 
   // Lahori Gate Archway Proximity (In 'red_fort_lahori' scene)
-  const isNearLahoriGate = scene === "red_fort_lahori" && playerPos.y <= 58.0 && playerPos.x >= 45.0 && playerPos.x <= 55.0;
+  const isNearLahoriGate = scene === "red_fort_lahori" && playerPos.y <= 68.0 && playerPos.x >= 44.0 && playerPos.x <= 56.0;
 
 
 
@@ -256,6 +256,9 @@ export default function MughalGameScreen() {
         }
         if (isNearArchaeologist) {
           setShowArchaeologistDialogue((prev) => !prev);
+        }
+        if (isNearLahoriGate) {
+          setShowCampaignComplete(true);
         }
         if (isNearCarriage || isNearRedFortCarriage) {
           setIsCarriageTravelling(true);
@@ -640,13 +643,24 @@ export default function MughalGameScreen() {
             return { x: nextX, y: nextY };
           } else if (scene === "red_fort_lahori") {
             // In red_fort_lahori scene
-            const minX = 15.0;
-            const maxX = 85.0;
-            const minY = 55.0;
-            const maxY = 90.0;
+            const minX = 5.0;
+            const maxX = 95.0;
+            let minY = 75.0;
+            const maxY = 95.0;
 
-            const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
-            const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
+            // Allow walking up into the gate archway
+            if (prev.x >= 44.0 && prev.x <= 56.0) {
+              minY = 65.0;
+            }
+
+            let nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
+            let nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
+
+            // Restrict horizontal movement when inside the archway path
+            if (nextY < 75.0 && (nextX < 44.0 || nextX > 56.0)) {
+               nextX = prev.x;
+               nextY = Math.max(75.0, nextY);
+            }
 
             // Enter Red Fort Plaza
             if (nextY <= 56.0 && nextX >= 45.0 && nextX <= 55.0) {
@@ -1523,7 +1537,7 @@ export default function MughalGameScreen() {
       )}
 
       {/* Carriage Boarding Prompt in Red Fort Lahori */}
-      {scene === "red_fort_lahori" && isNearRedFortCarriage && (
+      {scene === "red_fort_lahori" && isNearRedFortCarriage && !showCampaignComplete && (
         <div 
           className="absolute bottom-[16%] left-16 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 cursor-pointer z-10 animate-pulse animate-bounce"
           onClick={() => {
@@ -1545,6 +1559,17 @@ export default function MughalGameScreen() {
         >
           <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
           Take Carriage back to Agra
+        </div>
+      )}
+
+      {/* Lahori Gate Entrance Prompt */}
+      {scene === "red_fort_lahori" && isNearLahoriGate && !showCampaignComplete && (
+        <div 
+          className="absolute top-[60%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 cursor-pointer z-10 animate-bounce"
+          onClick={() => setShowCampaignComplete(true)}
+        >
+          <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
+          Enter Lahori Gate
         </div>
       )}
 
