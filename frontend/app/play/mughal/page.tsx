@@ -737,7 +737,7 @@ export default function MughalGameScreen() {
             // Walk back out to Plaza
             if (nextY >= 89.0) {
               setScene("red_fort_plaza");
-              setPlayerPos({ x: 50.0, y: 38.0 });
+              setPlayerPos({ x: 50.0, y: 52.0 });
             }
 
             return { x: nextX, y: nextY };
