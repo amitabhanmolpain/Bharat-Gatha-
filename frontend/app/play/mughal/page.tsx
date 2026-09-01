@@ -848,13 +848,13 @@ export default function MughalGameScreen() {
     : scene === "taj_mehtab_bagh"
     ? 0.95 + ((playerPos.y - 40.0) / 48.0) * 0.45
     : scene === "red_fort_lahori"
-    ? 0.95 + ((playerPos.y - 55.0) / 35.0) * 0.40
+    ? 0.85 + ((playerPos.y - 55.0) / 35.0) * 0.30
     : scene === "red_fort_plaza"
-    ? 0.90 + ((playerPos.y - 35.0) / 55.0) * 0.40
+    ? 0.80 + ((playerPos.y - 35.0) / 55.0) * 0.30
     : scene === "red_fort_interior"
-    ? 1.25 + ((playerPos.y - 45.0) / 45.0) * 0.50
-    : scene === "red_fort_diwani_khas" || scene === "red_fort_rang_mahal"
-    ? 1.15 + ((playerPos.y - 50.0) / 48.0) * 0.45
+    ? 1.35 + ((playerPos.y - 45.0) / 45.0) * 0.50
+    : scene === "red_fort_diwani_khas" || scene === "red_fort_rang_mahal" || scene === "red_fort_corridor"
+    ? 1.55 + ((playerPos.y - 50.0) / 48.0) * 0.55
     : 0.95 + ((playerPos.y - 45.0) / 45.0) * 0.40;
 
   const walkBob = isWalking ? Math.sin(walkPhase) * 1.8 : 0;
