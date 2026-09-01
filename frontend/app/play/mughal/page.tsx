@@ -855,6 +855,7 @@ export default function MughalGameScreen() {
     if (scene === "red_fort_plaza") return "/bg-red-fort-plaza.jpg";
     if (scene === "red_fort_interior") return "/bg-red-fort-interior.jpg";
     if (scene === "red_fort_diwani_khas") return "/bg-red-fort-diwani-khas.jpg";
+    if (scene === "red_fort_rang_mahal") return "/bg-red-fort-rang-mahal.jpg";
     return "/bg-red-fort-interior.jpg";
   };
 
