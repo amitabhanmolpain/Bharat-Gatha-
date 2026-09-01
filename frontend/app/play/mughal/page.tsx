@@ -1541,13 +1541,22 @@ export default function MughalGameScreen() {
       {/* Mughal Traders in Taj Gate (Darwaza-i-Rauza) */}
       {scene === "taj_gate" && (
         <>
-          {/* Pot Trader (Left Side) */}
-          <div className="absolute pointer-events-none z-10" style={{ left: '22%', top: '75%', transform: 'translate(-50%, -96%)' }}>
-            <img src="/trader_pots_transparent.png" alt="Pot Trader" className="w-56 h-56 object-contain" style={{ imageRendering: "pixelated" }} />
+          {/* Left Guard near gate */}
+          <div className="absolute pointer-events-none z-10" style={{ left: '41%', top: '68%', transform: 'translate(-50%, -96%)' }}>
+            <img src="/npc-guard.png" alt="Mughal Guard" className="w-32 h-32 object-contain" style={{ imageRendering: "pixelated" }} />
           </div>
-          {/* Painting Trader (Right Side) */}
-          <div className="absolute pointer-events-none z-10" style={{ left: '78%', top: '75%', transform: 'translate(-50%, -96%)' }}>
-            <img src="/trader_paintings_transparent.png" alt="Painting Trader" className="w-56 h-56 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
+          {/* Right Guard near gate */}
+          <div className="absolute pointer-events-none z-10" style={{ left: '59%', top: '68%', transform: 'translate(-50%, -96%)' }}>
+            <img src="/npc-guard.png" alt="Mughal Guard" className="w-32 h-32 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
+          </div>
+
+          {/* Pot Trader (Left Side near foreground pots) */}
+          <div className="absolute pointer-events-none z-10" style={{ left: '18%', top: '90%', transform: 'translate(-50%, -96%)' }}>
+            <img src="/trader_pots_transparent.png" alt="Pot Trader" className="w-40 h-40 object-contain" style={{ imageRendering: "pixelated" }} />
+          </div>
+          {/* Painting Trader (Right Side near foreground benches) */}
+          <div className="absolute pointer-events-none z-10" style={{ left: '82%', top: '90%', transform: 'translate(-50%, -96%)' }}>
+            <img src="/trader_paintings_transparent.png" alt="Painting Trader" className="w-40 h-40 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
           </div>
         </>
       )}
