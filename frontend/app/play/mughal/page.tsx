@@ -40,6 +40,32 @@ export default function MughalGameScreen() {
   const [showCampaignComplete, setShowCampaignComplete] = useState(false);
   const router = useRouter();
 
+  const handleResetGame = () => {
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setScene("gate");
+      setPlayerPos({ x: 50, y: 85 });
+      setFacingLeft(false);
+      setCluesFound(0);
+      setShowDialogue(false);
+      setShowThroneScroll(false);
+      setShowMirrorModal(false);
+      setShowKhasModal(false);
+      setShowCalligraphyPuzzle(false);
+      setIsCalligraphySolved(false);
+      setShowSymmetryPuzzle(false);
+      setIsSymmetrySolved(false);
+      setShowMausoleumModal(false);
+      setIsMausoleumExplored(false);
+      setShowArchaeologistDialogue(false);
+      setIsArchaeologistTalked(false);
+      setIsTransitioning(false);
+      
+      // Clear localStorage save state to ensure a clean start
+      localStorage.removeItem('mughal_save');
+    }, 400);
+  };
+
   // Handle URL Endpoints and Save State
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -515,16 +541,6 @@ export default function MughalGameScreen() {
               }
             }
 
-            // Walking down to return to Agra Fort (Khas Mahal river pavilion)
-            if (nextY >= 89.0) {
-              setIsTransitioning(true);
-              setTimeout(() => {
-                setScene("khas_mahal");
-                setPlayerPos({ x: 50.0, y: 72.0 });
-                setIsTransitioning(false);
-              }, 400);
-            }
-
             return { x: nextX, y: nextY };
           } else if (scene === "taj_charbagh") {
             const minX = 15.0;
@@ -765,9 +781,7 @@ export default function MughalGameScreen() {
     if (scene === "sheesh_mahal") return "Returning to Sheesh Mahal Corridor...";
     if (scene === "brown_passage") return playerPos.y <= 64 ? "Entering Khas Mahal Palace..." : "Returning to Anguri Bagh...";
     if (scene === "khas_mahal") return "Crossing the Yamuna toward the Taj Mahal...";
-    if (scene === "taj_gate") {
-      return playerPos.y >= 85 ? "Returning across the river to Agra Fort (Khas Mahal)..." : "Entering the Taj Mahal Charbagh Gardens...";
-    }
+    if (scene === "taj_gate") return "Entering the Taj Mahal Charbagh Gardens...";
     if (scene === "taj_charbagh") return playerPos.y <= 45 ? "Approaching the Taj Mahal Outside Terrace..." : "Returning to Great Gate...";
     if (scene === "taj_exterior") {
       if (playerPos.x >= 78) return "Crossing the Yamuna to Mehtab Bagh (Moonlight Garden)...";
@@ -959,12 +973,6 @@ export default function MughalGameScreen() {
       {scene === "taj_gate" && playerPos.y <= 62.0 && isCalligraphySolved && (
         <div className="absolute top-[52%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
           ▲ Walk forward to enter Charbagh Gardens
-        </div>
-      )}
-
-      {scene === "taj_gate" && playerPos.y >= 85.0 && (
-        <div className="absolute bottom-[10%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
-          ▼ Walk down to return to Agra Fort (Khas Mahal)
         </div>
       )}
 
@@ -1253,8 +1261,8 @@ export default function MughalGameScreen() {
               ? "Gaze out at the Yamuna and read the clue, then continue across the river."
               : scene === "taj_gate"
               ? !isCalligraphySolved
-                ? "Approach the Great Gate and examine the calligraphy puzzle (press E), or walk down to return to Agra Fort."
-                : "Walk through the Great Gate archway, or walk down to return to Agra Fort."
+                ? "Approach the Great Gate and examine the calligraphy puzzle (press E)."
+                : "Walk through the Great Gate archway."
               : scene === "taj_charbagh"
               ? !isSymmetrySolved
                 ? "Approach the central lotus pool and examine the symmetry puzzle (press E)."
@@ -1289,8 +1297,12 @@ export default function MughalGameScreen() {
       <div className="absolute top-6 right-6 flex flex-col items-end gap-3">
         {/* Buttons Row */}
         <div className="flex items-center gap-3">
-          <button className="w-10 h-10 bg-white border-2 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all flex items-center justify-center">
-            <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+          <button 
+            onClick={handleResetGame}
+            title="Restart to Beginning"
+            className="w-10 h-10 bg-white border-2 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all flex items-center justify-center group"
+          >
+            <svg className="w-5 h-5 text-black group-hover:-rotate-180 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
           </button>
           <button className="w-10 h-10 bg-amber-400 border-2 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all flex items-center justify-center">
             <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
