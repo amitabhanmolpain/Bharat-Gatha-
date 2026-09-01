@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 export default function MughalGameScreen() {
   const [isLoading, setIsLoading] = useState(true);
-  const [scene, setScene] = useState<"gate" | "passage" | "courtyard" | "interior" | "sheesh_passage" | "sheesh_mahal" | "brown_passage" | "khas_mahal" | "taj_gate" | "taj_charbagh" | "taj_exterior" | "taj_mausoleum" | "taj_mehtab_bagh" | "red_fort_lahori">("gate");
+  const [scene, setScene] = useState<"gate" | "passage" | "courtyard" | "interior" | "sheesh_passage" | "sheesh_mahal" | "brown_passage" | "khas_mahal" | "taj_gate" | "taj_charbagh" | "taj_exterior" | "taj_mausoleum" | "taj_mehtab_bagh" | "red_fort_lahori" | "red_fort_plaza" | "red_fort_interior">("gate");
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [playerPos, setPlayerPos] = useState({ x: 50, y: 85 });
   const [facingLeft, setFacingLeft] = useState(false);
@@ -638,7 +638,7 @@ export default function MughalGameScreen() {
             }
 
             return { x: nextX, y: nextY };
-          } else {
+          } else if (scene === "red_fort_lahori") {
             // In red_fort_lahori scene
             const minX = 15.0;
             const maxX = 85.0;
@@ -647,6 +647,53 @@ export default function MughalGameScreen() {
 
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
+
+            // Enter Red Fort Plaza
+            if (nextY <= 56.0 && nextX >= 45.0 && nextX <= 55.0) {
+              setScene("red_fort_plaza");
+              setPlayerPos({ x: 50.0, y: 88.0 });
+            }
+
+            return { x: nextX, y: nextY };
+          } else if (scene === "red_fort_plaza") {
+            // In red_fort_plaza scene
+            const minX = 15.0;
+            const maxX = 85.0;
+            const minY = 35.0;
+            const maxY = 90.0;
+
+            const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
+            const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
+
+            // Walk back out to Lahori Gate
+            if (nextY >= 89.0) {
+              setScene("red_fort_lahori");
+              setPlayerPos({ x: 50.0, y: 58.0 });
+            }
+
+            // Walk forward to Chatta Chowk interior
+            if (nextY <= 36.0 && nextX >= 40.0 && nextX <= 60.0) {
+              setScene("red_fort_interior");
+              setPlayerPos({ x: 50.0, y: 88.0 });
+            }
+
+            return { x: nextX, y: nextY };
+          } else {
+            // In red_fort_interior scene
+            const progress = Math.max(0, Math.min(1, (prev.y - 45.0) / (90.0 - 45.0)));
+            const minX = 35.0 - progress * 20.0;
+            const maxX = 65.0 + progress * 20.0;
+            const minY = 45.0;
+            const maxY = 90.0;
+
+            const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
+            const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
+
+            // Walk back out to Plaza
+            if (nextY >= 89.0) {
+              setScene("red_fort_plaza");
+              setPlayerPos({ x: 50.0, y: 38.0 });
+            }
 
             return { x: nextX, y: nextY };
           }
@@ -710,7 +757,11 @@ export default function MughalGameScreen() {
     ? 0.95 + ((playerPos.y - 35.0) / 53.0) * 0.45
     : scene === "taj_mehtab_bagh"
     ? 0.95 + ((playerPos.y - 40.0) / 48.0) * 0.45
-    : 0.95 + ((playerPos.y - 55.0) / 35.0) * 0.40;
+    : scene === "red_fort_lahori"
+    ? 0.95 + ((playerPos.y - 55.0) / 35.0) * 0.40
+    : scene === "red_fort_plaza"
+    ? 0.90 + ((playerPos.y - 35.0) / 55.0) * 0.40
+    : 0.95 + ((playerPos.y - 45.0) / 45.0) * 0.40;
 
   const walkBob = isWalking ? Math.sin(walkPhase) * 1.8 : 0;
   const walkSway = isWalking ? Math.sin(walkPhase * 0.5) * 1.5 : 0;
@@ -729,7 +780,9 @@ export default function MughalGameScreen() {
     if (scene === "taj_exterior") return "/bg-taj-exterior.jpg";
     if (scene === "taj_mausoleum") return "/bg-taj-mausoleum.jpg";
     if (scene === "taj_mehtab_bagh") return "/bg-taj-mehtab-bagh.jpg";
-    return "/bg-red-fort-lahori.jpg";
+    if (scene === "red_fort_lahori") return "/bg-red-fort-lahori.jpg";
+    if (scene === "red_fort_plaza") return "/bg-red-fort-plaza.jpg";
+    return "/bg-red-fort-interior.jpg";
   };
 
   const getTransitionLabel = () => {
@@ -755,7 +808,9 @@ export default function MughalGameScreen() {
       if (playerPos.y <= 52) return "Returning across the Yamuna to Taj Mahal Exterior...";
       return "Leaving Agra for Delhi...";
     }
-    if (scene === "red_fort_lahori") return "Entering the Red Fort...";
+    if (scene === "red_fort_lahori") return "Entering the Red Fort Plaza...";
+    if (scene === "red_fort_plaza") return playerPos.y <= 60 ? "Entering Chatta Chowk..." : "Exiting to Lahori Gate...";
+    if (scene === "red_fort_interior") return playerPos.y <= 60 ? "Exploring Chatta Chowk..." : "Returning to Plaza...";
     return "Transitioning...";
   };
 
