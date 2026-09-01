@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -39,6 +39,26 @@ export default function MughalGameScreen() {
 
   const [showCampaignComplete, setShowCampaignComplete] = useState(false);
   const router = useRouter();
+
+  const horseSoundRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      horseSoundRef.current = new Audio('/horse_sound.webm');
+      horseSoundRef.current.volume = 0.5;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isCarriageTravelling) {
+      horseSoundRef.current?.play().catch(e => console.log("Audio play blocked", e));
+    } else {
+      if (horseSoundRef.current) {
+        horseSoundRef.current.pause();
+        horseSoundRef.current.currentTime = 0;
+      }
+    }
+  }, [isCarriageTravelling]);
 
   const handleResetGame = () => {
     setIsTransitioning(true);
@@ -239,9 +259,6 @@ export default function MughalGameScreen() {
         }
         if (isNearCarriage || isNearRedFortCarriage) {
           setIsCarriageTravelling(true);
-          const horseSound = new Audio('/horse_sound.webm');
-          horseSound.volume = 0.5;
-          horseSound.play().catch(e => console.log("Audio play blocked", e));
           
           setTravelOverlayPhase(1);
           setTimeout(() => {
@@ -1430,9 +1447,6 @@ export default function MughalGameScreen() {
           className="absolute bottom-[16%] right-8 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 cursor-pointer z-10 animate-pulse animate-bounce"
           onClick={() => {
             setIsCarriageTravelling(true);
-            const horseSound = new Audio('/horse_sound.webm');
-            horseSound.volume = 0.5;
-            horseSound.play().catch(e => console.log("Audio play blocked", e));
             setTravelOverlayPhase(1);
             setTimeout(() => {
               setTravelOverlayPhase(2);
@@ -1459,9 +1473,6 @@ export default function MughalGameScreen() {
           className="absolute bottom-[16%] left-16 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 cursor-pointer z-10 animate-pulse animate-bounce"
           onClick={() => {
             setIsCarriageTravelling(true);
-            const horseSound = new Audio('/horse_sound.webm');
-            horseSound.volume = 0.5;
-            horseSound.play().catch(e => console.log("Audio play blocked", e));
             setTravelOverlayPhase(1);
             setTimeout(() => {
               setTravelOverlayPhase(2);
@@ -1755,7 +1766,7 @@ export default function MughalGameScreen() {
             {/* Icon / Emblem */}
             <div className="w-20 h-20 mb-6 bg-amber-100 rounded-full border-2 border-black flex items-center justify-center shadow-[inset_0_4px_4px_rgba(0,0,0,0.1)] relative overflow-hidden">
                <div className="absolute inset-0 opacity-50" style={{ backgroundImage: 'url("/panel-bg.jpg")', backgroundSize: 'cover' }}></div>
-               <span className="text-4xl relative z-10 animate-bounce" style={{ animationDuration: '1s' }}>🐎</span>
+               <img src="/carriage2_transparent.png" alt="Horse Carriage" className="w-14 h-14 object-contain relative z-10 animate-bounce" style={{ animationDuration: '1s' }} />
             </div>
             
             <h2 className="text-2xl sm:text-3xl font-serif text-amber-950 font-black tracking-widest uppercase mb-3">
