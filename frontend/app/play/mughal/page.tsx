@@ -828,6 +828,10 @@ export default function MughalGameScreen() {
     ? 0.95 + ((playerPos.y - 55.0) / 35.0) * 0.40
     : scene === "red_fort_plaza"
     ? 0.90 + ((playerPos.y - 35.0) / 55.0) * 0.40
+    : scene === "red_fort_interior"
+    ? 1.25 + ((playerPos.y - 45.0) / 45.0) * 0.50
+    : scene === "red_fort_diwani_khas" || scene === "red_fort_rang_mahal"
+    ? 1.15 + ((playerPos.y - 50.0) / 48.0) * 0.45
     : 0.95 + ((playerPos.y - 45.0) / 45.0) * 0.40;
 
   const walkBob = isWalking ? Math.sin(walkPhase) * 1.8 : 0;
@@ -1562,12 +1566,12 @@ export default function MughalGameScreen() {
       {scene === "red_fort_interior" && (
         <>
           {/* Silk Trader (Left Shop) */}
-          <div className="absolute pointer-events-none z-10" style={{ left: '26%', top: '68%', transform: 'translate(-50%, -96%) scale(1.1)' }}>
-            <img src="/trader_silk_transparent.png" alt="Silk Trader" className="w-40 h-40 object-contain" style={{ imageRendering: "pixelated" }} />
+          <div className="absolute pointer-events-none z-10" style={{ left: '26%', top: '82%', transform: 'translate(-50%, -96%)' }}>
+            <img src="/trader_silk_transparent.png" alt="Silk Trader" className="w-64 h-64 object-contain" style={{ imageRendering: "pixelated" }} />
           </div>
           {/* Jewel Trader (Right Shop) */}
-          <div className="absolute pointer-events-none z-10" style={{ left: '72%', top: '65%', transform: 'translate(-50%, -96%) scale(1.1)' }}>
-            <img src="/trader_jewels_transparent.png" alt="Jewel Trader" className="w-40 h-40 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
+          <div className="absolute pointer-events-none z-10" style={{ left: '72%', top: '80%', transform: 'translate(-50%, -96%)' }}>
+            <img src="/trader_jewels_transparent.png" alt="Jewel Trader" className="w-64 h-64 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
           </div>
         </>
       )}
