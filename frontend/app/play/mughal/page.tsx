@@ -1543,11 +1543,11 @@ export default function MughalGameScreen() {
         <>
           {/* Left Guard near gate */}
           <div className="absolute pointer-events-none z-10" style={{ left: '41%', top: '68%', transform: 'translate(-50%, -96%)' }}>
-            <img src="/npc-guard.png" alt="Mughal Guard" className="w-32 h-32 object-contain" style={{ imageRendering: "pixelated" }} />
+            <img src="/guard.png" alt="Mughal Guard" className="w-32 h-32 object-contain" style={{ imageRendering: "pixelated" }} />
           </div>
           {/* Right Guard near gate */}
           <div className="absolute pointer-events-none z-10" style={{ left: '59%', top: '68%', transform: 'translate(-50%, -96%)' }}>
-            <img src="/npc-guard.png" alt="Mughal Guard" className="w-32 h-32 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
+            <img src="/guard.png" alt="Mughal Guard" className="w-32 h-32 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
           </div>
 
           {/* Pot Trader (Left Side near foreground pots) */}
