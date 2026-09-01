@@ -1720,49 +1720,50 @@ export default function MughalGameScreen() {
 
       {/* Carriage Journey Fullscreen Overlay */}
       {isCarriageTravelling && (
-        <div className="absolute inset-0 bg-[#0d0a07] z-50 flex items-center justify-center flex-col relative overflow-hidden pointer-events-auto">
-          {/* Subtle background glow */}
-          <div className="absolute inset-0 bg-radial-gradient from-amber-900/10 via-black to-black opacity-80"></div>
+        <div className="absolute inset-0 bg-[#0d0a07] z-50 flex items-center justify-center pointer-events-auto animate-in fade-in duration-700">
+          {/* Background Map/Texture Pattern */}
+          <div className="absolute inset-0 opacity-40 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-amber-700/30 via-[#0d0a07] to-[#0d0a07]"></div>
+          <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'url("/panel-bg.jpg")', backgroundSize: 'cover', backgroundPosition: 'center', mixBlendMode: 'overlay' }}></div>
           
-          <div className="relative z-10 flex flex-col items-center text-center px-6">
-            {/* Spinning indicator */}
-            <div className="w-12 h-12 border-4 border-amber-900/30 border-t-amber-400 rounded-full animate-spin mb-8"></div>
+          <div className="relative z-10 bg-[#fff9ea] border-4 border-black rounded-2xl p-8 max-w-lg w-full shadow-[16px_16px_0_0_rgba(0,0,0,1)] flex flex-col items-center text-center">
             
-            {travelOverlayPhase === 1 && (
-              <>
-                <h2 className="text-2xl font-serif text-[#e4c794] tracking-widest uppercase mb-3 animate-pulse">
-                  Agra Exit
-                </h2>
-                <p className="text-[#a89985] tracking-wide text-sm font-sans uppercase">
-                  Boarding the carriage to Delhi...
-                </p>
-              </>
-            )}
+            {/* Icon / Emblem */}
+            <div className="w-20 h-20 mb-6 bg-amber-100 rounded-full border-2 border-black flex items-center justify-center shadow-[inset_0_4px_4px_rgba(0,0,0,0.1)] relative overflow-hidden">
+               <div className="absolute inset-0 opacity-50" style={{ backgroundImage: 'url("/panel-bg.jpg")', backgroundSize: 'cover' }}></div>
+               <span className="text-4xl relative z-10 animate-bounce" style={{ animationDuration: '1s' }}>🐎</span>
+            </div>
             
-            {travelOverlayPhase === 2 && (
-              <>
-                <h2 className="text-2xl font-serif text-[#e4c794] tracking-widest uppercase mb-3 animate-pulse">
-                  Imperial Journey
-                </h2>
-                <p className="text-[#a89985] tracking-wide text-sm font-sans uppercase">
-                  Travelling towards Delhi...
-                </p>
-              </>
-            )}
+            <h2 className="text-2xl sm:text-3xl font-serif text-amber-950 font-black tracking-widest uppercase mb-3">
+              {travelOverlayPhase === 1 ? "Departing Agra" : travelOverlayPhase === 2 ? "The Imperial Road" : "Approaching Delhi"}
+            </h2>
             
-            {travelOverlayPhase === 3 && (
-              <>
-                <h2 className="text-2xl font-serif text-[#e4c794] tracking-widest uppercase mb-3 animate-pulse">
-                  Sunset Over Yamuna
-                </h2>
-                <p className="text-[#a89985] tracking-wide text-sm font-sans uppercase mb-2">
-                  Time passes...
-                </p>
-                <p className="text-amber-500 tracking-wider text-xs font-sans uppercase">
-                  Evening falls...
-                </p>
-              </>
-            )}
+            <div className="w-full h-3 bg-amber-200 my-4 border-2 border-black rounded-full overflow-hidden relative shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)]">
+               <div className="absolute top-0 left-0 h-full bg-amber-500 transition-all duration-1000 ease-in-out" style={{ width: travelOverlayPhase === 1 ? '33%' : travelOverlayPhase === 2 ? '66%' : '100%' }}></div>
+            </div>
+
+            <p className="text-amber-900 font-serif font-bold italic text-[15px] mb-8 h-6">
+              {travelOverlayPhase === 1 && "Leaving the majestic Taj Mahal behind..."}
+              {travelOverlayPhase === 2 && "A long journey across the Mughal Empire..."}
+              {travelOverlayPhase === 3 && "The imposing red walls of the capital emerge..."}
+            </p>
+
+            {/* Timeline */}
+            <div className="flex items-center justify-between w-full px-4 mt-2">
+               <div className={`flex flex-col items-center transition-opacity duration-500 ${travelOverlayPhase >= 1 ? 'opacity-100' : 'opacity-30'}`}>
+                 <div className="w-5 h-5 rounded-full bg-amber-500 border-2 border-black mb-2 shadow-[2px_2px_0_0_rgba(0,0,0,1)]"></div>
+                 <span className="text-[11px] font-black text-black uppercase tracking-wider">Agra</span>
+               </div>
+               <div className={`flex-1 h-1 bg-black mx-2 transition-opacity duration-500 ${travelOverlayPhase >= 2 ? 'opacity-100' : 'opacity-30'}`}></div>
+               <div className={`flex flex-col items-center transition-opacity duration-500 ${travelOverlayPhase >= 2 ? 'opacity-100' : 'opacity-30'}`}>
+                 <div className="w-5 h-5 rounded-full bg-amber-500 border-2 border-black mb-2 shadow-[2px_2px_0_0_rgba(0,0,0,1)]"></div>
+                 <span className="text-[11px] font-black text-black uppercase tracking-wider">Journey</span>
+               </div>
+               <div className={`flex-1 h-1 bg-black mx-2 transition-opacity duration-500 ${travelOverlayPhase >= 3 ? 'opacity-100' : 'opacity-30'}`}></div>
+               <div className={`flex flex-col items-center transition-opacity duration-500 ${travelOverlayPhase >= 3 ? 'opacity-100' : 'opacity-30'}`}>
+                 <div className="w-5 h-5 rounded-full bg-amber-500 border-2 border-black mb-2 shadow-[2px_2px_0_0_rgba(0,0,0,1)]"></div>
+                 <span className="text-[11px] font-black text-black uppercase tracking-wider">Delhi</span>
+               </div>
+            </div>
           </div>
         </div>
       )}
