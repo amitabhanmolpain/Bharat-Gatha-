@@ -698,8 +698,8 @@ export default function MughalGameScreen() {
               setPlayerPos({ x: 50.0, y: 88.0 });
             }
 
-            // Walk to Diwan-i-Khas (top left side of plaza)
-            if (nextY <= 55.0 && nextX <= 20.0) {
+            // Walk up the left stairs to Diwan-i-Khas
+            if (nextX <= 28.0 && nextY >= 60.0 && nextY <= 72.0) {
               setScene("red_fort_diwani_khas");
               setPlayerPos({ x: 50.0, y: 88.0 });
             }
@@ -736,7 +736,7 @@ export default function MughalGameScreen() {
             // Walk back out to Plaza
             if (nextY >= 89.0) {
               setScene("red_fort_plaza");
-              setPlayerPos({ x: 18.0, y: 55.0 });
+              setPlayerPos({ x: 35.0, y: 66.0 }); // Spawn at the bottom of the stairs
             }
 
             return { x: nextX, y: nextY };
