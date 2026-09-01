@@ -1787,7 +1787,7 @@ export default function MughalGameScreen() {
                 You have successfully completed your journey through the Mughal Empire's campaigns. From the defensive ramps of Agra Fort to the symmetrical gardens and sacred tombs of the Taj Mahal, and finally to the imperial Lahori Gate of the Red Fort in Delhi, you have unraveled the rich histories, architectural wonders, and long-standing mysteries of the Mughal dynasty.
               </p>
               <p className="text-xs font-sans text-emerald-800 font-semibold bg-emerald-50 border border-emerald-300 p-2 rounded">
-                ✔ Completed 13 scenes of the Mughal Campaign!
+                ✔ Completed 14 scenes of the Mughal Campaign!
               </p>
             </div>
 
