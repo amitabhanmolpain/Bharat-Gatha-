@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 export default function MughalGameScreen() {
   const [isLoading, setIsLoading] = useState(true);
-  const [scene, setScene] = useState<"gate" | "passage" | "courtyard" | "interior" | "sheesh_passage" | "sheesh_mahal" | "brown_passage" | "khas_mahal" | "taj_gate" | "taj_charbagh" | "taj_exterior" | "taj_mausoleum" | "taj_mehtab_bagh" | "red_fort_lahori" | "red_fort_plaza" | "red_fort_interior" | "red_fort_diwani_khas" | "red_fort_rang_mahal">("gate");
+  const [scene, setScene] = useState<"gate" | "passage" | "courtyard" | "interior" | "sheesh_passage" | "sheesh_mahal" | "brown_passage" | "khas_mahal" | "taj_gate" | "taj_charbagh" | "taj_exterior" | "taj_mausoleum" | "taj_mehtab_bagh" | "red_fort_lahori" | "red_fort_plaza" | "red_fort_interior" | "red_fort_diwani_khas" | "red_fort_rang_mahal" | "red_fort_corridor">("gate");
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [playerPos, setPlayerPos] = useState({ x: 50, y: 85 });
   const [facingLeft, setFacingLeft] = useState(false);
@@ -744,12 +744,35 @@ export default function MughalGameScreen() {
           } else if (scene === "red_fort_diwani_khas") {
             // In red_fort_diwani_khas scene
             const minX = 25.0;
+            const maxX = 85.0; // Expanded to allow exiting to the right
+            const minY = 50.0;
+            const maxY = 98.0;
+
+            const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
+            const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
+
+            // Walk off to the right side to enter the corridor
+            if (nextX >= 83.0) {
+              setScene("red_fort_corridor");
+              setPlayerPos({ x: 50.0, y: 88.0 });
+            }
+
+            return { x: nextX, y: nextY };
+          } else if (scene === "red_fort_corridor") {
+            // In red_fort_corridor scene
+            const minX = 25.0;
             const maxX = 75.0;
             const minY = 50.0;
             const maxY = 98.0;
 
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
+
+            // Walk back out of the corridor to Diwan-i-Khas
+            if (nextY >= 96.0) {
+              setScene("red_fort_diwani_khas");
+              setPlayerPos({ x: 80.0, y: 88.0 }); // Spawn correctly on the floor
+            }
 
             return { x: nextX, y: nextY };
           } else {
@@ -856,6 +879,7 @@ export default function MughalGameScreen() {
     if (scene === "red_fort_interior") return "/bg-red-fort-interior.jpg";
     if (scene === "red_fort_diwani_khas") return "/bg-red-fort-diwani-khas.jpg";
     if (scene === "red_fort_rang_mahal") return "/bg-red-fort-rang-mahal.jpg";
+    if (scene === "red_fort_corridor") return "/bg-red-fort-corridor.jpg";
     return "/bg-red-fort-interior.jpg";
   };
 
@@ -888,7 +912,8 @@ export default function MughalGameScreen() {
       return playerPos.y <= 60 ? "Entering Chatta Chowk..." : "Exiting to Lahori Gate...";
     }
     if (scene === "red_fort_interior") return playerPos.y <= 60 ? "Exploring Chatta Chowk..." : "Returning to Plaza...";
-    if (scene === "red_fort_diwani_khas") return "Returning to Plaza...";
+    if (scene === "red_fort_diwani_khas") return playerPos.x >= 80 ? "Entering Hidden Corridor..." : "Returning to Plaza...";
+    if (scene === "red_fort_corridor") return "Returning to Diwan-i-Khas...";
     return "Transitioning...";
   };
 
