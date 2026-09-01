@@ -985,6 +985,26 @@ export default function MughalGameScreen() {
         </div>
       )}
 
+      {/* Genie in Starting Scene (Gate) */}
+      {scene === "gate" && (
+        <div
+          className="absolute pointer-events-none z-10 animate-bounce"
+          style={{
+            left: '75%',
+            top: '55%',
+            transform: 'translate(-50%, -50%)',
+            animationDuration: '3s'
+          }}
+        >
+          <img
+            src="/genie_rajasthani_transparent.png"
+            alt="Rajasthani Genie"
+            className="w-48 h-48 object-contain"
+            style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }}
+          />
+        </div>
+      )}
+
       {/* Throne Inspection Prompt (Interior Scene) */}
       {scene === "interior" && isNearThrone && !showThroneScroll && (
         <div 
