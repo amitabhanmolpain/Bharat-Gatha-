@@ -692,7 +692,7 @@ export default function MughalGameScreen() {
             // In red_fort_plaza scene
             const minX = 15.0;
             const maxX = 85.0;
-            const minY = 35.0;
+            const minY = 48.0; // Increased to prevent flying into walls/archway
             const maxY = 90.0;
 
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
@@ -704,8 +704,8 @@ export default function MughalGameScreen() {
               setPlayerPos({ x: 50.0, y: 58.0 });
             }
 
-            // Walk forward to Chatta Chowk interior (center top)
-            if (nextY <= 36.0 && nextX >= 40.0 && nextX <= 60.0) {
+            // Walk forward to Chatta Chowk interior (market)
+            if (nextY <= 49.0 && nextX >= 40.0 && nextX <= 60.0) {
               setScene("red_fort_interior");
               setPlayerPos({ x: 50.0, y: 88.0 });
             }
