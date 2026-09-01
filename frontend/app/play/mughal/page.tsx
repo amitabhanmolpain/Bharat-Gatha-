@@ -55,6 +55,7 @@ export default function MughalGameScreen() {
       setIsCalligraphySolved(false);
       setShowSymmetryPuzzle(false);
       setIsSymmetrySolved(false);
+      setSymmetryState([true, false, true, false]);
       setShowMausoleumModal(false);
       setIsMausoleumExplored(false);
       setShowArchaeologistDialogue(false);
@@ -700,7 +701,7 @@ export default function MughalGameScreen() {
       window.removeEventListener("keyup", onKeyUp);
       cancelAnimationFrame(animationFrameId);
     };
-  }, [isLoading, isTransitioning, scene, isNearGuard, isNearThrone, isNearMirrorFountain, isNearKhasFountain, isNearCalligraphy, isNearPool, isNearCenotaphs, isNearArchaeologist, isNearCarriage, isNearLahoriGate, isCalligraphySolved, isSymmetrySolved, isMausoleumExplored, isArchaeologistTalked, cluesFound]);
+  }, [isLoading, isTransitioning, scene, isNearGuard, isNearThrone, isNearMirrorFountain, isNearKhasFountain, isNearCalligraphy, isNearPool, isNearTajPishtaq, isNearCenotaphs, isNearArchaeologist, isNearCarriage, isNearLahoriGate, isCalligraphySolved, isSymmetrySolved, isMausoleumExplored, isArchaeologistTalked, cluesFound]);
 
   if (isLoading) {
     return (
