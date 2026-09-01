@@ -705,19 +705,19 @@ export default function MughalGameScreen() {
             }
 
             // Walk forward to Chatta Chowk interior (market)
-            if (nextY <= 49.0 && nextX >= 40.0 && nextX <= 60.0) {
+            if (nextY <= 49.0 && nextX > 35.0 && nextX < 65.0) {
               setScene("red_fort_interior");
               setPlayerPos({ x: 50.0, y: 88.0 });
             }
 
             // Walk into the left door to Diwan-i-Khas
-            if (nextX <= 28.0 && nextY <= 58.0) {
+            if (nextX <= 35.0 && nextY <= 58.0) {
               setScene("red_fort_diwani_khas");
               setPlayerPos({ x: 50.0, y: 88.0 });
             }
 
             // Walk into the right door to Rang Mahal
-            if (nextX >= 72.0 && nextY <= 58.0) {
+            if (nextX >= 65.0 && nextY <= 58.0) {
               setScene("red_fort_rang_mahal");
               setPlayerPos({ x: 50.0, y: 88.0 });
             }
