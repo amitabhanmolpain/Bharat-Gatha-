@@ -1283,6 +1283,8 @@ export default function MughalGameScreen() {
               scene === "taj_exterior" ? "Taj Mahal Outside Terrace" :
               scene === "taj_mausoleum" ? "Main Taj Mausoleum" :
               scene === "taj_mehtab_bagh" ? "Mehtab Bagh (Moonlight Garden)" :
+              scene === "red_fort_plaza" ? "Red Fort Plaza" :
+              scene === "red_fort_interior" ? "Chatta Chowk (Red Fort)" :
               "Lahori Gate (Red Fort)"
             }
           </div>
@@ -1323,7 +1325,13 @@ export default function MughalGameScreen() {
               ? !isArchaeologistTalked
                 ? "Explore Mehtab Bagh and talk to the Caretaker Archaeologist (press E)."
                 : "Proceed to the bottom-right carriage to Delhi, or walk up across the pier to return to Taj exterior."
-              : "Walk forward into the monumental Lahori Gate of the Red Fort."}
+              : scene === "red_fort_lahori"
+              ? "Walk forward into the monumental Lahori Gate of the Red Fort."
+              : scene === "red_fort_plaza"
+              ? "Explore the plaza, or walk forward into the Chatta Chowk."
+              : scene === "red_fort_interior"
+              ? "Proceed down the Chatta Chowk corridor to reach the Diwan-i-Khas."
+              : "Continue your journey."}
           </div>
         </div>
 
@@ -1487,21 +1495,17 @@ export default function MughalGameScreen() {
       {/* Mughal Guards in Red Fort Plaza */}
       {scene === "red_fort_plaza" && (
         <>
-          {/* Top Left Guard */}
-          <div className="absolute pointer-events-none z-10" style={{ left: '41%', top: '51%', transform: 'translate(-50%, -96%) scale(0.95)' }}>
-            <img src="/guard.png" alt="Mughal Guard" className="w-24 h-24 object-contain opacity-90" style={{ imageRendering: "pixelated", transform: "scaleX(1)" }} />
+          {/* Top Left Guard (Near Plant/Tree) */}
+          <div className="absolute pointer-events-none z-10" style={{ left: '8%', top: '48%', transform: 'translate(-50%, -96%) scale(0.95)' }}>
+            <img src="/guard.png" alt="Mughal Guard" className="w-32 h-32 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(1)" }} />
           </div>
-          {/* Top Right Guard */}
-          <div className="absolute pointer-events-none z-10" style={{ left: '59%', top: '51%', transform: 'translate(-50%, -96%) scale(0.95)' }}>
-            <img src="/guard.png" alt="Mughal Guard" className="w-24 h-24 object-contain opacity-90" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
+          {/* Left Balcony Guard (Black Dot) */}
+          <div className="absolute pointer-events-none z-10" style={{ left: '11%', top: '69%', transform: 'translate(-50%, -96%) scale(1)' }}>
+            <img src="/guard.png" alt="Mughal Guard" className="w-32 h-32 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(1)" }} />
           </div>
-          {/* Bottom Left Guard */}
-          <div className="absolute pointer-events-none z-10" style={{ left: '38%', top: '76%', transform: 'translate(-50%, -96%) scale(1.15)' }}>
-            <img src="/guard.png" alt="Mughal Guard" className="w-24 h-24 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(1)" }} />
-          </div>
-          {/* Bottom Right Guard */}
-          <div className="absolute pointer-events-none z-10" style={{ left: '62%', top: '76%', transform: 'translate(-50%, -96%) scale(1.15)' }}>
-            <img src="/guard.png" alt="Mughal Guard" className="w-24 h-24 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
+          {/* Right Path Guard (Black Dot) */}
+          <div className="absolute pointer-events-none z-10" style={{ left: '74%', top: '76%', transform: 'translate(-50%, -96%) scale(1.1)' }}>
+            <img src="/guard.png" alt="Mughal Guard" className="w-32 h-32 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
           </div>
         </>
       )}
