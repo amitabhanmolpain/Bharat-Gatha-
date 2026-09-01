@@ -1557,6 +1557,21 @@ export default function MughalGameScreen() {
           </div>
         </>
       )}
+
+      {/* Mughal Traders in Red Fort Interior (Chatta Chowk Market) */}
+      {scene === "red_fort_interior" && (
+        <>
+          {/* Silk Trader (Left Shop) */}
+          <div className="absolute pointer-events-none z-10" style={{ left: '26%', top: '68%', transform: 'translate(-50%, -96%) scale(1.1)', mixBlendMode: 'multiply' }}>
+            <img src="/trader_silk.jpg" alt="Silk Trader" className="w-40 h-40 object-contain" style={{ imageRendering: "pixelated", mixBlendMode: "multiply" }} />
+          </div>
+          {/* Jewel Trader (Right Shop) */}
+          <div className="absolute pointer-events-none z-10" style={{ left: '72%', top: '65%', transform: 'translate(-50%, -96%) scale(1.1)', mixBlendMode: 'multiply' }}>
+            <img src="/trader_jewels.jpg" alt="Jewel Trader" className="w-40 h-40 object-contain" style={{ imageRendering: "pixelated", mixBlendMode: "multiply", transform: "scaleX(-1)" }} />
+          </div>
+        </>
+      )}
+
       {/* Carriage Boarding Prompt in Mehtab Bagh */}
       {scene === "taj_mehtab_bagh" && isNearCarriage && (
         <div 
