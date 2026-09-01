@@ -273,11 +273,11 @@ export default function MughalGameScreen() {
         }
         if (isNearDiwaniKhasExit) {
           setScene("red_fort_plaza");
-          setPlayerPos({ x: 35.0, y: 66.0 });
+          setPlayerPos({ x: 35.0, y: 78.0 });
         }
         if (isNearRangMahalExit) {
           setScene("red_fort_plaza");
-          setPlayerPos({ x: 65.0, y: 66.0 });
+          setPlayerPos({ x: 65.0, y: 78.0 });
         }
         if (isNearCarriage || isNearRedFortCarriage) {
           setIsCarriageTravelling(true);
@@ -710,14 +710,14 @@ export default function MughalGameScreen() {
               setPlayerPos({ x: 50.0, y: 88.0 });
             }
 
-            // Walk into the left door to Diwan-i-Khas
-            if (nextX <= 35.0 && nextY <= 58.0) {
+            // Walk up the left stairs to Diwan-i-Khas
+            if (nextX <= 35.0 && nextY <= 72.0) {
               setScene("red_fort_diwani_khas");
               setPlayerPos({ x: 50.0, y: 88.0 });
             }
 
-            // Walk into the right door to Rang Mahal
-            if (nextX >= 65.0 && nextY <= 58.0) {
+            // Walk up the right stairs to Rang Mahal
+            if (nextX >= 65.0 && nextY <= 72.0) {
               setScene("red_fort_rang_mahal");
               setPlayerPos({ x: 50.0, y: 88.0 });
             }
