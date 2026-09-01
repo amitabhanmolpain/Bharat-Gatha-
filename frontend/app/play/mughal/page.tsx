@@ -256,7 +256,7 @@ export default function MughalGameScreen() {
         }
         if (isNearCharbaghReturn) {
           setScene("taj_charbagh");
-                setPlayerPos({ x: 50.0, y: 20.0 });
+                setPlayerPos({ x: 45.0, y: 20.0 });
         }
         if (isNearCenotaphs && !isMausoleumExplored) {
           setShowMausoleumModal(true);
@@ -1140,7 +1140,7 @@ export default function MughalGameScreen() {
           className="absolute bottom-[10%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 cursor-pointer z-10 animate-bounce"
           onClick={() => {
             setScene("taj_charbagh");
-                setPlayerPos({ x: 50.0, y: 20.0 });
+                setPlayerPos({ x: 45.0, y: 20.0 });
           }}
         >
           <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
