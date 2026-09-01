@@ -208,7 +208,8 @@ export default function MughalGameScreen() {
   // Diwan-i-Khas Proximity (In 'red_fort_diwani_khas' scene)
   const isNearDiwanIKhas = scene === "red_fort_diwani_khas" && playerPos.y <= 65.0 && playerPos.x >= 35.0 && playerPos.x <= 65.0;
 
-
+  // Diwan-i-Khas Exit Proximity
+  const isNearDiwaniKhasExit = scene === "red_fort_diwani_khas" && playerPos.y >= 75.0;
 
   // Smooth continuous 60fps movement game loop
   useEffect(() => {
@@ -266,6 +267,10 @@ export default function MughalGameScreen() {
         }
         if (isNearDiwanIKhas) {
           setShowCampaignComplete(true);
+        }
+        if (isNearDiwaniKhasExit) {
+          setScene("red_fort_plaza");
+          setPlayerPos({ x: 35.0, y: 66.0 });
         }
         if (isNearCarriage || isNearRedFortCarriage) {
           setIsCarriageTravelling(true);
@@ -728,16 +733,10 @@ export default function MughalGameScreen() {
             const minX = 25.0;
             const maxX = 75.0;
             const minY = 50.0;
-            const maxY = 90.0;
+            const maxY = 88.0;
 
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
-
-            // Walk back out to Plaza
-            if (nextY >= 89.0) {
-              setScene("red_fort_plaza");
-              setPlayerPos({ x: 35.0, y: 66.0 }); // Spawn at the bottom of the stairs
-            }
 
             return { x: nextX, y: nextY };
           }
@@ -754,7 +753,7 @@ export default function MughalGameScreen() {
       window.removeEventListener("keyup", onKeyUp);
       cancelAnimationFrame(animationFrameId);
     };
-  }, [isLoading, isTransitioning, scene, isNearGuard, isNearThrone, isNearMirrorFountain, isNearKhasFountain, isNearCalligraphy, isNearPool, isNearTajPishtaq, isNearCenotaphs, isNearArchaeologist, isNearCarriage, isNearLahoriGate, isNearDiwanIKhas, isNearCharbaghReturn, isCalligraphySolved, isSymmetrySolved, isMausoleumExplored, isArchaeologistTalked, cluesFound]);
+  }, [isLoading, isTransitioning, scene, isNearGuard, isNearThrone, isNearMirrorFountain, isNearKhasFountain, isNearCalligraphy, isNearPool, isNearTajPishtaq, isNearCenotaphs, isNearArchaeologist, isNearCarriage, isNearLahoriGate, isNearDiwanIKhas, isNearDiwaniKhasExit, isNearCharbaghReturn, isCalligraphySolved, isSymmetrySolved, isMausoleumExplored, isArchaeologistTalked, cluesFound]);
 
   if (isLoading) {
     return (
@@ -1608,6 +1607,20 @@ export default function MughalGameScreen() {
         >
           <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
           Conclude Campaign at Diwan-i-Khas
+        </div>
+      )}
+
+      {/* Diwan-i-Khas Exit Prompt */}
+      {scene === "red_fort_diwani_khas" && isNearDiwaniKhasExit && !showCampaignComplete && (
+        <div 
+          className="absolute bottom-[20%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 cursor-pointer z-10 animate-bounce"
+          onClick={() => {
+            setScene("red_fort_plaza");
+            setPlayerPos({ x: 35.0, y: 66.0 });
+          }}
+        >
+          <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
+          Exit Palace
         </div>
       )}
 
