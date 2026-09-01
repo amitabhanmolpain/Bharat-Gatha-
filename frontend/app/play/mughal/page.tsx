@@ -176,6 +176,9 @@ export default function MughalGameScreen() {
   // Carriage Exit Proximity (In 'taj_mehtab_bagh' scene)
   const isNearCarriage = scene === "taj_mehtab_bagh" && isArchaeologistTalked && playerPos.x >= 80.0 && playerPos.y >= 80.0;
 
+  // Red Fort Carriage Proximity (In 'red_fort_lahori' scene)
+  const isNearRedFortCarriage = scene === "red_fort_lahori" && playerPos.x <= 25.0 && playerPos.y >= 75.0;
+
   // Mehtab Bagh Cross Proximity (In 'taj_exterior' scene)
   const isNearMehtabBaghCross = scene === "taj_exterior" && playerPos.x >= 73.0 && playerPos.y <= 84.0;
 
@@ -234,20 +237,29 @@ export default function MughalGameScreen() {
         if (isNearArchaeologist) {
           setShowArchaeologistDialogue((prev) => !prev);
         }
-        if (isNearCarriage) {
+        if (isNearCarriage || isNearRedFortCarriage) {
           setIsCarriageTravelling(true);
+          const horseSound = new Audio('/horse_sound.webm');
+          horseSound.volume = 0.5;
+          horseSound.play().catch(e => console.log("Audio play blocked", e));
+          
           setTravelOverlayPhase(1);
           setTimeout(() => {
             setTravelOverlayPhase(2);
             setTimeout(() => {
               setTravelOverlayPhase(3);
               setTimeout(() => {
-                setScene("red_fort_lahori");
-                setPlayerPos({ x: 50.0, y: 88.0 });
+                if (isNearCarriage) {
+                  setScene("red_fort_lahori");
+                  setPlayerPos({ x: 50.0, y: 88.0 });
+                } else {
+                  setScene("taj_mehtab_bagh");
+                  setPlayerPos({ x: 75.0, y: 80.0 });
+                }
                 setIsCarriageTravelling(false);
                 setTravelOverlayPhase(0);
               }, 400);
-            }, 500);
+            }, 1500);
           }, 500);
         }
       } else if (e.key.toLowerCase() === "f") {
@@ -1373,12 +1385,54 @@ export default function MughalGameScreen() {
         </div>
       )}
 
+      {/* Horse Carriage Sprite in Mehtab Bagh */}
+      {scene === "taj_mehtab_bagh" && (
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            right: `2%`,
+            top: `82%`,
+            transform: `translate(0, -90%)`,
+            zIndex: 5,
+          }}
+        >
+          <img
+            src="/carriage2_transparent.png"
+            alt="Horse Carriage"
+            className="w-[300px] md:w-[420px] h-auto object-contain"
+            style={{ transform: "scaleX(-1)" }}
+          />
+        </div>
+      )}
+
+      {/* Horse Carriage Sprite in Red Fort Lahori */}
+      {scene === "red_fort_lahori" && (
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            left: `2%`,
+            top: `93%`,
+            transform: `translate(0, -90%)`,
+            zIndex: 5,
+          }}
+        >
+          <img
+            src="/carriage2_transparent.png"
+            alt="Horse Carriage"
+            className="w-[300px] md:w-[420px] h-auto object-contain"
+            style={{ transform: "scaleX(-1)" }}
+          />
+        </div>
+      )}
       {/* Carriage Boarding Prompt in Mehtab Bagh */}
       {scene === "taj_mehtab_bagh" && isNearCarriage && (
         <div 
           className="absolute bottom-[16%] right-8 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 cursor-pointer z-10 animate-pulse animate-bounce"
           onClick={() => {
             setIsCarriageTravelling(true);
+            const horseSound = new Audio('/horse_sound.webm');
+            horseSound.volume = 0.5;
+            horseSound.play().catch(e => console.log("Audio play blocked", e));
             setTravelOverlayPhase(1);
             setTimeout(() => {
               setTravelOverlayPhase(2);
@@ -1389,13 +1443,42 @@ export default function MughalGameScreen() {
                   setPlayerPos({ x: 50.0, y: 88.0 });
                   setIsCarriageTravelling(false);
                   setTravelOverlayPhase(0);
-                }, 2500);
-              }, 2500);
-            }, 2000);
+                }, 400);
+              }, 1500);
+            }, 500);
           }}
         >
           <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
           Board Carriage to Delhi (Red Fort)
+        </div>
+      )}
+
+      {/* Carriage Boarding Prompt in Red Fort Lahori */}
+      {scene === "red_fort_lahori" && isNearRedFortCarriage && (
+        <div 
+          className="absolute bottom-[16%] left-16 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 cursor-pointer z-10 animate-pulse animate-bounce"
+          onClick={() => {
+            setIsCarriageTravelling(true);
+            const horseSound = new Audio('/horse_sound.webm');
+            horseSound.volume = 0.5;
+            horseSound.play().catch(e => console.log("Audio play blocked", e));
+            setTravelOverlayPhase(1);
+            setTimeout(() => {
+              setTravelOverlayPhase(2);
+              setTimeout(() => {
+                setTravelOverlayPhase(3);
+                setTimeout(() => {
+                  setScene("taj_mehtab_bagh");
+                  setPlayerPos({ x: 75.0, y: 80.0 });
+                  setIsCarriageTravelling(false);
+                  setTravelOverlayPhase(0);
+                }, 400);
+              }, 1500);
+            }, 500);
+          }}
+        >
+          <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
+          Take Carriage back to Agra
         </div>
       )}
 
