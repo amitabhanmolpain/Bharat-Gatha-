@@ -358,7 +358,7 @@ export default function MughalGameScreen() {
             const maxX = 58.0 + rampProgress * 4.0;
 
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
-            const nextY = Math.max(71.0, Math.min(92.0, prev.y + dy));
+            const nextY = Math.max(71.0, Math.min(98.0, prev.y + dy));
 
             // Check trigger to enter passage through the archway
             if (nextY <= 71.8 && nextX >= 47.0 && nextX <= 53.0) {
@@ -369,6 +369,12 @@ export default function MughalGameScreen() {
                 setIsTransitioning(false);
                 if (cluesFound < 1) setCluesFound(1);
               }, 400);
+            }
+
+            // Walk backward out of the Agra Fort to Taj Gate
+            if (nextY >= 96.0) {
+              setScene("taj_gate");
+              setPlayerPos({ x: 50.0, y: 88.0 });
             }
 
             return { x: nextX, y: nextY };
@@ -533,10 +539,16 @@ export default function MughalGameScreen() {
             const minX = 20.0;
             const maxX = 80.0;
             const minY = 68.0;
-            const maxY = 90.0;
+            const maxY = 98.0;
 
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
+
+            // Walking backward out of the Taj Gate to Agra Fort
+            if (nextY >= 96.0) {
+              setScene("gate");
+              setPlayerPos({ x: 50.0, y: 88.0 });
+            }
 
             // Walking through the archway to Charbagh (requires calligraphy solved)
             if (nextY <= 68.5 && nextX >= 45.0 && nextX <= 55.0) {
@@ -884,7 +896,7 @@ export default function MughalGameScreen() {
   };
 
   const getTransitionLabel = () => {
-    if (scene === "gate") return "Entering Inner Ramp Passage...";
+    if (scene === "gate") return playerPos.y >= 90 ? "Traveling to the Taj Mahal Great Gate..." : "Entering Inner Ramp Passage...";
     if (scene === "passage") return playerPos.y <= 62 ? "Entering Diwan-i-Aam & Anguri Bagh..." : "Returning to Outer Gate...";
     if (scene === "courtyard") {
       if (playerPos.x >= 75) return "Entering Brown Palace Hallway...";
@@ -895,7 +907,7 @@ export default function MughalGameScreen() {
     if (scene === "sheesh_mahal") return "Returning to Sheesh Mahal Corridor...";
     if (scene === "brown_passage") return playerPos.y <= 64 ? "Entering Khas Mahal Palace..." : "Returning to Anguri Bagh...";
     if (scene === "khas_mahal") return "Crossing the Yamuna toward the Taj Mahal...";
-    if (scene === "taj_gate") return "Entering the Taj Mahal Charbagh Gardens...";
+    if (scene === "taj_gate") return playerPos.y >= 90 ? "Returning to Agra Fort Main Gate..." : "Entering the Taj Mahal Charbagh Gardens...";
     if (scene === "taj_charbagh") return playerPos.y <= 45 ? "Approaching the Taj Mahal Outside Terrace..." : "Returning to Great Gate...";
     if (scene === "taj_exterior") {
       if (playerPos.x >= 78) return "Crossing the Yamuna to Mehtab Bagh (Moonlight Garden)...";
@@ -1524,6 +1536,20 @@ export default function MughalGameScreen() {
             style={{ imageRendering: "pixelated" }}
           />
         </div>
+      )}
+
+      {/* Mughal Traders in Taj Gate (Darwaza-i-Rauza) */}
+      {scene === "taj_gate" && (
+        <>
+          {/* Pot Trader (Left Side) */}
+          <div className="absolute pointer-events-none z-10" style={{ left: '22%', top: '75%', transform: 'translate(-50%, -96%)' }}>
+            <img src="/trader_pots_transparent.png" alt="Pot Trader" className="w-56 h-56 object-contain" style={{ imageRendering: "pixelated" }} />
+          </div>
+          {/* Painting Trader (Right Side) */}
+          <div className="absolute pointer-events-none z-10" style={{ left: '78%', top: '75%', transform: 'translate(-50%, -96%)' }}>
+            <img src="/trader_paintings_transparent.png" alt="Painting Trader" className="w-56 h-56 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
+          </div>
+        </>
       )}
 
       {/* Horse Carriage Sprite in Mehtab Bagh */}
