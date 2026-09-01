@@ -205,6 +205,9 @@ export default function MughalGameScreen() {
   // Lahori Gate Archway Proximity (In 'red_fort_lahori' scene)
   const isNearLahoriGate = scene === "red_fort_lahori" && playerPos.y <= 68.0 && playerPos.x >= 44.0 && playerPos.x <= 56.0;
 
+  // Diwan-i-Khas Proximity (In 'red_fort_interior' scene)
+  const isNearDiwanIKhas = scene === "red_fort_interior" && playerPos.y <= 55.0 && playerPos.x >= 40.0 && playerPos.x <= 60.0;
+
 
 
   // Smooth continuous 60fps movement game loop
@@ -258,6 +261,10 @@ export default function MughalGameScreen() {
           setShowArchaeologistDialogue((prev) => !prev);
         }
         if (isNearLahoriGate) {
+          setScene("red_fort_plaza");
+          setPlayerPos({ x: 50.0, y: 88.0 });
+        }
+        if (isNearDiwanIKhas) {
           setShowCampaignComplete(true);
         }
         if (isNearCarriage || isNearRedFortCarriage) {
@@ -724,7 +731,7 @@ export default function MughalGameScreen() {
       window.removeEventListener("keyup", onKeyUp);
       cancelAnimationFrame(animationFrameId);
     };
-  }, [isLoading, isTransitioning, scene, isNearGuard, isNearThrone, isNearMirrorFountain, isNearKhasFountain, isNearCalligraphy, isNearPool, isNearTajPishtaq, isNearCenotaphs, isNearArchaeologist, isNearCarriage, isNearLahoriGate, isNearCharbaghReturn, isCalligraphySolved, isSymmetrySolved, isMausoleumExplored, isArchaeologistTalked, cluesFound]);
+  }, [isLoading, isTransitioning, scene, isNearGuard, isNearThrone, isNearMirrorFountain, isNearKhasFountain, isNearCalligraphy, isNearPool, isNearTajPishtaq, isNearCenotaphs, isNearArchaeologist, isNearCarriage, isNearLahoriGate, isNearDiwanIKhas, isNearCharbaghReturn, isCalligraphySolved, isSymmetrySolved, isMausoleumExplored, isArchaeologistTalked, cluesFound]);
 
   if (isLoading) {
     return (
@@ -1566,10 +1573,24 @@ export default function MughalGameScreen() {
       {scene === "red_fort_lahori" && isNearLahoriGate && !showCampaignComplete && (
         <div 
           className="absolute top-[60%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 cursor-pointer z-10 animate-bounce"
-          onClick={() => setShowCampaignComplete(true)}
+          onClick={() => {
+            setScene("red_fort_plaza");
+            setPlayerPos({ x: 50.0, y: 88.0 });
+          }}
         >
           <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
           Enter Lahori Gate
+        </div>
+      )}
+
+      {/* Diwan-i-Khas Completion Prompt */}
+      {scene === "red_fort_interior" && isNearDiwanIKhas && !showCampaignComplete && (
+        <div 
+          className="absolute top-[52%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 cursor-pointer z-10 animate-bounce"
+          onClick={() => setShowCampaignComplete(true)}
+        >
+          <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
+          Conclude Campaign at Diwan-i-Khas
         </div>
       )}
 
@@ -1885,7 +1906,7 @@ export default function MughalGameScreen() {
       )}
 
       {/* --- CAMPAIGN COMPLETE MODAL --- */}
-      {showCampaignComplete && scene === "red_fort_lahori" && (
+      {showCampaignComplete && (
         <div className="absolute inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-6 z-30 pointer-events-auto">
           <div className="bg-[#fff9ea] border-3 border-black rounded-2xl p-6 shadow-[8px_8px_0_0_rgba(0,0,0,1)] max-w-lg w-full flex flex-col gap-4 relative animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b-2 border-amber-200 pb-2">
