@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 export default function MughalGameScreen() {
   const [isLoading, setIsLoading] = useState(true);
-  const [scene, setScene] = useState<"gate" | "passage" | "courtyard" | "interior" | "sheesh_passage" | "sheesh_mahal" | "brown_passage" | "khas_mahal" | "taj_gate" | "taj_charbagh" | "taj_exterior" | "taj_mausoleum" | "taj_mehtab_bagh" | "red_fort_lahori" | "red_fort_plaza" | "red_fort_interior">("gate");
+  const [scene, setScene] = useState<"gate" | "passage" | "courtyard" | "interior" | "sheesh_passage" | "sheesh_mahal" | "brown_passage" | "khas_mahal" | "taj_gate" | "taj_charbagh" | "taj_exterior" | "taj_mausoleum" | "taj_mehtab_bagh" | "red_fort_lahori" | "red_fort_plaza" | "red_fort_interior" | "red_fort_diwani_khas">("gate");
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [playerPos, setPlayerPos] = useState({ x: 50, y: 85 });
   const [facingLeft, setFacingLeft] = useState(false);
@@ -205,8 +205,8 @@ export default function MughalGameScreen() {
   // Lahori Gate Archway Proximity (In 'red_fort_lahori' scene)
   const isNearLahoriGate = scene === "red_fort_lahori" && playerPos.y <= 68.0 && playerPos.x >= 44.0 && playerPos.x <= 56.0;
 
-  // Diwan-i-Khas Proximity (In 'red_fort_interior' scene)
-  const isNearDiwanIKhas = scene === "red_fort_interior" && playerPos.y <= 55.0 && playerPos.x >= 40.0 && playerPos.x <= 60.0;
+  // Diwan-i-Khas Proximity (In 'red_fort_diwani_khas' scene)
+  const isNearDiwanIKhas = scene === "red_fort_diwani_khas" && playerPos.y <= 65.0 && playerPos.x >= 35.0 && playerPos.x <= 65.0;
 
 
 
@@ -692,14 +692,20 @@ export default function MughalGameScreen() {
               setPlayerPos({ x: 50.0, y: 58.0 });
             }
 
-            // Walk forward to Chatta Chowk interior
+            // Walk forward to Chatta Chowk interior (center top)
             if (nextY <= 36.0 && nextX >= 40.0 && nextX <= 60.0) {
               setScene("red_fort_interior");
               setPlayerPos({ x: 50.0, y: 88.0 });
             }
 
+            // Walk to Diwan-i-Khas (top left side of plaza)
+            if (nextY <= 55.0 && nextX <= 20.0) {
+              setScene("red_fort_diwani_khas");
+              setPlayerPos({ x: 50.0, y: 88.0 });
+            }
+
             return { x: nextX, y: nextY };
-          } else {
+          } else if (scene === "red_fort_interior") {
             // In red_fort_interior scene
             const progress = Math.max(0, Math.min(1, (prev.y - 45.0) / (90.0 - 45.0)));
             const minX = 35.0 - progress * 20.0;
@@ -714,6 +720,23 @@ export default function MughalGameScreen() {
             if (nextY >= 89.0) {
               setScene("red_fort_plaza");
               setPlayerPos({ x: 50.0, y: 38.0 });
+            }
+
+            return { x: nextX, y: nextY };
+          } else {
+            // In red_fort_diwani_khas scene
+            const minX = 25.0;
+            const maxX = 75.0;
+            const minY = 50.0;
+            const maxY = 90.0;
+
+            const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
+            const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
+
+            // Walk back out to Plaza
+            if (nextY >= 89.0) {
+              setScene("red_fort_plaza");
+              setPlayerPos({ x: 18.0, y: 55.0 });
             }
 
             return { x: nextX, y: nextY };
@@ -803,6 +826,8 @@ export default function MughalGameScreen() {
     if (scene === "taj_mehtab_bagh") return "/bg-taj-mehtab-bagh.jpg";
     if (scene === "red_fort_lahori") return "/bg-red-fort-lahori.jpg";
     if (scene === "red_fort_plaza") return "/bg-red-fort-plaza.jpg";
+    if (scene === "red_fort_interior") return "/bg-red-fort-interior.jpg";
+    if (scene === "red_fort_diwani_khas") return "/bg-red-fort-diwani-khas.jpg";
     return "/bg-red-fort-interior.jpg";
   };
 
@@ -830,8 +855,12 @@ export default function MughalGameScreen() {
       return "Leaving Agra for Delhi...";
     }
     if (scene === "red_fort_lahori") return "Entering the Red Fort Plaza...";
-    if (scene === "red_fort_plaza") return playerPos.y <= 60 ? "Entering Chatta Chowk..." : "Exiting to Lahori Gate...";
+    if (scene === "red_fort_plaza") {
+      if (playerPos.x <= 35) return "Entering Diwan-i-Khas Palace...";
+      return playerPos.y <= 60 ? "Entering Chatta Chowk..." : "Exiting to Lahori Gate...";
+    }
     if (scene === "red_fort_interior") return playerPos.y <= 60 ? "Exploring Chatta Chowk..." : "Returning to Plaza...";
+    if (scene === "red_fort_diwani_khas") return "Returning to Plaza...";
     return "Transitioning...";
   };
 
@@ -1283,8 +1312,6 @@ export default function MughalGameScreen() {
               scene === "taj_exterior" ? "Taj Mahal Outside Terrace" :
               scene === "taj_mausoleum" ? "Main Taj Mausoleum" :
               scene === "taj_mehtab_bagh" ? "Mehtab Bagh (Moonlight Garden)" :
-              scene === "red_fort_plaza" ? "Red Fort Plaza" :
-              scene === "red_fort_interior" ? "Chatta Chowk (Red Fort)" :
               "Lahori Gate (Red Fort)"
             }
           </div>
@@ -1325,13 +1352,7 @@ export default function MughalGameScreen() {
               ? !isArchaeologistTalked
                 ? "Explore Mehtab Bagh and talk to the Caretaker Archaeologist (press E)."
                 : "Proceed to the bottom-right carriage to Delhi, or walk up across the pier to return to Taj exterior."
-              : scene === "red_fort_lahori"
-              ? "Walk forward into the monumental Lahori Gate of the Red Fort."
-              : scene === "red_fort_plaza"
-              ? "Explore the plaza, or walk forward into the Chatta Chowk."
-              : scene === "red_fort_interior"
-              ? "Proceed down the Chatta Chowk corridor to reach the Diwan-i-Khas."
-              : "Continue your journey."}
+              : "Walk forward into the monumental Lahori Gate of the Red Fort."}
           </div>
         </div>
 
@@ -1495,17 +1516,21 @@ export default function MughalGameScreen() {
       {/* Mughal Guards in Red Fort Plaza */}
       {scene === "red_fort_plaza" && (
         <>
-          {/* Top Left Guard (Near Plant/Tree) */}
-          <div className="absolute pointer-events-none z-10" style={{ left: '8%', top: '48%', transform: 'translate(-50%, -96%) scale(0.95)' }}>
-            <img src="/guard.png" alt="Mughal Guard" className="w-32 h-32 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(1)" }} />
+          {/* Top Left Guard */}
+          <div className="absolute pointer-events-none z-10" style={{ left: '41%', top: '51%', transform: 'translate(-50%, -96%) scale(0.95)' }}>
+            <img src="/guard.png" alt="Mughal Guard" className="w-24 h-24 object-contain opacity-90" style={{ imageRendering: "pixelated", transform: "scaleX(1)" }} />
           </div>
-          {/* Left Balcony Guard (Black Dot) */}
-          <div className="absolute pointer-events-none z-10" style={{ left: '11%', top: '69%', transform: 'translate(-50%, -96%) scale(1)' }}>
-            <img src="/guard.png" alt="Mughal Guard" className="w-32 h-32 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(1)" }} />
+          {/* Top Right Guard */}
+          <div className="absolute pointer-events-none z-10" style={{ left: '59%', top: '51%', transform: 'translate(-50%, -96%) scale(0.95)' }}>
+            <img src="/guard.png" alt="Mughal Guard" className="w-24 h-24 object-contain opacity-90" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
           </div>
-          {/* Right Path Guard (Black Dot) */}
-          <div className="absolute pointer-events-none z-10" style={{ left: '74%', top: '76%', transform: 'translate(-50%, -96%) scale(1.1)' }}>
-            <img src="/guard.png" alt="Mughal Guard" className="w-32 h-32 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
+          {/* Bottom Left Guard */}
+          <div className="absolute pointer-events-none z-10" style={{ left: '38%', top: '76%', transform: 'translate(-50%, -96%) scale(1.15)' }}>
+            <img src="/guard.png" alt="Mughal Guard" className="w-24 h-24 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(1)" }} />
+          </div>
+          {/* Bottom Right Guard */}
+          <div className="absolute pointer-events-none z-10" style={{ left: '62%', top: '76%', transform: 'translate(-50%, -96%) scale(1.15)' }}>
+            <img src="/guard.png" alt="Mughal Guard" className="w-24 h-24 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
           </div>
         </>
       )}
@@ -1576,7 +1601,7 @@ export default function MughalGameScreen() {
       )}
 
       {/* Diwan-i-Khas Completion Prompt */}
-      {scene === "red_fort_interior" && isNearDiwanIKhas && !showCampaignComplete && (
+      {scene === "red_fort_diwani_khas" && isNearDiwanIKhas && !showCampaignComplete && (
         <div 
           className="absolute top-[52%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 cursor-pointer z-10 animate-bounce"
           onClick={() => setShowCampaignComplete(true)}
