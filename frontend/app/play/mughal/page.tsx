@@ -1550,22 +1550,22 @@ export default function MughalGameScreen() {
             <img src="/guard.png" alt="Mughal Guard" className="w-32 h-32 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
           </div>
 
-          {/* Pot Trader (Left Side near foreground pots) */}
-          <div className="absolute pointer-events-none z-10" style={{ left: '20%', top: '88%', transform: 'translate(-50%, -96%)' }}>
+          {/* Toy Trader (Left Side far) */}
+          <div className="absolute pointer-events-none z-10" style={{ left: '10%', top: '88%', transform: 'translate(-50%, -96%)' }}>
+            <img src="/trader_toys_transparent.png" alt="Toy Trader" className="w-40 h-40 object-contain" style={{ imageRendering: "pixelated" }} />
+          </div>
+          {/* Pot Trader (Left Side inner) */}
+          <div className="absolute pointer-events-none z-10" style={{ left: '24%', top: '88%', transform: 'translate(-50%, -96%)' }}>
             <img src="/trader_pots_transparent.png" alt="Pot Trader" className="w-40 h-40 object-contain" style={{ imageRendering: "pixelated" }} />
           </div>
-          {/* Toy Trader (Left Side mid-ground) */}
-          <div className="absolute pointer-events-none z-10" style={{ left: '10%', top: '77%', transform: 'translate(-50%, -96%)' }}>
-            <img src="/trader_toys_transparent.png" alt="Toy Trader" className="w-36 h-36 object-contain" style={{ imageRendering: "pixelated" }} />
-          </div>
 
-          {/* Painting Trader (Right Side near foreground benches) */}
-          <div className="absolute pointer-events-none z-10" style={{ left: '80%', top: '88%', transform: 'translate(-50%, -96%)' }}>
+          {/* Painting Trader (Right Side inner) */}
+          <div className="absolute pointer-events-none z-10" style={{ left: '76%', top: '88%', transform: 'translate(-50%, -96%)' }}>
             <img src="/trader_paintings_transparent.png" alt="Painting Trader" className="w-40 h-40 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
           </div>
-          {/* Marble Trader (Right Side mid-ground) */}
-          <div className="absolute pointer-events-none z-10" style={{ left: '90%', top: '77%', transform: 'translate(-50%, -96%)' }}>
-            <img src="/trader_marble_transparent.png" alt="Marble Trader" className="w-36 h-36 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
+          {/* Marble Trader (Right Side far) */}
+          <div className="absolute pointer-events-none z-10" style={{ left: '90%', top: '88%', transform: 'translate(-50%, -96%)' }}>
+            <img src="/trader_marble_transparent.png" alt="Marble Trader" className="w-40 h-40 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
           </div>
         </>
       )}
