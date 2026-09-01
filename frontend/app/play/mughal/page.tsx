@@ -1412,40 +1412,6 @@ export default function MughalGameScreen() {
         </div>
       </div>
 
-      {/* Bottom Right: Stats */}
-      <div className="absolute bottom-6 right-6 flex items-center gap-2">
-        <div className="bg-[#fff9ea] border-2 border-black rounded px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)]">
-          <span className="text-[11px] font-bold text-black"><span className="text-amber-600 mr-1">⚡</span>33 generations</span>
-        </div>
-        <div className="bg-[#fff9ea] border-2 border-black rounded px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)]">
-          <span className="text-[11px] font-bold text-black"><span className="text-amber-600 mr-1">👁</span>14 screens</span>
-        </div>
-        <div className="bg-[#fff9ea] border-2 border-black rounded px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)]">
-          <span className="text-[11px] font-bold text-black">
-            <span className="text-amber-600 mr-1">🚪</span>
-            {(() => {
-              const rooms = {
-                gate: 1,
-                passage: 2,
-                courtyard: 3,
-                interior: 4,
-                sheesh_passage: 5,
-                sheesh_mahal: 6,
-                brown_passage: 7,
-                khas_mahal: 8,
-                taj_gate: 9,
-                taj_charbagh: 10,
-                taj_exterior: 11,
-                taj_mausoleum: 12,
-                taj_mehtab_bagh: 13,
-                red_fort_lahori: 14
-              };
-              const current = (rooms as any)[scene] || 1;
-              return `rooms ${current}/14`;
-            })()}
-          </span>
-        </div>
-      </div>
 
       {/* --- ARCHAEOLOGIST NPC (Only in Mehtab Bagh Scene) --- */}
       {scene === "taj_mehtab_bagh" && (
