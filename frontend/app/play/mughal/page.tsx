@@ -1483,6 +1483,28 @@ export default function MughalGameScreen() {
           />
         </div>
       )}
+
+      {/* Mughal Guards in Red Fort Plaza */}
+      {scene === "red_fort_plaza" && (
+        <>
+          {/* Top Left Guard */}
+          <div className="absolute pointer-events-none z-10" style={{ left: '41%', top: '51%', transform: 'translate(-50%, -96%) scale(0.95)' }}>
+            <img src="/guard.png" alt="Mughal Guard" className="w-24 h-24 object-contain opacity-90" style={{ imageRendering: "pixelated", transform: "scaleX(1)" }} />
+          </div>
+          {/* Top Right Guard */}
+          <div className="absolute pointer-events-none z-10" style={{ left: '59%', top: '51%', transform: 'translate(-50%, -96%) scale(0.95)' }}>
+            <img src="/guard.png" alt="Mughal Guard" className="w-24 h-24 object-contain opacity-90" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
+          </div>
+          {/* Bottom Left Guard */}
+          <div className="absolute pointer-events-none z-10" style={{ left: '38%', top: '76%', transform: 'translate(-50%, -96%) scale(1.15)' }}>
+            <img src="/guard.png" alt="Mughal Guard" className="w-24 h-24 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(1)" }} />
+          </div>
+          {/* Bottom Right Guard */}
+          <div className="absolute pointer-events-none z-10" style={{ left: '62%', top: '76%', transform: 'translate(-50%, -96%) scale(1.15)' }}>
+            <img src="/guard.png" alt="Mughal Guard" className="w-24 h-24 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
+          </div>
+        </>
+      )}
       {/* Carriage Boarding Prompt in Mehtab Bagh */}
       {scene === "taj_mehtab_bagh" && isNearCarriage && (
         <div 
