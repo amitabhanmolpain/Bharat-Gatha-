@@ -159,7 +159,7 @@ export default function MughalGameScreen() {
   const isNearArchaeologist = scene === "taj_mehtab_bagh" && distToArchaeologist < 9.0;
 
   // Calligraphy Gate Proximity (In 'taj_gate' scene)
-  const isNearCalligraphy = scene === "taj_gate" && playerPos.y <= 65.0 && playerPos.x >= 44.0 && playerPos.x <= 56.0;
+  const isNearCalligraphy = scene === "taj_gate" && playerPos.y <= 72.0 && playerPos.x >= 44.0 && playerPos.x <= 56.0;
 
   // Symmetry Pool Proximity (In 'taj_charbagh' scene)
   const isNearPool = scene === "taj_charbagh" && playerPos.y <= 58.0 && playerPos.y >= 42.0 && playerPos.x >= 42.0 && playerPos.x <= 58.0;
@@ -168,7 +168,10 @@ export default function MughalGameScreen() {
   const isNearTajPishtaq = scene === "taj_exterior" && playerPos.y <= 75.0 && playerPos.x >= 42.0 && playerPos.x <= 58.0;
 
   // Cenotaphs Proximity (In 'taj_mausoleum' scene)
-  const isNearCenotaphs = scene === "taj_mausoleum" && playerPos.y <= 62.0 && playerPos.y >= 38.0 && playerPos.x >= 38.0 && playerPos.x <= 62.0;
+  const isNearCenotaphs = scene === "taj_mausoleum" && playerPos.y <= 72.0 && playerPos.y >= 30.0 && playerPos.x >= 25.0 && playerPos.x <= 75.0;
+
+  // Return to Charbagh Proximity (In 'taj_exterior' scene)
+  const isNearCharbaghReturn = scene === "taj_exterior" && playerPos.y >= 94.0;
 
   // Carriage Exit Proximity (In 'taj_mehtab_bagh' scene)
   const isNearCarriage = scene === "taj_mehtab_bagh" && isArchaeologistTalked && playerPos.x >= 80.0 && playerPos.y >= 80.0;
@@ -219,6 +222,14 @@ export default function MughalGameScreen() {
           setTimeout(() => {
             setScene("taj_mausoleum");
             setPlayerPos({ x: 50.0, y: 86.0 });
+            setIsTransitioning(false);
+          }, 400);
+        }
+        if (isNearCharbaghReturn) {
+          setIsTransitioning(true);
+          setTimeout(() => {
+            setScene("taj_charbagh");
+            setPlayerPos({ x: 50.0, y: 20.0 });
             setIsTransitioning(false);
           }, 400);
         }
@@ -522,14 +533,14 @@ export default function MughalGameScreen() {
           } else if (scene === "taj_gate") {
             const minX = 20.0;
             const maxX = 80.0;
-            const minY = 60.0;
+            const minY = 68.0;
             const maxY = 90.0;
 
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
 
             // Walking through the archway to Charbagh (requires calligraphy solved)
-            if (nextY <= 61.0 && nextX >= 45.0 && nextX <= 55.0) {
+            if (nextY <= 68.5 && nextX >= 45.0 && nextX <= 55.0) {
               if (isCalligraphySolved) {
                 setIsTransitioning(true);
                 setTimeout(() => {
@@ -538,7 +549,7 @@ export default function MughalGameScreen() {
                   setIsTransitioning(false);
                 }, 400);
               } else {
-                return { x: prev.x, y: Math.max(62.0, prev.y) };
+                return { x: prev.x, y: Math.max(69.0, prev.y) };
               }
             }
 
@@ -584,47 +595,27 @@ export default function MughalGameScreen() {
               setIsTransitioning(true);
               setTimeout(() => {
                 setScene("taj_gate");
-                setPlayerPos({ x: 50.0, y: 64.0 });
+                setPlayerPos({ x: 50.0, y: 69.0 });
                 setIsTransitioning(false);
               }, 400);
             }
 
             return { x: nextX, y: nextY };
           } else if (scene === "taj_exterior") {
-            const minX = 15.0;
-            const maxX = 88.0;
-            const minY = 68.0;
-            const maxY = 90.0;
+            const minX = 26.0;
+            const maxX = 74.0;
+            const minY = 69.0;
+            const maxY = 96.0;
 
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
 
-            // Walking into the central Pishtaq arch entrance to enter the Mausoleum
-            if (nextY <= 70.0 && nextX >= 44.0 && nextX <= 56.0) {
-              setIsTransitioning(true);
-              setTimeout(() => {
-                setScene("taj_mausoleum");
-                setPlayerPos({ x: 50.0, y: 86.0 });
-                setIsTransitioning(false);
-              }, 400);
-            }
-
             // Walking towards the right to cross the river into Mehtab Bagh (Moonlight Garden)
-            if (nextX >= 84.0 && nextY <= 84.0) {
+            if (nextX >= 73.0 && nextY <= 84.0) {
               setIsTransitioning(true);
               setTimeout(() => {
                 setScene("taj_mehtab_bagh");
                 setPlayerPos({ x: 50.0, y: 50.0 });
-                setIsTransitioning(false);
-              }, 400);
-            }
-
-            // Exiting back down to Charbagh gardens
-            if (nextY >= 89.5) {
-              setIsTransitioning(true);
-              setTimeout(() => {
-                setScene("taj_charbagh");
-                setPlayerPos({ x: 50.0, y: 20.0 });
                 setIsTransitioning(false);
               }, 400);
             }
@@ -639,10 +630,18 @@ export default function MughalGameScreen() {
             let nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             let nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
 
-            // Central jali screen obstacle: block x in [40, 60] and y in [40, 60]
-            if (nextX >= 40.0 && nextX <= 60.0 && nextY >= 40.0 && nextY <= 60.0) {
-              nextX = prev.x;
-              nextY = prev.y;
+            // Central jali screen obstacle: block x in [32, 68] and y in [38, 66]
+            if (nextX > 32.0 && nextX < 68.0 && nextY > 38.0 && nextY < 66.0) {
+              if (!(prev.x + dx > 32.0 && prev.x + dx < 68.0 && prev.y > 38.0 && prev.y < 66.0)) {
+                nextX = prev.x + dx;
+                nextY = prev.y;
+              } else if (!(prev.x > 32.0 && prev.x < 68.0 && prev.y + dy > 38.0 && prev.y + dy < 66.0)) {
+                nextX = prev.x;
+                nextY = prev.y + dy;
+              } else {
+                nextX = prev.x;
+                nextY = prev.y;
+              }
             }
 
             // Exiting back to Taj Mahal outside exterior terrace
@@ -701,7 +700,7 @@ export default function MughalGameScreen() {
       window.removeEventListener("keyup", onKeyUp);
       cancelAnimationFrame(animationFrameId);
     };
-  }, [isLoading, isTransitioning, scene, isNearGuard, isNearThrone, isNearMirrorFountain, isNearKhasFountain, isNearCalligraphy, isNearPool, isNearTajPishtaq, isNearCenotaphs, isNearArchaeologist, isNearCarriage, isNearLahoriGate, isCalligraphySolved, isSymmetrySolved, isMausoleumExplored, isArchaeologistTalked, cluesFound]);
+  }, [isLoading, isTransitioning, scene, isNearGuard, isNearThrone, isNearMirrorFountain, isNearKhasFountain, isNearCalligraphy, isNearPool, isNearTajPishtaq, isNearCenotaphs, isNearArchaeologist, isNearCarriage, isNearLahoriGate, isNearCharbaghReturn, isCalligraphySolved, isSymmetrySolved, isMausoleumExplored, isArchaeologistTalked, cluesFound]);
 
   if (isLoading) {
     return (
@@ -743,7 +742,7 @@ export default function MughalGameScreen() {
     : scene === "taj_charbagh"
     ? 0.90 + ((playerPos.y - 40.0) / 50.0) * 0.50
     : scene === "taj_exterior"
-    ? 0.95 + ((playerPos.y - 68.0) / 24.0) * 0.45
+    ? 0.95 + ((playerPos.y - 69.0) / 27.0) * 0.45
     : scene === "taj_mausoleum"
     ? 0.95 + ((playerPos.y - 35.0) / 53.0) * 0.45
     : scene === "taj_mehtab_bagh"
@@ -995,15 +994,26 @@ export default function MughalGameScreen() {
         </div>
       )}
 
-      {scene === "taj_exterior" && playerPos.x >= 75.0 && (
+      {scene === "taj_exterior" && playerPos.x >= 73.0 && (
         <div className="absolute top-[52%] right-6 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
           ► Cross River to Mehtab Bagh (Moonlight Garden)
         </div>
       )}
 
-      {scene === "taj_exterior" && playerPos.y >= 86.0 && (
-        <div className="absolute bottom-[10%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
-          ▼ Walk down to return to Charbagh Gardens
+      {scene === "taj_exterior" && playerPos.y >= 94.0 && (
+        <div 
+          className="absolute bottom-[10%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 cursor-pointer z-10 animate-bounce"
+          onClick={() => {
+            setIsTransitioning(true);
+            setTimeout(() => {
+              setScene("taj_charbagh");
+              setPlayerPos({ x: 50.0, y: 20.0 });
+              setIsTransitioning(false);
+            }, 400);
+          }}
+        >
+          <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
+          Return to Charbagh Gardens
         </div>
       )}
 
@@ -1055,6 +1065,7 @@ export default function MughalGameScreen() {
         style={{
           left: `${playerPos.x}%`,
           top: `${playerPos.y}%`,
+          transformOrigin: "bottom center",
           transform: `translate(-50%, -96%) scale(${depthScale}) scaleX(${facingLeft ? -1 : 1})`,
         }}
       >
@@ -1301,9 +1312,10 @@ export default function MughalGameScreen() {
           <button 
             onClick={handleResetGame}
             title="Restart to Beginning"
-            className="w-10 h-10 bg-white border-2 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all flex items-center justify-center group"
+            className="h-10 bg-red-600 border-2 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all flex items-center justify-center px-3 gap-1.5 group"
           >
-            <svg className="w-5 h-5 text-black group-hover:-rotate-180 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+            <svg className="w-5 h-5 text-white group-hover:-rotate-180 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+            <span className="text-[13px] font-bold text-white">Restart</span>
           </button>
           <button className="w-10 h-10 bg-amber-400 border-2 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all flex items-center justify-center">
             <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
@@ -1311,8 +1323,8 @@ export default function MughalGameScreen() {
           <button className="w-10 h-10 bg-amber-400 border-2 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all flex items-center justify-center">
             <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.898a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>
           </button>
-          <button onClick={() => router.push('/dashboard')} className="h-10 bg-white border-2 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all flex items-center justify-center px-4">
-            <span className="text-[13px] font-bold">Leave world</span>
+          <button onClick={() => router.push('/dashboard')} className="h-10 bg-red-600 border-2 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all flex items-center justify-center px-4">
+            <span className="text-[13px] font-bold text-white">Leave world</span>
           </button>
         </div>
 
