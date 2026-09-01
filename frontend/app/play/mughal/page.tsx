@@ -209,7 +209,7 @@ export default function MughalGameScreen() {
   const isNearDiwanIKhas = scene === "red_fort_diwani_khas" && playerPos.y <= 65.0 && playerPos.x >= 35.0 && playerPos.x <= 65.0;
 
   // Diwan-i-Khas Exit Proximity
-  const isNearDiwaniKhasExit = scene === "red_fort_diwani_khas" && playerPos.y >= 75.0;
+  const isNearDiwaniKhasExit = scene === "red_fort_diwani_khas" && playerPos.y >= 88.0;
 
   // Smooth continuous 60fps movement game loop
   useEffect(() => {
@@ -733,7 +733,7 @@ export default function MughalGameScreen() {
             const minX = 25.0;
             const maxX = 75.0;
             const minY = 50.0;
-            const maxY = 88.0;
+            const maxY = 98.0;
 
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
