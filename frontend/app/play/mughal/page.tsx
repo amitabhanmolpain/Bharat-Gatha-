@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import DialoguePanel from "../components/DialoguePanel";
 
 export type SceneType =
   | "gate"
@@ -1358,38 +1359,18 @@ export default function MughalGameScreen() {
 
       {/* --- GUARD DIALOGUE MODAL --- */}
       {showDialogue && scene === "gate" && (
-        <div className="absolute inset-0 bg-black/40 backdrop-blur-xs flex items-end justify-center pb-24 z-30 pointer-events-auto">
-          <div className="bg-[#fff9ea] border-3 border-black rounded-xl p-5 shadow-[6px_6px_0_0_rgba(0,0,0,1)] max-w-xl w-full mx-4 flex gap-4 items-start relative animate-in fade-in zoom-in-95 duration-150">
-            {/* Guard Avatar */}
-            <div className="w-16 h-16 bg-amber-100 border-2 border-black rounded-lg overflow-hidden shrink-0 flex items-center justify-center shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
-              <img src="/guard.png" alt="Guard Avatar" className="w-24 h-24 object-contain translate-y-3" style={{ imageRendering: "pixelated" }} />
-            </div>
-
-            {/* Dialogue Content */}
-            <div className="flex-1">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[11px] font-bold text-amber-800 tracking-wider uppercase">Amar Singh Gate Sentry</span>
-                <button 
-                  onClick={() => setShowDialogue(false)}
-                  className="text-gray-500 hover:text-black font-bold text-xs"
-                >
-                  ✕ Close (Esc)
-                </button>
-              </div>
-              <p className="text-black font-semibold text-[13px] leading-relaxed mb-3">
-                &ldquo;Halt, traveler! Beyond this Amar Singh Gate lies the imperial ramp passage leading to the Elephant Gate (Hathi Pol). Your missing companion was seen ascending the ramp toward the upper court! You may proceed through the arch.&rdquo;
-              </p>
-              <div className="flex gap-2">
-                <button 
-                  onClick={() => setShowDialogue(false)}
-                  className="bg-amber-400 hover:bg-amber-300 border-2 border-black rounded-md px-3 py-1 text-xs font-bold text-black shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-0.5"
-                >
-                  &ldquo;Thank you, guard. I will proceed.&rdquo;
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <DialoguePanel 
+          characterName="Amar Singh Gate Sentry"
+          characterTitle="Agra Fort Royal Guard"
+          dialogueText="Halt, traveler! Beyond this Amar Singh Gate lies the imperial ramp passage leading to the Elephant Gate (Hathi Pol). Your missing companion was seen ascending the ramp toward the upper court! You may proceed through the arch."
+          isSpeaking={true}
+          options={[
+            { id: 1, text: "Thank you, guard. I will proceed." },
+            { id: 2, text: "Wait, who took my companion?" }
+          ]}
+          onOptionSelect={() => setShowDialogue(false)}
+          onClose={() => setShowDialogue(false)}
+        />
       )}
 
       {/* --- UI OVERLAYS (Light Neo-Brutalism) --- */}
@@ -2047,41 +2028,20 @@ export default function MughalGameScreen() {
 
       {/* --- ARCHAEOLOGIST DIALOGUE MODAL --- */}
       {showArchaeologistDialogue && scene === "taj_mehtab_bagh" && (
-        <div className="absolute inset-0 bg-black/40 backdrop-blur-xs flex items-end justify-center pb-24 z-30 pointer-events-auto">
-          <div className="bg-[#fff9ea] border-3 border-black rounded-xl p-5 shadow-[6px_6px_0_0_rgba(0,0,0,1)] max-w-xl w-full mx-4 flex gap-4 items-start relative animate-in fade-in zoom-in-95 duration-150">
-            {/* Archaeologist Avatar */}
-            <div className="w-16 h-16 bg-amber-100 border-2 border-black rounded-lg overflow-hidden shrink-0 flex items-center justify-center shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
-              <img src="/npc-archaeologist.png" alt="Archaeologist Avatar" className="w-24 h-24 object-contain translate-y-3" style={{ imageRendering: "pixelated" }} />
-            </div>
-
-            {/* Dialogue Content */}
-            <div className="flex-1">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[11px] font-bold text-amber-800 tracking-wider uppercase">Mehtab Bagh Caretaker</span>
-                <button 
-                  onClick={() => setShowArchaeologistDialogue(false)}
-                  className="text-gray-500 hover:text-black font-bold text-xs"
-                >
-                  ✕ Close (Esc)
-                </button>
-              </div>
-              <p className="text-black font-semibold text-[13px] leading-relaxed mb-3">
-                &ldquo;Greetings! I am the caretaker archaeologist here. You are standing on the ruins of Mehtab Bagh&apos;s pond foundations. See these scattered dark stone blocks? They inspired the legend that Shah Jahan wanted to build a &lsquo;Black Taj&rsquo; out of black marble across the river as his own tomb. However, our excavations show these are actually part of a garden pool. The Black Taj remains a beautiful legend. Go to the bottom-right, a royal carriage is waiting to carry you to Delhi!&rdquo;
-              </p>
-              <div className="flex gap-2">
-                <button 
-                  onClick={() => {
-                    setIsArchaeologistTalked(true);
-                    setShowArchaeologistDialogue(false);
-                  }}
-                  className="bg-amber-400 hover:bg-amber-300 border-2 border-black rounded-md px-3 py-1 text-xs font-bold text-black shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-0.5"
-                >
-                  &ldquo;Fascinating. I will proceed to the carriage.&rdquo;
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <DialoguePanel 
+          characterName="Mehtab Bagh Caretaker"
+          characterTitle="Archaeologist"
+          dialogueText="Greetings! I am the caretaker archaeologist here. You are standing on the ruins of Mehtab Bagh's pond foundations. See these scattered dark stone blocks? They inspired the legend that Shah Jahan wanted to build a 'Black Taj' out of black marble across the river as his own tomb. However, our excavations show these are actually part of a garden pool. The Black Taj remains a beautiful legend. Go to the bottom-right, a royal carriage is waiting to carry you to Delhi!"
+          isSpeaking={true}
+          options={[
+            { id: 1, text: "Fascinating. I will proceed to the carriage." }
+          ]}
+          onOptionSelect={() => {
+            setIsArchaeologistTalked(true);
+            setShowArchaeologistDialogue(false);
+          }}
+          onClose={() => setShowArchaeologistDialogue(false)}
+        />
       )}
 
       {/* Carriage Journey Fullscreen Overlay */}
