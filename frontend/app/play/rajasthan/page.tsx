@@ -8,8 +8,9 @@ export type RajasthanStage = 1 | 2 | 3 | 4 | 5 | 6;
 export type RajasthanSceneType =
   // Stage 1: Chittorgarh Fort
   | "ram_pol"
-  | "inner_courtyard"
+  | "courtyard_passage"
   | "vijay_stambh"
+  | "vijay_stambh_interior"
   | "jauhar_kund"
   // Stage 2: Kumbhalgarh Fort
   | "wall_approach"
@@ -62,6 +63,9 @@ export default function RajasthanGameScreen() {
   // Transition Lock Cooldown Ref
   const transitionLockRef = useRef<number>(0);
 
+  // Keys Held Ref for Movement
+  const keysHeldRef = useRef<Set<string>>(new Set());
+
   // Clues & Loss Tracker
   const [cluesFound, setCluesFound] = useState(0);
   const [lossCount, setLossCount] = useState(0);
@@ -80,6 +84,7 @@ export default function RajasthanGameScreen() {
   const [isCarvingSolved, setIsCarvingSolved] = useState(false);
   const [userCarvingOrder, setUserCarvingOrder] = useState<number[]>([]);
   const [carvingError, setCarvingError] = useState(false);
+  const [stambhFloor, setStambhFloor] = useState(1);
   const [showTowerView, setShowTowerView] = useState(false);
   const [showCaretakerDialogue, setShowCaretakerDialogue] = useState(false);
 
@@ -553,6 +558,7 @@ export default function RajasthanGameScreen() {
   // Check if current scene features fort gate hall entrance doors
   const isFortGateScene = ["ram_pol", "wall_approach", "zigzag_gates", "badal_mahal", "jaigarh_entry", "kuldhara_gate", "bhangarh_gate", "jaisalmer_streets"].includes(scene);
   const isNearFortDoors = isFortGateScene && playerPos.y <= 67.5 && playerPos.x >= 42.0 && playerPos.x <= 58.0;
+  const isNearRamPolDoor = scene === "ram_pol" && playerPos.y <= 85.0 && playerPos.x >= 55.0 && playerPos.x <= 95.0;
 
   // Proximities
   const chachaPos = { x: 30.0, y: 78.0 };
@@ -560,6 +566,7 @@ export default function RajasthanGameScreen() {
     Math.pow(playerPos.x - chachaPos.x, 2) + Math.pow(playerPos.y - chachaPos.y, 2)
   );
   const isNearChacha = scene === "inner_courtyard" && distToChacha < 10.0;
+  const isNearCourtyardExit = scene === "inner_courtyard" && playerPos.y >= 85.0;
   const isNearVijayTower = scene === "vijay_stambh" && playerPos.y <= 65.0 && playerPos.x >= 40.0 && playerPos.x <= 60.0;
   const caretakerPos = { x: 72.0, y: 74.0 };
   const distToCaretaker = Math.sqrt(
@@ -841,24 +848,26 @@ export default function RajasthanGameScreen() {
   const checkWalkablePosition = useCallback((targetX: number, targetY: number, activeScene: RajasthanSceneType) => {
     let minX = 18.0;
     let maxX = 82.0;
-    let minY = 52.0;
+    let minY = 75.0; // Default to 75 to prevent flying into the sky
     let maxY = 88.0;
 
     if (activeScene === "ram_pol") { minX = 22.0; maxX = 78.0; minY = 62.0; maxY = 90.0; }
     else if (activeScene === "inner_courtyard") { minY = 56.0; }
-    else if (activeScene === "vijay_stambh") { minX = 15.0; maxX = 85.0; minY = 50.0; }
+    else if (activeScene === "courtyard_passage") { minX = 35.0; maxX = 65.0; minY = 52.0; }
+    else if (activeScene === "vijay_stambh") { minX = 15.0; maxX = 85.0; minY = 75.0; }
+    else if (activeScene === "vijay_stambh_interior") { minX = 20.0; maxX = 80.0; minY = 56.0; maxY = 85.0; }
     else if (activeScene === "wall_approach") { minX = 20.0; maxX = 80.0; minY = 58.0; maxY = 90.0; }
-    else if (activeScene === "zigzag_gates") { minX = 15.0; maxX = 85.0; }
-    else if (activeScene === "soldiers_quarters") { minY = 56.0; }
-    else if (activeScene === "badal_mahal") { minY = 56.0; }
+    else if (activeScene === "zigzag_gates") { minX = 15.0; maxX = 85.0; minY = 70.0; }
+    else if (activeScene === "soldiers_quarters") { minY = 65.0; }
+    else if (activeScene === "badal_mahal") { minY = 65.0; }
     else if (activeScene === "jaigarh_entry") { minX = 20.0; maxX = 80.0; minY = 58.0; maxY = 90.0; }
-    else if (activeScene === "jaivana_courtyard") { minY = 56.0; }
-    else if (activeScene === "jal_mahal") { minY = 56.0; }
+    else if (activeScene === "jaivana_courtyard") { minY = 65.0; }
+    else if (activeScene === "jal_mahal") { minY = 65.0; }
     else if (activeScene === "kuldhara_gate") { minX = 20.0; maxX = 80.0; minY = 58.0; maxY = 90.0; }
-    else if (activeScene === "chiefs_house") { minY = 56.0; }
-    else if (activeScene === "treasury") { minY = 56.0; }
+    else if (activeScene === "chiefs_house") { minY = 65.0; }
+    else if (activeScene === "treasury") { minY = 65.0; }
     else if (activeScene === "bhangarh_gate") { minX = 20.0; maxX = 80.0; minY = 58.0; maxY = 90.0; }
-    else if (activeScene === "gopinath_temple") { minY = 56.0; }
+    else if (activeScene === "gopinath_temple") { minY = 65.0; }
     else if (activeScene === "bhangarh_chase") { minX = 18.0; maxX = 82.0; minY = 20.0; maxY = 90.0; }
     else if (activeScene === "jaisalmer_streets") { minX = 20.0; maxX = 80.0; minY = 58.0; maxY = 90.0; }
 
@@ -867,12 +876,7 @@ export default function RajasthanGameScreen() {
       return false;
     }
 
-    // --- FEATURE 3: CLOSED CASTLE HALL DOORS COLLISION ---
-    // If closed castle hall doors are present and not opened, block entry through top entrance
-    const isGateDoorScene = ["ram_pol", "wall_approach", "zigzag_gates", "badal_mahal", "jaigarh_entry", "kuldhara_gate", "bhangarh_gate", "jaisalmer_streets"].includes(activeScene);
-    if (isGateDoorScene && doorOpenProgress < 0.9 && targetY <= 64.0 && targetX >= 42.0 && targetX <= 58.0) {
-      return false;
-    }
+    // Removed drawn door collision block
 
     // Per-scene solid obstacle collision boxes
     if (activeScene === "inner_courtyard" && targetX >= 25.0 && targetX <= 35.0 && targetY >= 72.0 && targetY <= 82.0) return false; // Chacha NPC
@@ -889,25 +893,29 @@ export default function RajasthanGameScreen() {
 
   // Main 60 FPS Game Loop
   useEffect(() => {
-    if (isLoading || isTransitioning) return;
-
-    const keysHeld = new Set<string>();
+    if (isLoading) return;
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (isAnyModalOpen || isTransitioning) return;
 
-      keysHeld.add(e.key.toLowerCase());
+      keysHeldRef.current.add(e.key.toLowerCase());
       if (e.key.toLowerCase() === "e") {
-        // --- FEATURE 3: OPEN CASTLE HALL DOORS WITH E KEY ---
-        if (isNearFortDoors && doorOpenProgress < 0.9 && !isOpeningDoor) {
-          setIsOpeningDoor(true);
+        // Entry for Ram Pol wooden doors
+        if (isNearRamPolDoor) {
+          triggerSceneTransition("inner_courtyard", { x: 50.0, y: 84.0 });
         }
 
         // Stage 1
         if (isNearChacha) setShowChachaDialogue(true);
         if (isNearVijayTower) {
-          if (!isCarvingSolved) setShowCarvingPuzzle(true);
-          else setShowTowerView(true);
+          triggerSceneTransition("vijay_stambh_interior", { x: 50.0, y: 75.0 });
+        }
+        if (scene === "vijay_stambh_interior") {
+          if (stambhFloor < 8) {
+            setStambhFloor(prev => prev + 1);
+          } else {
+            setShowTowerView(true);
+          }
         }
         if (isNearCaretaker) setShowCaretakerDialogue(true);
         if (isNearJauharSanctuary && !isJauharCompleted) setShowJauharCutscene(true);
@@ -975,6 +983,11 @@ export default function RajasthanGameScreen() {
           setShowMosaicAssembly(true);
         }
       }
+      if (e.key.toLowerCase() === "f") {
+        if (isNearCourtyardExit) {
+          triggerSceneTransition("ram_pol", { x: 50.0, y: 66.0 });
+        }
+      }
       if (e.key === "Escape") {
         setShowIntroNarrative(false);
         setShowChachaDialogue(false);
@@ -1017,7 +1030,7 @@ export default function RajasthanGameScreen() {
     };
 
     const onKeyUp = (e: KeyboardEvent) => {
-      keysHeld.delete(e.key.toLowerCase());
+      keysHeldRef.current.delete(e.key.toLowerCase());
     };
 
     window.addEventListener("keydown", onKeyDown);
@@ -1027,8 +1040,9 @@ export default function RajasthanGameScreen() {
     let localWalkTimer = 0;
 
     const gameLoop = () => {
-      if (isAnyModalOpen) {
+      if (isAnyModalOpen || isTransitioning) {
         setIsWalking(false);
+        keysHeldRef.current.clear();
         animationFrameId = requestAnimationFrame(gameLoop);
         return;
       }
@@ -1037,10 +1051,10 @@ export default function RajasthanGameScreen() {
       let dy = 0;
       const speed = isBhangarhChaseActive ? 0.45 : 0.35;
 
-      if (keysHeld.has("arrowleft") || keysHeld.has("a")) dx -= speed;
-      if (keysHeld.has("arrowright") || keysHeld.has("d")) dx += speed;
-      if (keysHeld.has("arrowup") || keysHeld.has("w")) dy -= speed * 0.85;
-      if (keysHeld.has("arrowdown") || keysHeld.has("s")) dy += speed * 0.85;
+      if (keysHeldRef.current.has("arrowleft") || keysHeldRef.current.has("a")) dx -= speed;
+      if (keysHeldRef.current.has("arrowright") || keysHeldRef.current.has("d")) dx += speed;
+      if (keysHeldRef.current.has("arrowup") || keysHeldRef.current.has("w")) dy -= speed * 0.85;
+      if (keysHeldRef.current.has("arrowdown") || keysHeldRef.current.has("s")) dy += speed * 0.85;
 
       const moving = dx !== 0 || dy !== 0;
       setIsWalking(moving);
@@ -1074,23 +1088,27 @@ export default function RajasthanGameScreen() {
 
           // Scene Transitions with Debounced Safe Spawn Points
           // STAGE 1
-          if (scene === "ram_pol" && finalY <= 63.5 && finalX >= 44.0 && finalX <= 56.0) {
-            triggerSceneTransition("inner_courtyard", { x: 50.0, y: 84.0 });
-          } else if (scene === "inner_courtyard") {
+          if (scene === "inner_courtyard") {
             if (finalY <= 58.0 && finalX >= 65.0) {
               if (isChauparSolved || lossCount >= 2) {
-                triggerSceneTransition("vijay_stambh", { x: 50.0, y: 84.0 });
+                triggerSceneTransition("courtyard_passage", { x: 50.0, y: 84.0 });
               }
+            }
+          } else if (scene === "courtyard_passage") {
+            if (finalY <= 55.0) {
+              triggerSceneTransition("vijay_stambh", { x: 30.0, y: 84.0 });
             } else if (finalY >= 87.5) {
-              triggerSceneTransition("ram_pol", { x: 50.0, y: 66.0 });
+              triggerSceneTransition("inner_courtyard", { x: 68.0, y: 60.0 });
             }
           } else if (scene === "vijay_stambh") {
             if (finalX >= 78.0) {
-              if (isCarvingSolved) {
-                triggerSceneTransition("jauhar_kund", { x: 30.0, y: 80.0 });
-              }
+              triggerSceneTransition("jauhar_kund", { x: 30.0, y: 80.0 });
             } else if (finalY >= 87.5) {
-              triggerSceneTransition("inner_courtyard", { x: 68.0, y: 60.0 });
+              triggerSceneTransition("courtyard_passage", { x: 50.0, y: 60.0 });
+            }
+          } else if (scene === "vijay_stambh_interior") {
+            if (finalY >= 84.0) {
+              triggerSceneTransition("vijay_stambh", { x: 50.0, y: 65.0 });
             }
           } else if (scene === "jauhar_kund" && finalY >= 87.5) {
             triggerSceneTransition("vijay_stambh", { x: 74.0, y: 65.0 });
@@ -1217,7 +1235,7 @@ export default function RajasthanGameScreen() {
       window.removeEventListener("keyup", onKeyUp);
       cancelAnimationFrame(animationFrameId);
     };
-  }, [isLoading, isTransitioning, scene, isAnyModalOpen, isNearChacha, isNearVijayTower, isNearCaretaker, isNearJauharSanctuary, isNearGuardBheem, isNearLattuCircle, isNearBadalFresco, isNearPratapSanctuary, isNearArmorer, isNearJaivanaCannon, isNearHydraulicControls, isNearChhatriSanctuary, isNearGateMarker, isNearChiefHaveli, isNearTreasuryLedger, isNearKuldharaWell, isNearSquareDeduction, isNearGopinathPainting, isNearRuinsSpot1, isNearRuinsSpot2, isNearRuinsChalisaSpot, isNearChaseEscapeGate, isNearKathputliStage, isNearMosaicBoard, isChauparSolved, isCarvingSolved, isJauharCompleted, isLattuSolved, isFrescoSolved, isPratapCompleted, isCannonCalibrated, isHydraulicSolved, isChhatriCompleted, isEvidenceSolved, isTemplePaintingRestored, isChalisaFound, isKathputliSolved, isMosaicAssembled, isBhangarhChaseActive, lossCount, isNearFortDoors, doorOpenProgress, isOpeningDoor, triggerSceneTransition, checkWalkablePosition]);
+  }, [isLoading, isTransitioning, scene, isAnyModalOpen, isNearChacha, isNearVijayTower, isNearCaretaker, isNearJauharSanctuary, isNearGuardBheem, isNearLattuCircle, isNearBadalFresco, isNearPratapSanctuary, isNearArmorer, isNearJaivanaCannon, isNearHydraulicControls, isNearChhatriSanctuary, isNearGateMarker, isNearChiefHaveli, isNearTreasuryLedger, isNearKuldharaWell, isNearSquareDeduction, isNearGopinathPainting, isNearRuinsSpot1, isNearRuinsSpot2, isNearRuinsChalisaSpot, isNearChaseEscapeGate, isNearKathputliStage, isNearMosaicBoard, isChauparSolved, isCarvingSolved, isJauharCompleted, isLattuSolved, isFrescoSolved, isPratapCompleted, isCannonCalibrated, isHydraulicSolved, isChhatriCompleted, isEvidenceSolved, isTemplePaintingRestored, isChalisaFound, isKathputliSolved, isMosaicAssembled, isBhangarhChaseActive, lossCount, isNearFortDoors, doorOpenProgress, isOpeningDoor, triggerSceneTransition, checkWalkablePosition, isNearRamPolDoor, isNearCourtyardExit]);
 
   if (isLoading) {
     return (
@@ -1238,14 +1256,17 @@ export default function RajasthanGameScreen() {
 
   // --- FEATURE 4: DYNAMIC DEPTH-BASED TRAVELER SCALING ---
   // Background y=50% -> scale ~0.65; Foreground y=90% -> scale ~1.25
-  const depthScale = 0.65 + ((playerPos.y - 50.0) / 40.0) * 0.60;
+  const baseScale = 0.65 + ((playerPos.y - 50.0) / 40.0) * 0.60;
+  const depthScale = scene === "vijay_stambh" ? baseScale * 0.55 : baseScale;
   const walkBob = isWalking ? Math.sin(walkPhase) * 1.8 : 0;
   const walkSway = isWalking ? Math.sin(walkPhase * 0.5) * 1.5 : 0;
 
   const getBackgroundSrc = () => {
     if (scene === "ram_pol") return "/bg-chittorgarh-ram-pol.jpg";
     if (scene === "inner_courtyard") return "/bg-chittorgarh-courtyard.jpg";
+    if (scene === "courtyard_passage") return "/bg_rajasthan_passage.jpg";
     if (scene === "vijay_stambh") return "/bg-chittorgarh-vijay-stambh.jpg";
+    if (scene === "vijay_stambh_interior") return "/bg-vijay-stambh-interior.jpg";
     if (scene === "jauhar_kund") return "/bg-chittorgarh-jauhar-kund.jpg";
 
     if (scene === "wall_approach") return "/bg-kumbhalgarh-wall.jpg";
@@ -1283,8 +1304,10 @@ export default function RajasthanGameScreen() {
 
   const getTransitionLabel = () => {
     if (scene === "ram_pol") return "Entering Inner Courtyard...";
-    if (scene === "inner_courtyard") return playerPos.x >= 60 ? "Ascending to Vijay Stambh..." : "Returning to Ram Pol...";
-    if (scene === "vijay_stambh") return playerPos.x >= 70 ? "Entering Jauhar Kund Sanctuary..." : "Returning to Inner Courtyard...";
+    if (scene === "inner_courtyard") return playerPos.x >= 60 ? "Ascending to Stone Passage..." : "Returning to Ram Pol...";
+    if (scene === "courtyard_passage") return playerPos.y <= 60 ? "Approaching Vijay Stambh..." : "Returning to Inner Courtyard...";
+    if (scene === "vijay_stambh") return playerPos.x >= 70 ? "Entering Jauhar Kund Sanctuary..." : playerPos.y <= 65 ? "Entering Vijay Stambh..." : "Returning to Passage...";
+    if (scene === "vijay_stambh_interior") return "Returning Outside...";
     if (scene === "jauhar_kund") return "Returning to Vijay Stambh...";
 
     if (scene === "wall_approach") return "Entering Fortified Zigzag Gates...";
@@ -1335,44 +1358,25 @@ export default function RajasthanGameScreen() {
           : "bg-gradient-to-b from-amber-950/20 via-transparent to-black/40"
       }`}></div>
 
-      {/* --- FEATURE 3: ANIMATED HEAVY CARVED WOODEN CASTLE HALL DOORS --- */}
-      {isFortGateScene && (
-        <div className="absolute top-[48%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-48 h-44 z-15 pointer-events-none flex overflow-hidden rounded-t-full border-4 border-amber-950 shadow-2xl bg-amber-950/80">
-          {/* Left Door */}
-          <div
-            className="w-1/2 h-full bg-[#3a200d] border-r-2 border-amber-900/80 transition-transform duration-700 ease-out flex flex-col justify-around p-2 relative shadow-inner"
-            style={{
-              transform: `translateX(-${doorOpenProgress * 100}%) rotateY(-${doorOpenProgress * 75}deg)`,
-              transformOrigin: "left center",
-            }}
-          >
-            <div className="w-3 h-3 rounded-full border-2 border-yellow-600 bg-yellow-500 self-end shadow"></div>
-            <div className="w-full h-1 bg-amber-900/90 rounded"></div>
-            <div className="w-3 h-3 rounded-full border-2 border-yellow-600 bg-yellow-500 self-end shadow"></div>
-          </div>
-          {/* Right Door */}
-          <div
-            className="w-1/2 h-full bg-[#3a200d] border-l-2 border-amber-900/80 transition-transform duration-700 ease-out flex flex-col justify-around p-2 relative shadow-inner"
-            style={{
-              transform: `translateX(${doorOpenProgress * 100}%) rotateY(${doorOpenProgress * 75}deg)`,
-              transformOrigin: "right center",
-            }}
-          >
-            <div className="w-3 h-3 rounded-full border-2 border-yellow-600 bg-yellow-500 self-start shadow"></div>
-            <div className="w-full h-1 bg-amber-900/90 rounded"></div>
-            <div className="w-3 h-3 rounded-full border-2 border-yellow-600 bg-yellow-500 self-start shadow"></div>
-          </div>
+      {/* Ram Pol Door Entry Prompt */}
+      {isNearRamPolDoor && (
+        <div
+          className="absolute top-[45%] left-[68%] -translate-x-1/2 -translate-y-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 cursor-pointer z-35 animate-bounce"
+          onClick={() => triggerSceneTransition("inner_courtyard", { x: 50.0, y: 84.0 })}
+        >
+          <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
+          🚪 Enter Palace
         </div>
       )}
 
-      {/* Door Opening Prompt */}
-      {isNearFortDoors && doorOpenProgress < 0.9 && (
+      {/* Courtyard Exit Prompt */}
+      {isNearCourtyardExit && (
         <div
-          className="absolute top-[50%] left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 cursor-pointer z-35 animate-bounce"
-          onClick={() => setIsOpeningDoor(true)}
+          className="absolute top-[85%] left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 cursor-pointer z-35 animate-bounce"
+          onClick={() => triggerSceneTransition("ram_pol", { x: 50.0, y: 66.0 })}
         >
-          <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
-          🏰 Push Open Heavy Royal Castle Doors
+          <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">F</span>
+          🚪 Exit to Ram Pol
         </div>
       )}
 
@@ -1382,6 +1386,101 @@ export default function RajasthanGameScreen() {
           <span className="text-amber-300 text-sm font-serif tracking-widest uppercase">
             {getTransitionLabel()}
           </span>
+        </div>
+      )}
+
+      {/* --- DIRECTIONAL GUIDES --- */}
+      {/* Stage 1 */}
+      {scene === "inner_courtyard" && !(isChauparSolved || lossCount >= 2) && playerPos.y <= 65.0 && playerPos.x >= 50.0 && (
+        <div className="absolute top-[25%] right-[20%] bg-red-500/90 backdrop-blur-xs text-white border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          🔒 Challenge Buzurg Chacha first
+        </div>
+      )}
+      {scene === "inner_courtyard" && (isChauparSolved || lossCount >= 2) && playerPos.y <= 65.0 && playerPos.x >= 50.0 && (
+        <div className="absolute top-[25%] right-[20%] bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          ↗ Walk up right to Passage
+        </div>
+      )}
+      {scene === "courtyard_passage" && playerPos.y >= 75.0 && (
+        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          ▼ Walk down to return to Courtyard
+        </div>
+      )}
+      {scene === "courtyard_passage" && playerPos.y <= 65.0 && (
+        <div className="absolute top-[34%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          ▲ Walk up to Vijay Stambh
+        </div>
+      )}
+      {scene === "vijay_stambh" && playerPos.y >= 75.0 && (
+        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          ▼ Walk down to return to Passage
+        </div>
+      )}
+      {scene === "vijay_stambh" && playerPos.x >= 65.0 && (
+        <div className="absolute top-[50%] right-[10%] bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          ► Walk right to Jauhar Kund
+        </div>
+      )}
+      {scene === "jauhar_kund" && playerPos.y >= 75.0 && (
+        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          ▼ Walk down to return to Vijay Stambh
+        </div>
+      )}
+      {scene === "jauhar_kund" && playerPos.y <= 60.0 && !isJauharCompleted && (
+        <div className="absolute top-[34%] left-[20%] bg-red-500/90 backdrop-blur-xs text-white border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          🔒 Explore the Jauhar Sanctuary first
+        </div>
+      )}
+
+      {/* Stage 2 */}
+      {scene === "wall_approach" && playerPos.y <= 65.0 && (
+        <div className="absolute top-[34%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          ▲ Walk up to Kumbhalgarh Gates
+        </div>
+      )}
+      {scene === "zigzag_gates" && playerPos.y >= 75.0 && (
+        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          ▼ Walk down to return
+        </div>
+      )}
+      {scene === "zigzag_gates" && playerPos.y <= 65.0 && playerPos.x >= 60.0 && (
+        <div className="absolute top-[34%] right-[20%] bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          ↗ Walk up right to Soldiers' Quarters
+        </div>
+      )}
+      {scene === "soldiers_quarters" && playerPos.y >= 75.0 && (
+        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          ▼ Walk down to return
+        </div>
+      )}
+      {scene === "soldiers_quarters" && playerPos.y <= 65.0 && playerPos.x >= 40.0 && playerPos.x <= 60.0 && !isLattuSolved && (
+        <div className="absolute top-[34%] left-1/2 -translate-x-1/2 bg-red-500/90 backdrop-blur-xs text-white border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          🔒 Complete the Lattu Challenge
+        </div>
+      )}
+      {scene === "soldiers_quarters" && playerPos.y <= 65.0 && playerPos.x >= 40.0 && playerPos.x <= 60.0 && isLattuSolved && (
+        <div className="absolute top-[34%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          ▲ Walk up to Badal Mahal
+        </div>
+      )}
+      {scene === "badal_mahal" && playerPos.y >= 75.0 && (
+        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          ▼ Walk down to return
+        </div>
+      )}
+      {scene === "badal_mahal" && playerPos.x >= 65.0 && !isFrescoSolved && (
+        <div className="absolute top-[50%] right-[10%] bg-red-500/90 backdrop-blur-xs text-white border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          🔒 Examine the Fresco first
+        </div>
+      )}
+      {scene === "badal_mahal" && playerPos.x >= 65.0 && isFrescoSolved && (
+        <div className="absolute top-[50%] right-[10%] bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          ► Walk right to Pratap's Birthplace
+        </div>
+      )}
+      {scene === "pratap_birthplace" && playerPos.y >= 75.0 && (
+        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          ▼ Walk down to return
         </div>
       )}
 
@@ -1418,7 +1517,7 @@ export default function RajasthanGameScreen() {
 
       {/* --- FEATURE 1 & 2: RAJASTHANI NPCS & PROMPTS WITH TRADITIONAL SAFAS --- */}
       {scene === "inner_courtyard" && (
-        <div className="absolute pointer-events-auto cursor-pointer z-10 flex flex-col items-center" style={{ left: `${chachaPos.x}%`, top: `${chachaPos.y}%`, transform: `translate(-50%, -96%) scale(1.15)` }} onClick={() => setShowChachaDialogue(true)}>
+        <div className="absolute pointer-events-auto cursor-pointer z-10 flex flex-col items-center justify-end" style={{ left: `${chachaPos.x}%`, top: `${chachaPos.y}%`, transform: `translate(-50%, -100%) scale(1.15)` }} onClick={() => setShowChachaDialogue(true)}>
           {isNearChacha && !showChachaDialogue && !showChauparGame && (
             <div className="animate-bounce mb-2 bg-[#fff9ea] border-2 border-black rounded-lg px-2.5 py-1 shadow-[2px_2px_0_0_rgba(0,0,0,1)] text-[11px] font-bold text-black flex items-center gap-1.5 whitespace-nowrap">
               <span className="bg-amber-400 border border-black rounded px-1 text-[9px]">E</span>
@@ -1427,7 +1526,7 @@ export default function RajasthanGameScreen() {
           )}
           {/* Rajasthani Safa Turban Badge Indicator */}
           <div className="absolute -top-3 bg-amber-500 text-black text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-black shadow z-10">👳 Safa Elder</div>
-          <img src="/rajasthan-guard.jpg" alt="Buzurg Chacha" className="w-28 h-28 object-contain rounded-lg border border-amber-900/40 shadow-md" />
+          <img src="/rajasthan-guard-v2.png" alt="Buzurg Chacha" className="w-28 h-auto object-bottom drop-shadow-[0_5px_5px_rgba(0,0,0,0.5)]" style={{ imageRendering: "pixelated" }} />
         </div>
       )}
 
@@ -1440,7 +1539,7 @@ export default function RajasthanGameScreen() {
             </div>
           )}
           <div className="absolute -top-3 bg-amber-500 text-black text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-black shadow z-10">👳 Royal Pandit</div>
-          <img src="/npc-archaeologist.png" alt="Caretaker" className="w-28 h-28 object-contain" style={{ imageRendering: "pixelated" }} />
+          <img src="/npc-archaeologist.png" alt="Caretaker" className="w-16 h-16 object-contain" style={{ imageRendering: "pixelated" }} />
         </div>
       )}
 
@@ -1494,10 +1593,22 @@ export default function RajasthanGameScreen() {
       )}
 
       {/* Prompts */}
-      {scene === "vijay_stambh" && isNearVijayTower && !isCarvingSolved && !showCarvingPuzzle && (
-        <div className="absolute top-[52%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 cursor-pointer z-10 animate-bounce" onClick={() => setShowCarvingPuzzle(true)}>
+      {scene === "vijay_stambh" && isNearVijayTower && !showTowerView && (
+        <div className="absolute top-[52%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 cursor-pointer z-10 animate-bounce" onClick={() => triggerSceneTransition("vijay_stambh_interior", { x: 50.0, y: 75.0 })}>
           <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
-          Restore Weathered Panel Carvings
+          Enter Vijay Stambh
+        </div>
+      )}
+      
+      {scene === "vijay_stambh_interior" && (
+        <div className="absolute top-[32%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 z-10 animate-pulse">
+          <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
+          {stambhFloor < 8 ? `Ascend to Floor ${stambhFloor + 1}` : "Look out from the Summit Balcony"}
+        </div>
+      )}
+      {scene === "vijay_stambh_interior" && (
+        <div className="absolute top-[5%] left-[5%] bg-amber-900 border-2 border-amber-300 rounded-lg px-3 py-1 shadow-lg text-[14px] font-bold text-amber-100 flex items-center gap-2 z-10">
+          Floor {stambhFloor} / 8
         </div>
       )}
 
@@ -1598,7 +1709,7 @@ export default function RajasthanGameScreen() {
 
           <div className="text-[14px] font-bold text-black leading-snug">
             {scene === "ram_pol"
-              ? "Walk up to the royal castle hall doors and press E to swing them open!"
+              ? "Walk up to the wooden doors on the right to enter the palace."
               : scene === "inner_courtyard"
               ? !isChauparSolved && lossCount < 2
                 ? "Talk to Buzurg Chacha and challenge him to Chaupar."
@@ -1698,7 +1809,7 @@ export default function RajasthanGameScreen() {
               <>
                 <div className={scene === "ram_pol" ? "bg-amber-400 border border-amber-600 rounded-sm" : "bg-amber-100 rounded-sm"}></div>
                 <div className={scene === "inner_courtyard" ? "bg-amber-400 border border-amber-600 rounded-sm" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "vijay_stambh" ? "bg-amber-400 border border-amber-600 rounded-sm" : "bg-amber-100 rounded-sm"}></div>
+                <div className={scene === "vijay_stambh" || scene === "vijay_stambh_interior" ? "bg-amber-400 border border-amber-600 rounded-sm" : "bg-amber-100 rounded-sm"}></div>
                 <div className={scene === "jauhar_kund" ? "bg-amber-400 border border-amber-600 rounded-sm" : "bg-amber-100 rounded-sm"}></div>
               </>
             ) : stage === 2 ? (
@@ -1812,36 +1923,6 @@ export default function RajasthanGameScreen() {
                 &ldquo;I accept the Chaupar challenge!&rdquo;
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* CARVING RESTORATION PUZZLE */}
-      {showCarvingPuzzle && (
-        <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-6 z-50 pointer-events-auto">
-          <div className="bg-[#fff9ea] border-3 border-black rounded-2xl p-6 shadow-[8px_8px_0_0_rgba(0,0,0,1)] max-w-lg w-full flex flex-col gap-4 relative">
-            <div className="flex items-center justify-between border-b-2 border-amber-200 pb-2">
-              <span className="text-[12px] font-bold text-amber-900 uppercase tracking-widest">🧩 Vijay Stambh Carving Restoration</span>
-              <button onClick={() => setShowCarvingPuzzle(false)} className="text-gray-500 hover:text-black font-bold text-sm">✕ Close</button>
-            </div>
-            <div className="flex flex-col gap-2">
-              {panelsData.map((p) => {
-                const selectedIndex = userCarvingOrder.indexOf(p.id);
-                return (
-                  <button key={p.id} onClick={() => handleSelectPanel(p.id)} className={`p-3 border-2 border-black rounded-lg flex items-center justify-between ${selectedIndex !== -1 ? "bg-amber-300 border-amber-900" : "bg-white hover:bg-amber-100"}`}>
-                    <div className="flex flex-col text-left">
-                      <span className="text-xs font-bold font-serif text-black">{p.title}</span>
-                      <span className="text-[10.5px] text-gray-600">{p.desc}</span>
-                    </div>
-                    {selectedIndex !== -1 && <span className="bg-amber-800 text-white text-xs font-bold px-2 py-0.5 rounded-full">Step {selectedIndex + 1}</span>}
-                  </button>
-                );
-              })}
-            </div>
-            {carvingError && <span className="text-red-600 text-xs font-bold">⚠️ Incorrect order! (Start with 1448 CE proclamation)</span>}
-            <button onClick={handleVerifyCarvings} disabled={userCarvingOrder.length !== 4} className={`w-full border-2 border-black rounded-lg py-2.5 text-xs font-bold ${userCarvingOrder.length === 4 ? "bg-amber-400 hover:bg-amber-300 text-black cursor-pointer" : "bg-gray-200 text-gray-500 cursor-not-allowed"}`}>
-              Restore Panel Sequence
-            </button>
           </div>
         </div>
       )}

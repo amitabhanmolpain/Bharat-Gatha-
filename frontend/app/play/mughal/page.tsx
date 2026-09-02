@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import DialoguePanel from "../components/DialoguePanel";
+import DialoguePanel from "../../components/DialoguePanel";
 
 export type SceneType =
   | "gate"
