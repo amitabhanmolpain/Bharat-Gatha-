@@ -16,7 +16,12 @@ export type RajasthanSceneType =
   | "jauhar_kund"
   | "desert_outskirts"
   // Stage 2: Kumbhalgarh Fort
-  | "kumbhalgarh_gate";
+  | "kumbhalgarh_gate"
+  | "kumbhalgarh_interior_stairs"
+  | "kumbhalgarh_great_wall"
+  | "kumbhalgarh_zigzag_gates"
+  | "badal_mahal_interior"
+  | "badal_mahal_terrace";
 
 export default function RajasthanGameScreen() {
   const [isLoading, setIsLoading] = useState(true);
@@ -213,6 +218,67 @@ export default function RajasthanGameScreen() {
     playerPos.y >= 68.0 &&
     playerPos.y <= 88.0;
 
+  // --- STAGE 2 (KUMBHALGARH FORT) PROXIMITY TRIGGERS ---
+  // Near Hanuman Pol Entrance Gate (X: 20..36, Y <= 74.0 in kumbhalgarh_gate scene)
+  const isNearKumbhalgarhGateDoor =
+    scene === "kumbhalgarh_gate" &&
+    playerPos.x >= 20.0 &&
+    playerPos.x <= 36.0 &&
+    playerPos.y <= 74.0;
+
+  // Near Exit door inside Kumbhalgarh Bastion Hall (X <= 26.0, Y >= 78.0)
+  const isNearKumbhalgarhInteriorExit =
+    scene === "kumbhalgarh_interior_stairs" &&
+    playerPos.x <= 26.0 &&
+    playerPos.y >= 78.0;
+
+  // Near Top of Bastion Staircase leading to Great Wall ramparts (X >= 66.0, Y <= 62.0)
+  const isNearKumbhalgarhStairsTop =
+    scene === "kumbhalgarh_interior_stairs" &&
+    playerPos.x >= 66.0 &&
+    playerPos.y <= 62.0;
+
+  // Near Staircase entrance on the Great Wall top ramparts (bottom foreground: Y >= 84.0)
+  const isNearGreatWallStairs =
+    scene === "kumbhalgarh_great_wall" &&
+    playerPos.y >= 84.0;
+
+  // Near Far End of the Great Wall leading to Zigzag Gates (forward horizon: Y <= 46.0)
+  const isNearWallEndZigzag =
+    scene === "kumbhalgarh_great_wall" &&
+    playerPos.y <= 46.0;
+
+  // Near Lower Gate in Zigzag Gates scene leading back to Great Wall (X >= 52.0, Y >= 74.0)
+  const isNearZigzagLowerExit =
+    scene === "kumbhalgarh_zigzag_gates" &&
+    playerPos.x >= 52.0 &&
+    playerPos.y >= 74.0;
+
+  // Near Upper Citadel Gate in Zigzag Gates (X: 26..42, Y <= 62.0)
+  const isNearZigzagUpperGate =
+    scene === "kumbhalgarh_zigzag_gates" &&
+    playerPos.x >= 26.0 &&
+    playerPos.x <= 42.0 &&
+    playerPos.y <= 62.0;
+
+  // Near left exit door in Badal Mahal Interior (X <= 26.0, Y >= 78.0)
+  const isNearBadalMahalInteriorExit =
+    scene === "badal_mahal_interior" &&
+    playerPos.x <= 26.0 &&
+    playerPos.y >= 78.0;
+
+  // Near scalloped arched doorway leading to Cloud Terrace (X >= 66.0, Y <= 76.0)
+  const isNearBadalMahalTerraceDoor =
+    scene === "badal_mahal_interior" &&
+    playerPos.x >= 66.0 &&
+    playerPos.y <= 76.0;
+
+  // Near terrace doorway / stairs in Badal Mahal Terrace (X <= 44.0, Y >= 76.0)
+  const isNearBadalMahalTerraceExit =
+    scene === "badal_mahal_terrace" &&
+    playerPos.x <= 44.0 &&
+    playerPos.y >= 76.0;
+
   // --- ARCHITECTURE: KEYBOARD & GAME LOOP ---
   const keysHeldRef = useRef(new Set<string>());
   const interactionStateRef = useRef<any>({});
@@ -237,6 +303,16 @@ export default function RajasthanGameScreen() {
     isNearJauharDesertExit,
     isNearDesertPalaceGate,
     isNearCamel,
+    isNearKumbhalgarhGateDoor,
+    isNearKumbhalgarhInteriorExit,
+    isNearKumbhalgarhStairsTop,
+    isNearGreatWallStairs,
+    isNearWallEndZigzag,
+    isNearZigzagLowerExit,
+    isNearZigzagUpperGate,
+    isNearBadalMahalInteriorExit,
+    isNearBadalMahalTerraceDoor,
+    isNearBadalMahalTerraceExit,
     cluesFound,
 
     // Actions
@@ -343,6 +419,51 @@ export default function RajasthanGameScreen() {
             state.setIsTransitioning(false);
           }, 1200);
         }
+        // Enter Hanuman Pol Gate inside to Bastion Staircase
+        else if (state.isNearKumbhalgarhGateDoor) {
+          state.setIsTransitioning(true);
+          setTimeout(() => {
+            state.setScene("kumbhalgarh_interior_stairs");
+            state.setPlayerPos({ x: 20.0, y: 86.0 });
+            state.setIsTransitioning(false);
+          }, 400);
+        }
+        // Ascend Staircase to Top of Great Wall of India
+        else if (state.isNearKumbhalgarhStairsTop) {
+          state.setIsTransitioning(true);
+          setTimeout(() => {
+            state.setScene("kumbhalgarh_great_wall");
+            state.setPlayerPos({ x: 50.0, y: 88.0 });
+            state.setIsTransitioning(false);
+          }, 400);
+        }
+        // Walk along the Great Wall to the Zigzag Gates
+        else if (state.isNearWallEndZigzag) {
+          state.setIsTransitioning(true);
+          setTimeout(() => {
+            state.setScene("kumbhalgarh_zigzag_gates");
+            state.setPlayerPos({ x: 58.0, y: 84.0 });
+            state.setIsTransitioning(false);
+          }, 400);
+        }
+        // Enter Badal Mahal Interior from Upper Zigzag Gate
+        else if (state.isNearZigzagUpperGate) {
+          state.setIsTransitioning(true);
+          setTimeout(() => {
+            state.setScene("badal_mahal_interior");
+            state.setPlayerPos({ x: 28.0, y: 84.0 });
+            state.setIsTransitioning(false);
+          }, 400);
+        }
+        // Ascend to Badal Mahal Cloud Terrace from Interior Fresco Chamber
+        else if (state.isNearBadalMahalTerraceDoor) {
+          state.setIsTransitioning(true);
+          setTimeout(() => {
+            state.setScene("badal_mahal_terrace");
+            state.setPlayerPos({ x: 34.0, y: 80.0 });
+            state.setIsTransitioning(false);
+          }, 400);
+        }
       }
 
       // Press [F] for Exiting back to previous areas
@@ -407,6 +528,51 @@ export default function RajasthanGameScreen() {
           setTimeout(() => {
             state.setScene("jauhar_kund");
             state.setPlayerPos({ x: 16.0, y: 74.0 });
+            state.setIsTransitioning(false);
+          }, 400);
+        }
+        // Exit Kumbhalgarh Interior Bastion back to Hanuman Pol Gate
+        else if (state.isNearKumbhalgarhInteriorExit) {
+          state.setIsTransitioning(true);
+          setTimeout(() => {
+            state.setScene("kumbhalgarh_gate");
+            state.setPlayerPos({ x: 26.0, y: 68.0 });
+            state.setIsTransitioning(false);
+          }, 400);
+        }
+        // Descend Great Wall Stairs back down into Kumbhalgarh Bastion Hall
+        else if (state.isNearGreatWallStairs) {
+          state.setIsTransitioning(true);
+          setTimeout(() => {
+            state.setScene("kumbhalgarh_interior_stairs");
+            state.setPlayerPos({ x: 72.0, y: 56.0 });
+            state.setIsTransitioning(false);
+          }, 400);
+        }
+        // Return from Zigzag Gates back to Great Wall Ramparts
+        else if (state.isNearZigzagLowerExit) {
+          state.setIsTransitioning(true);
+          setTimeout(() => {
+            state.setScene("kumbhalgarh_great_wall");
+            state.setPlayerPos({ x: 50.0, y: 44.0 });
+            state.setIsTransitioning(false);
+          }, 400);
+        }
+        // Exit Badal Mahal Interior back to Zigzag Gates
+        else if (state.isNearBadalMahalInteriorExit) {
+          state.setIsTransitioning(true);
+          setTimeout(() => {
+            state.setScene("kumbhalgarh_zigzag_gates");
+            state.setPlayerPos({ x: 34.0, y: 58.0 });
+            state.setIsTransitioning(false);
+          }, 400);
+        }
+        // Descend from Badal Mahal Terrace back into Royal Interior Chamber
+        else if (state.isNearBadalMahalTerraceExit) {
+          state.setIsTransitioning(true);
+          setTimeout(() => {
+            state.setScene("badal_mahal_interior");
+            state.setPlayerPos({ x: 70.0, y: 72.0 });
             state.setIsTransitioning(false);
           }, 400);
         }
@@ -626,6 +792,78 @@ export default function RajasthanGameScreen() {
 
             return { x: nextX, y: nextY };
           }
+          // --- STAGE 2: KUMBHALGARH INTERIOR BASTION & STAIRCASE ---
+          else if (state.scene === "kumbhalgarh_interior_stairs") {
+            const minX = 12.0;
+            const maxX = 88.0;
+            const minY = 52.0;
+            const maxY = 90.0;
+
+            const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
+            const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
+
+            return { x: nextX, y: nextY };
+          }
+          // --- STAGE 2: THE GREAT WALL OF INDIA (OPEN STRAIGHT WALKWAY) ---
+          else if (state.scene === "kumbhalgarh_great_wall") {
+            const progress = (prev.y - 38.0) / 52.0; // 0 at top, 1 at bottom
+            const halfWidth = 5.0 + Math.max(0, Math.min(1, progress)) * 26.0;
+            const minX = Math.max(16.0, 50.0 - halfWidth);
+            const maxX = Math.min(84.0, 50.0 + halfWidth);
+            const minY = 38.0;
+            const maxY = 90.0;
+
+            const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
+            const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
+
+            // Walk straight along the long wall to the far gate -> Reach Zigzag Gates
+            if (nextY <= 40.0) {
+              state.setIsTransitioning(true);
+              setTimeout(() => {
+                state.setScene("kumbhalgarh_zigzag_gates");
+                state.setPlayerPos({ x: 58.0, y: 84.0 });
+                state.setIsTransitioning(false);
+              }, 400);
+            }
+
+            return { x: nextX, y: nextY };
+          }
+          // --- STAGE 2: KUMBHALGARH FORT ZIGZAG GATES ---
+          else if (state.scene === "kumbhalgarh_zigzag_gates") {
+            const minX = 12.0;
+            const maxX = 88.0;
+            const minY = 52.0;
+            const maxY = 90.0;
+
+            const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
+            const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
+
+            return { x: nextX, y: nextY };
+          }
+          // --- STAGE 2: BADAL MAHAL INTERIOR (WHITE PLASTER & ELEPHANT FRESCOES) ---
+          else if (state.scene === "badal_mahal_interior") {
+            const minX = 14.0;
+            const maxX = 86.0;
+            const minY = 62.0;
+            const maxY = 90.0;
+
+            const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
+            const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
+
+            return { x: nextX, y: nextY };
+          }
+          // --- STAGE 2: BADAL MAHAL CLOUD TERRACE & DOME (PINNACLE OF KUMBHALGARH) ---
+          else if (state.scene === "badal_mahal_terrace") {
+            const minX = 16.0;
+            const maxX = 84.0;
+            const minY = 60.0;
+            const maxY = 90.0;
+
+            const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
+            const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
+
+            return { x: nextX, y: nextY };
+          }
           // --- SCENE 8: VIJAY STAMBH INTERIOR (CARVED SANDSTONE CHAMBER) ---
           else if (state.scene === "vijay_stambh_interior") {
             const minX = 18.0;
@@ -709,6 +947,16 @@ export default function RajasthanGameScreen() {
         return "Entering Desert Outskirts...";
       case "kumbhalgarh_gate":
         return "Caravan Arriving at Kumbhalgarh Fort (Stage 2)...";
+      case "kumbhalgarh_interior_stairs":
+        return "Entering Kumbhalgarh Bastion Hall...";
+      case "kumbhalgarh_great_wall":
+        return "Ascending to Top of the Great Wall of India...";
+      case "kumbhalgarh_zigzag_gates":
+        return "Approaching Fortified Zigzag Gates...";
+      case "badal_mahal_interior":
+        return "Entering Badal Mahal (Palace of the Clouds)...";
+      case "badal_mahal_terrace":
+        return "Ascending to Cloud Terrace & Royal Dome...";
       default:
         return "Travelling across Rajasthan...";
     }
@@ -746,6 +994,16 @@ export default function RajasthanGameScreen() {
         return "/bg-chittorgarh-desert-side.jpg";
       case "kumbhalgarh_gate":
         return "/bg-kumbhalgarh-gate.jpg";
+      case "kumbhalgarh_interior_stairs":
+        return "/bg-kumbhalgarh-stairs.jpg";
+      case "kumbhalgarh_great_wall":
+        return "/bg-kumbhalgarh-wall-top.jpg";
+      case "kumbhalgarh_zigzag_gates":
+        return "/bg-kumbhalgarh-zigzag-gates.jpg";
+      case "badal_mahal_interior":
+        return "/bg-badal-mahal-interior.jpg";
+      case "badal_mahal_terrace":
+        return "/bg-badal-mahal-terrace.jpg";
       default:
         return "/bg-ram-pol.jpg";
     }
@@ -770,7 +1028,17 @@ export default function RajasthanGameScreen() {
       case "desert_outskirts":
         return "THAR DESERT OUTSKIRTS - CHITTORGARH FORT";
       case "kumbhalgarh_gate":
-        return "KUMBHALGARH FORT - THE GREAT WALL OF INDIA (STAGE 2)";
+        return "KUMBHALGARH FORT - HANUMAN POL GATE (STAGE 2)";
+      case "kumbhalgarh_interior_stairs":
+        return "KUMBHALGARH FORT - BASTION & GRAND STAIRCASE";
+      case "kumbhalgarh_great_wall":
+        return "THE GREAT WALL OF INDIA - KUMBHALGARH RAMPARTS";
+      case "kumbhalgarh_zigzag_gates":
+        return "KUMBHALGARH FORT - DEFENSIVE ZIGZAG GATES";
+      case "badal_mahal_interior":
+        return "BADAL MAHAL - BIRTHPLACE OF MAHARANA PRATAP (FRESCO CHAMBER)";
+      case "badal_mahal_terrace":
+        return "BADAL MAHAL - CLOUD TERRACE & DOME (PINNACLE OF KUMBHALGARH)";
       default:
         return "RAJASTHAN - LAND OF KINGS";
     }
@@ -795,7 +1063,17 @@ export default function RajasthanGameScreen() {
       case "desert_outskirts":
         return "Gaze upon the golden desert dunes outside the fort ramparts. Walk towards the royal camel caravan and press E to travel to Kumbhalgarh Fort (Stage 2).";
       case "kumbhalgarh_gate":
-        return "Welcome to Kumbhalgarh Fort, home to the Great Wall of India! Explore the grand Hanuman Pol gate ramparts.";
+        return "Approach the grand Hanuman Pol gate and press E to enter the fort bastion.";
+      case "kumbhalgarh_interior_stairs":
+        return "Explore the carved bastion hall. Climb the grand stone staircase on the right and press E to ascend to the top of the Great Wall of India. Press F at the left door to exit outside.";
+      case "kumbhalgarh_great_wall":
+        return "Walk along the Great Wall of India. Follow the long wall straight to the far end to reach the fortified Zigzag Gates!";
+      case "kumbhalgarh_zigzag_gates":
+        return "Traverse the multi-tiered zigzag gates of Kumbhalgarh designed to repel elephant charges. Press E near the upper gate to enter Badal Mahal Palace.";
+      case "badal_mahal_interior":
+        return "Admire the authentic 19th-century elephant battle frescoes and royal red floral inlays where Maharana Pratap was born. Walk to the arched doorway and press E to ascend to the cloud terrace.";
+      case "badal_mahal_terrace":
+        return "Stand atop the highest peak of Kumbhalgarh Fort above the clouds. Gaze across the vast Aravalli hills where Maharana Pratap once walked. Press F near the stairs to return.";
       default:
         return "Explore the historical grounds of Rajasthan.";
     }
@@ -936,123 +1214,16 @@ export default function RajasthanGameScreen() {
         </div>
       )}
 
-      {/* --- PLAYER SPRITE (EXACT MUGHAL ENGINE FORMAT: NO TRANSPARENCY, NO ARTIFICIAL SHADOW) --- */}
+      {/* --- PLAYER SPRITE (EXACT MUGHAL ENGINE FORMAT: CLEAN SPRITE WITH NATURAL WALK ANIMATION) --- */}
       <div
         className="absolute z-20 pointer-events-none flex flex-col items-center"
         style={{
           left: `${playerPos.x}%`,
           top: `${playerPos.y}%`,
           transformOrigin: "bottom center",
-          transform: `translate(-50%, -96%) scale(${scene === "vijay_stambh" ? 1.035 : scene === "vijay_stambh_interior" ? 1.05 : scene === "jauhar_passage" ? (0.75 + (playerPos.y - 56) * 0.011) : scene === "jauhar_kund" ? (0.90 + (playerPos.y - 57) * 0.009) : 1.15}) scaleX(${facingLeft ? -1 : 1})`,
+          transform: `translate(-50%, -96%) scale(${scene === "vijay_stambh" ? 1.035 : scene === "vijay_stambh_interior" ? 1.05 : scene === "jauhar_passage" ? (0.75 + (playerPos.y - 56) * 0.011) : scene === "jauhar_kund" ? (0.90 + (playerPos.y - 57) * 0.009) : scene === "kumbhalgarh_gate" ? (0.85 + (playerPos.y - 65) * 0.012) : scene === "kumbhalgarh_interior_stairs" ? (0.80 + (playerPos.y - 52) * 0.009) : scene === "kumbhalgarh_great_wall" ? (0.46 + (playerPos.y - 36) * 0.013) : scene === "kumbhalgarh_zigzag_gates" ? (0.75 + (playerPos.y - 52) * 0.011) : scene === "badal_mahal_interior" ? (0.85 + (playerPos.y - 62) * 0.010) : scene === "badal_mahal_terrace" ? (0.80 + (playerPos.y - 60) * 0.011) : 1.15}) scaleX(${facingLeft ? -1 : 1})`,
         }}
       >
-        {/* Proximity Interaction Prompt Cards (Exact Mughal Retro Style) */}
-        {isNearRamPolDoor && (
-          <div className="absolute -top-14 animate-bounce z-30 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 whitespace-nowrap">
-            <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
-            Enter Building
-          </div>
-        )}
-
-        {isNearChacha && (
-          <div className="absolute -top-14 animate-bounce z-30 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 whitespace-nowrap">
-            <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
-            Play Chaupar with Buzurg Chacha
-          </div>
-        )}
-
-        {isNearVijayStambhDoor && (
-          <div className="absolute -top-14 animate-bounce z-30 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 whitespace-nowrap">
-            <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
-            Enter Vijay Stambh
-          </div>
-        )}
-
-        {/* Exit Prompt Card in Vijay Stambh Interior leading back outside to Plaza */}
-        {scene === "vijay_stambh_interior" && (
-          <div className="absolute -top-14 animate-bounce z-30 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 whitespace-nowrap">
-            <span className="bg-red-500 text-white border border-black rounded px-1.5 text-[10px]">F</span>
-            Exit Outside to Vijay Stambh Plaza
-          </div>
-        )}
-
-        {isNearJauharPath && (
-          <div className="absolute -top-14 animate-bounce z-30 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 whitespace-nowrap">
-            <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
-            Passage of Broken Walls → Jauhar Kund
-          </div>
-        )}
-
-        {isNearJauharKundDoor && (
-          <div className="absolute -top-14 animate-bounce z-30 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 whitespace-nowrap">
-            <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
-            Enter Sacred Jauhar Kund
-          </div>
-        )}
-
-        {/* Exit Prompt Card when near bottom door in Jauhar Passage */}
-        {isNearPassageBottomDoor && (
-          <div className="absolute -top-14 animate-bounce z-30 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 whitespace-nowrap">
-            <span className="bg-red-500 text-white border border-black rounded px-1.5 text-[10px]">F</span>
-            Exit Back to Vijay Stambh Plaza
-          </div>
-        )}
-
-        {/* Exit Prompt Card ONLY when standing at doorway threshold (bottom center arch) */}
-        {isNearCourtyardExit && (
-          <div className="absolute -top-14 animate-bounce z-30 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 whitespace-nowrap">
-            <span className="bg-red-500 text-white border border-black rounded px-1.5 text-[10px]">F</span>
-            Exit Outside to Ram Pol
-          </div>
-        )}
-
-        {/* Exit Prompt Card in Vijay Stambh area leading back to Courtyard Passage */}
-        {isNearVijayStambhExit && (
-          <div className="absolute -top-14 animate-bounce z-30 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 whitespace-nowrap">
-            <span className="bg-red-500 text-white border border-black rounded px-1.5 text-[10px]">F</span>
-            Exit Back to Courtyard Passage
-          </div>
-        )}
-
-        {/* Exit Prompt Card in Jauhar Kund at pavilion stairs leading back to Broken Walls Passage */}
-        {isNearJauharPavilionStairs && (
-          <div className="absolute -top-14 animate-bounce z-30 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 whitespace-nowrap">
-            <span className="bg-red-500 text-white border border-black rounded px-1.5 text-[10px]">F</span>
-            Exit Back to Passage of Broken Walls
-          </div>
-        )}
-
-        {/* Exit Prompt Card on Left Walkway in Jauhar Kund leading outside to Desert Outskirts */}
-        {isNearJauharDesertExit && (
-          <div className="absolute -top-14 animate-bounce z-30 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 whitespace-nowrap">
-            <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
-            Exit Outside to Desert Dunes
-          </div>
-        )}
-
-        {/* Enter Palace Gate in Desert Outskirts */}
-        {isNearDesertPalaceGate && (
-          <div className="absolute -top-14 animate-bounce z-30 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 whitespace-nowrap">
-            <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
-            Enter Palace Jauhar Kund
-          </div>
-        )}
-
-        {/* Board Royal Camel to Kumbhalgarh Fort (Stage 2) */}
-        {isNearCamel && (
-          <div className="absolute -top-14 animate-bounce z-30 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 whitespace-nowrap">
-            <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
-            Board Camel to Kumbhalgarh Fort (Stage 2)
-          </div>
-        )}
-
-        {isNearCourtyardStairsTop && (
-          <div className="absolute -top-24 animate-bounce z-30 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 whitespace-nowrap">
-            <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">↑</span>
-            Ascending Stairs to Passageway...
-          </div>
-        )}
-
         {/* Player Avatar Sprite */}
         <img
           src="/player.png"
@@ -1065,6 +1236,167 @@ export default function RajasthanGameScreen() {
           }}
         />
       </div>
+
+      {/* --- INTERACTION PROMPTS (EXACT MUGHAL STYLE: CENTERED CLEAN PROMPTS & HOTSPOTS) --- */}
+      {isNearRamPolDoor && (
+        <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce pointer-events-none">
+          <span className="bg-amber-400 border border-black rounded px-1.5 text-[11px]">E</span>
+          Enter Building
+        </div>
+      )}
+
+      {isNearChacha && !showChachaDialogue && !showChauparGame && (
+        <div 
+          className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce cursor-pointer pointer-events-auto"
+          onClick={() => setShowChachaDialogue(true)}
+        >
+          <span className="bg-amber-400 border border-black rounded px-1.5 text-[11px]">E</span>
+          Play Chaupar with Buzurg Chacha
+        </div>
+      )}
+
+      {isNearVijayStambhDoor && !showVijayStambhModal && (
+        <div 
+          className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce cursor-pointer pointer-events-auto"
+          onClick={() => setShowVijayStambhModal(true)}
+        >
+          <span className="bg-amber-400 border border-black rounded px-1.5 text-[11px]">E</span>
+          Enter Vijay Stambh (Tower of Victory)
+        </div>
+      )}
+
+      {isNearCamel && (
+        <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce pointer-events-none">
+          <span className="bg-amber-400 border border-black rounded px-1.5 text-[11px]">E</span>
+          Board Camel to Kumbhalgarh Fort (Stage 2)
+        </div>
+      )}
+
+      {isNearKumbhalgarhGateDoor && (
+        <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce pointer-events-none">
+          <span className="bg-amber-400 border border-black rounded px-1.5 text-[11px]">E</span>
+          Enter Hanuman Pol Gate
+        </div>
+      )}
+
+      {isNearKumbhalgarhStairsTop && (
+        <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce pointer-events-none">
+          <span className="bg-amber-400 border border-black rounded px-1.5 text-[11px]">E</span>
+          Ascend Grand Staircase to Top of Great Wall of India
+        </div>
+      )}
+
+      {isNearWallEndZigzag && (
+        <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce pointer-events-none">
+          <span className="bg-amber-400 border border-black rounded px-1.5 text-[11px]">E</span>
+          Enter Fort Zigzag Gates
+        </div>
+      )}
+
+      {isNearZigzagUpperGate && (
+        <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce pointer-events-none">
+          <span className="bg-amber-400 border border-black rounded px-1.5 text-[11px]">E</span>
+          Enter Badal Mahal Palace
+        </div>
+      )}
+
+      {isNearBadalMahalTerraceDoor && (
+        <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce pointer-events-none">
+          <span className="bg-amber-400 border border-black rounded px-1.5 text-[11px]">E</span>
+          Ascend to Cloud Terrace & Dome
+        </div>
+      )}
+
+      {/* --- NAVIGATION & RETURN GUIDANCE BANNERS (EXACT MUGHAL ENGINE FORMAT: IMAGE 3) --- */}
+      {isNearCourtyardExit && (
+        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 pointer-events-none flex items-center gap-2 whitespace-nowrap">
+          <span>▼</span> Walk down to exit outside to Ram Pol (Press F)
+        </div>
+      )}
+
+      {isNearCourtyardStairsTop && (
+        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 pointer-events-none flex items-center gap-2 whitespace-nowrap">
+          <span>▲</span> Walk up the right stairs to Fortress Passageway
+        </div>
+      )}
+
+      {isNearVijayStambhExit && (
+        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 pointer-events-none flex items-center gap-2 whitespace-nowrap">
+          <span>▼</span> Walk down to return to Fortress Passageway (Press F)
+        </div>
+      )}
+
+      {isNearJauharPath && (
+        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 pointer-events-none flex items-center gap-2 whitespace-nowrap">
+          <span>►</span> Walk right to Passage of Broken Walls (Press E)
+        </div>
+      )}
+
+      {scene === "vijay_stambh_interior" && (
+        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 pointer-events-none flex items-center gap-2 whitespace-nowrap">
+          <span>▼</span> Walk down to exit outside to Vijay Stambh Plaza (Press F)
+        </div>
+      )}
+
+      {isNearPassageBottomDoor && (
+        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 pointer-events-none flex items-center gap-2 whitespace-nowrap">
+          <span>▼</span> Walk down to return to Vijay Stambh Plaza (Press F)
+        </div>
+      )}
+
+      {isNearJauharKundDoor && (
+        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 pointer-events-none flex items-center gap-2 whitespace-nowrap">
+          <span>▲</span> Walk forward to enter Sacred Jauhar Kund (Press E)
+        </div>
+      )}
+
+      {isNearJauharPavilionStairs && (
+        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 pointer-events-none flex items-center gap-2 whitespace-nowrap">
+          <span>▼</span> Walk down to return to Passage of Broken Walls (Press F)
+        </div>
+      )}
+
+      {isNearJauharDesertExit && (
+        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 pointer-events-none flex items-center gap-2 whitespace-nowrap">
+          <span>◄</span> Walk left to exit outside to Desert Dunes (Press E)
+        </div>
+      )}
+
+      {isNearDesertPalaceGate && (
+        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 pointer-events-none flex items-center gap-2 whitespace-nowrap">
+          <span>►</span> Walk right to enter Palace Jauhar Kund (Press E)
+        </div>
+      )}
+
+      {isNearKumbhalgarhInteriorExit && (
+        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 pointer-events-none flex items-center gap-2 whitespace-nowrap">
+          <span>▼</span> Walk down to exit outside to Hanuman Pol (Press F)
+        </div>
+      )}
+
+      {isNearGreatWallStairs && (
+        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 pointer-events-none flex items-center gap-2 whitespace-nowrap">
+          <span>▼</span> Walk down to descend stairs into Bastion Chamber (Press F)
+        </div>
+      )}
+
+      {isNearZigzagLowerExit && (
+        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 pointer-events-none flex items-center gap-2 whitespace-nowrap">
+          <span>▼</span> Walk down to return to Great Wall Ramparts (Press F)
+        </div>
+      )}
+
+      {isNearBadalMahalInteriorExit && (
+        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 pointer-events-none flex items-center gap-2 whitespace-nowrap">
+          <span>▼</span> Walk down to exit outside to Fort Gates (Press F)
+        </div>
+      )}
+
+      {isNearBadalMahalTerraceExit && (
+        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 pointer-events-none flex items-center gap-2 whitespace-nowrap">
+          <span>▼</span> Walk down to descend to Royal Fresco Chamber (Press F)
+        </div>
+      )}
 
       {/* --- BUZURG CHACHA DIALOGUE MODAL --- */}
       {showChachaDialogue && (
