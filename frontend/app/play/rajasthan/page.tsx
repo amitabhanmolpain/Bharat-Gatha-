@@ -261,17 +261,16 @@ export default function RajasthanGameScreen() {
     playerPos.x <= 42.0 &&
     playerPos.y <= 62.0;
 
-  // Near left exit door in Badal Mahal Interior (X <= 26.0, Y >= 78.0)
+  // Near left dark archway in Badal Mahal Interior → goes UP to the Terrace (X <= 28.0, any Y)
   const isNearBadalMahalInteriorExit =
     scene === "badal_mahal_interior" &&
-    playerPos.x <= 26.0 &&
-    playerPos.y >= 78.0;
+    playerPos.x <= 28.0 &&
+    playerPos.y >= 68.0;
 
-  // Near scalloped arched doorway leading to Cloud Terrace (X >= 66.0, Y <= 76.0)
+  // Walking back down / toward the bottom exits to zigzag gates courtyard (Y >= 88.0)
   const isNearBadalMahalTerraceDoor =
     scene === "badal_mahal_interior" &&
-    playerPos.x >= 66.0 &&
-    playerPos.y <= 76.0;
+    playerPos.y >= 88.0;
 
   // Near terrace doorway / stairs in Badal Mahal Terrace (X <= 44.0, Y >= 76.0)
   const isNearBadalMahalTerraceExit =
@@ -455,12 +454,21 @@ export default function RajasthanGameScreen() {
             state.setIsTransitioning(false);
           }, 400);
         }
-        // Ascend to Badal Mahal Cloud Terrace from Interior Fresco Chamber
-        else if (state.isNearBadalMahalTerraceDoor) {
+        // Left dark archway in Badal Mahal Interior → ascend to Cloud Terrace
+        else if (state.isNearBadalMahalInteriorExit) {
           state.setIsTransitioning(true);
           setTimeout(() => {
             state.setScene("badal_mahal_terrace");
-            state.setPlayerPos({ x: 34.0, y: 80.0 });
+            state.setPlayerPos({ x: 50.0, y: 78.0 });
+            state.setIsTransitioning(false);
+          }, 400);
+        }
+        // Walking to the bottom of the room → exit back to Zigzag Gates courtyard
+        else if (state.isNearBadalMahalTerraceDoor) {
+          state.setIsTransitioning(true);
+          setTimeout(() => {
+            state.setScene("kumbhalgarh_zigzag_gates");
+            state.setPlayerPos({ x: 50.0, y: 62.0 });
             state.setIsTransitioning(false);
           }, 400);
         }
@@ -555,15 +563,6 @@ export default function RajasthanGameScreen() {
           setTimeout(() => {
             state.setScene("kumbhalgarh_great_wall");
             state.setPlayerPos({ x: 50.0, y: 44.0 });
-            state.setIsTransitioning(false);
-          }, 400);
-        }
-        // Exit Badal Mahal Interior back to Zigzag Gates
-        else if (state.isNearBadalMahalInteriorExit) {
-          state.setIsTransitioning(true);
-          setTimeout(() => {
-            state.setScene("kumbhalgarh_zigzag_gates");
-            state.setPlayerPos({ x: 34.0, y: 58.0 });
             state.setIsTransitioning(false);
           }, 400);
         }
@@ -1330,10 +1329,16 @@ export default function RajasthanGameScreen() {
         </div>
       )}
 
-      {isNearBadalMahalTerraceDoor && (
+      {isNearBadalMahalInteriorExit && (
         <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce pointer-events-none">
           <span className="bg-amber-400 border border-black rounded px-1.5 text-[11px]">E</span>
           Ascend to Cloud Terrace & Dome
+        </div>
+      )}
+
+      {isNearBadalMahalTerraceDoor && (
+        <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 pointer-events-none flex items-center gap-2 whitespace-nowrap">
+          <span>▼</span> Walk back to exit to Zigzag Gates Courtyard
         </div>
       )}
 
