@@ -262,16 +262,16 @@ export default function RajasthanGameScreen() {
     playerPos.x <= 42.0 &&
     playerPos.y <= 62.0;
 
-  // Near left dark archway in Badal Mahal Interior → goes UP to the Terrace (X <= 28.0, any Y)
+  // Near left dark archway in Badal Mahal Interior → goes UP to Rooftop/Cloud Terrace (Image 2: X <= 36.0)
   const isNearBadalMahalInteriorExit =
     scene === "badal_mahal_interior" &&
-    playerPos.x <= 28.0 &&
-    playerPos.y >= 68.0;
+    playerPos.x <= 36.0 &&
+    playerPos.y <= 85.0;
 
-  // Walking back down / toward the bottom exits to zigzag gates courtyard (Y >= 88.0)
+  // Near right open door in Badal Mahal Interior → exits to Courtyard (Image 3: X >= 74.0 or Y >= 88.0)
   const isNearBadalMahalTerraceDoor =
     scene === "badal_mahal_interior" &&
-    playerPos.y >= 88.0;
+    (playerPos.x >= 74.0 || playerPos.y >= 88.0);
 
   // Near terrace doorway / stairs in Badal Mahal Terrace (X <= 44.0, Y >= 76.0)
   const isNearBadalMahalTerraceExit =
@@ -867,6 +867,7 @@ export default function RajasthanGameScreen() {
           }
           // --- STAGE 2: BADAL MAHAL INTERIOR (WHITE PLASTER & ELEPHANT FRESCOES) ---
           // --- STAGE 2: BADAL MAHAL COURTYARD ---
+          // --- STAGE 2: BADAL MAHAL COURTYARD ---
           else if (state.scene === "badal_mahal_courtyard") {
             const minX = 12.0;
             const maxX = 88.0;
@@ -876,12 +877,12 @@ export default function RajasthanGameScreen() {
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
 
-            // Walk up through the back gate → enter Badal Mahal Interior
-            if (nextY <= 60.0 && nextX >= 38.0 && nextX <= 62.0) {
+            // Image 1: Enter Badal Mahal Interior via Colonnade Door (left side) OR Back Gate
+            if ((nextY <= 78.0 && nextX >= 24.0 && nextX <= 35.0) || (nextY <= 60.0 && nextX >= 38.0 && nextX <= 62.0)) {
               state.setIsTransitioning(true);
               setTimeout(() => {
                 state.setScene("badal_mahal_interior");
-                state.setPlayerPos({ x: 50.0, y: 82.0 });
+                state.setPlayerPos({ x: 76.0, y: 80.0 }); // Spawn at right door inside (Image 3)
                 state.setIsTransitioning(false);
               }, 400);
             }
@@ -903,10 +904,30 @@ export default function RajasthanGameScreen() {
             const minX = 14.0;
             const maxX = 86.0;
             const minY = 62.0;
-            const maxY = 90.0;
+            const maxY = 92.0;
 
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
+
+            // Image 2: Left dark archway -> Ascend to Cloud Terrace / Rooftop
+            if (nextX <= 36.0 && nextY <= 85.0) {
+              state.setIsTransitioning(true);
+              setTimeout(() => {
+                state.setScene("badal_mahal_terrace");
+                state.setPlayerPos({ x: 50.0, y: 78.0 });
+                state.setIsTransitioning(false);
+              }, 400);
+            }
+
+            // Image 3: Right wooden door -> Exit back to Courtyard
+            if (nextX >= 74.0 && nextY >= 70.0) {
+              state.setIsTransitioning(true);
+              setTimeout(() => {
+                state.setScene("badal_mahal_courtyard");
+                state.setPlayerPos({ x: 29.0, y: 78.0 }); // Spawn at colonnade door in Courtyard (Image 1)
+                state.setIsTransitioning(false);
+              }, 400);
+            }
 
             return { x: nextX, y: nextY };
           }
@@ -1363,7 +1384,6 @@ export default function RajasthanGameScreen() {
       {scene === "kumbhalgarh_zigzag_gates" && playerPos.y <= 60.0 && (
         <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce pointer-events-none">
           <span>▲</span> Walk forward to enter Badal Mahal
-        </div>
       )}
       {scene === "kumbhalgarh_zigzag_gates" && playerPos.y >= 88.0 && (
         <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 pointer-events-none flex items-center gap-2 whitespace-nowrap">
@@ -1371,16 +1391,24 @@ export default function RajasthanGameScreen() {
         </div>
       )}
 
-      {isNearBadalMahalInteriorExit && (
+      {/* Image 1: Courtyard Colonnade Door Hint */}
+      {scene === "badal_mahal_courtyard" && playerPos.x >= 22.0 && playerPos.x <= 36.0 && playerPos.y <= 80.0 && (
         <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce pointer-events-none">
-          <span className="bg-amber-400 border border-black rounded px-1.5 text-[11px]">E</span>
-          Ascend to Cloud Terrace & Dome
+          <span>▲</span> Walk into colonnade door to enter Badal Mahal Palace
         </div>
       )}
 
+      {/* Image 2: Interior Left Archway -> Rooftop Hint */}
+      {isNearBadalMahalInteriorExit && (
+        <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce pointer-events-none">
+          <span>▲</span> Walk through left archway to ascend to Rooftop Terrace
+        </div>
+      )}
+
+      {/* Image 3: Interior Right Door -> Exit to Courtyard Hint */}
       {isNearBadalMahalTerraceDoor && (
         <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 pointer-events-none flex items-center gap-2 whitespace-nowrap">
-          <span>▼</span> Walk back to exit to Zigzag Gates Courtyard
+          <span>▶</span> Walk to right door to exit to Royal Courtyard
         </div>
       )}
 
