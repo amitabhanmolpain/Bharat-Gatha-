@@ -1246,7 +1246,7 @@ export default function RajasthanGameScreen() {
           left: `${playerPos.x}%`,
           top: `${playerPos.y}%`,
           transformOrigin: "bottom center",
-          transform: `translate(-50%, -96%) scale(${scene === "vijay_stambh" ? 1.035 : scene === "vijay_stambh_interior" ? 1.05 : scene === "jauhar_passage" ? (0.75 + (playerPos.y - 56) * 0.011) : scene === "jauhar_kund" ? (0.90 + (playerPos.y - 57) * 0.009) : scene === "kumbhalgarh_gate" ? (0.85 + (playerPos.y - 65) * 0.012) : scene === "kumbhalgarh_interior_stairs" ? (0.80 + (playerPos.y - 52) * 0.009) : scene === "kumbhalgarh_great_wall" ? (0.46 + (playerPos.y - 36) * 0.013) : scene === "kumbhalgarh_zigzag_gates" ? (0.75 + (playerPos.y - 52) * 0.011) : scene === "badal_mahal_interior" ? (0.85 + (playerPos.y - 62) * 0.010) : scene === "badal_mahal_terrace" ? (0.80 + (playerPos.y - 60) * 0.011) : 1.15}) scaleX(${facingLeft ? -1 : 1})`,
+          transform: `translate(-50%, -96%) scale(${scene === "vijay_stambh" ? 1.035 : scene === "vijay_stambh_interior" ? 1.05 : scene === "jauhar_passage" ? (0.75 + (playerPos.y - 56) * 0.011) : scene === "jauhar_kund" ? (0.90 + (playerPos.y - 57) * 0.009) : scene === "kumbhalgarh_gate" ? (0.85 + (playerPos.y - 65) * 0.012) : scene === "kumbhalgarh_interior_stairs" ? (0.80 + (playerPos.y - 52) * 0.009) : scene === "kumbhalgarh_great_wall" ? (0.46 + (playerPos.y - 36) * 0.013) : scene === "kumbhalgarh_zigzag_gates" ? (0.75 + (playerPos.y - 52) * 0.011) : scene === "badal_mahal_interior" ? (1.45 + (playerPos.y - 80) * 0.008) : scene === "badal_mahal_terrace" ? (1.10 + (playerPos.y - 60) * 0.010) : 1.15}) scaleX(${facingLeft ? -1 : 1})`,
         }}
       >
         {/* Player Avatar Sprite */}
