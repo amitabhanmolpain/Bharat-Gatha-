@@ -833,10 +833,35 @@ export default function RajasthanGameScreen() {
             const minX = 12.0;
             const maxX = 88.0;
             const minY = 52.0;
-            const maxY = 90.0;
+            const maxY = 98.0; // Allowed to walk backwards
 
-            const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
+            // Funnel players slightly towards the center ramp as they go up
+            const rampProgress = Math.max(0, Math.min(1, (prev.y - minY) / (maxY - minY)));
+            const currentMinX = 35.0 + (rampProgress * -23.0); // Widen at bottom
+            const currentMaxX = 65.0 + (rampProgress * 23.0);  // Widen at bottom
+
+            const nextX = Math.max(currentMinX, Math.min(currentMaxX, prev.x + dx));
             const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
+
+            // Automatically enter Badal Mahal if walking into the top gate
+            if (nextY <= 52.5 && nextX >= 42.0 && nextX <= 58.0) {
+              state.setIsTransitioning(true);
+              setTimeout(() => {
+                state.setScene("badal_mahal_interior");
+                state.setPlayerPos({ x: 50.0, y: 84.0 });
+                state.setIsTransitioning(false);
+              }, 400);
+            }
+
+            // Automatically return to Great Wall if walking fully down
+            if (nextY >= 96.0) {
+              state.setIsTransitioning(true);
+              setTimeout(() => {
+                state.setScene("kumbhalgarh_great_wall");
+                state.setPlayerPos({ x: 50.0, y: 44.0 });
+                state.setIsTransitioning(false);
+              }, 400);
+            }
 
             return { x: nextX, y: nextY };
           }
@@ -1293,12 +1318,7 @@ export default function RajasthanGameScreen() {
         </div>
       )}
 
-      {isNearZigzagUpperGate && (
-        <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce pointer-events-none">
-          <span className="bg-amber-400 border border-black rounded px-1.5 text-[11px]">E</span>
-          Enter Badal Mahal Palace
-        </div>
-      )}
+      {/* Removed isNearZigzagUpperGate prompt as it is now automatic */}
 
       {isNearBadalMahalTerraceDoor && (
         <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce pointer-events-none">
