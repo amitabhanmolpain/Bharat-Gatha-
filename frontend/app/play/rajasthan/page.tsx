@@ -1384,6 +1384,7 @@ export default function RajasthanGameScreen() {
       {scene === "kumbhalgarh_zigzag_gates" && playerPos.y <= 60.0 && (
         <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce pointer-events-none">
           <span>▲</span> Walk forward to enter Badal Mahal
+        </div>
       )}
       {scene === "kumbhalgarh_zigzag_gates" && playerPos.y >= 88.0 && (
         <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 pointer-events-none flex items-center gap-2 whitespace-nowrap">
