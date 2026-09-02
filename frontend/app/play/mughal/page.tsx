@@ -150,9 +150,9 @@ export default function MughalGameScreen() {
     }
   }, [scene]);
 
-  // Save game progress automatically on beforeunload
+  // Save game progress automatically on state changes & beforeunload
   useEffect(() => {
-    const handleBeforeUnload = () => {
+    if (typeof window !== 'undefined' && !isLoading) {
       const saveState = {
         scene,
         playerPos,
@@ -163,11 +163,8 @@ export default function MughalGameScreen() {
         isArchaeologistTalked
       };
       localStorage.setItem('mughal_save', JSON.stringify(saveState));
-    };
-    
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [scene, playerPos, cluesFound, isCalligraphySolved, isSymmetrySolved, isMausoleumExplored, isArchaeologistTalked]);
+    }
+  }, [scene, playerPos, cluesFound, isCalligraphySolved, isSymmetrySolved, isMausoleumExplored, isArchaeologistTalked, isLoading]);
 
 
   // Guard NPC Position (In 'gate' scene)
@@ -1535,7 +1532,7 @@ export default function MughalGameScreen() {
           <span className="text-[11px] font-bold text-black">
             <span className="text-amber-600 mr-1">🚪</span>
             {(() => {
-              const rooms: Record<SceneType, number> = {
+              const rooms: Record<string, number> = {
                 gate: 1,
                 passage: 2,
                 courtyard: 3,
@@ -1551,10 +1548,13 @@ export default function MughalGameScreen() {
                 taj_mehtab_bagh: 13,
                 red_fort_lahori: 14,
                 red_fort_plaza: 15,
-                red_fort_interior: 16
+                red_fort_interior: 16,
+                red_fort_diwani_khas: 17,
+                red_fort_corridor: 18,
+                red_fort_rang_mahal: 19
               };
-              const current = rooms[scene] || 1;
-              return `rooms ${current}/14`;
+              const current = rooms[scene as keyof typeof rooms] || 1;
+              return `rooms ${current}/19`;
             })()}
           </span>
         </div>
