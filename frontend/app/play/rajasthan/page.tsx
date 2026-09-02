@@ -14,7 +14,9 @@ export type RajasthanSceneType =
   | "vijay_stambh_interior"
   | "jauhar_passage"
   | "jauhar_kund"
-  | "desert_outskirts";
+  | "desert_outskirts"
+  // Stage 2: Kumbhalgarh Fort
+  | "kumbhalgarh_gate";
 
 export default function RajasthanGameScreen() {
   const [isLoading, setIsLoading] = useState(true);
@@ -51,6 +53,7 @@ export default function RajasthanGameScreen() {
     }
     setIsTransitioning(true);
     setTimeout(() => {
+      setStage(1);
       setScene("ram_pol");
       setPlayerPos({ x: 50.0, y: 88.0 });
       setFacingLeft(false);
@@ -68,13 +71,18 @@ export default function RajasthanGameScreen() {
     if (typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search);
       const urlScene = urlParams.get("scene") as RajasthanSceneType | null;
+      const urlStage = urlParams.get("stage");
       const saved = localStorage.getItem("rajasthan_game_state");
 
+      if (urlStage) {
+        setStage(parseInt(urlStage, 10) as RajasthanStage);
+      }
       if (urlScene) {
         setScene(urlScene);
       } else if (saved) {
         try {
           const parsed = JSON.parse(saved);
+          if (parsed.stage) setStage(parsed.stage);
           if (parsed.scene) setScene(parsed.scene);
           if (parsed.playerPos) setPlayerPos(parsed.playerPos);
           if (typeof parsed.cluesFound === "number") setCluesFound(parsed.cluesFound);
@@ -91,15 +99,15 @@ export default function RajasthanGameScreen() {
       try {
         localStorage.setItem(
           "rajasthan_game_state",
-          JSON.stringify({ scene, playerPos, cluesFound })
+          JSON.stringify({ stage, scene, playerPos, cluesFound })
         );
-        const newUrl = `${window.location.pathname}?scene=${scene}`;
+        const newUrl = `${window.location.pathname}?stage=${stage}&scene=${scene}`;
         window.history.replaceState({ path: newUrl }, "", newUrl);
       } catch (e) {
         console.error("Failed to save game state", e);
       }
     }
-  }, [scene, playerPos, cluesFound, isLoading]);
+  }, [stage, scene, playerPos, cluesFound, isLoading]);
 
   // Loading simulation
   useEffect(() => {
@@ -197,6 +205,14 @@ export default function RajasthanGameScreen() {
     playerPos.x >= 74.0 &&
     playerPos.y <= 82.0;
 
+  // Near Camel Caravan in Desert Outskirts (X: 18..38, Y: 68..88)
+  const isNearCamel =
+    scene === "desert_outskirts" &&
+    playerPos.x >= 18.0 &&
+    playerPos.x <= 38.0 &&
+    playerPos.y >= 68.0 &&
+    playerPos.y <= 88.0;
+
   // --- ARCHITECTURE: KEYBOARD & GAME LOOP ---
   const keysHeldRef = useRef(new Set<string>());
   const interactionStateRef = useRef<any>({});
@@ -205,6 +221,7 @@ export default function RajasthanGameScreen() {
   interactionStateRef.current = {
     isLoading,
     isTransitioning,
+    stage,
     scene,
     playerPos,
     isNearRamPolDoor,
@@ -219,9 +236,11 @@ export default function RajasthanGameScreen() {
     isNearJauharPavilionStairs,
     isNearJauharDesertExit,
     isNearDesertPalaceGate,
+    isNearCamel,
     cluesFound,
 
     // Actions
+    setStage,
     setScene,
     setPlayerPos,
     setIsTransitioning,
@@ -313,6 +332,16 @@ export default function RajasthanGameScreen() {
             state.setPlayerPos({ x: 16.0, y: 74.0 });
             state.setIsTransitioning(false);
           }, 400);
+        }
+        // Board Camel Caravan to Kumbhalgarh Fort (Stage 2)
+        else if (state.isNearCamel) {
+          state.setIsTransitioning(true);
+          setTimeout(() => {
+            state.setStage(2);
+            state.setScene("kumbhalgarh_gate");
+            state.setPlayerPos({ x: 30.0, y: 80.0 });
+            state.setIsTransitioning(false);
+          }, 1200);
         }
       }
 
@@ -585,6 +614,18 @@ export default function RajasthanGameScreen() {
 
             return { x: nextX, y: nextY };
           }
+          // --- STAGE 2: KUMBHALGARH FORT (GREAT WALL OF INDIA & HANUMAN POL) ---
+          else if (state.scene === "kumbhalgarh_gate") {
+            const minX = 15.0;
+            const maxX = 85.0;
+            const minY = 65.0;
+            const maxY = 90.0;
+
+            const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
+            const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
+
+            return { x: nextX, y: nextY };
+          }
           // --- SCENE 8: VIJAY STAMBH INTERIOR (CARVED SANDSTONE CHAMBER) ---
           else if (state.scene === "vijay_stambh_interior") {
             const minX = 18.0;
@@ -666,8 +707,10 @@ export default function RajasthanGameScreen() {
         return "Approaching Sacred Jauhar Kund...";
       case "desert_outskirts":
         return "Entering Desert Outskirts...";
+      case "kumbhalgarh_gate":
+        return "Caravan Arriving at Kumbhalgarh Fort (Stage 2)...";
       default:
-        return "Travelling across Chittorgarh...";
+        return "Travelling across Rajasthan...";
     }
   };
 
@@ -676,7 +719,7 @@ export default function RajasthanGameScreen() {
       <div className="relative w-full h-screen bg-[#0a0806] flex items-center justify-center font-mono">
         <div className="flex flex-col items-center gap-4 text-amber-400">
           <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
-          <span className="text-xl font-bold tracking-widest uppercase">Loading Chittorgarh Fort...</span>
+          <span className="text-xl font-bold tracking-widest uppercase">Loading Rajasthan World...</span>
         </div>
       </div>
     );
@@ -701,6 +744,8 @@ export default function RajasthanGameScreen() {
         return "/bg-chittorgarh-jauhar-kund.jpg";
       case "desert_outskirts":
         return "/bg-chittorgarh-desert-side.jpg";
+      case "kumbhalgarh_gate":
+        return "/bg-kumbhalgarh-gate.jpg";
       default:
         return "/bg-ram-pol.jpg";
     }
@@ -724,8 +769,10 @@ export default function RajasthanGameScreen() {
         return "SACRED JAUHAR KUND - TWILIGHT";
       case "desert_outskirts":
         return "THAR DESERT OUTSKIRTS - CHITTORGARH FORT";
+      case "kumbhalgarh_gate":
+        return "KUMBHALGARH FORT - THE GREAT WALL OF INDIA (STAGE 2)";
       default:
-        return "CHITTORGARH FORT";
+        return "RAJASTHAN - LAND OF KINGS";
     }
   };
 
@@ -746,9 +793,11 @@ export default function RajasthanGameScreen() {
       case "jauhar_kund":
         return "Stand in reverence at the sacred historic Jauhar Kund during twilight. Walk up to the pavilion stairs and press F to return to the passage, or walk left to exit outside to the desert.";
       case "desert_outskirts":
-        return "Gaze upon the golden desert dunes outside the fort ramparts. Approach the palace gate and press E to return inside.";
+        return "Gaze upon the golden desert dunes outside the fort ramparts. Walk towards the royal camel caravan and press E to travel to Kumbhalgarh Fort (Stage 2).";
+      case "kumbhalgarh_gate":
+        return "Welcome to Kumbhalgarh Fort, home to the Great Wall of India! Explore the grand Hanuman Pol gate ramparts.";
       default:
-        return "Explore the historical grounds of Chittorgarh Fort.";
+        return "Explore the historical grounds of Rajasthan.";
     }
   };
 
@@ -862,6 +911,31 @@ export default function RajasthanGameScreen() {
         </div>
       )}
 
+      {/* --- DESERT CARAVAN CAMEL NPC (STANDING IN THAR DESERT OUTSKIRTS) --- */}
+      {scene === "desert_outskirts" && (
+        <div
+          className="absolute z-10 pointer-events-none flex flex-col items-center"
+          style={{
+            left: "28%",
+            top: "78%",
+            transform: "translate(-50%, -85%)",
+          }}
+        >
+          {/* Name Tag */}
+          <div className="bg-[#fff9ea] text-amber-950 text-[11px] font-bold px-2.5 py-0.5 rounded border-2 border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)] mb-1 whitespace-nowrap">
+            🐫 Royal Desert Camel
+          </div>
+
+          {/* Camel Sprite Asset */}
+          <img
+            src="/rajasthan-camel.png"
+            alt="Royal Desert Camel"
+            className="w-48 h-48 object-contain filter drop-shadow-[0_8px_16px_rgba(0,0,0,0.85)]"
+            style={{ imageRendering: "pixelated" }}
+          />
+        </div>
+      )}
+
       {/* --- PLAYER SPRITE (EXACT MUGHAL ENGINE FORMAT: NO TRANSPARENCY, NO ARTIFICIAL SHADOW) --- */}
       <div
         className="absolute z-20 pointer-events-none flex flex-col items-center"
@@ -961,6 +1035,14 @@ export default function RajasthanGameScreen() {
           <div className="absolute -top-14 animate-bounce z-30 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 whitespace-nowrap">
             <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
             Enter Palace Jauhar Kund
+          </div>
+        )}
+
+        {/* Board Royal Camel to Kumbhalgarh Fort (Stage 2) */}
+        {isNearCamel && (
+          <div className="absolute -top-14 animate-bounce z-30 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 whitespace-nowrap">
+            <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
+            Board Camel to Kumbhalgarh Fort (Stage 2)
           </div>
         )}
 
