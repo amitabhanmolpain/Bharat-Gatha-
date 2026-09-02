@@ -59,13 +59,33 @@ export default function MughalGameScreen() {
   const router = useRouter();
 
   const horseSoundRef = useRef<HTMLAudioElement | null>(null);
+  const boatSoundRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       horseSoundRef.current = new Audio('/horse_sound.webm');
       horseSoundRef.current.volume = 0.5;
+      boatSoundRef.current = new Audio('/boat-transition.webm');
+      boatSoundRef.current.volume = 0.7;
     }
   }, []);
+
+  const startBoatTransition = (targetScene: any, targetPos: { x: number; y: number }, durationMs: number = 5000) => {
+    setIsTransitioning(true);
+    if (boatSoundRef.current) {
+      boatSoundRef.current.currentTime = 0;
+      boatSoundRef.current.play().catch(() => {});
+    }
+    setTimeout(() => {
+      setScene(targetScene);
+      setPlayerPos(targetPos);
+      setIsTransitioning(false);
+      if (boatSoundRef.current) {
+        boatSoundRef.current.pause();
+        boatSoundRef.current.currentTime = 0;
+      }
+    }, durationMs);
+  };
 
   useEffect(() => {
     if (isCarriageTravelling) {
@@ -387,8 +407,7 @@ export default function MughalGameScreen() {
 
             // Walk backward out of the Agra Fort to Taj Gate
             if (nextY >= 96.0) {
-              setScene("taj_gate");
-              setPlayerPos({ x: 50.0, y: 88.0 });
+              startBoatTransition("taj_gate", { x: 50.0, y: 88.0 }, 5000);
             }
 
             return { x: nextX, y: nextY };
@@ -560,8 +579,7 @@ export default function MughalGameScreen() {
 
             // Walking backward out of the Taj Gate to Agra Fort
             if (nextY >= 96.0) {
-              setScene("gate");
-              setPlayerPos({ x: 50.0, y: 88.0 });
+              startBoatTransition("gate", { x: 50.0, y: 88.0 }, 5000);
             }
 
             // Walking through the archway to Charbagh (requires calligraphy solved)
@@ -1339,16 +1357,11 @@ export default function MughalGameScreen() {
             <button 
               onClick={() => {
                 setShowKhasModal(false);
-                setIsTransitioning(true);
-                setTimeout(() => {
-                  setScene("taj_gate");
-                  setPlayerPos({ x: 50.0, y: 88.0 });
-                  setIsTransitioning(false);
-                }, 400);
+                startBoatTransition("taj_gate", { x: 50.0, y: 88.0 }, 5000);
               }}
-              className="bg-amber-400 hover:bg-amber-300 border-2 border-black rounded-lg py-2.5 mt-2 text-xs font-bold text-black shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5"
+              className="bg-amber-400 hover:bg-amber-300 border-2 border-black rounded-lg py-2.5 mt-2 text-xs font-bold text-black shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 flex items-center justify-center gap-2 cursor-pointer"
             >
-              Acknowledge Clue & Continue
+              <span>⛵</span> Board Boat Across Yamuna to Taj Mahal
             </button>
           </div>
         </div>
