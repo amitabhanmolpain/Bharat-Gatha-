@@ -1,12 +1,29 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
+
+export type SceneType =
+  | "gate"
+  | "passage"
+  | "courtyard"
+  | "interior"
+  | "sheesh_passage"
+  | "sheesh_mahal"
+  | "brown_passage"
+  | "khas_mahal"
+  | "taj_gate"
+  | "taj_charbagh"
+  | "taj_exterior"
+  | "taj_mausoleum"
+  | "taj_mehtab_bagh"
+  | "red_fort_lahori"
+  | "red_fort_plaza"
+  | "red_fort_interior";
 
 export default function MughalGameScreen() {
   const [isLoading, setIsLoading] = useState(true);
-  const [scene, setScene] = useState<"gate" | "passage" | "courtyard" | "interior" | "sheesh_passage" | "sheesh_mahal" | "brown_passage" | "khas_mahal" | "taj_gate" | "taj_charbagh" | "taj_exterior" | "taj_mausoleum" | "taj_mehtab_bagh" | "red_fort_lahori" | "red_fort_plaza" | "red_fort_interior">("gate");
+  const [scene, setScene] = useState<SceneType>("gate");
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [playerPos, setPlayerPos] = useState({ x: 50, y: 85 });
   const [facingLeft, setFacingLeft] = useState(false);
@@ -89,35 +106,34 @@ export default function MughalGameScreen() {
 
   // Handle URL Endpoints and Save State
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      const urlScene = urlParams.get('scene');
-      const saved = localStorage.getItem('mughal_save');
-      
-      let finalScene = urlScene || 'gate';
-
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (!urlScene) {
-             finalScene = parsed.scene || 'gate';
-             if (parsed.playerPos) setPlayerPos(parsed.playerPos);
-          }
-          if (parsed.cluesFound !== undefined) setCluesFound(parsed.cluesFound);
-          if (parsed.isCalligraphySolved !== undefined) setIsCalligraphySolved(parsed.isCalligraphySolved);
-          if (parsed.isSymmetrySolved !== undefined) setIsSymmetrySolved(parsed.isSymmetrySolved);
-          if (parsed.isMausoleumExplored !== undefined) setIsMausoleumExplored(parsed.isMausoleumExplored);
-          if (parsed.isArchaeologistTalked !== undefined) setIsArchaeologistTalked(parsed.isArchaeologistTalked);
-        } catch (e) {
-          console.error("Failed to load save state", e);
-        }
-      }
-      
-      setScene(finalScene as any);
-    }
-    
-    // Simulate loading screen
+    // Simulate loading screen and load save state asynchronously
     const timer = setTimeout(() => {
+      if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlScene = urlParams.get('scene') as SceneType | null;
+        const saved = localStorage.getItem('mughal_save');
+        
+        let finalScene: SceneType = urlScene || 'gate';
+
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            if (!urlScene && parsed.scene) {
+               finalScene = parsed.scene as SceneType;
+               if (parsed.playerPos) setPlayerPos(parsed.playerPos);
+            }
+            if (parsed.cluesFound !== undefined) setCluesFound(parsed.cluesFound);
+            if (parsed.isCalligraphySolved !== undefined) setIsCalligraphySolved(parsed.isCalligraphySolved);
+            if (parsed.isSymmetrySolved !== undefined) setIsSymmetrySolved(parsed.isSymmetrySolved);
+            if (parsed.isMausoleumExplored !== undefined) setIsMausoleumExplored(parsed.isMausoleumExplored);
+            if (parsed.isArchaeologistTalked !== undefined) setIsArchaeologistTalked(parsed.isArchaeologistTalked);
+          } catch (e) {
+            console.error("Failed to load save state", e);
+          }
+        }
+        
+        setScene(finalScene);
+      }
       setIsLoading(false);
     }, 2500);
     
@@ -710,7 +726,7 @@ export default function MughalGameScreen() {
       window.removeEventListener("keyup", onKeyUp);
       cancelAnimationFrame(animationFrameId);
     };
-  }, [isLoading, isTransitioning, scene, isNearGuard, isNearThrone, isNearMirrorFountain, isNearKhasFountain, isNearCalligraphy, isNearPool, isNearTajPishtaq, isNearCenotaphs, isNearArchaeologist, isNearCarriage, isNearLahoriGate, isNearCharbaghReturn, isCalligraphySolved, isSymmetrySolved, isMausoleumExplored, isArchaeologistTalked, cluesFound]);
+  }, [isLoading, isTransitioning, scene, isNearGuard, isNearThrone, isNearMirrorFountain, isNearKhasFountain, isNearCalligraphy, isNearPool, isNearTajPishtaq, isNearCenotaphs, isNearArchaeologist, isNearCarriage, isNearRedFortCarriage, isNearMehtabBaghCross, isNearLahoriGate, isNearCharbaghReturn, isCalligraphySolved, isSymmetrySolved, isMausoleumExplored, isArchaeologistTalked, cluesFound]);
 
   if (isLoading) {
     return (
@@ -1403,7 +1419,7 @@ export default function MughalGameScreen() {
           <span className="text-[11px] font-bold text-black">
             <span className="text-amber-600 mr-1">🚪</span>
             {(() => {
-              const rooms = {
+              const rooms: Record<SceneType, number> = {
                 gate: 1,
                 passage: 2,
                 courtyard: 3,
@@ -1417,9 +1433,11 @@ export default function MughalGameScreen() {
                 taj_exterior: 11,
                 taj_mausoleum: 12,
                 taj_mehtab_bagh: 13,
-                red_fort_lahori: 14
+                red_fort_lahori: 14,
+                red_fort_plaza: 15,
+                red_fort_interior: 16
               };
-              const current = (rooms as any)[scene] || 1;
+              const current = rooms[scene] || 1;
               return `rooms ${current}/14`;
             })()}
           </span>
@@ -1791,7 +1809,7 @@ export default function MughalGameScreen() {
                 </button>
               </div>
               <p className="text-black font-semibold text-[13px] leading-relaxed mb-3">
-                &ldquo;Greetings! I am the caretaker archaeologist here. You are standing on the ruins of Mehtab Bagh's pond foundations. See these scattered dark stone blocks? They inspired the legend that Shah Jahan wanted to build a 'Black Taj' out of black marble across the river as his own tomb. However, our excavations show these are actually part of a garden pool. The Black Taj remains a beautiful legend. Go to the bottom-right, a royal carriage is waiting to carry you to Delhi!&rdquo;
+                &ldquo;Greetings! I am the caretaker archaeologist here. You are standing on the ruins of Mehtab Bagh&apos;s pond foundations. See these scattered dark stone blocks? They inspired the legend that Shah Jahan wanted to build a &lsquo;Black Taj&rsquo; out of black marble across the river as his own tomb. However, our excavations show these are actually part of a garden pool. The Black Taj remains a beautiful legend. Go to the bottom-right, a royal carriage is waiting to carry you to Delhi!&rdquo;
               </p>
               <div className="flex gap-2">
                 <button 
@@ -1874,7 +1892,7 @@ export default function MughalGameScreen() {
                 Congratulations, Historian!
               </p>
               <p>
-                You have successfully completed your journey through the Mughal Empire's campaigns. From the defensive ramps of Agra Fort to the symmetrical gardens and sacred tombs of the Taj Mahal, and finally to the imperial Lahori Gate of the Red Fort in Delhi, you have unraveled the rich histories, architectural wonders, and long-standing mysteries of the Mughal dynasty.
+                You have successfully completed your journey through the Mughal Empire&apos;s campaigns. From the defensive ramps of Agra Fort to the symmetrical gardens and sacred tombs of the Taj Mahal, and finally to the imperial Lahori Gate of the Red Fort in Delhi, you have unraveled the rich histories, architectural wonders, and long-standing mysteries of the Mughal dynasty.
               </p>
               <p className="text-xs font-sans text-emerald-800 font-semibold bg-emerald-50 border border-emerald-300 p-2 rounded">
                 ✔ Completed 14 scenes of the Mughal Campaign!

@@ -18,18 +18,18 @@ export default function GamesDashboard() {
           <div className="h-[1px] bg-gradient-to-l from-current to-transparent flex-1"></div>
         </div>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl">
         {[
           { region: "Agra/Delhi", title: "Great Mughal Empire", description: "Step into the grand courts of Agra and shape the destiny of an empire. Intrigues, alliances, and conquests await.", image: "/bg-mughal.jpg", href: "/play/mughal" },
-          { region: "Rajasthan", title: "Great Rajputana", description: "Defend your honor in the desert forts of Rajasthan. A tale of valor, sacrifice, and legendary warriors.", image: "/bg-rajputana.jpg" },
+          { region: "Rajasthan", title: "Great Rajputana", description: "Defend your honor in the desert forts of Rajasthan. A tale of valor, sacrifice, and legendary warriors.", image: "/bg-rajputana.jpg", href: "/play/rajasthan" },
           { region: "Karnataka", title: "Great Vijayanagara", description: "Explore the wealthy and culturally rich capital of the southern peninsula. Navigate trade, art, and warfare.", image: "/bg-vijayanagara.jpg" }
         ].map((campaign, idx) => (
           <div key={idx} className={`group flex flex-col p-6 backdrop-blur-sm border-[1.5px] rounded-2xl relative overflow-hidden transition-all duration-500 hover:-translate-y-1 ${isDark ? 'bg-[#0a0806]/60 border-[#3a2d1d] hover:border-[#5a4834] shadow-[0_8px_32px_rgba(0,0,0,0.8)]' : 'bg-white/60 border-[#e3d5c1] hover:border-[#c9a776] shadow-[0_8px_32px_rgba(0,0,0,0.05)]'}`}>
-            
+
             {/* Top Accent Line */}
             <div className={`absolute top-0 left-0 w-full h-[3px] opacity-70 transition-colors duration-500 z-20 ${isDark ? 'bg-gradient-to-r from-transparent via-[#91714b] to-transparent' : 'bg-gradient-to-r from-transparent via-[#c9a776] to-transparent'}`}></div>
-            
+
             {/* Image Header */}
             <div className="w-full h-36 mb-5 rounded-lg overflow-hidden relative z-10 shadow-inner">
               <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors duration-500 z-10"></div>
