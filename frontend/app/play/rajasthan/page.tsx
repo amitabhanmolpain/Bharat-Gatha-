@@ -841,16 +841,6 @@ export default function RajasthanGameScreen() {
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
 
-            // Walk straight along the long wall to the far gate -> Reach Zigzag Gates
-            if (nextY <= 40.0) {
-              state.setIsTransitioning(true);
-              setTimeout(() => {
-                state.setScene("kumbhalgarh_zigzag_gates");
-                state.setPlayerPos({ x: 58.0, y: 84.0 });
-                state.setIsTransitioning(false);
-              }, 400);
-            }
-
             return { x: nextX, y: nextY };
           }
           // --- STAGE 2: KUMBHALGARH FORT ZIGZAG GATES ---
