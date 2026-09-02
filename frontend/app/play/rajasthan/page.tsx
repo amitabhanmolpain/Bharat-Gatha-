@@ -20,6 +20,7 @@ export type RajasthanSceneType =
   | "kumbhalgarh_interior_stairs"
   | "kumbhalgarh_great_wall"
   | "kumbhalgarh_zigzag_gates"
+  | "badal_mahal_courtyard"
   | "badal_mahal_interior"
   | "badal_mahal_terrace";
 
@@ -842,11 +843,11 @@ export default function RajasthanGameScreen() {
             const nextX = Math.max(currentMinX, Math.min(currentMaxX, prev.x + dx));
             const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
 
-            // Automatically enter Badal Mahal if walking into the top gate
+            // Automatically enter Badal Mahal Courtyard if walking into the top gate
             if (nextY <= 52.5 && nextX >= 42.0 && nextX <= 58.0) {
               state.setIsTransitioning(true);
               setTimeout(() => {
-                state.setScene("badal_mahal_interior");
+                state.setScene("badal_mahal_courtyard");
                 state.setPlayerPos({ x: 50.0, y: 84.0 });
                 state.setIsTransitioning(false);
               }, 400);
@@ -858,6 +859,39 @@ export default function RajasthanGameScreen() {
               setTimeout(() => {
                 state.setScene("kumbhalgarh_great_wall");
                 state.setPlayerPos({ x: 50.0, y: 44.0 });
+                state.setIsTransitioning(false);
+              }, 400);
+            }
+
+            return { x: nextX, y: nextY };
+          }
+          // --- STAGE 2: BADAL MAHAL INTERIOR (WHITE PLASTER & ELEPHANT FRESCOES) ---
+          // --- STAGE 2: BADAL MAHAL COURTYARD ---
+          else if (state.scene === "badal_mahal_courtyard") {
+            const minX = 12.0;
+            const maxX = 88.0;
+            const minY = 58.0;
+            const maxY = 96.0;
+
+            const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
+            const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
+
+            // Walk up through the back gate → enter Badal Mahal Interior
+            if (nextY <= 60.0 && nextX >= 38.0 && nextX <= 62.0) {
+              state.setIsTransitioning(true);
+              setTimeout(() => {
+                state.setScene("badal_mahal_interior");
+                state.setPlayerPos({ x: 50.0, y: 82.0 });
+                state.setIsTransitioning(false);
+              }, 400);
+            }
+
+            // Walk back down → return to Zigzag Gates
+            if (nextY >= 94.0) {
+              state.setIsTransitioning(true);
+              setTimeout(() => {
+                state.setScene("kumbhalgarh_zigzag_gates");
+                state.setPlayerPos({ x: 50.0, y: 62.0 });
                 state.setIsTransitioning(false);
               }, 400);
             }
@@ -977,8 +1011,10 @@ export default function RajasthanGameScreen() {
         return "Ascending to Top of the Great Wall of India...";
       case "kumbhalgarh_zigzag_gates":
         return "Approaching Fortified Zigzag Gates...";
+      case "badal_mahal_courtyard":
+        return "Entering Badal Mahal Royal Courtyard...";
       case "badal_mahal_interior":
-        return "Entering Badal Mahal (Palace of the Clouds)...";
+        return "Entering Badal Mahal Palace Interior...";
       case "badal_mahal_terrace":
         return "Ascending to Cloud Terrace & Royal Dome...";
       default:
@@ -1024,6 +1060,8 @@ export default function RajasthanGameScreen() {
         return "/bg-kumbhalgarh-wall-top.jpg";
       case "kumbhalgarh_zigzag_gates":
         return "/bg-kumbhalgarh-zigzag-gates.jpg";
+      case "badal_mahal_courtyard":
+        return "/bg-badal-mahal-courtyard.jpg";
       case "badal_mahal_interior":
         return "/bg-badal-mahal-interior.jpg";
       case "badal_mahal_terrace":
@@ -1059,6 +1097,8 @@ export default function RajasthanGameScreen() {
         return "THE GREAT WALL OF INDIA - KUMBHALGARH RAMPARTS";
       case "kumbhalgarh_zigzag_gates":
         return "KUMBHALGARH FORT - DEFENSIVE ZIGZAG GATES";
+      case "badal_mahal_courtyard":
+        return "BADAL MAHAL - ROYAL COURTYARD (PALACE OF THE CLOUDS)";
       case "badal_mahal_interior":
         return "BADAL MAHAL - BIRTHPLACE OF MAHARANA PRATAP (FRESCO CHAMBER)";
       case "badal_mahal_terrace":
@@ -1093,9 +1133,11 @@ export default function RajasthanGameScreen() {
       case "kumbhalgarh_great_wall":
         return "Walk along the Great Wall of India. Follow the long wall straight to the far end to reach the fortified Zigzag Gates!";
       case "kumbhalgarh_zigzag_gates":
-        return "Walk forward along the bridge path to enter Badal Mahal Palace. Walk backward to return to the Great Wall.";
+        return "Walk forward along the bridge path to enter Badal Mahal. Walk backward to return to the Great Wall.";
+      case "badal_mahal_courtyard":
+        return "You stand in the royal courtyard of Badal Mahal. Walk forward through the back gate to enter the palace interior. Walk backward to exit to the Zigzag Gates.";
       case "badal_mahal_interior":
-        return "Admire the authentic 19th-century elephant battle frescoes and royal red floral inlays where Maharana Pratap was born. Walk to the arched doorway and press E to ascend to the cloud terrace.";
+        return "Admire the 19th-century elephant battle frescoes where Maharana Pratap was born. Walk left to the dark archway to ascend to the Cloud Terrace. Walk back down to return to the courtyard.";
       case "badal_mahal_terrace":
         return "Stand atop the highest peak of Kumbhalgarh Fort above the clouds. Gaze across the vast Aravalli hills where Maharana Pratap once walked. Press F near the stairs to return.";
       default:
@@ -1245,7 +1287,7 @@ export default function RajasthanGameScreen() {
           left: `${playerPos.x}%`,
           top: `${playerPos.y}%`,
           transformOrigin: "bottom center",
-          transform: `translate(-50%, -96%) scale(${scene === "vijay_stambh" ? 1.035 : scene === "vijay_stambh_interior" ? 1.05 : scene === "jauhar_passage" ? (0.75 + (playerPos.y - 56) * 0.011) : scene === "jauhar_kund" ? (0.90 + (playerPos.y - 57) * 0.009) : scene === "kumbhalgarh_gate" ? (0.85 + (playerPos.y - 65) * 0.012) : scene === "kumbhalgarh_interior_stairs" ? (0.80 + (playerPos.y - 52) * 0.009) : scene === "kumbhalgarh_great_wall" ? (0.46 + (playerPos.y - 36) * 0.013) : scene === "kumbhalgarh_zigzag_gates" ? (0.75 + (playerPos.y - 52) * 0.011) : scene === "badal_mahal_interior" ? (1.45 + (playerPos.y - 80) * 0.008) : scene === "badal_mahal_terrace" ? (1.10 + (playerPos.y - 60) * 0.010) : 1.15}) scaleX(${facingLeft ? -1 : 1})`,
+          transform: `translate(-50%, -96%) scale(${scene === "vijay_stambh" ? 1.035 : scene === "vijay_stambh_interior" ? 1.05 : scene === "jauhar_passage" ? (0.75 + (playerPos.y - 56) * 0.011) : scene === "jauhar_kund" ? (0.90 + (playerPos.y - 57) * 0.009) : scene === "kumbhalgarh_gate" ? (0.85 + (playerPos.y - 65) * 0.012) : scene === "kumbhalgarh_interior_stairs" ? (0.80 + (playerPos.y - 52) * 0.009) : scene === "kumbhalgarh_great_wall" ? (0.46 + (playerPos.y - 36) * 0.013) : scene === "kumbhalgarh_zigzag_gates" ? (0.75 + (playerPos.y - 52) * 0.011) : scene === "badal_mahal_courtyard" ? (1.00 + (playerPos.y - 70) * 0.010) : scene === "badal_mahal_interior" ? (1.45 + (playerPos.y - 80) * 0.008) : scene === "badal_mahal_terrace" ? (1.10 + (playerPos.y - 60) * 0.010) : 1.15}) scaleX(${facingLeft ? -1 : 1})`,
         }}
       >
         {/* Player Avatar Sprite */}
