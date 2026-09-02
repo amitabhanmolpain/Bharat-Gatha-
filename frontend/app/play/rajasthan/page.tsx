@@ -317,6 +317,8 @@ export default function RajasthanGameScreen() {
     isNearWallEndZigzag,
     isNearZigzagLowerExit,
     isNearZigzagUpperGate,
+    isNearCourtyardColonnadeDoor,
+    isNearCourtyardExitZigzag,
     isNearBadalMahalInteriorExit,
     isNearBadalMahalTerraceDoor,
     isNearBadalMahalTerraceExit,
@@ -1335,13 +1337,33 @@ export default function RajasthanGameScreen() {
 
       {/* Zigzag Gates Prompts */}
       {isNearZigzagUpperGate && (
-        <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce pointer-events-none">
+        <div 
+          className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce cursor-pointer pointer-events-auto"
+          onClick={() => {
+            setIsTransitioning(true);
+            setTimeout(() => {
+              setScene("badal_mahal_courtyard");
+              setPlayerPos({ x: 50.0, y: 84.0 });
+              setIsTransitioning(false);
+            }, 400);
+          }}
+        >
           <span className="bg-amber-400 border border-black rounded px-1.5 text-[11px]">E</span>
           Enter Badal Mahal Courtyard
         </div>
       )}
       {isNearZigzagLowerExit && (
-        <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 pointer-events-none flex items-center gap-2 whitespace-nowrap">
+        <div 
+          className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse cursor-pointer pointer-events-auto flex items-center gap-2 whitespace-nowrap"
+          onClick={() => {
+            setIsTransitioning(true);
+            setTimeout(() => {
+              setScene("kumbhalgarh_great_wall");
+              setPlayerPos({ x: 50.0, y: 44.0 });
+              setIsTransitioning(false);
+            }, 400);
+          }}
+        >
           <span className="bg-black text-amber-400 px-1.5 rounded text-[11px]">F</span>
           Exit to Great Wall Ramparts
         </div>
@@ -1349,13 +1371,33 @@ export default function RajasthanGameScreen() {
 
       {/* Courtyard Prompts (Image 1 Entrance / F Exit) */}
       {isNearCourtyardColonnadeDoor && (
-        <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce pointer-events-none">
+        <div 
+          className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce cursor-pointer pointer-events-auto"
+          onClick={() => {
+            setIsTransitioning(true);
+            setTimeout(() => {
+              setScene("badal_mahal_interior");
+              setPlayerPos({ x: 76.0, y: 80.0 });
+              setIsTransitioning(false);
+            }, 400);
+          }}
+        >
           <span className="bg-amber-400 border border-black rounded px-1.5 text-[11px]">E</span>
           Enter Badal Mahal Palace Interior
         </div>
       )}
       {isNearCourtyardExitZigzag && (
-        <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 pointer-events-none flex items-center gap-2 whitespace-nowrap">
+        <div 
+          className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse cursor-pointer pointer-events-auto flex items-center gap-2 whitespace-nowrap"
+          onClick={() => {
+            setIsTransitioning(true);
+            setTimeout(() => {
+              setScene("kumbhalgarh_zigzag_gates");
+              setPlayerPos({ x: 50.0, y: 62.0 });
+              setIsTransitioning(false);
+            }, 400);
+          }}
+        >
           <span className="bg-black text-amber-400 px-1.5 rounded text-[11px]">F</span>
           Exit to Zigzag Gates Bridge
         </div>
@@ -1363,7 +1405,17 @@ export default function RajasthanGameScreen() {
 
       {/* Image 2: Interior Left Archway -> Rooftop Entrance (E Key) */}
       {isNearBadalMahalInteriorExit && (
-        <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce pointer-events-none">
+        <div 
+          className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce cursor-pointer pointer-events-auto"
+          onClick={() => {
+            setIsTransitioning(true);
+            setTimeout(() => {
+              setScene("badal_mahal_terrace");
+              setPlayerPos({ x: 50.0, y: 78.0 });
+              setIsTransitioning(false);
+            }, 400);
+          }}
+        >
           <span className="bg-amber-400 border border-black rounded px-1.5 text-[11px]">E</span>
           Ascend to Rooftop Cloud Terrace
         </div>
@@ -1371,7 +1423,17 @@ export default function RajasthanGameScreen() {
 
       {/* Image 3: Interior Right Door -> Courtyard Exit (F Key) */}
       {isNearBadalMahalTerraceDoor && (
-        <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 pointer-events-none flex items-center gap-2 whitespace-nowrap">
+        <div 
+          className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse cursor-pointer pointer-events-auto flex items-center gap-2 whitespace-nowrap"
+          onClick={() => {
+            setIsTransitioning(true);
+            setTimeout(() => {
+              setScene("badal_mahal_courtyard");
+              setPlayerPos({ x: 29.0, y: 78.0 });
+              setIsTransitioning(false);
+            }, 400);
+          }}
+        >
           <span className="bg-black text-amber-400 px-1.5 rounded text-[11px]">F</span>
           Exit to Royal Courtyard
         </div>
@@ -1379,7 +1441,17 @@ export default function RajasthanGameScreen() {
 
       {/* Rooftop Cloud Terrace Exit (F Key) */}
       {isNearBadalMahalTerraceExit && (
-        <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 pointer-events-none flex items-center gap-2 whitespace-nowrap">
+        <div 
+          className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse cursor-pointer pointer-events-auto flex items-center gap-2 whitespace-nowrap"
+          onClick={() => {
+            setIsTransitioning(true);
+            setTimeout(() => {
+              setScene("badal_mahal_interior");
+              setPlayerPos({ x: 28.0, y: 76.0 });
+              setIsTransitioning(false);
+            }, 400);
+          }}
+        >
           <span className="bg-black text-amber-400 px-1.5 rounded text-[11px]">F</span>
           Descend to Interior Chamber
         </div>
