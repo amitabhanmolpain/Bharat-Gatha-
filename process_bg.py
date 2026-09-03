@@ -52,6 +52,8 @@ def main() -> None:
 
     if args.input and args.output:
         remove_black_background(args.input, args.output)
+    elif args.input or args.output:
+        parser.error("Both --input (-i) and --output (-o) must be supplied together.")
     else:
         default_in = "frontend/public/rajasthan-guard.jpg"
         default_out = "frontend/public/rajasthan-guard-transparent.png"

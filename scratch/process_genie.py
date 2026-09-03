@@ -54,6 +54,8 @@ def main() -> None:
 
     if args.input and args.output:
         make_transparent(args.input, args.output)
+    elif args.input or args.output:
+        parser.error("Both --input (-i) and --output (-o) must be supplied together.")
     else:
         # Default fallback if genie file exists locally in frontend/public
         default_in = "frontend/public/genie_rajasthani.jpg"
