@@ -90,6 +90,7 @@ export function parseAndValidateWorld(jsonString: string, userPrompt: string): W
       archetype,
       historicalPeriod: typeof sc.historicalPeriod === "string" ? sc.historicalPeriod : "Historical Era",
       locationName: typeof sc.locationName === "string" ? sc.locationName : "Historical Site",
+      historicalPurpose: typeof sc.historicalPurpose === "string" ? sc.historicalPurpose : undefined,
       backgroundImageUrl: typeof sc.backgroundImageUrl === "string" ? sc.backgroundImageUrl : ARCHETYPE_BACKGROUNDS[archetype],
       playerSpawn,
       walkableBoundary,
@@ -126,6 +127,9 @@ export function parseAndValidateWorld(jsonString: string, userPrompt: string): W
             id: typeof c.id === "string" ? c.id : `clue-${cIdx}`,
             name: typeof c.name === "string" ? c.name : "Historical Evidence",
             description: typeof c.description === "string" ? c.description : "An authentic primary historical source.",
+            historicalFact: typeof c.historicalFact === "string" ? c.historicalFact : undefined,
+            learningObjective: typeof c.learningObjective === "string" ? c.learningObjective : undefined,
+            category: typeof c.category === "string" ? c.category : "document",
             position: parsePosition(c.position, { x: 60, y: 65 }),
           }))
         : [],
@@ -134,6 +138,36 @@ export function parseAndValidateWorld(jsonString: string, userPrompt: string): W
 
   const slug = raw.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
   const rawKinematics = raw.kinematics as Record<string, unknown> | undefined;
+
+  const rawQuestObj = raw.quest as Record<string, unknown> | undefined;
+  const isValidQuest =
+    rawQuestObj &&
+    typeof rawQuestObj === "object" &&
+    Array.isArray(rawQuestObj.stages) &&
+    rawQuestObj.stages.length > 0;
+
+  const validatedQuest: import("../types/world").QuestDefinition = isValidQuest
+    ? (raw.quest as unknown as import("../types/world").QuestDefinition)
+    : {
+        id: "quest-1",
+        title: `${raw.title} Quest`,
+        type: "historical_mission",
+        objective: `Explore the historical scenes and gather evidence for ${userPrompt}.`,
+        learningObjective: `Understand the historical significance of ${userPrompt}.`,
+        historicalEra: typeof raw.historicalEra === "string" ? raw.historicalEra : "Historical Period",
+        year: typeof raw.year === "number" ? raw.year : 1857,
+        location: typeof raw.region === "string" ? raw.region : "India",
+        cluesRequired: 1,
+        rewardXp: 500,
+        stages: [
+          {
+            stageIndex: 0,
+            description: "Explore the area and gather historical clues.",
+            targetSceneId: initialSceneId,
+            completionCondition: { type: "clue_collect", targetId: "clue-0" },
+          },
+        ],
+      };
 
   const validatedWorld: WorldDefinition = {
     worldId: `expedition-ai-${slug}-${Date.now().toString(36)}`,
@@ -160,26 +194,7 @@ export function parseAndValidateWorld(jsonString: string, userPrompt: string): W
           maxY: 85.0,
           speed: 0.35,
         },
-    quest: (raw.quest as unknown as import("../types/world").QuestDefinition) || {
-      id: "quest-1",
-      title: `${raw.title} Quest`,
-      type: "historical_mission",
-      objective: `Explore the historical scenes and gather evidence for ${userPrompt}.`,
-      learningObjective: `Understand the historical significance of ${userPrompt}.`,
-      historicalEra: typeof raw.historicalEra === "string" ? raw.historicalEra : "Historical Period",
-      year: typeof raw.year === "number" ? raw.year : 1857,
-      location: typeof raw.region === "string" ? raw.region : "India",
-      cluesRequired: 1,
-      rewardXp: 500,
-      stages: [
-        {
-          stageIndex: 0,
-          description: "Explore the area and gather historical clues.",
-          targetSceneId: initialSceneId,
-          completionCondition: { type: "clue_collect", targetId: "clue-0" },
-        },
-      ],
-    },
+    quest: validatedQuest,
     scenes: repairedScenes,
   };
 

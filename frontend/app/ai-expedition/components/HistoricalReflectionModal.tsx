@@ -149,9 +149,14 @@ export default function HistoricalReflectionModal({
         <div className="pt-4 border-t-2 border-black/10 mt-4">
           <button
             onClick={onComplete}
-            className="w-full bg-[#ffdc5e] hover:bg-[#ffcf33] border-3 border-black rounded-xl py-3.5 font-black text-sm uppercase tracking-wider text-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[0px_0px_0_0_rgba(0,0,0,1)] transition-all"
+            disabled={!hasAnswered}
+            className={`w-full border-3 border-black rounded-xl py-3.5 font-black text-sm uppercase tracking-wider transition-all ${
+              hasAnswered
+                ? "bg-[#ffdc5e] hover:bg-[#ffcf33] text-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[0px_0px_0_0_rgba(0,0,0,1)]"
+                : "bg-gray-200 text-gray-500 cursor-not-allowed opacity-60 shadow-none"
+            }`}
           >
-            Complete Expedition & Claim {world.quest.rewardXp} XP 🏆
+            {hasAnswered ? `Complete Expedition & Claim ${world.quest.rewardXp} XP 🏆` : "Select an Answer to Complete Expedition"}
           </button>
         </div>
       </div>

@@ -19,10 +19,13 @@ export async function POST(req: NextRequest) {
     const openaiKey = process.env.OPENAI_API_KEY;
     const mockProvider = new MockLLMProvider();
 
+    let geminiQuotaExceeded = false;
+    let geminiFailureType = "provider_error";
+    let geminiAttempted = false;
+
     // 1. Primary Strategy: Google Gemini API (gemini-3.6-flash)
     if (geminiKey) {
-      let isQuotaExceeded = false;
-      let lastErrorType = "provider_error";
+      geminiAttempted = true;
 
       for (let attempt = 1; attempt <= 3; attempt++) {
         try {
@@ -54,20 +57,20 @@ export async function POST(req: NextRequest) {
             const rawMsg = String(errData.error?.message || "");
 
             if (res.status === 429 || rawMsg.includes("429") || rawMsg.includes("quota") || rawMsg.includes("RESOURCE_EXHAUSTED")) {
-              isQuotaExceeded = true;
-              lastErrorType = "quota_exceeded";
-              console.warn("[Gemini API] Quota limit reached (HTTP 429). Switching immediately to fallback.");
+              geminiQuotaExceeded = true;
+              geminiFailureType = "quota_exceeded";
+              console.warn("[Gemini API] Quota limit reached (HTTP 429). Switching to backup provider.");
               break;
             }
 
             if (res.status === 401 || res.status === 403) {
-              lastErrorType = "authentication_error";
+              geminiFailureType = "authentication_error";
               console.warn("[Gemini API] Authentication error (HTTP", res.status, ")");
               break;
             }
 
             if (res.status === 404) {
-              lastErrorType = "model_unavailable";
+              geminiFailureType = "model_unavailable";
               console.warn("[Gemini API] Model endpoint unavailable (HTTP 404)");
               break;
             }
@@ -90,38 +93,27 @@ export async function POST(req: NextRequest) {
           const errorObj = err instanceof Error ? err : new Error(String(err));
           console.warn(`Gemini API attempt ${attempt} failed:`, errorObj.message);
 
-          if (isQuotaExceeded) break;
+          if (geminiQuotaExceeded) break;
           if (attempt < 3) {
             await new Promise((r) => setTimeout(r, 2000));
           }
         }
       }
-
-      // Return clean, friendly fallback payload without exposing raw error strings or API keys
-      const fallbackResult = await mockProvider.generateWorldDefinition(prompt);
-      const friendlyMessage = isQuotaExceeded
-        ? "AI generation is temporarily unavailable. We've loaded a prepared historical expedition so you can continue exploring."
-        : "AI service connection offline. Loaded a prepared historical expedition.";
-
-      return NextResponse.json({
-        status: "fallback",
-        world: fallbackResult.world,
-        provider: "mock_fallback",
-        generationMode: "fallback",
-        errorType: lastErrorType,
-        message: friendlyMessage,
-      });
     }
 
-    // 2. Secondary Strategy: OpenAI API (gpt-4o-mini)
+    // 2. Secondary Strategy: OpenAI API (gpt-4o-mini) with 25-second timeout
     if (openaiKey) {
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 25000);
+
         const res = await fetch("https://api.openai.com/v1/chat/completions", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${openaiKey}`,
           },
+          signal: controller.signal,
           body: JSON.stringify({
             model: "gpt-4o-mini",
             response_format: { type: "json_object" },
@@ -133,6 +125,8 @@ export async function POST(req: NextRequest) {
             max_tokens: 2500,
           }),
         });
+
+        clearTimeout(timeoutId);
 
         if (res.ok) {
           const data = await res.json();
@@ -154,12 +148,19 @@ export async function POST(req: NextRequest) {
 
     // 3. Offline / Unconfigured Fallback
     const fallbackResult = await mockProvider.generateWorldDefinition(prompt);
+    const friendlyMessage = geminiAttempted
+      ? geminiQuotaExceeded
+        ? "AI generation is temporarily unavailable. We've loaded a prepared historical expedition so you can continue exploring."
+        : "AI service connection offline. Loaded a prepared historical expedition."
+      : "AI generation key not configured. Loaded a prepared historical expedition.";
+
     return NextResponse.json({
       status: "fallback",
       world: fallbackResult.world,
       provider: "mock_fallback",
       generationMode: "fallback",
-      message: "AI generation key not configured. Loaded a prepared historical expedition.",
+      errorType: geminiAttempted ? geminiFailureType : "key_not_configured",
+      message: friendlyMessage,
     });
   } catch (globalErr) {
     console.error("Server API handler error:", globalErr);

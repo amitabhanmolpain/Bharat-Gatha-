@@ -53,6 +53,7 @@ function getIDBDatabase(): Promise<IDBDatabase | null> {
 
 /**
  * Stores a generated image payload into memory cache and IndexedDB.
+ * Awaits transaction completion so caller knows when database write succeeds.
  */
 export async function storeImagePayload(hashKey: string, imageUrl: string): Promise<void> {
   if (!hashKey || !imageUrl) return;
@@ -61,20 +62,25 @@ export async function storeImagePayload(hashKey: string, imageUrl: string): Prom
   memoryCache.set(hashKey, imageUrl);
 
   // 2. Persist to IndexedDB asynchronously
-  try {
-    const db = await getIDBDatabase();
-    if (!db) return;
+  const db = await getIDBDatabase();
+  if (!db) return;
 
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    const store = tx.objectStore(STORE_NAME);
-    store.put({
-      hashKey,
-      imageUrl,
-      createdAt: Date.now(),
-    });
-  } catch (err) {
-    console.warn("Failed to store image in IndexedDB:", err);
-  }
+  return new Promise<void>((resolve, reject) => {
+    try {
+      const tx = db.transaction(STORE_NAME, "readwrite");
+      tx.oncomplete = () => resolve();
+      tx.onabort = tx.onerror = () =>
+        reject(tx.error ?? new Error("IndexedDB write failed"));
+      tx.objectStore(STORE_NAME).put({
+        hashKey,
+        imageUrl,
+        createdAt: Date.now(),
+      });
+    } catch (err) {
+      console.warn("Failed to store image in IndexedDB:", err);
+      reject(err);
+    }
+  });
 }
 
 /**

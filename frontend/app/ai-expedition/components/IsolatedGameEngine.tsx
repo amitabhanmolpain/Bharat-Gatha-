@@ -150,17 +150,20 @@ export default function IsolatedGameEngine({ world }: IsolatedGameEngineProps) {
     };
   }, [currentSceneId, world, currentScene]);
 
-  // Persist game state on state changes
+  // Persist game state on state changes (debounced to avoid synchronous storage writes on every 60fps frame)
   useEffect(() => {
-    saveGameState({
-      worldId: world.worldId,
-      currentSceneId,
-      playerPos,
-      discoveredClueIds: discoveredClues,
-      currentStageIndex,
-      isCompleted,
-      updatedAt: new Date().toISOString(),
-    });
+    const timer = setTimeout(() => {
+      saveGameState({
+        worldId: world.worldId,
+        currentSceneId,
+        playerPos,
+        discoveredClueIds: discoveredClues,
+        currentStageIndex,
+        isCompleted,
+        updatedAt: new Date().toISOString(),
+      });
+    }, 500);
+    return () => clearTimeout(timer);
   }, [world.worldId, currentSceneId, playerPos, discoveredClues, currentStageIndex, isCompleted]);
 
   // Proximity calculations

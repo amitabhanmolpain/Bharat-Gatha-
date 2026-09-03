@@ -24,7 +24,14 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { world, scene, forceProvider } = body;
 
-    if (!world || !scene || !scene.archetype) {
+    if (
+      !world ||
+      typeof world.region !== "string" ||
+      typeof world.historicalEra !== "string" ||
+      !scene ||
+      typeof scene.name !== "string" ||
+      !scene.archetype
+    ) {
       return NextResponse.json(
         { status: "error", message: "Invalid world or scene object provided." },
         { status: 400 }
@@ -48,9 +55,10 @@ export async function POST(req: NextRequest) {
 
     const hfToken = process.env.HF_TOKEN || process.env.FLUX_API_KEY;
     const xaiKey = process.env.XAI_API_KEY;
+    const isProd = process.env.NODE_ENV === "production";
 
-    // Direct provider override (e.g. from diagnostic test page)
-    if (forceProvider === "grok" && xaiKey) {
+    // Direct provider override (for local diagnostic test page only)
+    if (!isProd && forceProvider === "grok" && xaiKey) {
       const grokProvider = new GrokImageProvider();
       const res = await grokProvider.generateImage({ prompt, archetype, sceneSignature });
       return NextResponse.json({

@@ -33,12 +33,14 @@ export function sanitizeWorldForPersistence(world: WorldDefinition): WorldDefini
 
       if (rawImg && rawImg.startsWith("data:image/")) {
         // Save multi-megabyte base64 image string to IndexedDB asynchronously
-        storeImagePayload(hashKey, rawImg).catch((err) => {
-          console.warn(`Failed to store media payload for scene ${sceneId}:`, err);
-        });
-
-        // Clear base64 string from localStorage copy to guarantee <5KB footprint
-        sceneObj.backgroundImageUrl = "";
+        storeImagePayload(hashKey, rawImg)
+          .then(() => {
+            // Only clear base64 string from localStorage copy once IndexedDB confirms write success
+            sceneObj.backgroundImageUrl = "";
+          })
+          .catch((err) => {
+            console.warn(`Failed to store media payload for scene ${sceneId}, retaining base64:`, err);
+          });
       }
     }
   }
