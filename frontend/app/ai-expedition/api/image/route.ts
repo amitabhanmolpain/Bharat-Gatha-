@@ -19,25 +19,35 @@ const ARCHETYPE_FALLBACKS: Record<SceneArchetype, string> = {
   port: "/bg-agra-fort.jpg",
 };
 
-// In-memory sliding-window rate-limiting store (max 15 requests per 1-minute window per IP)
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+// True rolling-window rate-limiting store (max 15 requests per rolling 60-second window per IP)
+const rateLimitMap = new Map<string, number[]>();
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const MAX_REQUESTS_PER_WINDOW = 15;
 
 function checkRateLimit(ip: string): boolean {
   const now = Date.now();
-  const entry = rateLimitMap.get(ip);
+  const windowStart = now - RATE_LIMIT_WINDOW_MS;
 
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
-    return true;
+  let timestamps = rateLimitMap.get(ip) || [];
+  // Filter out timestamps outside the rolling 60s window
+  timestamps = timestamps.filter((t) => t > windowStart);
+
+  // Periodic map cleanup for inactive IPs to prevent unbounded memory retention
+  if (rateLimitMap.size > 2000) {
+    for (const [k, ts] of rateLimitMap.entries()) {
+      if (ts.every((t) => t <= windowStart)) {
+        rateLimitMap.delete(k);
+      }
+    }
   }
 
-  if (entry.count >= MAX_REQUESTS_PER_WINDOW) {
+  if (timestamps.length >= MAX_REQUESTS_PER_WINDOW) {
+    rateLimitMap.set(ip, timestamps);
     return false;
   }
 
-  entry.count += 1;
+  timestamps.push(now);
+  rateLimitMap.set(ip, timestamps);
   return true;
 }
 
@@ -56,10 +66,30 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const body = await req.json();
-    const { world, scene, forceProvider } = body;
+    // 2. Safe JSON Parsing & Malformed Body Check
+    let rawBody: unknown;
+    try {
+      rawBody = await req.json();
+    } catch {
+      return NextResponse.json(
+        { status: "error", message: "Invalid or malformed JSON payload." },
+        { status: 400 }
+      );
+    }
 
-    // 2. Request Body Validation
+    if (!rawBody || typeof rawBody !== "object" || Array.isArray(rawBody)) {
+      return NextResponse.json(
+        { status: "error", message: "Request body must be a non-null object." },
+        { status: 400 }
+      );
+    }
+
+    const body = rawBody as Record<string, unknown>;
+    const world = body.world as import("../../types/world").WorldDefinition | undefined;
+    const scene = body.scene as import("../../types/world").SceneDefinition | undefined;
+    const forceProvider = typeof body.forceProvider === "string" ? body.forceProvider : undefined;
+
+    // 3. Request Body Field Validation
     if (
       !world ||
       typeof world.region !== "string" ||
