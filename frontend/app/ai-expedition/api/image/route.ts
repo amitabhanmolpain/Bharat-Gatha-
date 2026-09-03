@@ -1,0 +1,148 @@
+import { NextRequest, NextResponse } from "next/server";
+import { SceneArchetype } from "../../types/world";
+import { buildVisualPrompt } from "../../services/visualGenerator";
+import { FluxKontextProvider } from "../../services/imageProviders/fluxKontextProvider";
+import { GrokImageProvider } from "../../services/imageProviders/grokProvider";
+import { generateSceneHash } from "../../services/cache";
+
+const ARCHETYPE_FALLBACKS: Record<SceneArchetype, string> = {
+  gate: "/bg-agra-fort.jpg",
+  corridor: "/bg-agra-brown-passage.jpg",
+  courtyard: "/bg-chittorgarh-courtyard.jpg",
+  palace_interior: "/bg-badal-mahal-interior.jpg",
+  throne_hall: "/bg-agra-interior.jpg",
+  terrace: "/bg-kumbhalgarh-wall-top.jpg",
+  bazaar: "/bg-red-fort-interior.jpg",
+  fort_approach: "/bg-chittorgarh-ram-pol.jpg",
+  fort_wall: "/bg-chittorgarh-desert-side.jpg",
+  merchant_warehouse: "/bg-red-fort-interior.jpg",
+  port: "/bg-agra-fort.jpg",
+};
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { world, scene, forceProvider } = body;
+
+    if (!world || !scene || !scene.archetype) {
+      return NextResponse.json(
+        { status: "error", message: "Invalid world or scene object provided." },
+        { status: 400 }
+      );
+    }
+
+    const archetype: SceneArchetype = ARCHETYPE_FALLBACKS[scene.archetype as SceneArchetype]
+      ? (scene.archetype as SceneArchetype)
+      : "courtyard";
+    const defaultFallbackUrl = scene.backgroundImageUrl || ARCHETYPE_FALLBACKS[archetype];
+
+    // Compute visual signature for deterministic caching
+    const sceneSignature = generateSceneHash(
+      scene.historicalPeriod || world.historicalEra,
+      world.region,
+      archetype,
+      scene.name
+    );
+
+    const prompt = buildVisualPrompt(world, scene);
+
+    const hfToken = process.env.HF_TOKEN || process.env.FLUX_API_KEY;
+    const xaiKey = process.env.XAI_API_KEY;
+
+    // Direct provider override (e.g. from diagnostic test page)
+    if (forceProvider === "grok" && xaiKey) {
+      const grokProvider = new GrokImageProvider();
+      const res = await grokProvider.generateImage({ prompt, archetype, sceneSignature });
+      return NextResponse.json({
+        status: "success",
+        imageUrl: res.imageUrl,
+        provider: res.provider,
+        model: res.model,
+        generated: res.generated,
+        cached: res.cached,
+        fallback: res.fallback,
+        isFallback: res.isFallback,
+        signature: sceneSignature,
+        message: res.message,
+      });
+    }
+
+    // Strategy 1: FLUX.1 Kontext [dev] Provider (Primary Live Visual Provider)
+    if (hfToken) {
+      try {
+        const fluxProvider = new FluxKontextProvider();
+        const result = await fluxProvider.generateImage({
+          prompt,
+          archetype,
+          sceneSignature,
+        });
+
+        if (result.generated) {
+          return NextResponse.json({
+            status: "success",
+            imageUrl: result.imageUrl,
+            provider: result.provider,
+            model: result.model,
+            generated: true,
+            cached: false,
+            fallback: false,
+            isFallback: false,
+            signature: sceneSignature,
+            message: result.message,
+          });
+        }
+      } catch (fluxErr) {
+        console.warn("FLUX.1 Kontext [dev] generation failed, trying Grok fallback:", fluxErr);
+      }
+    }
+
+    // Strategy 2: Grok Imagine Provider (Secondary Backup AI Image Provider)
+    if (xaiKey) {
+      try {
+        const grokProvider = new GrokImageProvider();
+        const result = await grokProvider.generateImage({
+          prompt,
+          archetype,
+          sceneSignature,
+        });
+
+        if (result.generated) {
+          return NextResponse.json({
+            status: "success",
+            imageUrl: result.imageUrl,
+            provider: "grok",
+            model: result.model || "grok-imagine-image-2.0",
+            generated: true,
+            cached: false,
+            fallback: true,
+            isFallback: true,
+            signature: sceneSignature,
+            message: "Environment generated with backup image provider (Grok Imagine).",
+          });
+        }
+      } catch (grokErr) {
+        console.warn("Grok Imagine generation failed, using static archetype fallback:", grokErr);
+      }
+    }
+
+    // Strategy 3: Guaranteed Static Archetype Fallback
+    return NextResponse.json({
+      status: "success",
+      imageUrl: defaultFallbackUrl,
+      provider: "static",
+      model: "archetype-static-template",
+      generated: false,
+      cached: false,
+      fallback: true,
+      isFallback: true,
+      signature: sceneSignature,
+      message: "Live image generation is temporarily unavailable. Using a historical environment template.",
+    });
+  } catch (globalErr) {
+    console.error("Server image API route error:", globalErr);
+    return NextResponse.json(
+      { status: "error", message: "Server error processing image request." },
+      { status: 500 }
+    );
+  }
+}

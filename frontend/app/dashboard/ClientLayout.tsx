@@ -53,6 +53,20 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             Games
           </Link>
 
+          {/* AI Expedition Link */}
+          <Link href="/ai-expedition" className={`flex items-center gap-4 px-4 py-3.5 rounded-lg font-medium text-[14px] tracking-wide transition-all ${
+            pathname?.startsWith('/ai-expedition')
+              ? isDark
+                ? 'bg-gradient-to-r from-[#91714b]/15 to-transparent border-l-2 border-[#b4986b] rounded-r-lg rounded-l-none text-[#e4c794] shadow-[inset_1px_0_0_rgba(180,152,107,0.5)]'
+                : 'bg-gradient-to-r from-[#c9a776]/15 to-transparent border-l-2 border-[#b38848] rounded-r-lg rounded-l-none text-[#8a6835] shadow-[inset_1px_0_0_rgba(179,136,72,0.3)]'
+              : isDark
+                ? 'text-[#a89985] hover:text-[#e4c794] hover:bg-[#91714b]/5'
+                : 'text-[#7a6f5e] hover:text-[#8a6835] hover:bg-[#c9a776]/10'
+          }`}>
+            <svg className={`w-5 h-5 ${pathname?.startsWith('/ai-expedition') ? (isDark ? 'text-[#b4986b]' : 'text-[#b38848]') : 'opacity-70'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L5.602 15.13a2 2 0 00-1.15.109l-1.03.44a1 1 0 00-.547.962V20a1 1 0 001.127.994l2.766-.346a6 6 0 012.26.068l2.062.516a6 6 0 002.578-.068l2.766-.346A1 1 0 0021 19.825v-3.435a1 1 0 00-.572-.91l-1.000-.452zM12 11V3m0 0L8.5 6.5M12 3l3.5 3.5"></path></svg>
+            AI Expedition
+          </Link>
+
           {/* Leaderboard Link */}
           <Link href="/dashboard/leaderboard" className={`flex items-center gap-4 px-4 py-3.5 rounded-lg font-medium text-[14px] tracking-wide transition-all ${
             pathname === '/dashboard/leaderboard'
