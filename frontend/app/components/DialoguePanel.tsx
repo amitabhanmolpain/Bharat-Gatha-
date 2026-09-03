@@ -41,28 +41,10 @@ export default function DialoguePanel({
   const [isAskingAI, setIsAskingAI] = useState(false);
   const [isVoiceActive, setIsVoiceActive] = useState(false);
   const [questionCount, setQuestionCount] = useState(0);
-  const audioStartedRef = useRef(false);
 
-  // Play character dialogue automatically on mount or when dialogueText changes
   useEffect(() => {
-    if (isSpeaking && characterId && dialogueText) {
-      setIsVoiceActive(true);
-      
-      const timer = setTimeout(() => {
-        playCharacterDialogue({
-          character: characterId,
-          text: dialogueText,
-          onStart: () => setIsVoiceActive(true),
-          onEnd: () => setIsVoiceActive(false),
-          onError: () => setIsVoiceActive(false)
-        });
-      }, 50);
-
-      return () => {
-        clearTimeout(timer);
-      };
-    }
-  }, [characterId, dialogueText, isSpeaking]);
+    setDisplayedText(dialogueText);
+  }, [dialogueText]);
 
 const VULGAR_WORDS = [
   "fuck", "shit", "bitch", "bastard", "asshole", "idiot", "stupid", "dumb", 
@@ -188,24 +170,6 @@ function isVulgar(text: string): boolean {
             )}
           </div>
           <div className="flex gap-2">
-            <button 
-              onClick={() => {
-                if (characterId && displayedText) {
-                  setIsVoiceActive(true);
-                  playCharacterDialogue({
-                    character: characterId,
-                    text: displayedText,
-                    onStart: () => setIsVoiceActive(true),
-                    onEnd: () => setIsVoiceActive(false),
-                    onError: () => setIsVoiceActive(false)
-                  });
-                }
-              }}
-              className="bg-[#fcd34d] hover:bg-[#fbbf24] border-2 border-black rounded-lg p-2 shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[0px_0px_0_0_rgba(0,0,0,1)] cursor-pointer transition-all"
-              title="Speak / Replay Dialogue"
-            >
-              <span className="text-sm text-black">🔊</span>
-            </button>
             <button 
               onClick={handleClosePanel}
               className="bg-white hover:bg-gray-100 border-2 border-black rounded-lg px-3.5 py-1.5 font-black text-xs text-black shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[0px_0px_0_0_rgba(0,0,0,1)] transition-all cursor-pointer"

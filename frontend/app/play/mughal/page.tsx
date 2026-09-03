@@ -132,6 +132,23 @@ export default function MughalGameScreen() {
 
   const [showKhasPermissionModal, setShowKhasPermissionModal] = useState(false);
   const [showRestartConfirmModal, setShowRestartConfirmModal] = useState(false);
+  const [hasKhasPermission, setHasKhasPermission] = useState(false);
+  const hasKhasPermissionRef = useRef(hasKhasPermission);
+  useEffect(() => {
+    hasKhasPermissionRef.current = hasKhasPermission;
+  }, [hasKhasPermission]);
+
+  const [showKhasGuardDialogue, setShowKhasGuardDialogue] = useState(false);
+  const [khasGuardDialogueText, setKhasGuardDialogueText] = useState(
+    "Halt! You are not allowed into the imperial Khas Mahal without royal clearance!"
+  );
+  const [khasGuardOptions, setKhasGuardOptions] = useState<Array<{ id: number; text: string }>>([
+    { id: 1, text: "How can I enter the Khas Mahal?" },
+    { id: 2, text: "I will turn back to the courtyard." }
+  ]);
+  const [courtyardGuardSpeech, setCourtyardGuardSpeech] = useState<string | null>(null);
+  const [activeCourtyardGuardId, setActiveCourtyardGuardId] = useState<string | null>(null);
+
   const [throneGuardSpeech, setThroneGuardSpeech] = useState<string | null>(null);
   const [activeTraderId, setActiveTraderId] = useState<string | null>(null);
   const [traderSpeech, setTraderSpeech] = useState<string | null>(null);
@@ -139,6 +156,12 @@ export default function MughalGameScreen() {
   const [jollyOptions, setJollyOptions] = useState<Array<{ id: number; text: string }>>([]);
   const [hasTalkedToJolly, setHasTalkedToJolly] = useState<boolean>(false);
   const [heardClueScenes, setHeardClueScenes] = useState<string[]>([]);
+
+  const [showJewelTraderDialogue, setShowJewelTraderDialogue] = useState(false);
+  const [jewelTraderDialogueText, setJewelTraderDialogueText] = useState("");
+  const [jewelTraderOptions, setJewelTraderOptions] = useState<Array<{ id: number; text: string }>>([]);
+  const [jewelTraderSpeech, setJewelTraderSpeech] = useState<string | null>(null);
+  const [showPermissionDecreeModal, setShowPermissionDecreeModal] = useState(false);
 
   const [showMausoleumModal, setShowMausoleumModal] = useState(false);
   const [isMausoleumExplored, setIsMausoleumExplored] = useState(false);
@@ -338,6 +361,72 @@ export default function MughalGameScreen() {
     }
   }, [isLoading, scene]);
 
+  const triggerCourtyardGuardDialogue = (guardId: string, side: 'left' | 'right') => {
+    setActiveCourtyardGuardId(guardId);
+    if (hasKhasPermissionRef.current || hasKhasPermission) {
+      const speech = "Good! You possess the Imperial Royal Firman. You are good to go! Step inside the Khas Mahal.";
+      setCourtyardGuardSpeech(speech);
+      setKhasGuardDialogueText(speech);
+      setKhasGuardOptions([
+        { id: 10, text: "Enter the Khas Mahal" },
+        { id: 11, text: "Stay in the courtyard" }
+      ]);
+      setShowKhasGuardDialogue(true);
+      playCharacterDialogue({
+        character: "guard",
+        text: speech,
+        audioUrl: "/guard_khas_pass.wav"
+      });
+      return;
+    }
+
+    const speech = "Halt! You are not allowed into the imperial Khas Mahal without royal clearance!";
+    setCourtyardGuardSpeech(speech);
+    setKhasGuardDialogueText(speech);
+    setKhasGuardOptions([
+      { id: 1, text: "How can I enter?" },
+      { id: 2, text: "I will turn back." }
+    ]);
+    setShowKhasGuardDialogue(true);
+
+    playCharacterDialogue({
+      character: "guard",
+      text: speech,
+      audioUrl: "/guard_khas_halt.wav"
+    });
+  };
+
+  const triggerJewelTraderDialogue = () => {
+    setActiveTraderId("jewels");
+    const speech = "Hah! Look at this fine gold and imperial jewels! Only nobles can afford my wares. Buy this pure Mughal gold, or move along!";
+    setJewelTraderSpeech(speech);
+    setJewelTraderDialogueText(speech);
+    setJewelTraderOptions([
+      { id: 1, text: "Buy the royal gold jewelry (100 Mohurs)" },
+      { id: 2, text: "Reject / Not interested" }
+    ]);
+    setShowJewelTraderDialogue(true);
+    playCharacterDialogue({
+      character: "trader_jewels",
+      text: speech,
+      audioUrl: "/trader_khas_arrogant_offer.wav"
+    });
+  };
+
+  // Clean up all character audio and speech bubbles when scene changes
+  useEffect(() => {
+    stopCharacterDialogue();
+    setTraderSpeech(null);
+    setJewelTraderSpeech(null);
+    setCourtyardGuardSpeech(null);
+    setThroneGuardSpeech(null);
+    setShowDialogue(false);
+    setShowKhasGuardDialogue(false);
+    setShowJewelTraderDialogue(false);
+    setShowJollyDialogue(false);
+    setShowPermissionDecreeModal(false);
+  }, [scene]);
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       horseSoundRef.current = new Audio('/horse_sound.webm');
@@ -390,7 +479,17 @@ export default function MughalGameScreen() {
     }
   }, [isCarriageTravelling]);
 
-  const handleResetGame = () => {
+  const handleResetGame = async () => {
+    stopNarration();
+    stopCharacterDialogue();
+    try {
+      await fetch("http://localhost:5000/api/game/checkpoint/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: "default_traveller", era: "mughal" })
+      }).catch(() => {});
+    } catch(e) {}
+
     setIsTransitioning(true);
     setTimeout(() => {
       setScene("gate");
@@ -400,8 +499,12 @@ export default function MughalGameScreen() {
       setGuardAttempts(0);
       setHasGuardPermission(false);
       hasGuardPermissionRef.current = false;
+      setHasKhasPermission(false);
+      hasKhasPermissionRef.current = false;
       setDiscoveredClueIds([]);
       setShowDialogue(false);
+      setShowKhasGuardDialogue(false);
+      setShowJewelTraderDialogue(false);
       setShowThroneScroll(false);
       setShowMirrorModal(false);
       setShowKhasModal(false);
@@ -417,6 +520,7 @@ export default function MughalGameScreen() {
       setIsSheeshMirrorSolved(false);
       isSheeshMirrorSolvedRef.current = false;
       setShowKhasPermissionModal(false);
+      setShowPermissionDecreeModal(false);
       setShowMausoleumModal(false);
       setIsMausoleumExplored(false);
       setShowArchaeologistDialogue(false);
@@ -431,8 +535,10 @@ export default function MughalGameScreen() {
       hasPlayedMausoleumNarrationRef.current = false;
       localStorage.removeItem('mughal_save');
       localStorage.removeItem('mughal_has_talked_to_jolly');
+      localStorage.removeItem('mughal_has_khas_permission');
       localStorage.removeItem('mughal_is_pietra_dura_solved');
       localStorage.removeItem('mughal_is_sheesh_mirror_solved');
+      localStorage.removeItem('bharat_gatha_mughal_checkpoint');
     }, 400);
   };
 
@@ -478,6 +584,39 @@ export default function MughalGameScreen() {
         if (localStorage.getItem('mughal_has_talked_to_jolly') === 'true' || finalScene !== 'gate') {
           setHasTalkedToJolly(true);
         }
+        // Sync full checkpoint from MongoDB database
+        try {
+          const chkRes = await fetch("http://localhost:5000/api/game/checkpoint?user_id=default_traveller&era=mughal");
+          if (chkRes.ok) {
+            const chkData = await chkRes.json();
+            if (chkData.has_checkpoint && chkData.checkpoint) {
+              const cp = chkData.checkpoint;
+              if (cp.hasKhasPermission) {
+                setHasKhasPermission(true);
+                hasKhasPermissionRef.current = true;
+                localStorage.setItem("mughal_has_khas_permission", "true");
+              }
+              if (cp.hasGuardPermission) {
+                setHasGuardPermission(true);
+                hasGuardPermissionRef.current = true;
+              }
+              if (cp.scene && (!urlScene || urlScene === "gate")) {
+                finalScene = cp.scene as SceneType;
+                if (cp.playerPos) setPlayerPos(cp.playerPos);
+              }
+              if (cp.isPietraDuraSolved) {
+                setIsPietraDuraSolved(true);
+                isPietraDuraSolvedRef.current = true;
+              }
+              if (cp.isSheeshMirrorSolved) {
+                setIsSheeshMirrorSolved(true);
+                isSheeshMirrorSolvedRef.current = true;
+              }
+              if (cp.isArchaeologistTalked) setIsArchaeologistTalked(true);
+              if (cp.cluesFound !== undefined) setCluesFound(cp.cluesFound);
+            }
+          }
+        } catch (e) {}
 
         // Also sync explicit solved status from MongoDB
         try {
@@ -510,14 +649,18 @@ export default function MughalGameScreen() {
     }
   }, [scene]);
 
+  // Auto-Save Checkpoint to both localStorage and MongoDB Database
   useEffect(() => {
     if (typeof window !== 'undefined' && !isLoading) {
       const saveState = {
+        user_id: "default_traveller",
+        era: "mughal",
         scene,
         playerPos,
         cluesFound,
         discoveredClueIds,
         hasGuardPermission,
+        hasKhasPermission,
         isPietraDuraSolved,
         isSheeshMirrorSolved,
         isCalligraphySolved,
@@ -527,11 +670,33 @@ export default function MughalGameScreen() {
         hasTalkedToJolly
       };
       localStorage.setItem('mughal_save', JSON.stringify(saveState));
-      if (hasTalkedToJolly) {
-        localStorage.setItem('mughal_has_talked_to_jolly', 'true');
-      }
+      localStorage.setItem('bharat_gatha_mughal_checkpoint', JSON.stringify(saveState));
+      if (hasKhasPermission) localStorage.setItem('mughal_has_khas_permission', 'true');
+      if (hasTalkedToJolly) localStorage.setItem('mughal_has_talked_to_jolly', 'true');
+
+      // Persist to MongoDB
+      fetch("http://localhost:5000/api/game/checkpoint", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(saveState)
+      }).catch(() => {});
     }
-  }, [scene, playerPos, cluesFound, discoveredClueIds, hasGuardPermission, isPietraDuraSolved, isSheeshMirrorSolved, isCalligraphySolved, isSymmetrySolved, isMausoleumExplored, isArchaeologistTalked, hasTalkedToJolly, isLoading]);
+  }, [
+    scene,
+    playerPos,
+    cluesFound,
+    discoveredClueIds,
+    hasGuardPermission,
+    hasKhasPermission,
+    isPietraDuraSolved,
+    isSheeshMirrorSolved,
+    isCalligraphySolved,
+    isSymmetrySolved,
+    isMausoleumExplored,
+    isArchaeologistTalked,
+    hasTalkedToJolly,
+    isLoading
+  ]);
 
   const guardPos = { x: 43.5, y: 72.0 };
   const distToGuard = Math.sqrt(
@@ -586,6 +751,26 @@ export default function MughalGameScreen() {
       const pos = playerPosRef.current;
       const curScene = sceneRef.current;
 
+      // Handle 'Escape' Key (Instantly stop all TTS and close all dialogue modals)
+      if (key === "escape") {
+        stopCharacterDialogue();
+        stopNarration();
+        setShowDialogue(false);
+        setShowKhasGuardDialogue(false);
+        setShowJewelTraderDialogue(false);
+        setShowJollyDialogue(false);
+        setShowMirrorModal(false);
+        setShowThroneScroll(false);
+        setShowMausoleumModal(false);
+        setShowArchaeologistDialogue(false);
+        setShowPermissionDecreeModal(false);
+        setTraderSpeech(null);
+        setJewelTraderSpeech(null);
+        setCourtyardGuardSpeech(null);
+        setThroneGuardSpeech(null);
+        return;
+      }
+
       // Handle 'F' Key (Quick Exits / Crossings)
       if (key === "f") {
         if (curScene === "sheesh_mahal") {
@@ -637,9 +822,9 @@ export default function MughalGameScreen() {
         return;
       }
 
-      // Handle 'E' Key (Interactions & Dialogue)
-      if (key === "e") {
-        if (curScene === "gate" && Math.hypot(pos.x - 43.5, pos.y - 72.0) < 14.0) {
+      // Handle 'E' or 'F' Key (Interactions & Dialogue)
+      if (key === "e" || key === "f") {
+        if (curScene === "gate" && Math.hypot(pos.x - 43.5, pos.y - 72.0) < 18.0) {
           setShowDialogue(true);
           setGuardAttempts((prev) => {
             const next = prev + 1;
@@ -652,6 +837,55 @@ export default function MughalGameScreen() {
             character: "guard",
             text: "Halt, intruder! Stop right where you stand! Beyond this Amar Singh Gate is restricted imperial ground! Answer immediately, or you will be seized!"
           });
+          return;
+        }
+        if (curScene === "red_fort_lahori" && pos.y <= 68.0 && pos.x >= 44.0 && pos.x <= 56.0) {
+          setScene("red_fort_plaza");
+          setPlayerPos({ x: 50.0, y: 88.0 });
+          return;
+        }
+        if (curScene === "red_fort_plaza") {
+          const distPlazaGuard = Math.hypot(pos.x - 41.0, pos.y - 72.0);
+          if (distPlazaGuard < 22.0) {
+            triggerCourtyardGuardDialogue("red_fort_plaza_guard", "left");
+            return;
+          }
+        }
+        if (curScene === "courtyard") {
+          const distBL = Math.hypot(pos.x - 41.5, pos.y - 73.0);
+          const distBR = Math.hypot(pos.x - 69.0, pos.y - 73.0);
+          const distTL = Math.hypot(pos.x - 31.0, pos.y - 44.0);
+          const distTR = Math.hypot(pos.x - 58.5, pos.y - 38.0);
+          const minDist = Math.min(distBL, distBR, distTL, distTR);
+          if (minDist < 18.0) {
+            if (minDist === distBL) {
+              triggerCourtyardGuardDialogue("bottom_left", "left");
+            } else if (minDist === distBR) {
+              triggerCourtyardGuardDialogue("bottom_right", "right");
+            } else if (minDist === distTL) {
+              triggerCourtyardGuardDialogue("top_left", "left");
+            } else {
+              triggerCourtyardGuardDialogue("top_right", "right");
+            }
+            return;
+          }
+        }
+        if (curScene === "red_fort_interior") {
+          if (Math.hypot(pos.x - 72.0, pos.y - 80.0) < 22.0) {
+            triggerJewelTraderDialogue();
+            return;
+          }
+          if (Math.hypot(pos.x - 26.0, pos.y - 82.0) < 22.0) {
+            setActiveTraderId("silk");
+            const speech = "Welcome, effendi! Finest Persian and Banarasi silks directly from the imperial looms!";
+            setTraderSpeech(speech);
+            playCharacterDialogue({
+              character: "trader_silk",
+              text: speech,
+              audioUrl: "/trader_marble_art.wav"
+            });
+            return;
+          }
         }
         if (curScene === "interior") {
           if (pos.x >= 65.0) {
@@ -2041,6 +2275,165 @@ export default function MughalGameScreen() {
         />
       )}
 
+      {/* --- KHAS MAHAL & RED FORT GUARD DIALOGUE MODAL WITH TTS INPUT BOX --- */}
+      {showKhasGuardDialogue && (scene === "courtyard" || scene === "red_fort_lahori" || scene === "red_fort_plaza") && (
+        <DialoguePanel 
+          characterName="Royal Palace Guard"
+          characterTitle="Imperial Palace Sentry"
+          characterId="guard"
+          historicalContext={{
+            current_year: 1653,
+            era: "Mughal Empire",
+            location: scene === "red_fort_lahori" ? "Red Fort - Lahori Gate Plaza" : "Agra Fort - Anguri Bagh Courtyard",
+            ruler: "Emperor Shah Jahan",
+            nearby_monuments: "Khas Mahal, Diwan-i-Aam, Anguri Bagh, Sheesh Mahal, Red Fort",
+            historical_events: "Strict Mughal court protocol for imperial quarters"
+          }}
+          dialogueText={khasGuardDialogueText}
+          isSpeaking={false}
+          showInput={true}
+          options={khasGuardOptions}
+          onOptionSelect={(opt) => {
+            if (opt.id === 10) {
+              stopCharacterDialogue();
+              setShowKhasGuardDialogue(false);
+              setScene("brown_passage");
+              setPlayerPos({ x: 50.0, y: 88.0 });
+            } else if (opt.id === 1) {
+              const reply = "You wish to enter? Go ask one of the traders in the bazaar! One of them is the Khas confidant of the Badshah.";
+              setKhasGuardDialogueText(reply);
+              setCourtyardGuardSpeech(reply);
+              setKhasGuardOptions([
+                { id: 3, text: "Understood. I will seek out the court trader." }
+              ]);
+              playCharacterDialogue({
+                character: "guard",
+                text: reply,
+                audioUrl: "/guard_khas_trader_hint.wav"
+              });
+            } else {
+              stopCharacterDialogue();
+              setShowKhasGuardDialogue(false);
+            }
+          }}
+          onPunish={(punish) => {
+            stopCharacterDialogue();
+            setShowKhasGuardDialogue(false);
+            setPunishmentState({
+              isOpen: true,
+              ...punish
+            });
+          }}
+          onClose={() => {
+            stopCharacterDialogue();
+            setShowKhasGuardDialogue(false);
+          }}
+        />
+      )}
+
+      {/* --- JEWEL TRADER (BADSHAH'S KHAS) DIALOGUE MODAL --- */}
+      {showJewelTraderDialogue && scene === "red_fort_interior" && (
+        <DialoguePanel 
+          characterName="Royal Jewellery Merchant"
+          characterTitle="Khas Confidant of the Badshah"
+          characterId="trader_jewels"
+          historicalContext={{
+            current_year: 1653,
+            era: "Mughal Empire",
+            location: "Red Fort - Chatta Chowk Arcade Bazaar",
+            ruler: "Emperor Shah Jahan",
+            nearby_monuments: "Chatta Chowk, Diwan-i-Khas, Peacock Throne, Khas Mahal",
+            historical_events: "Covered bazaars of Shahjahanabad catering to royalty and nobility"
+          }}
+          dialogueText={jewelTraderDialogueText}
+          isSpeaking={false}
+          showInput={true}
+          options={jewelTraderOptions}
+          onOptionSelect={(opt) => {
+            if (opt.id === 1) {
+              const boast = "A wise purchase! You know, I am no ordinary merchant—I am the Khas confidant of Badshah Shah Jahan himself!";
+              setJewelTraderDialogueText(boast);
+              setJewelTraderSpeech(boast);
+              setJewelTraderOptions([
+                { id: 3, text: "Can you give me a written permission to enter the Khas Mahal?" },
+                { id: 4, text: "Thank you for the gold. I must go." }
+              ]);
+              playCharacterDialogue({
+                character: "trader_jewels",
+                text: boast,
+                audioUrl: "/trader_khas_boast.wav"
+              });
+            } else if (opt.id === 3) {
+              const grant = "Very well! Take this Imperial Royal Firman bearing the royal seal. Show this decree to the guards, and they shall grant you entry into the Khas Mahal!";
+              setJewelTraderDialogueText(grant);
+              setJewelTraderSpeech(grant);
+              hasKhasPermissionRef.current = true;
+              setHasKhasPermission(true);
+              setShowPermissionDecreeModal(true);
+              setJewelTraderOptions([
+                { id: 5, text: "Take the Royal Decree & Proceed" }
+              ]);
+              playCharacterDialogue({
+                character: "trader_jewels",
+                text: grant,
+                audioUrl: "/trader_khas_permission_grant.wav"
+              });
+            } else {
+              stopCharacterDialogue();
+              setShowJewelTraderDialogue(false);
+            }
+          }}
+          onClose={() => {
+            stopCharacterDialogue();
+            setShowJewelTraderDialogue(false);
+          }}
+        />
+      )}
+
+      {/* --- WRITTEN PERMISSION FIRMAN DECREE MODAL (2ND IMAGE WITHOUT BG) --- */}
+      {showPermissionDecreeModal && (
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-60 pointer-events-auto animate-in fade-in zoom-in-95 duration-200">
+          <div className="relative max-w-xl w-full flex flex-col items-center">
+            
+            {/* Ambient Gold Glow Aura */}
+            <div className="absolute -inset-6 bg-amber-500/20 rounded-3xl blur-2xl pointer-events-none"></div>
+
+            {/* Decree Header Badge */}
+            <div className="relative z-10 bg-[#140e0a] border-2 border-[#caa068] px-4 py-1.5 rounded-full mb-3 shadow-lg flex items-center gap-2">
+              <span className="text-amber-400 text-sm">⚜️</span>
+              <span className="text-xs font-black uppercase tracking-widest text-[#fae2b8]">
+                Imperial Royal Firman • Khas Mahal Permission
+              </span>
+            </div>
+
+            {/* Transparent Cutout Image of Decree */}
+            <div className="relative z-10 p-2 flex justify-center">
+              <img 
+                src="/khas_mahal_permission_decree.png" 
+                alt="Imperial Royal Firman Decree" 
+                className="max-h-[340px] md:max-h-[420px] w-auto object-contain filter drop-shadow-[0_15px_30px_rgba(0,0,0,0.9)] transition-transform hover:scale-102"
+              />
+            </div>
+
+            {/* Bottom Card Summary */}
+            <div className="relative z-10 bg-[#fff9ea] border-3 border-black rounded-xl p-4 mt-2 max-w-md w-full shadow-[5px_5px_0_0_rgba(0,0,0,1)] text-center">
+              <p className="text-xs font-extrabold text-amber-950 mb-1">
+                &ldquo;Granted by the Badshah's Khas Confidant in Chatta Chowk&rdquo;
+              </p>
+              <p className="text-[11px] text-gray-700 leading-snug mb-3">
+                This royal firman bears the imperial red seal of Emperor Shah Jahan. Present it to the guards at the courtyard gates to access the private Khas Mahal!
+              </p>
+              <button
+                onClick={() => setShowPermissionDecreeModal(false)}
+                className="w-full bg-amber-400 hover:bg-amber-300 border-2 border-black rounded-lg py-2.5 font-black text-xs uppercase tracking-wider text-black shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 cursor-pointer transition-all"
+              >
+                Claim Royal Decree & Continue Exploration ✓
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* --- JOLLY BHAI (GENIE) DIALOGUE MODAL WITH GROQ & LANGCHAIN ASK AI --- */}
       {showJollyDialogue && (
         <DialoguePanel 
@@ -2314,26 +2707,111 @@ export default function MughalGameScreen() {
         </div>
       )}
 
-      {/* Mughal Royal Guards stationed in Anguri Bagh Courtyard */}
+      {/* Mughal Royal Guards stationed in Agra Fort Courtyard (Anguri Bagh) */}
       {scene === "courtyard" && (
         <>
-          {/* Diwan-i-Khas Marble Colonnade Guard (Left) */}
-          <div className="absolute pointer-events-none z-10" style={{ left: '17%', top: '44%', transform: 'translate(-50%, -96%) scale(0.85)' }}>
-            <img src="/guard.png" alt="Diwan-i-Khas Guard" className="w-24 h-24 object-contain" style={{ imageRendering: "pixelated" }} />
+          {/* Top-Left Guard */}
+          <div 
+            className="absolute pointer-events-auto cursor-pointer z-25 flex flex-col items-center group" 
+            style={{ left: '31%', top: '44%', transform: 'translate(-50%, -96%) scale(0.95)' }}
+            onClick={() => triggerCourtyardGuardDialogue("top_left", "left")}
+          >
+            {activeCourtyardGuardId === "top_left" && courtyardGuardSpeech && (
+              <div className="animate-bounce mb-2 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[11px] font-black text-black max-w-[220px] text-center leading-tight whitespace-normal z-30">
+                {courtyardGuardSpeech}
+              </div>
+            )}
+            {Math.hypot(playerPos.x - 31.0, playerPos.y - 44.0) < 14.0 && !showKhasGuardDialogue && (
+              <div className="animate-bounce mb-1 bg-[#fff9ea] border-2 border-black rounded-lg px-2.5 py-1 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[11px] font-black text-black flex items-center gap-1.5 whitespace-nowrap">
+                <span className="bg-amber-400 border border-black rounded px-1.5 text-[9px]">E</span>
+                Talk to Guard
+              </div>
+            )}
+            <img src="/guard.png" alt="Palace Guard" className="w-24 h-24 object-contain transition-transform group-hover:scale-105" style={{ imageRendering: "pixelated" }} />
           </div>
-          {/* Diwan-i-Khas Marble Colonnade Guard (Right) */}
-          <div className="absolute pointer-events-none z-10" style={{ left: '31%', top: '44%', transform: 'translate(-50%, -96%) scale(0.85)' }}>
-            <img src="/guard.png" alt="Diwan-i-Khas Guard" className="w-24 h-24 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
+
+          {/* Top-Right Guard */}
+          <div 
+            className="absolute pointer-events-auto cursor-pointer z-25 flex flex-col items-center group" 
+            style={{ left: '58.5%', top: '38%', transform: 'translate(-50%, -96%) scale(0.95)' }}
+            onClick={() => triggerCourtyardGuardDialogue("top_right", "right")}
+          >
+            {activeCourtyardGuardId === "top_right" && courtyardGuardSpeech && (
+              <div className="animate-bounce mb-2 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[11px] font-black text-black max-w-[220px] text-center leading-tight whitespace-normal z-30">
+                {courtyardGuardSpeech}
+              </div>
+            )}
+            {Math.hypot(playerPos.x - 58.5, playerPos.y - 38.0) < 14.0 && !showKhasGuardDialogue && (
+              <div className="animate-bounce mb-1 bg-[#fff9ea] border-2 border-black rounded-lg px-2.5 py-1 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[11px] font-black text-black flex items-center gap-1.5 whitespace-nowrap">
+                <span className="bg-amber-400 border border-black rounded px-1.5 text-[9px]">E</span>
+                Talk to Palace Guard
+              </div>
+            )}
+            <img src="/guard.png" alt="Terrace Sentry" className="w-24 h-24 object-contain transition-transform group-hover:scale-105" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
           </div>
-          {/* Palace Terrace Sentry (Center North) */}
-          <div className="absolute pointer-events-none z-10" style={{ left: '48%', top: '38%', transform: 'translate(-50%, -96%) scale(0.78)' }}>
-            <img src="/guard.png" alt="Terrace Sentry" className="w-20 h-20 object-contain" style={{ imageRendering: "pixelated" }} />
+
+          {/* Bottom-Left Guard (Right beside Player) */}
+          <div 
+            className="absolute pointer-events-auto cursor-pointer z-25 flex flex-col items-center group" 
+            style={{ left: '41.5%', top: '73%', transform: 'translate(-50%, -96%) scale(1.05)' }}
+            onClick={() => triggerCourtyardGuardDialogue("bottom_left", "left")}
+          >
+            {activeCourtyardGuardId === "bottom_left" && courtyardGuardSpeech && (
+              <div className="animate-bounce mb-2 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[11px] font-black text-black max-w-[220px] text-center leading-tight whitespace-normal z-30">
+                {courtyardGuardSpeech}
+              </div>
+            )}
+            {Math.hypot(playerPos.x - 41.5, playerPos.y - 73.0) < 16.0 && !showKhasGuardDialogue && (
+              <div className="animate-bounce mb-1 bg-[#fff9ea] border-2 border-black rounded-lg px-2.5 py-1 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[11px] font-black text-black flex items-center gap-1.5 whitespace-nowrap">
+                <span className="bg-amber-400 border border-black rounded px-1.5 text-[9px]">E</span>
+                Talk to Guard
+              </div>
+            )}
+            <img src="/guard.png" alt="Courtyard Guard" className="w-28 h-28 object-contain transition-transform group-hover:scale-105" style={{ imageRendering: "pixelated" }} />
           </div>
-          {/* Brown Palace Arcade Guard (Right) */}
-          <div className="absolute pointer-events-none z-10" style={{ left: '84%', top: '52%', transform: 'translate(-50%, -96%) scale(0.95)' }}>
-            <img src="/guard.png" alt="Palace Guard" className="w-26 h-26 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
+
+          {/* Bottom-Right Guard */}
+          <div 
+            className="absolute pointer-events-auto cursor-pointer z-25 flex flex-col items-center group" 
+            style={{ left: '69%', top: '73%', transform: 'translate(-50%, -96%) scale(1.05)' }}
+            onClick={() => triggerCourtyardGuardDialogue("bottom_right", "right")}
+          >
+            {activeCourtyardGuardId === "bottom_right" && courtyardGuardSpeech && (
+              <div className="animate-bounce mb-2 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[11px] font-black text-black max-w-[220px] text-center leading-tight whitespace-normal z-30">
+                {courtyardGuardSpeech}
+              </div>
+            )}
+            {Math.hypot(playerPos.x - 69.0, playerPos.y - 73.0) < 16.0 && !showKhasGuardDialogue && (
+              <div className="animate-bounce mb-1 bg-[#fff9ea] border-2 border-black rounded-lg px-2.5 py-1 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[11px] font-black text-black flex items-center gap-1.5 whitespace-nowrap">
+                <span className="bg-amber-400 border border-black rounded px-1.5 text-[9px]">E</span>
+                Talk to Palace Guard
+              </div>
+            )}
+            <img src="/guard.png" alt="Palace Sentry" className="w-28 h-28 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
           </div>
         </>
+      )}
+
+      {/* Single Interactive Imperial Sentry in Red Fort Plaza */}
+      {scene === "red_fort_plaza" && (
+        <div 
+          className="absolute pointer-events-auto cursor-pointer z-25 flex flex-col items-center group" 
+          style={{ left: '41%', top: '72%', transform: 'translate(-50%, -96%) scale(1.15)' }}
+          onClick={() => triggerCourtyardGuardDialogue("red_fort_plaza_guard", "left")}
+        >
+          {activeCourtyardGuardId === "red_fort_plaza_guard" && courtyardGuardSpeech && (
+            <div className="animate-bounce mb-2 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[11px] font-black text-black max-w-[230px] text-center leading-tight whitespace-normal z-30">
+              {courtyardGuardSpeech}
+            </div>
+          )}
+          {Math.hypot(playerPos.x - 41.0, playerPos.y - 72.0) < 22.0 && !showKhasGuardDialogue && (
+            <div className="animate-bounce mb-1 bg-[#fff9ea] border-2 border-black rounded-lg px-2.5 py-1 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[11px] font-black text-black flex items-center gap-1.5 whitespace-nowrap">
+              <span className="bg-amber-400 border border-black rounded px-1.5 text-[9px]">E</span>
+              Talk to Royal Sentry
+            </div>
+          )}
+          <img src="/guard.png" alt="Red Fort Plaza Sentry" className="w-28 h-28 object-contain transition-transform group-hover:scale-105" style={{ imageRendering: "pixelated" }} />
+        </div>
       )}
 
       {/* Mughal Military Guards stationed in Imperial Throne Room (Interior) */}
@@ -2500,14 +2978,56 @@ export default function MughalGameScreen() {
         </>
       )}
 
-      {/* Mughal Traders in Red Fort Interior */}
+      {/* Mughal Traders in Red Fort Interior (Chatta Chowk) */}
       {scene === "red_fort_interior" && (
         <>
-          <div className="absolute pointer-events-none z-10" style={{ left: '26%', top: '82%', transform: 'translate(-50%, -96%)' }}>
-            <img src="/trader_silk_transparent.png" alt="Silk Trader" className="w-64 h-64 object-contain" style={{ imageRendering: "pixelated" }} />
+          {/* Silk Trader */}
+          <div 
+            className="absolute pointer-events-auto cursor-pointer z-15 flex flex-col items-center group" 
+            style={{ left: '26%', top: '82%', transform: 'translate(-50%, -96%)' }}
+            onClick={() => {
+              setActiveTraderId("silk");
+              const speech = "Welcome, effendi! Finest Persian and Banarasi silks directly from the imperial looms!";
+              setTraderSpeech(speech);
+              playCharacterDialogue({
+                character: "trader_silk",
+                text: speech,
+                audioUrl: "/trader_marble_art.wav"
+              });
+            }}
+          >
+            {activeTraderId === "silk" && traderSpeech && (
+              <div className="animate-bounce mb-1 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[11px] font-black text-black max-w-[210px] text-center leading-tight whitespace-normal z-30">
+                {traderSpeech}
+              </div>
+            )}
+            {Math.hypot(playerPos.x - 26.0, playerPos.y - 82.0) < 22.0 && activeTraderId !== "silk" && (
+              <div className="animate-bounce mb-1 bg-[#fff9ea] border-2 border-black rounded-lg px-2.5 py-1 shadow-[2px_2px_0_0_rgba(0,0,0,1)] text-[10px] font-bold text-black flex items-center gap-1">
+                <span className="bg-amber-400 border border-black rounded px-1 text-[9px]">E</span>
+                Talk to Silk Merchant
+              </div>
+            )}
+            <img src="/trader_silk_transparent.png" alt="Silk Trader" className="w-64 h-64 object-contain transition-transform group-hover:scale-105" style={{ imageRendering: "pixelated" }} />
           </div>
-          <div className="absolute pointer-events-none z-10" style={{ left: '72%', top: '80%', transform: 'translate(-50%, -96%)' }}>
-            <img src="/trader_jewels_transparent.png" alt="Jewel Trader" className="w-64 h-64 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
+
+          {/* Jewellery Trader (The Badshah's Khas) */}
+          <div 
+            className="absolute pointer-events-auto cursor-pointer z-15 flex flex-col items-center group" 
+            style={{ left: '72%', top: '80%', transform: 'translate(-50%, -96%)' }}
+            onClick={triggerJewelTraderDialogue}
+          >
+            {activeTraderId === "jewels" && jewelTraderSpeech && (
+              <div className="animate-bounce mb-1 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[11px] font-black text-black max-w-[230px] text-center leading-tight whitespace-normal z-30">
+                {jewelTraderSpeech}
+              </div>
+            )}
+            {Math.hypot(playerPos.x - 72.0, playerPos.y - 80.0) < 22.0 && !showJewelTraderDialogue && (
+              <div className="animate-bounce mb-1 bg-[#fff9ea] border-2 border-black rounded-lg px-2.5 py-1 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[10px] font-black text-black flex items-center gap-1">
+                <span className="bg-amber-400 border border-black rounded px-1 text-[9px]">E</span>
+                Talk to Royal Jewellery Merchant
+              </div>
+            )}
+            <img src="/trader_jewels_transparent.png" alt="Jewel Trader" className="w-64 h-64 object-contain transition-transform group-hover:scale-105" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
           </div>
         </>
       )}

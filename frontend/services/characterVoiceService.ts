@@ -73,12 +73,18 @@ class CharacterVoiceManager {
    * Stop any active character dialogue audio immediately.
    */
   public stopCharacterDialogue(): void {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch (e) {}
+    }
     if (this.activeAudio) {
       const audioToStop = this.activeAudio;
       this.activeAudio = null;
       try {
         audioToStop.pause();
         audioToStop.currentTime = 0;
+        audioToStop.src = "";
       } catch (e) {}
     }
     this.updateState({
@@ -98,13 +104,22 @@ class CharacterVoiceManager {
 
     // 1. Guard Local Canonical Pre-recorded Files
     if (char === "guard" || char.includes("sentry")) {
+      if (lower.includes("good to go") || lower.includes("you possess the imperial") || lower.includes("step inside the khas mahal") || lower.includes("good you are good to go") || lower.includes("pass through")) {
+        return "/guard_khas_pass.wav";
+      }
       if (lower.includes("again you ask") || lower.includes("again u ask") || (lower.includes("punished") && lower.includes("question"))) {
         return "/guard_punish_warn.wav";
       }
-      if (lower.includes("accha") && (lower.includes("diwan-i-khas") || lower.includes("eyes will be on you"))) {
+      if (lower.includes("halt") || lower.includes("not allowed") || lower.includes("khas mahal") || lower.includes("royal clearance") || lower.includes("state your purpose") || lower.includes("strictly off-limits")) {
+        return "/guard_khas_halt.wav";
+      }
+      if (lower.includes("trader") || lower.includes("bazaar") || lower.includes("confidant") || lower.includes("khas of the badshah") || lower.includes("ask one of the trader")) {
+        return "/guard_khas_trader_hint.wav";
+      }
+      if (lower.includes("accha") || lower.includes("qila-e-mubarak") || lower.includes("peacock throne") || lower.includes("chatta chowk") || lower.includes("welcome to the qila") || lower.includes("eyes will be on you")) {
         return "/guard_court_talent.wav";
       }
-      if (lower.includes("halt, intruder") || lower.includes("stop right where you stand") || lower.includes("restricted imperial ground")) {
+      if (lower.includes("halt, intruder") || lower.includes("stop right where you stand") || lower.includes("restricted imperial ground") || lower.includes("amar singh gate")) {
         return "/guard_gate_halt.wav";
       }
     }
@@ -117,13 +132,22 @@ class CharacterVoiceManager {
       if (lower.includes("golden domes") || lower.includes("bittersweet truth") || lower.includes("pure, solid gold") || lower.includes("shadow of our lost mughal splendour")) {
         return "/jolly_khas_mahal_gold.wav";
       }
-      if (lower.includes("jolly bhai") && lower.includes("born many centuries") && lower.includes("dancing like a madman")) {
+      if (lower.includes("jolly bhai") && (lower.includes("born many centuries") || lower.includes("witnessed great wars") || lower.includes("madman"))) {
         return "/jolly_intro.wav";
       }
     }
 
     // 3. Bazaar Traders Pre-recorded Files
-    if (char.includes("trader") || char.includes("marble") || char.includes("toy")) {
+    if (char.includes("trader") || char.includes("marble") || char.includes("toy") || char.includes("jewel")) {
+      if (lower.includes("buy this pure mughal gold") || lower.includes("only nobles") || lower.includes("ordinary traveller") || lower.includes("buy gold")) {
+        return "/trader_khas_arrogant_offer.wav";
+      }
+      if (lower.includes("wise purchase") || lower.includes("khas confidant") || lower.includes("badshah shah jahan himself") || lower.includes("no ordinary merchant")) {
+        return "/trader_khas_boast.wav";
+      }
+      if (lower.includes("firman") || lower.includes("written permission") || lower.includes("royal seal") || lower.includes("grant you entry") || lower.includes("royal firman")) {
+        return "/trader_khas_permission_grant.wav";
+      }
       if (lower.includes("marble art") || lower.includes("finest marble")) {
         return "/trader_marble_art.wav";
       }
@@ -208,35 +232,8 @@ class CharacterVoiceManager {
         }
       }
 
-      // If still not available from backend, use browser speech synthesis with character tone
+      // If not available, do not play unwanted browser speech synthesis
       if (!audioSrc) {
-        if (typeof window !== "undefined" && "speechSynthesis" in window) {
-          window.speechSynthesis.cancel();
-          const utterance = new SpeechSynthesisUtterance(trimmed);
-          utterance.rate = character.toLowerCase() === "guard" ? 1.05 : 0.95;
-          utterance.pitch = character.toLowerCase() === "guard" ? 0.8 : 1.1;
-          
-          const voices = window.speechSynthesis.getVoices();
-          const inVoice = voices.find(v => v.lang.includes("en-IN") || v.lang.includes("hi-IN"));
-          if (inVoice) utterance.voice = inVoice;
-
-          utterance.onstart = () => {
-            this.updateState({ isPlaying: true, isLoading: false });
-            onStart?.();
-          };
-          utterance.onend = () => {
-            this.updateState({ isPlaying: false, isLoading: false, activeCharacter: null, currentText: null });
-            onEnd?.();
-          };
-          utterance.onerror = (e) => {
-            this.updateState({ isPlaying: false, isLoading: false, error: "Speech synthesis failed" });
-            onError?.(e);
-          };
-
-          window.speechSynthesis.speak(utterance);
-          return null;
-        }
-
         this.updateState({ isLoading: false, isPlaying: false });
         return null;
       }
@@ -274,25 +271,6 @@ class CharacterVoiceManager {
             isLoading: false,
             error: null,
           });
-        }
-        // Fallback to SpeechSynthesis if audio element cannot load the source
-        if (typeof window !== "undefined" && "speechSynthesis" in window) {
-          try {
-            window.speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(trimmed);
-            utterance.rate = character.toLowerCase() === "guard" ? 1.05 : 0.95;
-            utterance.pitch = character.toLowerCase() === "guard" ? 0.8 : 1.1;
-            utterance.onstart = () => {
-              this.updateState({ isPlaying: true, isLoading: false });
-              onStart?.();
-            };
-            utterance.onend = () => {
-              this.updateState({ isPlaying: false, isLoading: false, activeCharacter: null, currentText: null });
-              onEnd?.();
-            };
-            window.speechSynthesis.speak(utterance);
-            return;
-          } catch (speechErr) {}
         }
         onError?.(e);
       };

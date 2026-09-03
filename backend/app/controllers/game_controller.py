@@ -83,3 +83,63 @@ def get_solved_status():
             "success": False,
             "error": str(e)
         }), 500
+
+
+@game_bp.route("/checkpoint", methods=["POST"])
+def save_checkpoint():
+    """Persist the player's full milestone and exploration checkpoint in database."""
+    try:
+        data = request.get_json(silent=True) or {}
+        checkpoint = GameWinModel.save_checkpoint(data)
+        return jsonify({
+            "success": True,
+            "message": "Checkpoint saved in database successfully!",
+            "checkpoint": checkpoint
+        }), 200
+    except Exception as e:
+        print(f"[Save Checkpoint Error]: {e}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
+@game_bp.route("/checkpoint", methods=["GET"])
+def get_checkpoint():
+    """Retrieve the latest saved checkpoint for the user and era."""
+    try:
+        user_id = request.args.get("user_id", "default_traveller")
+        era = request.args.get("era", "mughal")
+        checkpoint = GameWinModel.get_checkpoint(user_id, era)
+        return jsonify({
+            "success": True,
+            "has_checkpoint": checkpoint is not None,
+            "checkpoint": checkpoint
+        }), 200
+    except Exception as e:
+        print(f"[Get Checkpoint Error]: {e}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
+@game_bp.route("/checkpoint/reset", methods=["POST"])
+def reset_checkpoint():
+    """Reset player checkpoint back to start of era upon user request."""
+    try:
+        data = request.get_json(silent=True) or {}
+        user_id = data.get("user_id", "default_traveller")
+        era = data.get("era", "mughal")
+        initial = GameWinModel.reset_checkpoint(user_id, era)
+        return jsonify({
+            "success": True,
+            "message": "Checkpoint reset to start successfully!",
+            "checkpoint": initial
+        }), 200
+    except Exception as e:
+        print(f"[Reset Checkpoint Error]: {e}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500

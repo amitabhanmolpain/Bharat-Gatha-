@@ -225,13 +225,122 @@ class GameWinModel:
 
     @classmethod
     def get_solved_puzzles(cls, user_id: str, era: str = None) -> list:
-        """Get the list of all solved puzzle IDs for a user."""
+        """Retrieve unique list of solved puzzle identifiers for a user."""
         try:
             user_progress_col = cls.get_user_collection()
-            doc = user_progress_col.find_one({"user_id": user_id, "era": era or "mughal"})
-            if doc and "solved_puzzles" in doc:
-                return doc["solved_puzzles"]
+            query = {"user_id": user_id}
+            if era:
+                query["era"] = era
+
+            progress_doc = user_progress_col.find_one(query)
+            if progress_doc and "solved_puzzles" in progress_doc:
+                return list(set(progress_doc["solved_puzzles"]))
         except Exception:
             pass
 
         return _get_local_solved_puzzles(user_id, era)
+
+    @classmethod
+    def save_checkpoint(cls, data: dict) -> dict:
+        """Save full game checkpoint to MongoDB and persistent disk cache."""
+        user_id = str(data.get("user_id", "default_traveller"))
+        era = str(data.get("era", "mughal"))
+        now = datetime.utcnow()
+        
+        checkpoint = {
+            "user_id": user_id,
+            "era": era,
+            "scene": data.get("scene", "gate"),
+            "playerPos": data.get("playerPos", {"x": 50.0, "y": 86.0}),
+            "hasGuardPermission": bool(data.get("hasGuardPermission", False)),
+            "hasKhasPermission": bool(data.get("hasKhasPermission", False)),
+            "isPietraDuraSolved": bool(data.get("isPietraDuraSolved", False)),
+            "isSheeshMirrorSolved": bool(data.get("isSheeshMirrorSolved", False)),
+            "isArchaeologistTalked": bool(data.get("isArchaeologistTalked", False)),
+            "isCarriageUnlocked": bool(data.get("isCarriageUnlocked", False)),
+            "cluesFound": data.get("cluesFound", []),
+            "last_saved_at": now.isoformat()
+        }
+        
+        try:
+            col = get_db()["user_checkpoints"]
+            col.update_one(
+                {"user_id": user_id, "era": era},
+                {"$set": checkpoint},
+                upsert=True
+            )
+        except Exception as e:
+            print(f"Mongo checkpoint save error: {e}")
+            
+        # Local JSON fallback
+        _ensure_local_store()
+        try:
+            chk_file = os.path.join(LOCAL_DATA_DIR, "user_checkpoints.json")
+            all_chk = {}
+            if os.path.exists(chk_file):
+                with open(chk_file, "r", encoding="utf-8") as f:
+                    all_chk = json.load(f)
+            all_chk[f"{user_id}_{era}"] = checkpoint
+            with open(chk_file, "w", encoding="utf-8") as f:
+                json.dump(all_chk, f, indent=2)
+        except Exception as e:
+            print(f"Local checkpoint save error: {e}")
+            
+        return checkpoint
+
+    @classmethod
+    def get_checkpoint(cls, user_id: str, era: str) -> dict:
+        """Retrieve the latest saved checkpoint from MongoDB or disk cache."""
+        try:
+            col = get_db()["user_checkpoints"]
+            doc = col.find_one({"user_id": user_id, "era": era})
+            if doc:
+                doc.pop("_id", None)
+                return doc
+        except Exception as e:
+            print(f"Mongo checkpoint get error: {e}")
+            
+        # Local JSON fallback
+        try:
+            chk_file = os.path.join(LOCAL_DATA_DIR, "user_checkpoints.json")
+            if os.path.exists(chk_file):
+                with open(chk_file, "r", encoding="utf-8") as f:
+                    all_chk = json.load(f)
+                    return all_chk.get(f"{user_id}_{era}")
+        except Exception:
+            pass
+        return None
+
+    @classmethod
+    def reset_checkpoint(cls, user_id: str, era: str) -> dict:
+        """Reset checkpoint to start of game."""
+        initial = {
+            "user_id": user_id,
+            "era": era,
+            "scene": "gate",
+            "playerPos": {"x": 50.0, "y": 86.0},
+            "hasGuardPermission": False,
+            "hasKhasPermission": False,
+            "isPietraDuraSolved": False,
+            "isSheeshMirrorSolved": False,
+            "isArchaeologistTalked": False,
+            "isCarriageUnlocked": False,
+            "cluesFound": [],
+            "last_saved_at": datetime.utcnow().isoformat()
+        }
+        try:
+            col = get_db()["user_checkpoints"]
+            col.delete_one({"user_id": user_id, "era": era})
+        except Exception:
+            pass
+        try:
+            chk_file = os.path.join(LOCAL_DATA_DIR, "user_checkpoints.json")
+            if os.path.exists(chk_file):
+                with open(chk_file, "r", encoding="utf-8") as f:
+                    all_chk = json.load(f)
+                all_chk.pop(f"{user_id}_{era}", None)
+                with open(chk_file, "w", encoding="utf-8") as f:
+                    json.dump(all_chk, f, indent=2)
+        except Exception:
+            pass
+        return initial
