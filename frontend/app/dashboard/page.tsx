@@ -42,7 +42,7 @@ export default function GamesDashboard() {
         const rajSave = localStorage.getItem("rajasthan_game_state") || localStorage.getItem("rajasthan_save_v6");
         if (rajSave) {
           const parsed = JSON.parse(rajSave);
-          if (parsed.isCampaignComplete || (parsed.stage === 4 && parsed.cluesFound >= 4)) {
+          if (parsed.isCampaignComplete) {
             progress.rajasthan = { statusText: "✓ Imperial Rajputana Complete (4/4)", isComplete: true };
           } else if (parsed.stage) {
             progress.rajasthan = { statusText: `Stage ${parsed.stage}/4 Active`, isComplete: false };

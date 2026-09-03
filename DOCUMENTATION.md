@@ -166,7 +166,7 @@ flowchart TD
 ```
 
 ### 5.1 Landing & Authentication Portal (`/`)
-* **File:** [`frontend/app/page.tsx`](file:///d:/sih_proj/Bharat-Gatha-/frontend/app/page.tsx)
+* **File:** [`frontend/app/page.tsx`](frontend/app/page.tsx)
 * **Features:**
   * **Dynamic Era Slideshow:** Cycles smoothly across 4 eras every 6 seconds: Pixel Art Overview (`/bg-pixel.jpg`), Indus Valley (`/bg-indus.jpg`), Mughal Empire (`/bg-mughal.jpg`), and British Era (`/bg-british.jpg`).
   * **Mughal Architectural Arch Card:** Backdrop-blur glassmorphic arch with gold borders, radial light glows, and custom typography.
@@ -174,9 +174,9 @@ flowchart TD
 
 ### 5.2 Traveler Dashboard & Campaign Hub (`/dashboard`)
 * **Files:** 
-  * [`frontend/app/dashboard/page.tsx`](file:///d:/sih_proj/Bharat-Gatha-/frontend/app/dashboard/page.tsx)
-  * [`frontend/app/dashboard/ClientLayout.tsx`](file:///d:/sih_proj/Bharat-Gatha-/frontend/app/dashboard/ClientLayout.tsx)
-  * [`frontend/app/dashboard/ThemeContext.tsx`](file:///d:/sih_proj/Bharat-Gatha-/frontend/app/dashboard/ThemeContext.tsx)
+  * [`frontend/app/dashboard/page.tsx`](frontend/app/dashboard/page.tsx)
+  * [`frontend/app/dashboard/ClientLayout.tsx`](frontend/app/dashboard/ClientLayout.tsx)
+  * [`frontend/app/dashboard/ThemeContext.tsx`](frontend/app/dashboard/ThemeContext.tsx)
 * **Features:**
   * **Persistent Sidebar:** Houses the Bharat Gatha emblem, navigation links, dark/light theme switch, and sign-out button.
   * **Campaign Grid:**
@@ -185,14 +185,14 @@ flowchart TD
     3. **Great Vijayanagara (Karnataka):** Status: *Coming Soon*.
 
 ### 5.3 Global Leaderboard & Ranking (`/dashboard/leaderboard`)
-* **File:** [`frontend/app/dashboard/leaderboard/page.tsx`](file:///d:/sih_proj/Bharat-Gatha-/frontend/app/dashboard/leaderboard/page.tsx)
+* **File:** [`frontend/app/dashboard/leaderboard/page.tsx`](frontend/app/dashboard/leaderboard/page.tsx)
 * **Features:**
   * Top players ranking with historical titles: *Emperor, General, Strategist, Warrior, Noble, Traveler*.
   * Gold (`#1`), Silver (`#2`), and Bronze (`#3`) podium visual badges.
   * Formatted XP scoring system.
 
 ### 5.4 Traveler Profile & Statistics (`/dashboard/profile`)
-* **File:** [`frontend/app/dashboard/profile/page.tsx`](file:///d:/sih_proj/Bharat-Gatha-/frontend/app/dashboard/profile/page.tsx)
+* **File:** [`frontend/app/dashboard/profile/page.tsx`](frontend/app/dashboard/profile/page.tsx)
 * **Features:**
   * Player Avatar, Level (Level 42), Title (*Emperor*), Global Rank (#1 Global).
   * XP progress bar with numerical tracker (`14,250 XP`).
@@ -203,7 +203,7 @@ flowchart TD
 
 ## 6. Interactive RPG Game Engine Deep Dive (`/play/mughal`)
 
-* **Primary Engine File:** [`frontend/app/play/mughal/page.tsx`](file:///d:/sih_proj/Bharat-Gatha-/frontend/app/play/mughal/page.tsx) (1,897 lines of TypeScript)
+* **Primary Engine File:** [`frontend/app/play/mughal/page.tsx`](frontend/app/play/mughal/page.tsx) (1,897 lines of TypeScript)
 
 ### 6.1 Continuous 60 FPS Game Loop & Input System
 The game implements a frame-synchronized loop using `requestAnimationFrame`:
@@ -360,7 +360,7 @@ graph TD
 
 ### Great Rajputana Campaign — 4-Stage Complete Arc (`/play/rajasthan`)
 
-* **Engine:** [`frontend/app/play/rajasthan/page.tsx`](file:///d:/sih_proj/Bharat-Gatha-/frontend/app/play/rajasthan/page.tsx)
+* **Engine:** [`frontend/app/play/rajasthan/page.tsx`](frontend/app/play/rajasthan/page.tsx)
 * **Storage Key:** `rajasthan_game_state`
 * **Central Climax:** *Bhangarh Fort ("Night of the Moonrise")*
 
@@ -406,7 +406,7 @@ graph TD
 
 ### Great Vijayanagara Empire Campaign — 4-Stage Complete Arc (`/play/vijayanagara`)
 
-* **Engine:** [`frontend/app/play/vijayanagara/page.tsx`](file:///d:/sih_proj/Bharat-Gatha-/frontend/app/play/vijayanagara/page.tsx)
+* **Engine:** [`frontend/app/play/vijayanagara/page.tsx`](frontend/app/play/vijayanagara/page.tsx)
 * **Storage Key:** `vijayanagara_save_v1`
 * **Central Mystery:** *The Missing Merchant's Master Ledger (Ramayya's Archive)*
 
