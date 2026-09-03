@@ -295,6 +295,25 @@ export default function MughalGameScreen() {
     }
   }, [isLoading, scene, isSheeshMirrorSolved]);
 
+  const hasPlayedKhasNarrationRef = useRef(false);
+  useEffect(() => {
+    if (!isLoading && scene === "khas_mahal" && !hasPlayedKhasNarrationRef.current) {
+      hasPlayedKhasNarrationRef.current = true;
+      const timer = setTimeout(() => {
+        playNarration(
+          "From this golden pavilion, Emperor Shah Jahan spent his twilight years gazing across the sparkling Yamuna River towards the Taj Mahal.",
+          {
+            audioUrl: "/khas_mahal_narration.wav",
+            speaker: "ratan",
+            pace: 0.88,
+            language_code: "en-IN"
+          }
+        );
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, scene]);
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       horseSoundRef.current = new Audio('/horse_sound.webm');
@@ -383,6 +402,7 @@ export default function MughalGameScreen() {
       hasPlayedIntroNarrationRef.current = false;
       hasPlayedInteriorNarrationRef.current = false;
       hasPlayedSheeshNarrationRef.current = false;
+      hasPlayedKhasNarrationRef.current = false;
       localStorage.removeItem('mughal_save');
       localStorage.removeItem('mughal_is_pietra_dura_solved');
       localStorage.removeItem('mughal_is_sheesh_mirror_solved');
@@ -627,6 +647,15 @@ export default function MughalGameScreen() {
         }
         if (curScene === "khas_mahal" && pos.y <= 85.0 && pos.x >= 28.0 && pos.x <= 72.0) {
           setShowKhasModal(true);
+          playNarration(
+            "From this golden pavilion, Emperor Shah Jahan spent his twilight years gazing across the sparkling Yamuna River towards the Taj Mahal.",
+            {
+              audioUrl: "/khas_mahal_narration.wav",
+              speaker: "ratan",
+              pace: 0.88,
+              language_code: "en-IN"
+            }
+          );
         }
         if (curScene === "taj_gate" && pos.y <= 78.0 && pos.x >= 38.0 && pos.x <= 62.0 && !isCalligraphySolved) {
           setShowCalligraphyPuzzle(true);
@@ -1514,7 +1543,18 @@ export default function MughalGameScreen() {
       {scene === "khas_mahal" && isNearKhasFountain && !showKhasModal && (
         <div 
           className="absolute top-[62%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 cursor-pointer z-10 animate-bounce"
-          onClick={() => setShowKhasModal(true)}
+          onClick={() => {
+            setShowKhasModal(true);
+            playNarration(
+              "From this golden pavilion, Emperor Shah Jahan spent his twilight years gazing across the sparkling Yamuna River towards the Taj Mahal.",
+              {
+                audioUrl: "/khas_mahal_narration.wav",
+                speaker: "ratan",
+                pace: 0.88,
+                language_code: "en-IN"
+              }
+            );
+          }}
         >
           <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
           Inspect Khas Mahal Pool
@@ -1813,7 +1853,10 @@ export default function MughalGameScreen() {
                 <span>🏛️</span> Khas Mahal — Yamuna River & Taj Mahal View
               </span>
               <button 
-                onClick={() => setShowKhasModal(false)}
+                onClick={() => {
+                  stopNarration();
+                  setShowKhasModal(false);
+                }}
                 className="text-gray-500 hover:text-black font-bold text-sm cursor-pointer"
               >
                 ✕ Close
