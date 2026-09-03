@@ -318,6 +318,25 @@ export default function MughalGameScreen() {
     }
   }, [isLoading, scene]);
 
+  const hasPlayedMausoleumNarrationRef = useRef(false);
+  useEffect(() => {
+    if (!isLoading && scene === "taj_mausoleum" && !hasPlayedMausoleumNarrationRef.current) {
+      hasPlayedMausoleumNarrationRef.current = true;
+      const timer = setTimeout(() => {
+        playNarration(
+          "These decorated marble cenotaphs are for public viewing. The actual historic graves of Emperor Shah Jahan and Empress Mumtaz Mahal lie in a quiet, unadorned crypt directly beneath this chamber at garden level, in accordance with ancient tradition that resting places should remain humble and peaceful.",
+          {
+            audioUrl: "/taj_mausoleum_narration.wav",
+            speaker: "ratan",
+            pace: 0.88,
+            language_code: "en-IN"
+          }
+        );
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, scene]);
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       horseSoundRef.current = new Audio('/horse_sound.webm');
@@ -407,6 +426,7 @@ export default function MughalGameScreen() {
       hasPlayedInteriorNarrationRef.current = false;
       hasPlayedSheeshNarrationRef.current = false;
       hasPlayedKhasNarrationRef.current = false;
+      hasPlayedMausoleumNarrationRef.current = false;
       localStorage.removeItem('mughal_save');
       localStorage.removeItem('mughal_has_talked_to_jolly');
       localStorage.removeItem('mughal_is_pietra_dura_solved');
@@ -2611,7 +2631,18 @@ export default function MughalGameScreen() {
       {scene === "taj_mausoleum" && isNearCenotaphs && !showMausoleumModal && (
         <div 
           className="absolute top-[48%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 cursor-pointer z-10 animate-bounce"
-          onClick={() => setShowMausoleumModal(true)}
+          onClick={() => {
+            setShowMausoleumModal(true);
+            playNarration(
+              "These decorated marble cenotaphs are for public viewing. The actual historic graves of Emperor Shah Jahan and Empress Mumtaz Mahal lie in a quiet, unadorned crypt directly beneath this chamber at garden level, in accordance with ancient tradition that resting places should remain humble and peaceful.",
+              {
+                audioUrl: "/taj_mausoleum_narration.wav",
+                speaker: "ratan",
+                pace: 0.88,
+                language_code: "en-IN"
+              }
+            );
+          }}
         >
           <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
           Examine Royal Cenotaphs & Inscriptions
@@ -2774,7 +2805,10 @@ export default function MughalGameScreen() {
                 <span>🕌</span> Royal Cenotaphs & Crypt
               </span>
               <button 
-                onClick={() => setShowMausoleumModal(false)}
+                onClick={() => {
+                  stopNarration();
+                  setShowMausoleumModal(false);
+                }}
                 className="text-gray-500 hover:text-black font-bold text-sm cursor-pointer"
               >
                 ✕ Close
@@ -2786,7 +2820,7 @@ export default function MughalGameScreen() {
                 You stand inside the silent main chamber of the mausoleum, before the beautifully carved marble cenotaphs of Emperor Shah Jahan and Empress Mumtaz Mahal. 
               </p>
               <div className="bg-amber-100 border-l-4 border-amber-500 p-3 rounded-r-lg italic text-amber-950 font-serif">
-                &ldquo;Note: These highly decorated marble cenotaphs are only for public viewing. The actual, historic graves of the royal couple lie in a completely unadorned, quiet brick crypt directly beneath this room at the garden level, in accordance with Islamic tradition that graves should not be ostentatious.&rdquo;
+                &ldquo;Note: These highly decorated marble cenotaphs are only for public viewing. The actual, historic graves of the royal couple lie in a completely unadorned, quiet crypt directly beneath this room at the garden level, in accordance with ancient tradition that resting places should remain humble and peaceful.&rdquo;
               </div>
               <p className="text-xs font-sans text-emerald-800 font-semibold bg-emerald-50 border border-emerald-300 p-2 rounded">
                 ★ <strong className="text-black">Discovery:</strong> You have fully explored the main mausoleum chamber and learned the secret of the lower crypt!
@@ -2795,6 +2829,7 @@ export default function MughalGameScreen() {
 
             <button 
               onClick={() => {
+                stopNarration();
                 setIsMausoleumExplored(true);
                 setShowMausoleumModal(false);
               }}

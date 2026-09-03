@@ -161,6 +161,8 @@ class NarratorManager {
           audioSrc = "/pietra_dura_solved_narration.wav";
         } else if (lowerText.includes("golden pavilion") && (lowerText.includes("twilight years") || lowerText.includes("yamuna river") || lowerText.includes("taj mahal"))) {
           audioSrc = "/khas_mahal_narration.wav";
+        } else if (lowerText.includes("cenotaphs") && (lowerText.includes("public viewing") || lowerText.includes("crypt") || lowerText.includes("actual historic graves"))) {
+          audioSrc = "/taj_mausoleum_narration.wav";
         }
       }
 
