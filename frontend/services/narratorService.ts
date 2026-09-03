@@ -140,11 +140,72 @@ class NarratorManager {
     });
 
     try {
-      // 2. Prioritize local file playback
-      let audioSrc: string = options?.audioUrl || "/mughal_intro_narration.wav";
+      // 2. Resolve audio source: check static or dynamic Sarvam TTS
+      let audioSrc: string | null = options?.audioUrl || null;
       const lowerText = trimmed.toLowerCase();
 
-      if (lowerText.includes("you have entered the year 1653") || lowerText.includes("heart of the mughal empire")) {
+      if (!audioSrc && (lowerText.includes("you have entered the year 1653") || lowerText.includes("heart of the mughal empire"))) {
+        audioSrc = "/mughal_intro_narration.wav";
+      }
+
+      // Check cache or fetch from Sarvam AI TTS backend
+      if (!audioSrc) {
+        if (this.audioCache.has(trimmed)) {
+          audioSrc = this.audioCache.get(trimmed)!;
+        } else {
+          try {
+            const res = await fetch(`${this.getBackendUrl()}/api/tts/narrate`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                text: trimmed,
+                speaker: options?.speaker || "ratan",
+                pace: options?.pace || 0.88,
+                language_code: options?.language_code || "en-IN",
+                model: options?.model || "bulbul:v3"
+              })
+            });
+
+            if (res.ok) {
+              const data = await res.json();
+              if (typeof data?.audio_base64 === "string" && data.audio_base64) {
+                const b64Src = `data:audio/wav;base64,${data.audio_base64}`;
+                audioSrc = b64Src;
+                this.audioCache.set(trimmed, b64Src);
+              } else if (typeof data?.audio_url === "string" && data.audio_url) {
+                const urlSrc: string = data.audio_url;
+                audioSrc = urlSrc;
+                this.audioCache.set(trimmed, urlSrc);
+              }
+            }
+          } catch (fetchErr) {
+            console.warn("Sarvam AI TTS backend fetch failed, using browser speech fallback:", fetchErr);
+          }
+        }
+      }
+
+      // If still no audioSrc, use browser SpeechSynthesis as robust fallback
+      if (!audioSrc) {
+        if (typeof window !== "undefined" && "speechSynthesis" in window) {
+          window.speechSynthesis.cancel();
+          const utterance = new SpeechSynthesisUtterance(trimmed);
+          utterance.rate = 0.88;
+          utterance.pitch = 0.95;
+          utterance.onstart = () => {
+            this.updateState({ isPlaying: true, isLoading: false });
+            options?.onStart?.();
+          };
+          utterance.onend = () => {
+            this.updateState({ isPlaying: false, isLoading: false, currentText: null });
+            options?.onEnd?.();
+          };
+          utterance.onerror = (e) => {
+            this.updateState({ isPlaying: false, isLoading: false });
+            options?.onError?.(e);
+          };
+          window.speechSynthesis.speak(utterance);
+          return null;
+        }
         audioSrc = "/mughal_intro_narration.wav";
       }
 

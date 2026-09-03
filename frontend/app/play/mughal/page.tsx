@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import DialoguePanel from "../../components/DialoguePanel";
 import { playNarration, stopNarration } from "../../../services/narratorService";
-import { playCharacterDialogue } from "../../../services/characterVoiceService";
+import { playCharacterDialogue, stopCharacterDialogue } from "../../../services/characterVoiceService";
 import NarratorSubtitle from "../../../components/NarratorSubtitle";
 import CluesModal, { MUGHAL_HISTORICAL_CLUES } from "./components/CluesModal";
 
@@ -144,6 +144,21 @@ export default function MughalGameScreen() {
       stopNarration();
     };
   }, []);
+
+  // Play cinematic Sarvam AI narrator voice on Punishment Screen (stops any character voice first)
+  useEffect(() => {
+    if (punishmentState.isOpen) {
+      stopCharacterDialogue();
+      playNarration(
+        `${punishmentState.title}. ${punishmentState.description}`,
+        {
+          speaker: "ratan",
+          pace: 0.88,
+          language_code: "en-IN"
+        }
+      );
+    }
+  }, [punishmentState.isOpen, punishmentState.title, punishmentState.description]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -472,15 +487,12 @@ export default function MughalGameScreen() {
             // If player moves up towards the archway without speaking to the guard
             if (nextY <= 73.8) {
               if (!hasGuardPermissionRef.current) {
+                stopCharacterDialogue();
                 setPunishmentState({
                   isOpen: true,
                   title: "Expelled from the Imperial Gates",
                   subtitle: "THE FALL",
                   description: "You entered without taking permission from the royal guard. Under the fierce glare of the Amar Singh Gate sentries, your attempt to sneak into the palace of Emperor Shah Jahan has ended in disaster. You are seized, disciplined with the iron mace, and thrown outside the locked gates into the dust."
-                });
-                playCharacterDialogue({
-                  character: "guard",
-                  text: "Halt, intruder! Stop right where you stand! Beyond this Amar Singh Gate is restricted imperial ground! Answer immediately, or you will be seized!"
                 });
                 return { x: 50.0, y: 88.0 };
               }
@@ -488,15 +500,12 @@ export default function MughalGameScreen() {
 
             if (nextY <= 71.8 && nextX >= 47.0 && nextX <= 53.0) {
               if (!hasGuardPermissionRef.current) {
+                stopCharacterDialogue();
                 setPunishmentState({
                   isOpen: true,
                   title: "Expelled from the Imperial Gates",
                   subtitle: "THE FALL",
                   description: "You entered without taking permission from the royal guard. Under the fierce glare of the Amar Singh Gate sentries, your attempt to sneak into the palace of Emperor Shah Jahan has ended in disaster. You are seized, disciplined with the iron mace, and thrown outside the locked gates into the dust."
-                });
-                playCharacterDialogue({
-                  character: "guard",
-                  text: "Halt, intruder! Stop right where you stand! Beyond this Amar Singh Gate is restricted imperial ground! Answer immediately, or you will be seized!"
                 });
                 return { x: 50.0, y: 88.0 };
               } else {
@@ -1560,13 +1569,13 @@ export default function MughalGameScreen() {
           </div>
           <div className="text-[13px] font-black text-black leading-snug">
             {scene === "gate"
-              ? guardAttempts >= 1
-                ? "You have to find your companion. Walk through the passage to reach the Diwan-i-Khas."
-                : "You have to find your companion. Talk to the Royal Guard at the gate to gain entry into the palace."
+              ? hasGuardPermission || guardAttempts >= 1
+                ? "You have clearance from the guard! Walk through the passage to reach the Diwan-i-Khas marble building."
+                : "Talk to the Royal Guard at the gate to gain clearance into the palace."
               : scene === "passage"
-              ? "Walk up the curving ramp to enter the Diwan-i-Aam courtyard."
+              ? "Ascend the royal ramp passage to reach the Diwan-i-Khas marble building and Anguri Bagh."
               : scene === "courtyard"
-              ? "Search the royal courtyard for traces of your companion. Enter Diwan-i-Aam or the palace galleries."
+              ? "Go to the white marble Diwan-i-Khas building (top-left palace) across the Anguri Bagh garden."
               : scene === "interior"
               ? "Inspect the imperial throne dais, then proceed right to the Sheesh Mahal corridor."
               : scene === "sheesh_passage"
@@ -1742,6 +1751,28 @@ export default function MughalGameScreen() {
             style={{ imageRendering: "pixelated" }}
           />
         </div>
+      )}
+
+      {/* Mughal Royal Guards stationed in Anguri Bagh Courtyard */}
+      {scene === "courtyard" && (
+        <>
+          {/* Diwan-i-Khas Marble Colonnade Guard (Left) */}
+          <div className="absolute pointer-events-none z-10" style={{ left: '17%', top: '44%', transform: 'translate(-50%, -96%) scale(0.85)' }}>
+            <img src="/guard.png" alt="Diwan-i-Khas Guard" className="w-24 h-24 object-contain" style={{ imageRendering: "pixelated" }} />
+          </div>
+          {/* Diwan-i-Khas Marble Colonnade Guard (Right) */}
+          <div className="absolute pointer-events-none z-10" style={{ left: '31%', top: '44%', transform: 'translate(-50%, -96%) scale(0.85)' }}>
+            <img src="/guard.png" alt="Diwan-i-Khas Guard" className="w-24 h-24 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
+          </div>
+          {/* Palace Terrace Sentry (Center North) */}
+          <div className="absolute pointer-events-none z-10" style={{ left: '48%', top: '38%', transform: 'translate(-50%, -96%) scale(0.78)' }}>
+            <img src="/guard.png" alt="Terrace Sentry" className="w-20 h-20 object-contain" style={{ imageRendering: "pixelated" }} />
+          </div>
+          {/* Brown Palace Arcade Guard (Right) */}
+          <div className="absolute pointer-events-none z-10" style={{ left: '84%', top: '52%', transform: 'translate(-50%, -96%) scale(0.95)' }}>
+            <img src="/guard.png" alt="Palace Guard" className="w-26 h-26 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
+          </div>
+        </>
       )}
 
       {/* Mughal Traders in Taj Gate */}
@@ -2287,6 +2318,7 @@ export default function MughalGameScreen() {
             {/* Yellow / Gold Rounded CTA Button */}
             <button
               onClick={() => {
+                stopNarration();
                 setPunishmentState(prev => ({ ...prev, isOpen: false }));
                 setScene("gate");
                 setPlayerPos({ x: 50.0, y: 88.0 });
@@ -2299,8 +2331,8 @@ export default function MughalGameScreen() {
         </div>
       )}
 
-      {/* --- CINEMATIC NARRATOR SUBTITLES & AUDIO CONTROLS --- */}
-      <NarratorSubtitle />
+      {/* --- CINEMATIC NARRATOR SUBTITLES & AUDIO CONTROLS (Hidden during punishment screen) --- */}
+      {!punishmentState.isOpen && <NarratorSubtitle />}
     </div>
   );
 }
