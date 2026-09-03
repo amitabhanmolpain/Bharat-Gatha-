@@ -166,7 +166,7 @@ flowchart TD
 ```
 
 ### 5.1 Landing & Authentication Portal (`/`)
-* **File:** [`frontend/app/page.tsx`](file:///d:/sih_proj/Bharat-Gatha-/frontend/app/page.tsx)
+* **File:** [`frontend/app/page.tsx`](frontend/app/page.tsx)
 * **Features:**
   * **Dynamic Era Slideshow:** Cycles smoothly across 4 eras every 6 seconds: Pixel Art Overview (`/bg-pixel.jpg`), Indus Valley (`/bg-indus.jpg`), Mughal Empire (`/bg-mughal.jpg`), and British Era (`/bg-british.jpg`).
   * **Mughal Architectural Arch Card:** Backdrop-blur glassmorphic arch with gold borders, radial light glows, and custom typography.
@@ -174,9 +174,9 @@ flowchart TD
 
 ### 5.2 Traveler Dashboard & Campaign Hub (`/dashboard`)
 * **Files:** 
-  * [`frontend/app/dashboard/page.tsx`](file:///d:/sih_proj/Bharat-Gatha-/frontend/app/dashboard/page.tsx)
-  * [`frontend/app/dashboard/ClientLayout.tsx`](file:///d:/sih_proj/Bharat-Gatha-/frontend/app/dashboard/ClientLayout.tsx)
-  * [`frontend/app/dashboard/ThemeContext.tsx`](file:///d:/sih_proj/Bharat-Gatha-/frontend/app/dashboard/ThemeContext.tsx)
+  * [`frontend/app/dashboard/page.tsx`](frontend/app/dashboard/page.tsx)
+  * [`frontend/app/dashboard/ClientLayout.tsx`](frontend/app/dashboard/ClientLayout.tsx)
+  * [`frontend/app/dashboard/ThemeContext.tsx`](frontend/app/dashboard/ThemeContext.tsx)
 * **Features:**
   * **Persistent Sidebar:** Houses the Bharat Gatha emblem, navigation links, dark/light theme switch, and sign-out button.
   * **Campaign Grid:**
@@ -185,14 +185,14 @@ flowchart TD
     3. **Great Vijayanagara (Karnataka):** Status: *Coming Soon*.
 
 ### 5.3 Global Leaderboard & Ranking (`/dashboard/leaderboard`)
-* **File:** [`frontend/app/dashboard/leaderboard/page.tsx`](file:///d:/sih_proj/Bharat-Gatha-/frontend/app/dashboard/leaderboard/page.tsx)
+* **File:** [`frontend/app/dashboard/leaderboard/page.tsx`](frontend/app/dashboard/leaderboard/page.tsx)
 * **Features:**
   * Top players ranking with historical titles: *Emperor, General, Strategist, Warrior, Noble, Traveler*.
   * Gold (`#1`), Silver (`#2`), and Bronze (`#3`) podium visual badges.
   * Formatted XP scoring system.
 
 ### 5.4 Traveler Profile & Statistics (`/dashboard/profile`)
-* **File:** [`frontend/app/dashboard/profile/page.tsx`](file:///d:/sih_proj/Bharat-Gatha-/frontend/app/dashboard/profile/page.tsx)
+* **File:** [`frontend/app/dashboard/profile/page.tsx`](frontend/app/dashboard/profile/page.tsx)
 * **Features:**
   * Player Avatar, Level (Level 42), Title (*Emperor*), Global Rank (#1 Global).
   * XP progress bar with numerical tracker (`14,250 XP`).
@@ -203,7 +203,7 @@ flowchart TD
 
 ## 6. Interactive RPG Game Engine Deep Dive (`/play/mughal`)
 
-* **Primary Engine File:** [`frontend/app/play/mughal/page.tsx`](file:///d:/sih_proj/Bharat-Gatha-/frontend/app/play/mughal/page.tsx) (1,897 lines of TypeScript)
+* **Primary Engine File:** [`frontend/app/play/mughal/page.tsx`](frontend/app/play/mughal/page.tsx) (1,897 lines of TypeScript)
 
 ### 6.1 Continuous 60 FPS Game Loop & Input System
 The game implements a frame-synchronized loop using `requestAnimationFrame`:
@@ -358,56 +358,55 @@ graph TD
 | **15** | `red_fort_plaza` | **Red Fort Plaza** | Fortified courtyard connecting gate to covered bazaar | Top $\rightarrow$ `red_fort_interior`, Bottom $\rightarrow$ `red_fort_lahori` |
 | **16** | `red_fort_interior` | **Chatta Chowk (Covered Bazaar)** | Vaulted arcade exploration, campaign completion milestone | Bottom $\rightarrow$ `red_fort_plaza`, Completion Modal $\rightarrow$ `/dashboard` |
 
-### Great Rajputana Campaign — Stage 1: Chittorgarh Fort ("The Old Man's Board")
+### Great Rajputana Campaign — 4-Stage Complete Arc (`/play/rajasthan`)
 
+* **Engine:** [`frontend/app/play/rajasthan/page.tsx`](frontend/app/play/rajasthan/page.tsx)
+* **Storage Key:** `rajasthan_game_state`
+* **Central Climax:** *Bhangarh Fort ("Night of the Moonrise")*
+
+#### Stage 1: Chittorgarh Fort — "Pride of Rajputana"
 | # | Scene Identifier | Location Name | Key Interactions & Mechanics | Exit / Transition Paths |
 |---|---|---|---|---|
-| **1** | `ram_pol` | **Ram Pol (Outer Gate)** | Dawn light, introductory manuscript narrative, movement teaching | Top Arch $\rightarrow$ `inner_courtyard` |
-| **2** | `inner_courtyard` | **Inner Courtyard** | Buzurg Chacha NPC, interactive **Chaupar Mini-Game** (turn-based cowrie shell roll) | Top-Right Stairs $\rightarrow$ `vijay_stambh`, Bottom $\rightarrow$ `ram_pol` |
-| **3** | `vijay_stambh` | **Vijay Stambh (Tower of Victory)** | Weathered panel carving restoration puzzle, tower summit view modal, Caretaker Panditji NPC | Right Path $\rightarrow$ `jauhar_kund`, Bottom $\rightarrow$ `inner_courtyard` |
-| **4** | `jauhar_kund` | **Jauhar Kund Sanctuary** | **Narrative-only** solemn historical cutscene (respectful non-gamified experience) | Stage 1 Complete $\rightarrow$ `/dashboard` |
+| **1** | `ram_pol` | **Ram Pol (Fort Entrance)** | Dawn light, grand arched entrance, movement teaching | Top Arch $\rightarrow$ `inner_courtyard` |
+| **2** | `inner_courtyard` | **Inner Courtyard & Chaupar** | Buzurg Chacha NPC, interactive **Chaupar Mini-Game** (turn-based cowrie shell roll) | Top-Right Stairs $\rightarrow$ `courtyard_passage`, Bottom Threshold $\rightarrow$ `ram_pol` |
+| **3** | `courtyard_passage`| **Fortress Passageway** | Narrow stone battlements passageway | Top Arch $\rightarrow$ `vijay_stambh`, Bottom Door $\rightarrow$ `inner_courtyard` |
+| **4** | `vijay_stambh` | **Vijay Stambh Plaza** | 9-story Tower of Victory, entrance steps to interior | Step $\rightarrow$ `vijay_stambh_interior`, Right Path $\rightarrow$ `jauhar_passage`, Bottom Stairs $\rightarrow$ `courtyard_passage` |
+| **5** | `vijay_stambh_interior` | **Tower Interior Chamber** | Carved sandstone chamber & spiral stairway view | Bottom Stairs $\rightarrow$ `vijay_stambh` |
+| **6** | `jauhar_passage` | **Passage of Broken Walls** | Weathered stone archway corridor | Top Arch $\rightarrow$ `jauhar_kund`, Bottom Door $\rightarrow$ `vijay_stambh` |
+| **7** | `jauhar_kund` | **Sacred Jauhar Kund** | Historic water reservoir at dusk, sacred solemn atmosphere | Left Path $\rightarrow$ `desert_outskirts`, Pavilion Stairs $\rightarrow$ `jauhar_passage` |
+| **8** | `desert_outskirts` | **Thar Desert Outskirts** | Royal Desert Camel caravan, golden dunes | Board Camel $\rightarrow$ Stage 2 `kumbhalgarh_gate` |
 
-### Great Rajputana Campaign — Stage 2: Kumbhalgarh Fort ("The Wall That Never Ends")
-
+#### Stage 2: Kumbhalgarh Fort — "The Great Wall & Badal Mahal"
 | # | Scene Identifier | Location Name | Key Interactions & Mechanics | Exit / Transition Paths |
 |---|---|---|---|---|
-| **1** | `wall_approach` | **Approach to Great Wall** | 36km continuous wall view, Aravalli landscape, initial narrative | Top Arch $\rightarrow$ `zigzag_gates` |
-| **2** | `zigzag_gates` | **Zigzag Gates (Wall Maze)** | Winding stone gate maze, Gate Guard Bheem NPC, defensive architecture lore | Top-Right Arch $\rightarrow$ `soldiers_quarters`, Bottom $\rightarrow$ `wall_approach` |
-| **3** | `soldiers_quarters` | **Soldiers' Quarters** | Mewar barracks courtyard, interactive **Lattu Mini-Game** (spinning top timing challenge) | Top Arch $\rightarrow$ `badal_mahal`, Bottom $\rightarrow$ `zigzag_gates` |
-| **4** | `badal_mahal` | **Badal Mahal (Cloud Palace)** | **Fresco Pigment Restoration Puzzle** (Geru Red, Neel Blue, Haldi Yellow) | Right Door $\rightarrow$ `pratap_birthplace`, Bottom $\rightarrow$ `soldiers_quarters` |
-| **5** | `pratap_birthplace` | **Maharana Pratap Birthplace** | **Narrative-only** solemn cutscene (1540 CE historical birth chamber) | Stage 2 Complete $\rightarrow$ `/dashboard` |
+| **1** | `kumbhalgarh_gate` | **Hanuman Pol Gate** | Imposing bastion entrance of Kumbhalgarh | Left Arch $\rightarrow$ `kumbhalgarh_interior_stairs` |
+| **2** | `kumbhalgarh_interior_stairs` | **Bastion & Grand Staircase** | Massive carved bastion hall, grand stone staircase | Top Stairs $\rightarrow$ `kumbhalgarh_great_wall`, Left Door $\rightarrow$ `kumbhalgarh_gate` |
+| **3** | `kumbhalgarh_great_wall` | **The Great Wall of India** | 36km continuous rampart walkway with mountain views | Far Rampart End $\rightarrow$ `kumbhalgarh_zigzag_gates`, Bottom Stairs $\rightarrow$ `kumbhalgarh_interior_stairs` |
+| **4** | `kumbhalgarh_zigzag_gates` | **Defensive Zigzag Gates** | Fortified stone incline bridge & defensive maze | Upper Gate $\rightarrow$ `badal_mahal_courtyard`, Lower Ramp $\rightarrow$ `kumbhalgarh_great_wall` |
+| **5** | `badal_mahal_courtyard` | **Badal Mahal Courtyard** | Royal palace courtyard of the Palace of the Clouds | Colonnade Arch $\rightarrow$ `badal_mahal_interior`, Bottom Threshold $\rightarrow$ `kumbhalgarh_zigzag_gates` |
+| **6** | `badal_mahal_interior` | **Birthplace of Maharana Pratap** | 19th-century elephant battle frescoes & white plaster chambers | Left Dark Arch $\rightarrow$ `badal_mahal_terrace`, Right Door $\rightarrow$ `badal_mahal_courtyard` |
+| **7** | `badal_mahal_terrace` | **Cloud Terrace & Royal Dome** | Highest peak above the clouds, Royal Elephant Caravan | Mount Royal Elephant $\rightarrow$ Stage 3 `kuldhara_gate` |
 
-### Great Rajputana Campaign — Stage 3: Jaigarh Fort & Jal Mahal ("The Cannon and the Lake Palace")
-
+#### Stage 3: Kuldhara Ghost Village — "83 Villages, One Night"
 | # | Scene Identifier | Location Name | Key Interactions & Mechanics | Exit / Transition Paths |
 |---|---|---|---|---|
-| **1** | `jaigarh_entry` | **Jaigarh Fort Entry** | Aravalli hill fortress view, armory manuscript narrative | Top Arch $\rightarrow$ `jaivana_courtyard` |
-| **2** | `jaivana_courtyard` | **Jaivana Cannon Courtyard** | 50-ton Jaivana Cannon, Master Armorer Ustad NPC, **Cannon Calibration Trajectory Puzzle** (45° angle, 80 kg charge) | Top Arch $\rightarrow$ `jal_mahal`, Bottom $\rightarrow$ `jaigarh_entry` |
-| **3** | `jal_mahal` | **Jal Mahal (Lake Palace)** | Man Sagar Lake water palace view, **Hydraulic Sluice Water Level Puzzle** | Right Arch $\rightarrow$ `top_chhatri`, Bottom $\rightarrow$ `jaivana_courtyard` |
-| **4** | `top_chhatri` | **Rooftop Chhatri Pavilion** | **Narrative-only** sunset reflection cutscene (18th-century water palace architecture) | Stage 3 Complete $\rightarrow$ `/dashboard` |
+| **1** | `kuldhara_gate` | **Kuldhara Village Gate** | Arriving via Royal Elephant, Inscribed pillar marker `"83"` (84 Paliwal villages context) | Top Path $\rightarrow$ `chiefs_house` |
+| **2** | `chiefs_house` | **Village Chief's Haveli** | Ruined haveli interior, broken mirror, **Clue 1: Bridal Wedding Ornament** (Salim Singh forced marriage demand) | Top Door $\rightarrow$ `treasury`, Bottom $\rightarrow$ `kuldhara_gate` |
+| **3** | `treasury` | **Grain Merchant Treasury** | Grain sacks, stone urns, **Clue 2: Torn Tax Ledger** (Oppressive extortion & economic ruin) | Right Path $\rightarrow$ `well`, Bottom $\rightarrow$ `chiefs_house` |
+| **4** | `well` | **Village Stepwell (Baori)** | Strict physical boundaries preventing walking on water/floating, **Clue 3: Intact Water Pots & Supplies** (Coordinated overnight departure) | Right Path $\rightarrow$ `village_square`, Bottom $\rightarrow$ `treasury` |
+| **5** | `village_square` | **Village Square (Deduction)** | Central Memorial Chhatri, **Evidence Matching Deduction Puzzle** (Ornament $\rightarrow$ Marriage, Ledger $\rightarrow$ Extortion, Water Pots $\rightarrow$ Evacuation) | Left Path $\rightarrow$ `well`, Nightfall Caravan $\rightarrow$ Stage 4 `bhangarh_gate` |
 
-### Great Rajputana Campaign — Stage 4: Kuldhara Ghost Village ("83 Villagers, One Night")
-
+#### Stage 4: Bhangarh Fort — "Night of the Moonrise" (Final Stage)
 | # | Scene Identifier | Location Name | Key Interactions & Mechanics | Exit / Transition Paths |
 |---|---|---|---|---|
-| **1** | `kuldhara_gate` | **Kuldhara Village Gate** | 4-minute investigation timer start, Inscribed pillar marker `"83"` (83 Paliwal villages context) | Top Arch $\rightarrow$ `chiefs_house` |
-| **2** | `chiefs_house` | **Chief's Haveli** | Ruined haveli interior, broken mirror, wedding ornament, voice echo (Minister Salim Singh forced marriage demand) | Top Door $\rightarrow$ `treasury`, Bottom $\rightarrow$ `kuldhara_gate` |
-| **3** | `treasury` | **Grain Merchant Treasury** | Grain sacks, merchant storage, torn tax ledger (Salim Singh extortion evidence) | Right Path $\rightarrow$ `well`, Bottom $\rightarrow$ `chiefs_house` |
-| **4** | `well` | **Village Stepwell** | Intact clay water pots, hidden caches, archaeological proof of coordinated overnight departure | Right Path $\rightarrow$ `village_square`, Bottom $\rightarrow$ `treasury` |
-| **5** | `village_square` | **Village Square (Deduction)** | **Evidence Matching Deduction Puzzle** (Ornament $\rightarrow$ Forced Marriage, Ledger $\rightarrow$ Extortion, Water Pots $\rightarrow$ Coordinated Evacuation). Timeout retry preserves clues. | Stage 4 Complete $\rightarrow$ Stage 5 (Bhangarh) / `/dashboard` |
-
-### Great Rajputana Campaign — Stage 5: Bhangarh Fort ("Night of the Moonrise")
-
-| # | Scene Identifier | Location Name | Key Interactions & Mechanics | Exit / Transition Paths |
-|---|---|---|---|---|
-| **1** | `bhangarh_gate` | **Bhangarh Main Gate** | Nighttime moonlight atmosphere, torchlight glow, 3-minute moonrise countdown start | Top Arch $\rightarrow$ `gopinath_temple` |
-| **2** | `gopinath_temple` | **Gopinath Temple Sanctuary** | Torchlight quick restoration of faded wall painting, verse fragment clue pointing to palace ruins | Top Arch $\rightarrow$ `palace_ruins`, Bottom $\rightarrow$ `bhangarh_gate` |
-| **3** | `palace_ruins` | **Bhangarh Palace Ruins** | Searchable ruins spots, ambient ghost silhouettes, glowing Hanuman Chalisa manuscript search | SUCCESS $\rightarrow$ Dawn cutscene $\rightarrow$ Jaisalmer / `/dashboard` |
-| **4** | `bhangarh_chase` | **Shadow Chase (Failure Path)** | Non-combat obstacle dodge run back to entrance gate. Resets timer on exit while retaining temple clue mercy. | Bottom Gate $\rightarrow$ `bhangarh_gate` (Retry with mercy) |
+| **1** | `bhangarh_gate` | **Bhangarh Main Gate** | Arrival at dusk, Moonrise progression timer start, **Puzzle 1: Gate Inscription Chronology Decoding** (1573 CE Foundation) $\rightarrow$ **Clue 1** | Top Arch $\rightarrow$ `gopinath_temple` |
+| **2** | `gopinath_temple` | **Gopinath Temple Sanctuary** | Weathered Nagara mandapa, **Puzzle 2: Torchlight Reveal & Sacred Motif Decoding** (Gaja-Lakshmi, Kalasa, Kirthimukha) $\rightarrow$ **Clue 2** | Top-Right Path $\rightarrow$ `palace_ruins`, Bottom $\rightarrow$ `bhangarh_gate` |
+| **3** | `palace_ruins` | **7-Tiered Royal Palace Ruins** | Multi-point investigation: **Puzzle 3: Famine Stratum Archaeological Trail** (1783 CE Chalisa Famine Layer) $\rightarrow$ **Clue 3**; **Puzzle 4: Folklore vs Evidence Classifier** $\rightarrow$ **Clue 4**; **Puzzle 5: Final Evidence Board Synthesis** $\rightarrow$ Grand Campaign Completion Modal (+2500 XP) | Bottom $\rightarrow$ `gopinath_temple`, Hub $\rightarrow$ `/dashboard` |
+| **4** | `bhangarh_chase` | **Misty Shadow Route (Retry Flow)** | Non-combat misty ruins escape corridor if moon timer expires. Preserves all clues, resets timer upon gate return with mercy. | Gate Portal $\rightarrow$ `bhangarh_gate` |
 
 ### Great Vijayanagara Empire Campaign — 4-Stage Complete Arc (`/play/vijayanagara`)
 
-* **Engine:** [`frontend/app/play/vijayanagara/page.tsx`](file:///d:/sih_proj/Bharat-Gatha-/frontend/app/play/vijayanagara/page.tsx)
+* **Engine:** [`frontend/app/play/vijayanagara/page.tsx`](frontend/app/play/vijayanagara/page.tsx)
 * **Storage Key:** `vijayanagara_save_v1`
 * **Central Mystery:** *The Missing Merchant's Master Ledger (Ramayya's Archive)*
 
