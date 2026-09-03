@@ -138,6 +138,7 @@ export default function MughalGameScreen() {
   const [jollySpeechText, setJollySpeechText] = useState<string>("");
   const [jollyOptions, setJollyOptions] = useState<Array<{ id: number; text: string }>>([]);
   const [hasTalkedToJolly, setHasTalkedToJolly] = useState<boolean>(false);
+  const [heardClueScenes, setHeardClueScenes] = useState<string[]>([]);
 
   const [showMausoleumModal, setShowMausoleumModal] = useState(false);
   const [isMausoleumExplored, setIsMausoleumExplored] = useState(false);
@@ -422,6 +423,7 @@ export default function MughalGameScreen() {
       setIsArchaeologistTalked(false);
       setIsTransitioning(false);
       setHasTalkedToJolly(false);
+      setHeardClueScenes([]);
       hasPlayedIntroNarrationRef.current = false;
       hasPlayedInteriorNarrationRef.current = false;
       hasPlayedSheeshNarrationRef.current = false;
@@ -732,10 +734,11 @@ export default function MughalGameScreen() {
         if (curScene === "taj_mehtab_bagh" && Math.hypot(pos.x - 45.0, pos.y - 72.0) < 14.0) {
           discoverClue("mehtab_bagh_journal");
           setIsArchaeologistTalked(true);
-          setShowArchaeologistDialogue((prev) => !prev);
+          setShowArchaeologistDialogue(true);
           playCharacterDialogue({
             character: "archaeologist",
-            text: "Greetings! I am the caretaker archaeologist here. You are standing on the ruins of Mehtab Bagh's pond foundations."
+            text: "Greetings! I am the caretaker archaeologist here. You are standing on the ruins of Mehtab Bagh's pond foundations. See these scattered dark stone blocks? They inspired the legend that Shah Jahan wanted to build a Black Taj out of black marble across the river as his own tomb. However, our excavations show these are actually part of a garden pool. The Black Taj remains a beautiful legend. Go to the bottom-right, a royal carriage is waiting to carry you to Delhi!",
+            audioUrl: "/archaeologist_mehtab_bagh.wav"
           });
         }
         if (curScene === "red_fort_lahori" && pos.y <= 68.0 && pos.x >= 44.0 && pos.x <= 56.0) {
@@ -1458,8 +1461,9 @@ export default function MughalGameScreen() {
           (scene === "khas_mahal" && isNearKhasFountain && isKhasClueNeeded) ||
           (scene === "red_fort_diwani_khas" && isNearDiwanIKhas && !showCampaignComplete);
 
-        // Mode 2: 💥 Crazy Shaking (Important historical clue or quest nearby - only if unsolved)
-        const isShaking = !isGlowing && (
+        // Mode 2: 💥 Crazy Shaking (Stops once clue is heard or solved)
+        const hasHeardThisClue = heardClueScenes.includes(scene);
+        const isShaking = !isGlowing && !hasHeardThisClue && (
           (isNearGuard && isGuardClueNeeded) ||
           (isNearThrone && isThroneClueNeeded) ||
           (isNearMirrorFountain && isMirrorClueNeeded) ||
@@ -1469,7 +1473,6 @@ export default function MughalGameScreen() {
           (isNearPool && isSymmetryClueNeeded) ||
           (isNearCenotaphs && isCenotaphClueNeeded) ||
           (isNearArchaeologist && isArchaeologistClueNeeded) ||
-          (isNearCarriage && scene === "taj_mehtab_bagh" && isArchaeologistTalked) ||
           (isNearLahoriGate && scene === "red_fort_lahori")
         );
 
@@ -1556,6 +1559,9 @@ export default function MughalGameScreen() {
               setJollySpeechText(speechText);
               setJollyOptions(customOptions);
               setShowJollyDialogue(true);
+              if (isShaking) {
+                setHeardClueScenes((prev) => [...prev, scene]);
+              }
               playCharacterDialogue({
                 character: "jolly",
                 text: speechText,
@@ -1563,7 +1569,10 @@ export default function MughalGameScreen() {
                   ? "/jolly_taj_gate_traders.wav"
                   : (scene === "khas_mahal" && isNearKhasFountain)
                   ? "/jolly_khas_mahal_gold.wav"
-                  : undefined
+                  : undefined,
+                onEnd: () => {
+                  setHeardClueScenes((prev) => [...prev, scene]);
+                }
               });
               if (!hasTalkedToJolly) {
                 setHasTalkedToJolly(true);
@@ -2279,10 +2288,13 @@ export default function MughalGameScreen() {
             transform: `translate(-50%, -96%) scale(1.15)`,
           }}
           onClick={() => {
-            setShowArchaeologistDialogue((prev) => !prev);
+            discoverClue("mehtab_bagh_journal");
+            setIsArchaeologistTalked(true);
+            setShowArchaeologistDialogue(true);
             playCharacterDialogue({
               character: "archaeologist",
-              text: "Greetings! I am the caretaker archaeologist here. You are standing on the ruins of Mehtab Bagh's pond foundations."
+              text: "Greetings! I am the caretaker archaeologist here. You are standing on the ruins of Mehtab Bagh's pond foundations. See these scattered dark stone blocks? They inspired the legend that Shah Jahan wanted to build a Black Taj out of black marble across the river as his own tomb. However, our excavations show these are actually part of a garden pool. The Black Taj remains a beautiful legend. Go to the bottom-right, a royal carriage is waiting to carry you to Delhi!",
+              audioUrl: "/archaeologist_mehtab_bagh.wav"
             });
           }}
         >

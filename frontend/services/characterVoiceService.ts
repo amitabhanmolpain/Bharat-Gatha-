@@ -132,6 +132,11 @@ class CharacterVoiceManager {
       }
     }
 
+    // 4. Caretaker Archaeologist Pre-recorded Files
+    if (char.includes("archaeologist") || char.includes("caretaker")) {
+      return "/archaeologist_mehtab_bagh.wav";
+    }
+
     return null;
   }
 
