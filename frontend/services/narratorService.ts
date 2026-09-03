@@ -289,6 +289,31 @@ class NarratorManager {
           return audio;
         }
 
+        if (
+          playErr?.name === "NotSupportedError" ||
+          playErr?.message?.includes("NotSupportedError") ||
+          playErr?.message?.includes("supported source")
+        ) {
+          if (typeof window !== "undefined" && "speechSynthesis" in window) {
+            try {
+              window.speechSynthesis.cancel();
+              const utterance = new SpeechSynthesisUtterance(trimmed);
+              utterance.rate = 0.88;
+              utterance.pitch = 0.95;
+              utterance.onstart = () => {
+                this.updateState({ isPlaying: true, isLoading: false });
+                options?.onStart?.();
+              };
+              utterance.onend = () => {
+                this.updateState({ isPlaying: false, isLoading: false, currentText: null });
+                options?.onEnd?.();
+              };
+              window.speechSynthesis.speak(utterance);
+            } catch (speechErr) {}
+          }
+          return null;
+        }
+
         throw playErr;
       }
 
@@ -297,9 +322,11 @@ class NarratorManager {
       if (
         err?.name !== "NotAllowedError" &&
         err?.name !== "AbortError" &&
+        err?.name !== "NotSupportedError" &&
+        !err?.message?.includes("supported source") &&
         !err?.message?.includes("interrupted")
       ) {
-        console.error("Narration playback error:", err);
+        console.warn("Narration playback warning:", err);
       }
       this.updateState({
         isPlaying: false,

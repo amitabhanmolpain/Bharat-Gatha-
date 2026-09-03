@@ -111,6 +111,9 @@ class CharacterVoiceManager {
 
     // 2. Jolly Local Canonical Pre-recorded Files
     if (char === "jolly" || char.includes("genie")) {
+      if (lower.includes("golden domes") || lower.includes("bittersweet truth") || lower.includes("pure, solid gold") || lower.includes("shadow of our lost mughal splendour")) {
+        return "/jolly_khas_mahal_gold.wav";
+      }
       if (lower.includes("jolly bhai") && lower.includes("born many centuries") && lower.includes("dancing like a madman")) {
         return "/jolly_intro.wav";
       }
@@ -171,8 +174,9 @@ class CharacterVoiceManager {
 
             if (response.ok) {
               const data = await response.json();
-              if (data.audio_base64) {
-                cachedB64 = data.audio_base64;
+              const b64Data = data.audio || data.audio_base64;
+              if (b64Data) {
+                cachedB64 = b64Data;
                 this.audioCache.set(lookupKey, cachedB64!);
               }
             }
@@ -253,6 +257,25 @@ class CharacterVoiceManager {
             error: null,
           });
         }
+        // Fallback to SpeechSynthesis if audio element cannot load the source
+        if (typeof window !== "undefined" && "speechSynthesis" in window) {
+          try {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(trimmed);
+            utterance.rate = character.toLowerCase() === "guard" ? 1.05 : 0.95;
+            utterance.pitch = character.toLowerCase() === "guard" ? 0.8 : 1.1;
+            utterance.onstart = () => {
+              this.updateState({ isPlaying: true, isLoading: false });
+              onStart?.();
+            };
+            utterance.onend = () => {
+              this.updateState({ isPlaying: false, isLoading: false, activeCharacter: null, currentText: null });
+              onEnd?.();
+            };
+            window.speechSynthesis.speak(utterance);
+            return;
+          } catch (speechErr) {}
+        }
         onError?.(e);
       };
 
@@ -287,6 +310,31 @@ class CharacterVoiceManager {
           return audio;
         }
 
+        if (
+          playErr?.name === "NotSupportedError" ||
+          playErr?.message?.includes("NotSupportedError") ||
+          playErr?.message?.includes("supported source")
+        ) {
+          if (typeof window !== "undefined" && "speechSynthesis" in window) {
+            try {
+              window.speechSynthesis.cancel();
+              const utterance = new SpeechSynthesisUtterance(trimmed);
+              utterance.rate = character.toLowerCase() === "guard" ? 1.05 : 0.95;
+              utterance.pitch = character.toLowerCase() === "guard" ? 0.8 : 1.1;
+              utterance.onstart = () => {
+                this.updateState({ isPlaying: true, isLoading: false });
+                onStart?.();
+              };
+              utterance.onend = () => {
+                this.updateState({ isPlaying: false, isLoading: false, activeCharacter: null, currentText: null });
+                onEnd?.();
+              };
+              window.speechSynthesis.speak(utterance);
+            } catch (speechErr) {}
+          }
+          return null;
+        }
+
         throw playErr;
       }
 
@@ -295,9 +343,11 @@ class CharacterVoiceManager {
       if (
         err?.name !== "NotAllowedError" &&
         err?.name !== "AbortError" &&
+        err?.name !== "NotSupportedError" &&
+        !err?.message?.includes("supported source") &&
         !err?.message?.includes("interrupted")
       ) {
-        console.error("Character dialogue playback error:", err);
+        console.warn("Character dialogue playback warning:", err);
       }
       this.updateState({
         isPlaying: false,

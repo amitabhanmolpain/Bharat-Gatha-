@@ -745,7 +745,7 @@ export default function MughalGameScreen() {
             const maxX = 58.0 + rampProgress * 4.0;
 
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
-            const nextY = Math.max(71.0, Math.min(98.0, prev.y + dy));
+            const nextY = Math.max(71.0, Math.min(92.0, prev.y + dy));
 
             // If player moves up towards the archway without speaking to the guard
             if (nextY <= 73.8) {
@@ -779,10 +779,6 @@ export default function MughalGameScreen() {
                   setIsTransitioning(false);
                 }, 400);
               }
-            }
-
-            if (nextY >= 96.0) {
-              startBoatTransition("taj_gate", { x: 50.0, y: 88.0 }, 5000);
             }
 
             return { x: nextX, y: nextY };
@@ -1266,7 +1262,7 @@ export default function MughalGameScreen() {
   };
 
   const getTransitionLabel = () => {
-    if (scene === "gate") return playerPos.y >= 90 ? "Traveling to the Taj Mahal Great Gate..." : "Entering Inner Ramp Passage...";
+    if (scene === "gate") return "Entering Inner Ramp Passage...";
     if (scene === "passage") return playerPos.y <= 62 ? "Entering Diwan-i-Aam & Anguri Bagh..." : "Returning to Outer Gate...";
     if (scene === "courtyard") {
       if (playerPos.x >= 75) return "Entering Brown Palace Hallway...";
@@ -1346,7 +1342,7 @@ export default function MughalGameScreen() {
           }}
         >
           {/* Guard Proximity Indicator */}
-          {isNearGuard && !showDialogue && (
+          {isNearGuard && !showDialogue && !hasGuardPermission && !discoveredClueIds.includes("guard_permit") && (
             <div className="animate-bounce mb-2 bg-[#fff9ea] border-2 border-black rounded-lg px-2.5 py-1 shadow-[2px_2px_0_0_rgba(0,0,0,1)] text-[11px] font-bold text-black flex items-center gap-1.5 whitespace-nowrap">
               <span className="bg-amber-400 border border-black rounded px-1 text-[9px]">E</span>
               Talk to Royal Guard
@@ -1363,47 +1359,125 @@ export default function MughalGameScreen() {
         </div>
       )}
 
-      {/* --- JOLLY BHAI (GENIE) COMPANION FOLLOWER --- */}
-      <div
-        className="absolute z-20 pointer-events-auto cursor-pointer group transition-all duration-700 ease-out"
-        onClick={() => {
-          const speechText = !hasTalkedToJolly
-            ? "Ah! Hello, traveller! I am Jolly Bhai. I was born many centuries ago and have witnessed great wars, powerful kingdoms, and the changing of history. But remember... only you can see me. I will guide you through this journey. And whenever you see me shaking and dancing like a madman... come quickly! It means I have something very important to tell you!"
-            : "Mere aaka, how can I help you?";
+      {/* --- JOLLY BHAI (GENIE) COMPANION FOLLOWER WITH 3 DYNAMIC MODES --- */}
+      {(() => {
+        const isGuardClueNeeded = !hasGuardPermission && !discoveredClueIds.includes("guard_permit");
+        const isThroneClueNeeded = !isPietraDuraSolved && !discoveredClueIds.includes("pietra_dura_seal");
+        const isMirrorClueNeeded = !isSheeshMirrorSolved && !discoveredClueIds.includes("sheesh_mirror_shard");
+        const isKhasClueNeeded = !discoveredClueIds.includes("khas_mahal_gem");
+        const isCalligraphyClueNeeded = !isCalligraphySolved && !discoveredClueIds.includes("calligraphy_scroll");
+        const isSymmetryClueNeeded = !isSymmetrySolved && !discoveredClueIds.includes("charbagh_layout");
+        const isCenotaphClueNeeded = !isMausoleumExplored && !discoveredClueIds.includes("cenotaph_rubbing");
+        const isArchaeologistClueNeeded = !isArchaeologistTalked && !discoveredClueIds.includes("mehtab_bagh_journal");
 
-          setShowJollyDialogue(true);
-          playCharacterDialogue({
-            character: "jolly",
-            text: speechText
-          });
-          if (!hasTalkedToJolly) {
-            setHasTalkedToJolly(true);
-          }
-        }}
-        style={{
-          left: `${genieX}%`,
-          top: `${genieY}%`,
-          transform: 'translate(-50%, -50%)',
-        }}
-        title="Click to talk to Jolly Bhai (AI Genie Guide)"
-      >
-        <div className="relative animate-bounce" style={{ animationDuration: '3.5s' }}>
-          <img
-            src="/genie_rajasthani_transparent.png"
-            alt="Jolly Bhai Genie Companion"
-            className="w-24 h-24 md:w-28 md:h-28 object-contain transition-transform group-hover:scale-110 drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]"
-            style={{
-              imageRendering: "pixelated",
-              transform: facingLeft ? "scaleX(1)" : "scaleX(-1)",
+        // Mode 1: ✨ Glowing (Major story event / hidden secret)
+        const isGlowing = 
+          (scene === "gate" && isGuardClueNeeded && guardAttempts >= 1) ||
+          (scene === "interior" && !isPietraDuraSolved) ||
+          (scene === "sheesh_mahal" && !isSheeshMirrorSolved) ||
+          (scene === "khas_mahal" && isKhasClueNeeded) ||
+          (scene === "taj_gate" && !isCalligraphySolved) ||
+          (scene === "taj_charbagh" && !isSymmetrySolved) ||
+          (scene === "taj_mausoleum" && !isMausoleumExplored) ||
+          (scene === "taj_mehtab_bagh" && !isArchaeologistTalked) ||
+          (scene === "red_fort_diwani_khas" && !showCampaignComplete);
+
+        // Mode 2: 💥 Crazy Shaking (Important historical clue or quest information nearby - only if unsolved)
+        const isShaking = !isGlowing && (
+          (isNearGuard && isGuardClueNeeded) ||
+          (isNearThrone && isThroneClueNeeded) ||
+          (isNearMirrorFountain && isMirrorClueNeeded) ||
+          (isNearKhasFountain && isKhasClueNeeded) ||
+          (isNearCalligraphy && isCalligraphyClueNeeded) ||
+          (isNearPool && isSymmetryClueNeeded) ||
+          (isNearTajPishtaq && !isMausoleumExplored) ||
+          (isNearCenotaphs && isCenotaphClueNeeded) ||
+          (isNearArchaeologist && isArchaeologistClueNeeded) ||
+          (isNearCarriage && scene === "taj_mehtab_bagh" && isArchaeologistTalked) ||
+          (isNearLahoriGate && scene === "red_fort_lahori") ||
+          (isNearDiwanIKhas && scene === "red_fort_diwani_khas" && !showCampaignComplete)
+        );
+
+        // Mode 3: 🧞 Normal (Optional story / lore inquiry)
+        const mode = isGlowing ? "glowing" : isShaking ? "shaking" : "normal";
+
+        return (
+          <div
+            className="absolute z-20 pointer-events-auto cursor-pointer group transition-all duration-700 ease-out"
+            onClick={() => {
+              let speechText = "";
+              if (!hasTalkedToJolly) {
+                speechText = "Ah! Hello, traveller! I am Jolly Bhai. I was born many centuries ago and have witnessed great wars, powerful kingdoms, and the changing of history. But remember... only you can see me. I will guide you through this journey. And whenever you see me shaking and dancing like a madman... come quickly! It means I have something very important to tell you!";
+              } else if (isGlowing) {
+                if (scene === "gate") speechText = "Mere aaka! Look at the sentries closely! Speak with the Royal Guard and tell him you are here to perform your court talent!";
+                else if (scene === "interior") speechText = "✨ Secret of the Throne: The Emperor has stepped away for prayers. Complete the sacred floral Pietra Dura marble mosaic on the dais!";
+                else if (scene === "sheesh_mahal") speechText = "✨ Architectural Mystery: Align the three optical mirrors so the candle flame forms the eight-pointed cosmic star on the dome ceiling!";
+                else if (scene === "khas_mahal") speechText = "Mere aaka, let me share a bittersweet truth with you... The golden domes you see beside us were once layered in pure, solid gold and inlaid with precious gems. Tragically, the gold was stripped away during colonial rule in the 18th century, and over time, tourists stole the remaining stones. What remains today is only a quiet shadow of our lost Mughal splendour.";
+                else if (scene === "taj_gate") speechText = "✨ Sacred Inscription: The Great Gate bears Quranic Thuluth calligraphy. Complete the sacred verse of peace!";
+                else if (scene === "taj_charbagh") speechText = "✨ Persian Symmetry: All four quadrants of paradise water channels must be activated symmetrically!";
+                else if (scene === "taj_mausoleum") speechText = "✨ Hidden Truth: The decorated cenotaphs above are for viewing. The actual quiet graves lie in the lower crypt below!";
+                else if (scene === "taj_mehtab_bagh") speechText = "✨ The Legend: The Black Taj is a myth born from the dark pool stones of Mehtab Bagh. Board the royal carriage to Delhi!";
+                else speechText = "✨ Major Event Unfolding: We stand at the threshold of imperial history!";
+              } else if (isShaking) {
+                speechText = "💥 Quick, mere aaka! A vital historical clue is right next to you! Press [E] to investigate before the moment slips away!";
+              } else {
+                speechText = "Mere aaka, how can I help you? Ask me anything about Emperor Shah Jahan, the Taj Mahal, or Mughal architecture!";
+              }
+
+              setShowJollyDialogue(true);
+              playCharacterDialogue({
+                character: "jolly",
+                text: speechText,
+                audioUrl: scene === "khas_mahal" ? "/jolly_khas_mahal_gold.wav" : undefined
+              });
+              if (!hasTalkedToJolly) {
+                setHasTalkedToJolly(true);
+              }
             }}
-          />
-          {!showJollyDialogue && (
-            <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded px-2 py-0.5 shadow-[2px_2px_0_0_rgba(0,0,0,1)] text-[10px] font-black text-black whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-              Ask Jolly Bhai 🧞
+            style={{
+              left: `${genieX}%`,
+              top: `${genieY}%`,
+              transform: 'translate(-50%, -50%)',
+            }}
+            title={
+              mode === "glowing"
+                ? "✨ Jolly Bhai is GLOWING! (Major Story Secret / Key Event)"
+                : mode === "shaking"
+                ? "💥 Jolly Bhai is SHAKING! (Crucial Clue Nearby)"
+                : "🧞 Jolly Bhai (Genie Guide - Click for Story)"
+            }
+          >
+            <div className={`relative ${mode === "shaking" ? "animate-crazy-shake" : mode === "glowing" ? "animate-celestial-glow" : "animate-bounce"}`} style={mode === "normal" ? { animationDuration: '3.5s' } : undefined}>
+              <img
+                src="/genie_rajasthani_transparent.png"
+                alt="Jolly Bhai Genie Companion"
+                className={`w-24 h-24 md:w-28 md:h-28 object-contain transition-all group-hover:scale-110 drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)] ${
+                  mode === "glowing" ? "filter drop-shadow-[0_0_25px_rgba(251,191,36,1)] brightness-125" : ""
+                }`}
+                style={{
+                  imageRendering: "pixelated",
+                  transform: facingLeft ? "scaleX(1)" : "scaleX(-1)",
+                }}
+              />
+              
+              {/* Dynamic Mode Badge Floating Above Genie */}
+              {!showJollyDialogue && (
+                <div className={`absolute -top-3 left-1/2 -translate-x-1/2 border-2 border-black rounded-full px-2.5 py-0.5 shadow-[2px_2px_0_0_rgba(0,0,0,1)] text-[9.5px] font-black whitespace-nowrap transition-all flex items-center gap-1 ${
+                  mode === "glowing"
+                    ? "bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400 text-black animate-pulse opacity-100 ring-2 ring-amber-400"
+                    : mode === "shaking"
+                    ? "bg-red-500 text-white animate-bounce opacity-100"
+                    : "bg-[#fff9ea] text-black opacity-0 group-hover:opacity-100"
+                }`}>
+                  {mode === "glowing" && <span>✨ Story Secret!</span>}
+                  {mode === "shaking" && <span>💥 Clue Alert!</span>}
+                  {mode === "normal" && <span>Ask Jolly Bhai 🧞</span>}
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      </div>
+          </div>
+        );
+      })()}
 
       {/* Throne Inspection / Art Performance Prompt (Interior Scene) */}
       {scene === "interior" && isNearThrone && !showThroneScroll && !showPietraDuraPuzzle && (
@@ -1842,17 +1916,27 @@ export default function MughalGameScreen() {
             historical_events: "Reign of Shah Jahan, completion of Taj Mahal, Mughal golden age"
           }}
           dialogueText={
-            hasTalkedToJolly
+            scene === "khas_mahal"
+              ? "Mere aaka, let me share a bittersweet truth with you... The golden domes you see beside us were once layered in pure, solid gold and inlaid with precious gems. Tragically, the gold was stripped away during colonial rule in the 18th century, and over time, tourists stole the remaining stones. What remains today is only a quiet shadow of our lost Mughal splendour."
+              : hasTalkedToJolly
               ? "Mere aaka, how can I help you?"
               : "Ah! Hello, traveller! I am Jolly Bhai. I was born many centuries ago and have witnessed great wars, powerful kingdoms, and the changing of history. But remember... only you can see me. I will guide you through this journey. And whenever you see me shaking and dancing like a madman... come quickly! It means I have something very important to tell you!"
           }
           isSpeaking={true}
           showInput={true}
-          options={[
-            { id: 1, text: "Who built the Taj Mahal and why?" },
-            { id: 2, text: "Tell me about Emperor Shah Jahan's reign." },
-            { id: 3, text: "Why is Agra Fort fortified so strongly?" }
-          ]}
+          options={
+            scene === "khas_mahal"
+              ? [
+                  { id: 1, text: "Why were the golden domes stripped of their gold?" },
+                  { id: 2, text: "Tell me more about Khas Mahal and Anguri Bagh." },
+                  { id: 3, text: "How do we cross the Yamuna River to the Taj Mahal?" }
+                ]
+              : [
+                  { id: 1, text: "Who built the Taj Mahal and why?" },
+                  { id: 2, text: "Tell me about Emperor Shah Jahan's reign." },
+                  { id: 3, text: "Why is Agra Fort fortified so strongly?" }
+                ]
+          }
           onClose={() => setShowJollyDialogue(false)}
         />
       )}
