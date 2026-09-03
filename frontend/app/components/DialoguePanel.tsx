@@ -10,6 +10,7 @@ interface DialoguePanelProps {
   characterTitle?: string;
   dialogueText: string;
   isSpeaking?: boolean;
+  showInput?: boolean;
   options?: DialogueOption[];
   onOptionSelect?: (option: DialogueOption) => void;
   onClose: () => void;
@@ -20,6 +21,7 @@ export default function DialoguePanel({
   characterTitle,
   dialogueText,
   isSpeaking = false,
+  showInput = true,
   options = [],
   onOptionSelect,
   onClose
@@ -82,17 +84,19 @@ export default function DialoguePanel({
           </div>
         )}
 
-        {/* Text Input */}
-        <div className="flex gap-2">
-          <input 
-            type="text" 
-            placeholder={`Say anything to ${characterName.split(' ')[0]}...`}
-            className="flex-1 bg-white border-[3px] border-black rounded-md px-3 py-2 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-[#f5a623]"
-          />
-          <button className="bg-[#ffdc5e] hover:bg-[#ffcf33] border-[3px] border-black rounded-md px-4 flex items-center justify-center shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[0px_0px_0_0_rgba(0,0,0,1)] transition-all">
-            <span className="text-lg translate-y-[1px]">➢</span>
-          </button>
-        </div>
+        {/* Text Input (Only for interactive NPCs, not for Narrator) */}
+        {showInput && (
+          <div className="flex gap-2">
+            <input 
+              type="text" 
+              placeholder={`Say anything to ${characterName.split(' ')[0]}...`}
+              className="flex-1 bg-white border-[3px] border-black rounded-md px-3 py-2 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-[#f5a623]"
+            />
+            <button className="bg-[#ffdc5e] hover:bg-[#ffcf33] border-[3px] border-black rounded-md px-4 flex items-center justify-center shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[0px_0px_0_0_rgba(0,0,0,1)] transition-all cursor-pointer">
+              <span className="text-lg translate-y-[1px]">➢</span>
+            </button>
+          </div>
+        )}
 
       </div>
     </div>

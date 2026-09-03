@@ -42,6 +42,4 @@ def get_db():
         Database: The PyMongo Database object for 'bharat_gatha'.
     """
     client = get_db_client()
-    # The database name defaults to 'bharat_gatha'. 
-    # MongoDB will create it automatically when you insert the first document.
     return client['bharat_gatha']

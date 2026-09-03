@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import DialoguePanel from "../../components/DialoguePanel";
+import { playNarration, stopNarration } from "../../../services/narratorService";
+import NarratorSubtitle from "../../../components/NarratorSubtitle";
 
 export type SceneType =
   | "gate"
@@ -63,6 +65,36 @@ export default function MughalGameScreen() {
 
   const horseSoundRef = useRef<HTMLAudioElement | null>(null);
   const boatSoundRef = useRef<HTMLAudioElement | null>(null);
+  const hasPlayedIntroNarrationRef = useRef(false);
+
+  // Play cinematic narrator voice once from Cloudinary CDN when entering 1653 Mughal Era
+  useEffect(() => {
+    if (!isLoading && !hasPlayedIntroNarrationRef.current) {
+      hasPlayedIntroNarrationRef.current = true;
+      const narrationTimer = setTimeout(() => {
+        playNarration(
+          "You have entered the year 1653... the heart of the Mughal Empire.\n\n" +
+          "Mumtaz Mahal is gone... but her memory now stands immortal before you.\n\n" +
+          "The Taj Mahal.\n\n" +
+          "You now live under the rule of Emperor Shah Jahan.\n\n" +
+          "Remember, time traveller... reveal your true identity to no one.\n\n" +
+          "One wrong word... and your journey may end before it has even begun.\n\n" +
+          "Now... step carefully into history.",
+          {
+            audioUrl: "https://res.cloudinary.com/urk5afel/video/upload/v1788432688/bharat_gatha/audio/mughal_intro_narration.wav"
+          }
+        );
+      }, 700);
+      return () => clearTimeout(narrationTimer);
+    }
+  }, [isLoading]);
+
+  // Clean up narration audio when navigating away
+  useEffect(() => {
+    return () => {
+      stopNarration();
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -2103,6 +2135,9 @@ export default function MughalGameScreen() {
           </div>
         </div>
       )}
+
+      {/* --- CINEMATIC NARRATOR SUBTITLES & AUDIO CONTROLS --- */}
+      <NarratorSubtitle />
 
     </div>
   );
