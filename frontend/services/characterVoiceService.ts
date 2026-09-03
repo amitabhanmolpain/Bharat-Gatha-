@@ -126,6 +126,12 @@ class CharacterVoiceManager {
 
     // 2. Jolly Local Canonical Pre-recorded Files
     if (char === "jolly" || char.includes("genie")) {
+      if (lower.includes("trapped in the dungeon") || lower.includes("stucked in the jail") || lower.includes("in the other chamber") || lower.includes("rescue him") || lower.includes("stuck in the jail")) {
+        return "/jolly_companion_jail_clue.wav";
+      }
+      if (lower.includes("door is locked") || lower.includes("oh god") || lower.includes("personal palace") || lower.includes("royal key") || lower.includes("dungeon door")) {
+        return "/jolly_dungeon_door_locked.wav";
+      }
       if (lower.includes("bazaar traders") || (lower.includes("traders") && lower.includes("taj gate"))) {
         return "/jolly_taj_gate_traders.wav";
       }

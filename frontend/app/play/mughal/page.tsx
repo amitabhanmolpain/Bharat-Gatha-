@@ -155,7 +155,23 @@ export default function MughalGameScreen() {
   const [jollySpeechText, setJollySpeechText] = useState<string>("");
   const [jollyOptions, setJollyOptions] = useState<Array<{ id: number; text: string }>>([]);
   const [hasTalkedToJolly, setHasTalkedToJolly] = useState<boolean>(false);
-  const [heardClueScenes, setHeardClueScenes] = useState<string[]>([]);
+  const [heardClueScenes, setHeardClueScenes] = useState<string[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("mughal_heard_clue_scenes");
+        if (saved) return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("mughal_heard_clue_scenes", JSON.stringify(heardClueScenes));
+      } catch (e) {}
+    }
+  }, [heardClueScenes]);
 
   const [showJewelTraderDialogue, setShowJewelTraderDialogue] = useState(false);
   const [jewelTraderDialogueText, setJewelTraderDialogueText] = useState("");
@@ -361,6 +377,30 @@ export default function MughalGameScreen() {
     }
   }, [isLoading, scene]);
 
+  // Auto-play Jolly Bhai clue when entering Red Fort Diwan-i-Khas (Peacock Throne Room)
+  const hasPlayedDiwaniKhasJollyRef = useRef(false);
+  useEffect(() => {
+    if (!isLoading && scene === "red_fort_diwani_khas" && !hasPlayedDiwaniKhasJollyRef.current) {
+      hasPlayedDiwaniKhasJollyRef.current = true;
+      const timer = setTimeout(() => {
+        triggerJollyDiwaniKhasClue();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, scene]);
+
+  // Auto-play Jolly Bhai locked dungeon door reaction when entering Red Fort Corridor / Dungeon
+  const hasPlayedCorridorJollyRef = useRef(false);
+  useEffect(() => {
+    if (!isLoading && (scene === "red_fort_corridor" || scene === "red_fort_rang_mahal") && !hasPlayedCorridorJollyRef.current) {
+      hasPlayedCorridorJollyRef.current = true;
+      const timer = setTimeout(() => {
+        triggerJollyDungeonLockedReaction();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, scene]);
+
   const triggerCourtyardGuardDialogue = (guardId: string, side: 'left' | 'right') => {
     setActiveCourtyardGuardId(guardId);
     if (hasKhasPermissionRef.current || hasKhasPermission) {
@@ -410,6 +450,47 @@ export default function MughalGameScreen() {
       character: "trader_jewels",
       text: speech,
       audioUrl: "/trader_khas_arrogant_offer.wav"
+    });
+  };
+
+  const triggerJollyDiwaniKhasClue = () => {
+    const text = "Mere aaka! Your companion is trapped in the dungeon in the other chamber! Go quickly and rescue him!";
+    setJollySpeechText(text);
+    setJollyOptions([
+      { id: 1, text: "How do I reach the other chamber?" },
+      { id: 2, text: "I will go rescue him right away!" }
+    ]);
+    setShowJollyDialogue(true);
+    playCharacterDialogue({
+      character: "jolly",
+      text,
+      audioUrl: "/jolly_companion_jail_clue.wav",
+      onEnd: () => {
+        setHeardClueScenes((prev) => prev.includes("red_fort_diwani_khas") ? prev : [...prev, "red_fort_diwani_khas"]);
+      }
+    });
+  };
+
+  const triggerJollyDungeonLockedReaction = () => {
+    const text = "Oh god, the dungeon door is locked! The royal key must be kept inside the King's personal palace!";
+    setJollySpeechText(text);
+    setJollyOptions([
+      { id: 1, text: "Where is the King's personal palace?" },
+      { id: 2, text: "I will search for the key!" }
+    ]);
+    setShowJollyDialogue(true);
+    playCharacterDialogue({
+      character: "jolly",
+      text,
+      audioUrl: "/jolly_dungeon_door_locked.wav",
+      onEnd: () => {
+        setHeardClueScenes((prev) => {
+          const updated = [...prev];
+          if (!updated.includes("red_fort_corridor")) updated.push("red_fort_corridor");
+          if (!updated.includes("red_fort_rang_mahal")) updated.push("red_fort_rang_mahal");
+          return updated;
+        });
+      }
     });
   };
 
@@ -538,6 +619,7 @@ export default function MughalGameScreen() {
       localStorage.removeItem('mughal_has_khas_permission');
       localStorage.removeItem('mughal_is_pietra_dura_solved');
       localStorage.removeItem('mughal_is_sheesh_mirror_solved');
+      localStorage.removeItem('mughal_heard_clue_scenes');
       localStorage.removeItem('bharat_gatha_mughal_checkpoint');
     }, 400);
   };
@@ -1681,6 +1763,9 @@ export default function MughalGameScreen() {
 
       {/* --- JOLLY BHAI (GENIE) COMPANION FOLLOWER WITH 3 DYNAMIC MODES --- */}
       {(() => {
+        const genieX = facingLeft ? playerPos.x + 8.5 : playerPos.x - 8.5;
+        const genieY = playerPos.y - 12.0;
+
         const isGuardClueNeeded = !hasGuardPermission && !discoveredClueIds.includes("guard_permit");
         const isThroneClueNeeded = !isPietraDuraSolved && !discoveredClueIds.includes("pietra_dura_seal");
         const isMirrorClueNeeded = !isSheeshMirrorSolved && !discoveredClueIds.includes("sheesh_mirror_shard");
@@ -1691,13 +1776,14 @@ export default function MughalGameScreen() {
         const isArchaeologistClueNeeded = !isArchaeologistTalked && !discoveredClueIds.includes("mehtab_bagh_journal");
 
         // Mode 1: ✨ Glowing (Only for major hidden secrets when nearby)
-        const isGlowing = 
-          (scene === "khas_mahal" && isNearKhasFountain && isKhasClueNeeded) ||
-          (scene === "red_fort_diwani_khas" && isNearDiwanIKhas && !showCampaignComplete);
+        const isGlowing = scene === "khas_mahal" && isNearKhasFountain && isKhasClueNeeded;
 
         // Mode 2: 💥 Crazy Shaking (Stops once clue is heard or solved)
         const hasHeardThisClue = heardClueScenes.includes(scene);
         const isShaking = !isGlowing && !hasHeardThisClue && (
+          scene === "red_fort_diwani_khas" ||
+          scene === "red_fort_corridor" ||
+          scene === "red_fort_rang_mahal" ||
           (isNearGuard && isGuardClueNeeded) ||
           (isNearThrone && isThroneClueNeeded) ||
           (isNearMirrorFountain && isMirrorClueNeeded) ||
@@ -1717,6 +1803,15 @@ export default function MughalGameScreen() {
           <div
             className="absolute z-20 pointer-events-auto cursor-pointer group transition-all duration-700 ease-out"
             onClick={() => {
+              if (scene === "red_fort_diwani_khas") {
+                triggerJollyDiwaniKhasClue();
+                return;
+              }
+              if (scene === "red_fort_corridor" || scene === "red_fort_rang_mahal") {
+                triggerJollyDungeonLockedReaction();
+                return;
+              }
+
               let speechText = "";
               let customOptions: Array<{ id: number; text: string }> = [];
 
@@ -1826,10 +1921,10 @@ export default function MughalGameScreen() {
                 : "🧞 Jolly Bhai (Genie Guide - Click for Story)"
             }
           >
-            <div className={`relative ${mode === "shaking" ? "animate-crazy-shake" : mode === "glowing" ? "animate-celestial-glow" : "animate-bounce"}`} style={mode === "normal" ? { animationDuration: '3.5s' } : undefined}>
+            <div className={`relative ${mode === "shaking" ? "animate-crazy-shake" : mode === "glowing" ? "animate-celestial-glow" : "animate-bounce"}`} style={mode === "normal" && !showJollyDialogue ? { animationDuration: '3.5s' } : undefined}>
               <img
                 src="/genie_rajasthani_transparent.png"
-                alt="Jolly Bhai Genie Companion"
+                alt=""
                 className={`w-24 h-24 md:w-28 md:h-28 object-contain transition-all group-hover:scale-110 drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)] ${
                   mode === "glowing" ? "filter drop-shadow-[0_0_25px_rgba(251,191,36,1)] brightness-125" : ""
                 }`}
@@ -2443,7 +2538,9 @@ export default function MughalGameScreen() {
           historicalContext={{
             current_year: 1653,
             era: "Mughal Empire",
-            location: scene === "gate" ? "Agra Fort - Amar Singh Gate" :
+            location: scene === "red_fort_diwani_khas" ? "Red Fort - Diwan-i-Khas Throne Hall" :
+                      scene === "red_fort_rang_mahal" ? "Red Fort - Rang Mahal & Imperial Dungeon" :
+                      scene === "gate" ? "Agra Fort - Amar Singh Gate" :
                       scene === "passage" ? "Agra Fort - Inner Ramp Passage" :
                       scene === "courtyard" ? "Agra Fort - Diwan-i-Aam Courtyard" :
                       scene === "interior" ? "Diwan-i-Aam (Imperial Throne Hall)" :
@@ -2463,7 +2560,11 @@ export default function MughalGameScreen() {
           }}
           dialogueText={
             jollySpeechText || (
-              scene === "khas_mahal"
+              scene === "red_fort_diwani_khas"
+                ? "Mere aaka! Your companion is trapped in the dungeon in the other chamber! Go quickly and rescue him!"
+                : scene === "red_fort_rang_mahal"
+                ? "Oh god, the dungeon door is locked! The royal key must be kept inside the King's personal palace!"
+                : scene === "khas_mahal"
                 ? "Mere aaka, let me share a bittersweet truth with you... The golden domes you see beside us were once layered in pure, solid gold and inlaid with precious gems. Tragically, the gold was stripped away during colonial rule in the 18th century, and over time, tourists stole the remaining stones. What remains today is only a quiet shadow of our lost Mughal splendour."
                 : hasTalkedToJolly
                 ? "Mere aaka, how can I help you?"
@@ -2475,6 +2576,16 @@ export default function MughalGameScreen() {
           options={
             jollyOptions.length > 0
               ? jollyOptions
+              : scene === "red_fort_diwani_khas"
+              ? [
+                  { id: 1, text: "How do I reach the other chamber?" },
+                  { id: 2, text: "I will go rescue him right away!" }
+                ]
+              : scene === "red_fort_rang_mahal"
+              ? [
+                  { id: 1, text: "How can I unlock this door?" },
+                  { id: 2, text: "I will find the King's personal key." }
+                ]
               : scene === "khas_mahal"
               ? [
                   { id: 1, text: "Why were the golden domes stripped of their gold?" },
@@ -2487,7 +2598,30 @@ export default function MughalGameScreen() {
                   { id: 3, text: "Why is Agra Fort fortified so strongly?" }
                 ]
           }
-          onClose={() => setShowJollyDialogue(false)}
+          onOptionSelect={() => {
+            stopCharacterDialogue();
+            setShowJollyDialogue(false);
+            setHeardClueScenes((prev) => {
+              const updated = prev.includes(scene) ? prev : [...prev, scene];
+              if (scene === "red_fort_corridor" || scene === "red_fort_rang_mahal") {
+                if (!updated.includes("red_fort_corridor")) updated.push("red_fort_corridor");
+                if (!updated.includes("red_fort_rang_mahal")) updated.push("red_fort_rang_mahal");
+              }
+              return updated;
+            });
+          }}
+          onClose={() => {
+            stopCharacterDialogue();
+            setShowJollyDialogue(false);
+            setHeardClueScenes((prev) => {
+              const updated = prev.includes(scene) ? prev : [...prev, scene];
+              if (scene === "red_fort_corridor" || scene === "red_fort_rang_mahal") {
+                if (!updated.includes("red_fort_corridor")) updated.push("red_fort_corridor");
+                if (!updated.includes("red_fort_rang_mahal")) updated.push("red_fort_rang_mahal");
+              }
+              return updated;
+            });
+          }}
         />
       )}
 
@@ -2552,6 +2686,12 @@ export default function MughalGameScreen() {
               ? !isArchaeologistTalked
                 ? "Explore Mehtab Bagh and talk to the Caretaker Archaeologist to locate your companion."
                 : "Proceed to the bottom-right carriage to Delhi, or walk up across the pier to return to Taj exterior."
+              : scene === "red_fort_diwani_khas"
+              ? "All the ministers are waiting for Badshah Shah Jahan. Inspect the legendary Peacock Throne (Takht-i-Taus)!"
+              : scene === "red_fort_interior"
+              ? "Explore the Chatta Chowk covered bazaar and trade with the imperial merchants."
+              : scene === "red_fort_plaza"
+              ? "Proceed into the Diwan-i-Khas or trade in the Chatta Chowk arcade bazaar."
               : "Walk forward into the monumental Lahori Gate of the Red Fort."}
           </div>
         </div>
