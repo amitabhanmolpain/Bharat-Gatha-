@@ -1791,6 +1791,7 @@ export default function VijayanagaraGameScreen() {
           unlockedJournalCount={unlockedJournalEntries.length}
           onOpenJournal={() => setIsJournalOpen(true)}
           onResetCampaign={handleResetCampaign}
+          isTransitioning={isTransitioning}
         />
 
         {/* --- JOURNAL MODAL --- */}

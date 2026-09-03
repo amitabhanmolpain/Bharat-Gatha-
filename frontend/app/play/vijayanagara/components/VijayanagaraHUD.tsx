@@ -14,6 +14,7 @@ interface VijayanagaraHUDProps {
   unlockedJournalCount: number;
   onOpenJournal: () => void;
   onResetCampaign: () => void;
+  isTransitioning?: boolean;
 }
 
 export default function VijayanagaraHUD({
@@ -24,12 +25,18 @@ export default function VijayanagaraHUD({
   unlockedJournalCount,
   onOpenJournal,
   onResetCampaign,
+  isTransitioning = false,
 }: VijayanagaraHUDProps) {
   const currentStageMeta = STAGE_METAS[stage];
   const currentSceneMeta = SCENE_CONFIGS[scene];
 
   return (
-    <div className="absolute inset-0 pointer-events-none z-30 flex flex-col justify-between p-4 md:p-6 select-none font-sans">
+    <div
+      aria-hidden={isTransitioning}
+      className={`absolute inset-0 pointer-events-none z-30 flex flex-col justify-between p-4 md:p-6 select-none font-sans ${
+        isTransitioning ? "opacity-40" : ""
+      }`}
+    >
       {/* Top Header Bar */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 w-full">
         
@@ -73,8 +80,11 @@ export default function VijayanagaraHUD({
 
           {/* Palm-Leaf Journal Button */}
           <button
+            type="button"
             onClick={onOpenJournal}
-            className="flex items-center gap-2 bg-gradient-to-r from-[#2c241c] to-[#3d3328] hover:from-[#3d3328] hover:to-[#4f4234] border-2 border-[#d4a359] text-[#f6ede0] font-serif font-bold px-3.5 py-2.5 rounded-xl shadow-[3px_3px_0_0_rgba(0,0,0,0.8)] active:translate-y-0.5 transition-all cursor-pointer text-xs uppercase tracking-wider"
+            disabled={isTransitioning}
+            tabIndex={isTransitioning ? -1 : 0}
+            className="flex items-center gap-2 bg-gradient-to-r from-[#2c241c] to-[#3d3328] hover:from-[#3d3328] hover:to-[#4f4234] border-2 border-[#d4a359] text-[#f6ede0] font-serif font-bold px-3.5 py-2.5 rounded-xl shadow-[3px_3px_0_0_rgba(0,0,0,0.8)] active:translate-y-0.5 transition-all cursor-pointer text-xs uppercase tracking-wider disabled:pointer-events-none disabled:opacity-40"
             title="Open Historical Journal"
           >
             <span>🪶</span>
@@ -84,7 +94,10 @@ export default function VijayanagaraHUD({
           {/* Dashboard Return Button */}
           <Link
             href="/dashboard"
-            className="flex items-center justify-center bg-[#1a1714]/90 hover:bg-[#2b2520] border-2 border-[#5a4d3f] hover:border-[#d4a359] text-[#d6c7b2] hover:text-[#f6ede0] px-3 py-2.5 rounded-xl shadow-[3px_3px_0_0_rgba(0,0,0,0.8)] active:translate-y-0.5 transition-all text-xs font-serif"
+            tabIndex={isTransitioning ? -1 : 0}
+            className={`flex items-center justify-center bg-[#1a1714]/90 hover:bg-[#2b2520] border-2 border-[#5a4d3f] hover:border-[#d4a359] text-[#d6c7b2] hover:text-[#f6ede0] px-3 py-2.5 rounded-xl shadow-[3px_3px_0_0_rgba(0,0,0,0.8)] active:translate-y-0.5 transition-all text-xs font-serif ${
+              isTransitioning ? "pointer-events-none opacity-40" : ""
+            }`}
             title="Return to Campaign Hub"
           >
             🏰 Hub
@@ -92,8 +105,11 @@ export default function VijayanagaraHUD({
 
           {/* Reset Campaign Button */}
           <button
+            type="button"
             onClick={onResetCampaign}
-            className="flex items-center justify-center bg-[#1a1714]/90 hover:bg-[#381a17] border-2 border-[#5a4d3f] hover:border-[#c86446] text-[#a89985] hover:text-[#fca5a5] p-2.5 rounded-xl shadow-[3px_3px_0_0_rgba(0,0,0,0.8)] active:translate-y-0.5 transition-all cursor-pointer text-xs"
+            disabled={isTransitioning}
+            tabIndex={isTransitioning ? -1 : 0}
+            className="flex items-center justify-center bg-[#1a1714]/90 hover:bg-[#381a17] border-2 border-[#5a4d3f] hover:border-[#c86446] text-[#a89985] hover:text-[#fca5a5] p-2.5 rounded-xl shadow-[3px_3px_0_0_rgba(0,0,0,0.8)] active:translate-y-0.5 transition-all cursor-pointer text-xs disabled:pointer-events-none disabled:opacity-40"
             title="Reset Vijayanagara Campaign Progress"
           >
             🔄

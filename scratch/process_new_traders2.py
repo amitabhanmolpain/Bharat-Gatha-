@@ -1,9 +1,15 @@
-"""Sprite transparency processing utility for merchant assets."""
+"""Sprite transparency processing utility for merchant assets.
 
+Accepts input and output image paths via CLI arguments to convert
+background pixels into transparency.
+"""
+
+import argparse
+import os
 from PIL import Image
 
 
-def make_transparent(input_path, output_path):
+def make_transparent(input_path: str, output_path: str) -> None:
     """Convert near-white background pixels in an image to alpha transparency.
 
     Args:
@@ -13,7 +19,16 @@ def make_transparent(input_path, output_path):
     Returns:
         None
     """
-    img = Image.open(input_path).convert("RGBA")
+    if not os.path.exists(input_path):
+        print(f"Warning: Input file '{input_path}' not found. Skipping.")
+        return
+
+    try:
+        img = Image.open(input_path).convert("RGBA")
+    except Exception as e:
+        print(f"Failed to open '{input_path}': {e}")
+        return
+
     data = img.getdata()
     
     newData = []
@@ -24,9 +39,30 @@ def make_transparent(input_path, output_path):
             newData.append(item)
             
     img.putdata(newData)
+    os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
     img.save(output_path, "PNG")
+    print(f"Saved transparent image to {output_path}")
+
+
+def main() -> None:
+    """Parse command-line arguments and process images."""
+    parser = argparse.ArgumentParser(description="Convert white image backgrounds to transparency.")
+    parser.add_argument("-i", "--input", help="Path to input image file.")
+    parser.add_argument("-o", "--output", help="Path to output PNG image file.")
+    args = parser.parse_args()
+
+    if args.input and args.output:
+        make_transparent(args.input, args.output)
+    else:
+        # Default fallback if files exist locally in frontend/public
+        defaults = [
+            ("frontend/public/trader_toys.jpg", "frontend/public/trader_toys_transparent.png"),
+            ("frontend/public/trader_marble.jpg", "frontend/public/trader_marble_transparent.png"),
+        ]
+        for inp, out in defaults:
+            if os.path.exists(inp):
+                make_transparent(inp, out)
 
 
 if __name__ == "__main__":
-    make_transparent("/Users/aniruddhapain/.gemini/antigravity/brain/8fb789ad-270c-4b5f-b551-d4c6b3359775/trader_toys_1788278706979.jpg", "frontend/public/trader_toys_transparent.png")
-    make_transparent("/Users/aniruddhapain/.gemini/antigravity/brain/8fb789ad-270c-4b5f-b551-d4c6b3359775/trader_marble_1788278732236.jpg", "frontend/public/trader_marble_transparent.png")
+    main()

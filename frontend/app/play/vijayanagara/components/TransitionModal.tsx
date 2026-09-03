@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useRef } from "react";
 
 interface TransitionModalProps {
   isActive: boolean;
@@ -17,14 +17,70 @@ export default function TransitionModal({
   description,
   travelType = "coracle",
 }: TransitionModalProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const previousActiveElementRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!isActive) return;
+
+    // Save previous active element to restore focus when transition finishes
+    previousActiveElementRef.current = document.activeElement as HTMLElement;
+
+    // Immediately blur any active background control (e.g., HUD buttons)
+    if (document.activeElement && typeof (document.activeElement as HTMLElement).blur === "function") {
+      (document.activeElement as HTMLElement).blur();
+    }
+
+    // Move focus into the modal container
+    const focusTimer = setTimeout(() => {
+      if (containerRef.current) {
+        containerRef.current.focus();
+      }
+    }, 20);
+
+    // Trap focus and prevent key activations from bubbling to background
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Prevent Tab from moving focus to background elements
+      if (e.key === "Tab") {
+        e.preventDefault();
+        if (containerRef.current) {
+          containerRef.current.focus();
+        }
+      }
+
+      // Prevent Space / Enter from activating previously focused background controls
+      if (e.key === " " || e.key === "Enter") {
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown, { capture: true });
+
+    return () => {
+      clearTimeout(focusTimer);
+      document.removeEventListener("keydown", handleKeyDown, { capture: true });
+
+      // Restore focus to previous element on close
+      if (
+        previousActiveElementRef.current &&
+        typeof previousActiveElementRef.current.focus === "function" &&
+        document.body.contains(previousActiveElementRef.current)
+      ) {
+        previousActiveElementRef.current.focus();
+      }
+    };
+  }, [isActive]);
+
   if (!isActive) return null;
 
   return (
     <div
+      ref={containerRef}
       role="dialog"
       aria-modal="true"
       aria-labelledby="transition-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-lg animate-fadeIn p-4"
+      tabIndex={-1}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-lg animate-fadeIn p-4 outline-none"
     >
       <div className="relative w-full max-w-2xl bg-[#1e1b18] border-4 border-[#5a4d3f] rounded-2xl p-8 text-center text-[#f6ede0] shadow-[0_0_60px_rgba(0,0,0,0.95)] overflow-hidden">
         {/* Top Decorative Border Accent */}
