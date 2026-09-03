@@ -111,11 +111,24 @@ class CharacterVoiceManager {
 
     // 2. Jolly Local Canonical Pre-recorded Files
     if (char === "jolly" || char.includes("genie")) {
+      if (lower.includes("bazaar traders") || (lower.includes("traders") && lower.includes("taj gate"))) {
+        return "/jolly_taj_gate_traders.wav";
+      }
       if (lower.includes("golden domes") || lower.includes("bittersweet truth") || lower.includes("pure, solid gold") || lower.includes("shadow of our lost mughal splendour")) {
         return "/jolly_khas_mahal_gold.wav";
       }
       if (lower.includes("jolly bhai") && lower.includes("born many centuries") && lower.includes("dancing like a madman")) {
         return "/jolly_intro.wav";
+      }
+    }
+
+    // 3. Bazaar Traders Pre-recorded Files
+    if (char.includes("trader") || char.includes("marble") || char.includes("toy")) {
+      if (lower.includes("marble art") || lower.includes("finest marble")) {
+        return "/trader_marble_art.wav";
+      }
+      if (lower.includes("symbolizes peace") || lower.includes("toys and paintings") || lower.includes("peace")) {
+        return "/trader_toys_peace.wav";
       }
     }
 

@@ -133,6 +133,10 @@ export default function MughalGameScreen() {
   const [showKhasPermissionModal, setShowKhasPermissionModal] = useState(false);
   const [showRestartConfirmModal, setShowRestartConfirmModal] = useState(false);
   const [throneGuardSpeech, setThroneGuardSpeech] = useState<string | null>(null);
+  const [activeTraderId, setActiveTraderId] = useState<string | null>(null);
+  const [traderSpeech, setTraderSpeech] = useState<string | null>(null);
+  const [jollySpeechText, setJollySpeechText] = useState<string>("");
+  const [jollyOptions, setJollyOptions] = useState<Array<{ id: number; text: string }>>([]);
   const [hasTalkedToJolly, setHasTalkedToJolly] = useState<boolean>(false);
 
   const [showMausoleumModal, setShowMausoleumModal] = useState(false);
@@ -404,6 +408,7 @@ export default function MughalGameScreen() {
       hasPlayedSheeshNarrationRef.current = false;
       hasPlayedKhasNarrationRef.current = false;
       localStorage.removeItem('mughal_save');
+      localStorage.removeItem('mughal_has_talked_to_jolly');
       localStorage.removeItem('mughal_is_pietra_dura_solved');
       localStorage.removeItem('mughal_is_sheesh_mirror_solved');
     }, 400);
@@ -441,10 +446,15 @@ export default function MughalGameScreen() {
             if (parsed.isSymmetrySolved !== undefined) setIsSymmetrySolved(parsed.isSymmetrySolved);
             if (parsed.isMausoleumExplored !== undefined) setIsMausoleumExplored(parsed.isMausoleumExplored);
             if (parsed.isArchaeologistTalked !== undefined) setIsArchaeologistTalked(parsed.isArchaeologistTalked);
+            if (parsed.hasTalkedToJolly !== undefined) setHasTalkedToJolly(parsed.hasTalkedToJolly);
             if (parsed.discoveredClueIds) setDiscoveredClueIds(parsed.discoveredClueIds);
           } catch (e) {
             console.error("Failed to load save state", e);
           }
+        }
+
+        if (localStorage.getItem('mughal_has_talked_to_jolly') === 'true' || finalScene !== 'gate') {
+          setHasTalkedToJolly(true);
         }
 
         // Also sync explicit solved status from MongoDB
@@ -491,11 +501,15 @@ export default function MughalGameScreen() {
         isCalligraphySolved,
         isSymmetrySolved,
         isMausoleumExplored,
-        isArchaeologistTalked
+        isArchaeologistTalked,
+        hasTalkedToJolly
       };
       localStorage.setItem('mughal_save', JSON.stringify(saveState));
+      if (hasTalkedToJolly) {
+        localStorage.setItem('mughal_has_talked_to_jolly', 'true');
+      }
     }
-  }, [scene, playerPos, cluesFound, discoveredClueIds, hasGuardPermission, isPietraDuraSolved, isSheeshMirrorSolved, isCalligraphySolved, isSymmetrySolved, isMausoleumExplored, isArchaeologistTalked, isLoading]);
+  }, [scene, playerPos, cluesFound, discoveredClueIds, hasGuardPermission, isPietraDuraSolved, isSheeshMirrorSolved, isCalligraphySolved, isSymmetrySolved, isMausoleumExplored, isArchaeologistTalked, hasTalkedToJolly, isLoading]);
 
   const guardPos = { x: 43.5, y: 72.0 };
   const distToGuard = Math.sqrt(
@@ -519,6 +533,8 @@ export default function MughalGameScreen() {
   const isNearArchaeologist = scene === "taj_mehtab_bagh" && distToArchaeologist < 9.0;
 
   const isNearCalligraphy = scene === "taj_gate" && playerPos.y <= 72.0 && playerPos.x >= 44.0 && playerPos.x <= 56.0;
+  const isNearToyTrader = scene === "taj_gate" && Math.sqrt(Math.pow(playerPos.x - 32.0, 2) + Math.pow(playerPos.y - 88.0, 2)) < 16.0;
+  const isNearMarbleTrader = scene === "taj_gate" && Math.sqrt(Math.pow(playerPos.x - 68.0, 2) + Math.pow(playerPos.y - 88.0, 2)) < 16.0;
   const isNearPool = scene === "taj_charbagh" && playerPos.y <= 58.0 && playerPos.y >= 42.0 && playerPos.x >= 42.0 && playerPos.x <= 58.0;
   const isNearTajPishtaq = scene === "taj_exterior" && playerPos.y <= 75.0 && playerPos.x >= 42.0 && playerPos.x <= 58.0;
   const isNearCenotaphs = scene === "taj_mausoleum" && playerPos.y <= 72.0 && playerPos.y >= 30.0 && playerPos.x >= 25.0 && playerPos.x <= 75.0;
@@ -657,8 +673,26 @@ export default function MughalGameScreen() {
             }
           );
         }
-        if (curScene === "taj_gate" && pos.y <= 78.0 && pos.x >= 38.0 && pos.x <= 62.0 && !isCalligraphySolved) {
-          setShowCalligraphyPuzzle(true);
+        if (curScene === "taj_gate") {
+          if (pos.y <= 78.0 && pos.x >= 38.0 && pos.x <= 62.0 && !isCalligraphySolved) {
+            setShowCalligraphyPuzzle(true);
+          } else if (Math.sqrt(Math.pow(pos.x - 32.0, 2) + Math.pow(pos.y - 88.0, 2)) < 11.0) {
+            setActiveTraderId("toys");
+            setTraderSpeech("Each of my toys and paintings symbolizes peace.");
+            playCharacterDialogue({
+              character: "trader_toys",
+              text: "Each of my toys and paintings symbolizes peace.",
+              audioUrl: "/trader_toys_peace.wav"
+            });
+          } else if (Math.sqrt(Math.pow(pos.x - 68.0, 2) + Math.pow(pos.y - 88.0, 2)) < 11.0) {
+            setActiveTraderId("marble");
+            setTraderSpeech("This is some of the finest marble art in the empire, carved by royal artisans!");
+            playCharacterDialogue({
+              character: "trader_marble",
+              text: "This is some of the finest marble art in the empire, carved by royal artisans!",
+              audioUrl: "/trader_marble_art.wav"
+            });
+          }
         }
         if (curScene === "taj_charbagh" && pos.y <= 65.0 && pos.y >= 35.0 && pos.x >= 35.0 && pos.x <= 65.0 && !isSymmetrySolved) {
           setShowSymmetryPuzzle(true);
@@ -1399,32 +1433,24 @@ export default function MughalGameScreen() {
         const isCenotaphClueNeeded = !isMausoleumExplored && !discoveredClueIds.includes("cenotaph_rubbing");
         const isArchaeologistClueNeeded = !isArchaeologistTalked && !discoveredClueIds.includes("mehtab_bagh_journal");
 
-        // Mode 1: ✨ Glowing (Major story event / hidden secret)
+        // Mode 1: ✨ Glowing (Only for major hidden secrets when nearby)
         const isGlowing = 
-          (scene === "gate" && isGuardClueNeeded && guardAttempts >= 1) ||
-          (scene === "interior" && !isPietraDuraSolved) ||
-          (scene === "sheesh_mahal" && !isSheeshMirrorSolved) ||
-          (scene === "khas_mahal" && isKhasClueNeeded) ||
-          (scene === "taj_gate" && !isCalligraphySolved) ||
-          (scene === "taj_charbagh" && !isSymmetrySolved) ||
-          (scene === "taj_mausoleum" && !isMausoleumExplored) ||
-          (scene === "taj_mehtab_bagh" && !isArchaeologistTalked) ||
-          (scene === "red_fort_diwani_khas" && !showCampaignComplete);
+          (scene === "khas_mahal" && isNearKhasFountain && isKhasClueNeeded) ||
+          (scene === "red_fort_diwani_khas" && isNearDiwanIKhas && !showCampaignComplete);
 
-        // Mode 2: 💥 Crazy Shaking (Important historical clue or quest information nearby - only if unsolved)
+        // Mode 2: 💥 Crazy Shaking (Important historical clue or quest nearby - only if unsolved)
         const isShaking = !isGlowing && (
           (isNearGuard && isGuardClueNeeded) ||
           (isNearThrone && isThroneClueNeeded) ||
           (isNearMirrorFountain && isMirrorClueNeeded) ||
-          (isNearKhasFountain && isKhasClueNeeded) ||
           (isNearCalligraphy && isCalligraphyClueNeeded) ||
+          (isNearToyTrader && isCalligraphyClueNeeded) ||
+          (isNearMarbleTrader && isCalligraphyClueNeeded) ||
           (isNearPool && isSymmetryClueNeeded) ||
-          (isNearTajPishtaq && !isMausoleumExplored) ||
           (isNearCenotaphs && isCenotaphClueNeeded) ||
           (isNearArchaeologist && isArchaeologistClueNeeded) ||
           (isNearCarriage && scene === "taj_mehtab_bagh" && isArchaeologistTalked) ||
-          (isNearLahoriGate && scene === "red_fort_lahori") ||
-          (isNearDiwanIKhas && scene === "red_fort_diwani_khas" && !showCampaignComplete)
+          (isNearLahoriGate && scene === "red_fort_lahori")
         );
 
         // Mode 3: 🧞 Normal (Optional story / lore inquiry)
@@ -1435,32 +1461,93 @@ export default function MughalGameScreen() {
             className="absolute z-20 pointer-events-auto cursor-pointer group transition-all duration-700 ease-out"
             onClick={() => {
               let speechText = "";
-              if (!hasTalkedToJolly) {
-                speechText = "Ah! Hello, traveller! I am Jolly Bhai. I was born many centuries ago and have witnessed great wars, powerful kingdoms, and the changing of history. But remember... only you can see me. I will guide you through this journey. And whenever you see me shaking and dancing like a madman... come quickly! It means I have something very important to tell you!";
-              } else if (isGlowing) {
-                if (scene === "gate") speechText = "Mere aaka! Look at the sentries closely! Speak with the Royal Guard and tell him you are here to perform your court talent!";
-                else if (scene === "interior") speechText = "✨ Secret of the Throne: The Emperor has stepped away for prayers. Complete the sacred floral Pietra Dura marble mosaic on the dais!";
-                else if (scene === "sheesh_mahal") speechText = "✨ Architectural Mystery: Align the three optical mirrors so the candle flame forms the eight-pointed cosmic star on the dome ceiling!";
-                else if (scene === "khas_mahal") speechText = "Mere aaka, let me share a bittersweet truth with you... The golden domes you see beside us were once layered in pure, solid gold and inlaid with precious gems. Tragically, the gold was stripped away during colonial rule in the 18th century, and over time, tourists stole the remaining stones. What remains today is only a quiet shadow of our lost Mughal splendour.";
-                else if (scene === "taj_gate") speechText = "✨ Sacred Inscription: The Great Gate bears Quranic Thuluth calligraphy. Complete the sacred verse of peace!";
-                else if (scene === "taj_charbagh") speechText = "✨ Persian Symmetry: All four quadrants of paradise water channels must be activated symmetrically!";
-                else if (scene === "taj_mausoleum") speechText = "✨ Hidden Truth: The decorated cenotaphs above are for viewing. The actual quiet graves lie in the lower crypt below!";
-                else if (scene === "taj_mehtab_bagh") speechText = "✨ The Legend: The Black Taj is a myth born from the dark pool stones of Mehtab Bagh. Board the royal carriage to Delhi!";
-                else speechText = "✨ Major Event Unfolding: We stand at the threshold of imperial history!";
+              let customOptions: Array<{ id: number; text: string }> = [];
+
+              if (isGlowing) {
+                if (scene === "khas_mahal") {
+                  speechText = "Mere aaka, let me share a bittersweet truth with you... The golden domes you see beside us were once layered in pure, solid gold and inlaid with precious gems. Tragically, the gold was stripped away during colonial rule in the 18th century, and over time, tourists stole the remaining stones. What remains today is only a quiet shadow of our lost Mughal splendour.";
+                  customOptions = [
+                    { id: 1, text: "Why were the golden domes stripped of their gold?" },
+                    { id: 2, text: "Tell me more about Khas Mahal and Anguri Bagh." },
+                    { id: 3, text: "How do we cross the Yamuna River to the Taj Mahal?" }
+                  ];
+                } else if (scene === "red_fort_diwani_khas") {
+                  speechText = "✨ The Final Throne: You stand before the imperial Peacock Throne of Emperor Shah Jahan!";
+                  customOptions = [
+                    { id: 1, text: "Tell me about the Peacock Throne and its gems." },
+                    { id: 2, text: "Who designed this imperial hall of private audience?" }
+                  ];
+                } else {
+                  speechText = "✨ Major Event Unfolding: We stand at the threshold of imperial history!";
+                  customOptions = [
+                    { id: 1, text: "What is the secret of this chamber?" },
+                    { id: 2, text: "Tell me more about this royal monument." }
+                  ];
+                }
               } else if (isShaking) {
-                speechText = "💥 Quick, mere aaka! A vital historical clue is right next to you! Press [E] to investigate before the moment slips away!";
+                if (scene === "taj_gate") {
+                  speechText = "Mere aaka, speak with these bazaar traders to learn the password clue to enter through the Great Taj Gate!";
+                  customOptions = [
+                    { id: 1, text: "Which trader knows the Darwaza-i-Rauza calligraphy secret?" },
+                    { id: 2, text: "What is written in the sacred black marble verse?" },
+                    { id: 3, text: "Tell me about master calligrapher Amanat Khan." }
+                  ];
+                } else if (scene === "gate") {
+                  speechText = "Mere aaka! Look at the sentries closely! Speak with the Royal Guard and tell him you are here to perform your court talent!";
+                  customOptions = [
+                    { id: 1, text: "How do I get past the Amar Singh Gate guard?" },
+                    { id: 2, text: "What court talents did Emperor Shah Jahan enjoy?" }
+                  ];
+                } else if (scene === "interior") {
+                  speechText = "💥 Quick, mere aaka! The Emperor's throne dais has an incomplete floral Pietra Dura inlay! Press [E] on the dais to solve it!";
+                  customOptions = [
+                    { id: 1, text: "What precious stones were used in Pietra Dura art?" },
+                    { id: 2, text: "Tell me about the Diwan-i-Aam throne architecture." }
+                  ];
+                } else if (scene === "sheesh_mahal") {
+                  speechText = "💥 Mere aaka! Inspect the optical mirrors in the pool to bounce candlelight across the ceiling dome!";
+                  customOptions = [
+                    { id: 1, text: "How do the Sheesh Mahal convex mirrors work?" },
+                    { id: 2, text: "Who commissioned the Palace of Mirrors?" }
+                  ];
+                } else {
+                  speechText = "💥 Quick, mere aaka! A vital historical clue is right next to you! Press [E] to investigate before the moment slips away!";
+                  customOptions = [
+                    { id: 1, text: "What clue should I look for here?" },
+                    { id: 2, text: "Tell me the history behind this room." }
+                  ];
+                }
+              } else if (!hasTalkedToJolly && scene === "gate") {
+                speechText = "Ah! Hello, traveller! I am Jolly Bhai. I was born many centuries ago and have witnessed great wars, powerful kingdoms, and the changing of history. But remember... only you can see me. I will guide you through this journey. And whenever you see me shaking and dancing like a madman... come quickly! It means I have something very important to tell you!";
+                customOptions = [
+                  { id: 1, text: "Who built the Taj Mahal and why?" },
+                  { id: 2, text: "Tell me about Emperor Shah Jahan's reign." },
+                  { id: 3, text: "Why is Agra Fort fortified so strongly?" }
+                ];
               } else {
                 speechText = "Mere aaka, how can I help you? Ask me anything about Emperor Shah Jahan, the Taj Mahal, or Mughal architecture!";
+                customOptions = [
+                  { id: 1, text: "Who built the Taj Mahal and why?" },
+                  { id: 2, text: "Tell me about Emperor Shah Jahan's reign." },
+                  { id: 3, text: "Why is Agra Fort fortified so strongly?" }
+                ];
               }
 
+              setJollySpeechText(speechText);
+              setJollyOptions(customOptions);
               setShowJollyDialogue(true);
               playCharacterDialogue({
                 character: "jolly",
                 text: speechText,
-                audioUrl: scene === "khas_mahal" ? "/jolly_khas_mahal_gold.wav" : undefined
+                audioUrl: (scene === "taj_gate" && isShaking)
+                  ? "/jolly_taj_gate_traders.wav"
+                  : (scene === "khas_mahal" && isNearKhasFountain)
+                  ? "/jolly_khas_mahal_gold.wav"
+                  : undefined
               });
               if (!hasTalkedToJolly) {
                 setHasTalkedToJolly(true);
+                localStorage.setItem('mughal_has_talked_to_jolly', 'true');
               }
             }}
             style={{
@@ -1470,9 +1557,9 @@ export default function MughalGameScreen() {
             }}
             title={
               mode === "glowing"
-                ? "✨ Jolly Bhai is GLOWING! (Major Story Secret / Key Event)"
+                ? "✨ Jolly Bhai (Special Story Secret)"
                 : mode === "shaking"
-                ? "💥 Jolly Bhai is SHAKING! (Crucial Clue Nearby)"
+                ? "💥 Jolly Bhai (Clue Nearby!)"
                 : "🧞 Jolly Bhai (Genie Guide - Click for Story)"
             }
           >
@@ -1489,16 +1576,10 @@ export default function MughalGameScreen() {
                 }}
               />
               
-              {/* Dynamic Mode Badge Floating Above Genie */}
+              {/* Subtle Mode Badge on Hover Only */}
               {!showJollyDialogue && (
-                <div className={`absolute -top-3 left-1/2 -translate-x-1/2 border-2 border-black rounded-full px-2.5 py-0.5 shadow-[2px_2px_0_0_rgba(0,0,0,1)] text-[9.5px] font-black whitespace-nowrap transition-all flex items-center gap-1 ${
-                  mode === "glowing"
-                    ? "bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400 text-black animate-pulse opacity-100 ring-2 ring-amber-400"
-                    : mode === "shaking"
-                    ? "bg-red-500 text-white animate-bounce opacity-100"
-                    : "bg-[#fff9ea] text-black opacity-0 group-hover:opacity-100"
-                }`}>
-                  {mode === "glowing" && <span>✨ Story Secret!</span>}
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 border-2 border-black rounded-full px-2.5 py-0.5 shadow-[2px_2px_0_0_rgba(0,0,0,1)] text-[9.5px] font-black whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity bg-[#fff9ea] text-black flex items-center gap-1 pointer-events-none">
+                  {mode === "glowing" && <span>✨ Secret Lore</span>}
                   {mode === "shaking" && <span>💥 Clue Alert!</span>}
                   {mode === "normal" && <span>Ask Jolly Bhai 🧞</span>}
                 </div>
@@ -1959,16 +2040,20 @@ export default function MughalGameScreen() {
             historical_events: "Reign of Shah Jahan, completion of Taj Mahal, Mughal golden age"
           }}
           dialogueText={
-            scene === "khas_mahal"
-              ? "Mere aaka, let me share a bittersweet truth with you... The golden domes you see beside us were once layered in pure, solid gold and inlaid with precious gems. Tragically, the gold was stripped away during colonial rule in the 18th century, and over time, tourists stole the remaining stones. What remains today is only a quiet shadow of our lost Mughal splendour."
-              : hasTalkedToJolly
-              ? "Mere aaka, how can I help you?"
-              : "Ah! Hello, traveller! I am Jolly Bhai. I was born many centuries ago and have witnessed great wars, powerful kingdoms, and the changing of history. But remember... only you can see me. I will guide you through this journey. And whenever you see me shaking and dancing like a madman... come quickly! It means I have something very important to tell you!"
+            jollySpeechText || (
+              scene === "khas_mahal"
+                ? "Mere aaka, let me share a bittersweet truth with you... The golden domes you see beside us were once layered in pure, solid gold and inlaid with precious gems. Tragically, the gold was stripped away during colonial rule in the 18th century, and over time, tourists stole the remaining stones. What remains today is only a quiet shadow of our lost Mughal splendour."
+                : hasTalkedToJolly
+                ? "Mere aaka, how can I help you?"
+                : "Ah! Hello, traveller! I am Jolly Bhai. I was born many centuries ago and have witnessed great wars, powerful kingdoms, and the changing of history. But remember... only you can see me. I will guide you through this journey. And whenever you see me shaking and dancing like a madman... come quickly! It means I have something very important to tell you!"
+            )
           }
           isSpeaking={true}
           showInput={true}
           options={
-            scene === "khas_mahal"
+            jollyOptions.length > 0
+              ? jollyOptions
+              : scene === "khas_mahal"
               ? [
                   { id: 1, text: "Why were the golden domes stripped of their gold?" },
                   { id: 2, text: "Tell me more about Khas Mahal and Anguri Bagh." },
@@ -2262,12 +2347,63 @@ export default function MughalGameScreen() {
           <div className="absolute pointer-events-none z-10" style={{ left: '18%', top: '88%', transform: 'translate(-50%, -96%)' }}>
             <img src="/trader_pots_transparent.png" alt="Pot Trader" className="w-40 h-40 object-contain" style={{ imageRendering: "pixelated" }} />
           </div>
-          <div className="absolute pointer-events-none z-10" style={{ left: '32%', top: '88%', transform: 'translate(-50%, -96%)' }}>
-            <img src="/trader_toys_transparent.png" alt="Toy Trader" className="w-40 h-40 object-contain" style={{ imageRendering: "pixelated" }} />
+
+          {/* Toy & Painting Trader (Clue Trader) */}
+          <div 
+            className="absolute pointer-events-auto cursor-pointer z-15 flex flex-col items-center group" 
+            style={{ left: '32%', top: '88%', transform: 'translate(-50%, -96%)' }}
+            onClick={() => {
+              setActiveTraderId("toys");
+              setTraderSpeech("Each of my toys and paintings symbolizes peace.");
+              playCharacterDialogue({
+                character: "trader_toys",
+                text: "Each of my toys and paintings symbolizes peace.",
+                audioUrl: "/trader_toys_peace.wav"
+              });
+            }}
+          >
+            {activeTraderId === "toys" && traderSpeech && (
+              <div className="animate-bounce mb-1 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[11px] font-black text-black max-w-[210px] text-center leading-tight whitespace-normal">
+                {traderSpeech}
+              </div>
+            )}
+            {isNearToyTrader && activeTraderId !== "toys" && (
+              <div className="animate-bounce mb-1 bg-[#fff9ea] border-2 border-black rounded-lg px-2 py-0.5 shadow-[2px_2px_0_0_rgba(0,0,0,1)] text-[10px] font-bold text-black flex items-center gap-1">
+                <span className="bg-amber-400 border border-black rounded px-1 text-[9px]">E</span>
+                Talk to Toy Artisan
+              </div>
+            )}
+            <img src="/trader_toys_transparent.png" alt="Toy & Painting Trader" className="w-40 h-40 object-contain transition-transform group-hover:scale-105" style={{ imageRendering: "pixelated" }} />
           </div>
-          <div className="absolute pointer-events-none z-10" style={{ left: '68%', top: '88%', transform: 'translate(-50%, -96%)' }}>
-            <img src="/trader_marble_transparent.png" alt="Marble Trader" className="w-40 h-40 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
+
+          {/* Marble Art Trader */}
+          <div 
+            className="absolute pointer-events-auto cursor-pointer z-15 flex flex-col items-center group" 
+            style={{ left: '68%', top: '88%', transform: 'translate(-50%, -96%)' }}
+            onClick={() => {
+              setActiveTraderId("marble");
+              setTraderSpeech("This is some of the finest marble art in the empire, carved by royal artisans!");
+              playCharacterDialogue({
+                character: "trader_marble",
+                text: "This is some of the finest marble art in the empire, carved by royal artisans!",
+                audioUrl: "/trader_marble_art.wav"
+              });
+            }}
+          >
+            {activeTraderId === "marble" && traderSpeech && (
+              <div className="animate-bounce mb-1 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[11px] font-black text-black max-w-[210px] text-center leading-tight whitespace-normal">
+                {traderSpeech}
+              </div>
+            )}
+            {isNearMarbleTrader && activeTraderId !== "marble" && (
+              <div className="animate-bounce mb-1 bg-[#fff9ea] border-2 border-black rounded-lg px-2 py-0.5 shadow-[2px_2px_0_0_rgba(0,0,0,1)] text-[10px] font-bold text-black flex items-center gap-1">
+                <span className="bg-amber-400 border border-black rounded px-1 text-[9px]">E</span>
+                Talk to Marble Craftsman
+              </div>
+            )}
+            <img src="/trader_marble_transparent.png" alt="Marble Trader" className="w-40 h-40 object-contain transition-transform group-hover:scale-105" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
           </div>
+
           <div className="absolute pointer-events-none z-10" style={{ left: '82%', top: '88%', transform: 'translate(-50%, -96%)' }}>
             <img src="/trader_spices_transparent.png" alt="Spice Trader" className="w-40 h-40 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
           </div>
@@ -2532,7 +2668,7 @@ export default function MughalGameScreen() {
               />
               {calligraphyError && (
                 <span className="text-red-600 text-xs font-bold font-sans">
-                  ⚠️ Incorrect transcription! Try again. (Hint: opposite of war/conflict)
+                  ⚠️ Incorrect transcription! Try again.
                 </span>
               )}
             </div>
