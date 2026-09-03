@@ -39,13 +39,13 @@ export default function GamesDashboard() {
 
       // Check Rajasthan Progress
       try {
-        const rajSave = localStorage.getItem("rajasthan_save_v6") || localStorage.getItem("rajasthan_game_state");
+        const rajSave = localStorage.getItem("rajasthan_game_state") || localStorage.getItem("rajasthan_save_v6");
         if (rajSave) {
           const parsed = JSON.parse(rajSave);
-          if (parsed.stage === 6 && parsed.cluesFound >= 6) {
-            progress.rajasthan = { statusText: "✓ Sun Relic Restored", isComplete: true };
+          if (parsed.isCampaignComplete || (parsed.stage === 4 && parsed.cluesFound >= 4)) {
+            progress.rajasthan = { statusText: "✓ Imperial Rajputana Complete (4/4)", isComplete: true };
           } else if (parsed.stage) {
-            progress.rajasthan = { statusText: `Stage ${parsed.stage}/6 Active`, isComplete: false };
+            progress.rajasthan = { statusText: `Stage ${parsed.stage}/4 Active`, isComplete: false };
           }
         }
       } catch {
