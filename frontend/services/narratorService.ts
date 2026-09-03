@@ -74,7 +74,7 @@ class NarratorManager {
   /**
    * Stop any ongoing narrator audio playback immediately.
    */
-  public stopNarration(): void {
+  public stopNarration(triggerOnEnd: boolean = false): void {
     if (this.activeAudio) {
       const audioToStop = this.activeAudio;
       this.activeAudio = null;
@@ -85,7 +85,15 @@ class NarratorManager {
         // Safe to ignore interruption
       }
     }
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+    const endCallback = this.currentOptions?.onEnd;
+    this.currentOptions = undefined;
     this.updateState({ isPlaying: false, isLoading: false, currentText: null });
+    if (triggerOnEnd && endCallback) {
+      endCallback();
+    }
   }
 
   /**
@@ -304,4 +312,4 @@ export const narrator = new NarratorManager();
 export const playNarration = (text: string, options?: NarrationOptions) =>
   narrator.playNarration(text, options);
 
-export const stopNarration = () => narrator.stopNarration();
+export const stopNarration = (triggerOnEnd: boolean = false) => narrator.stopNarration(triggerOnEnd);

@@ -15,7 +15,7 @@ export default function NarratorSubtitle() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && (state.isPlaying || state.isLoading || state.currentText)) {
-        stopNarration();
+        stopNarration(true);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -42,7 +42,7 @@ export default function NarratorSubtitle() {
                 if (!state.isPlaying) {
                   narrator.playActiveAudio();
                 } else {
-                  stopNarration();
+                  stopNarration(true);
                 }
               }}
               className="bg-[#fcd34d] hover:bg-[#fbbf24] border-2 border-black rounded-lg p-2 shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[0px_0px_0_0_rgba(0,0,0,1)] cursor-pointer transition-all"
@@ -51,7 +51,7 @@ export default function NarratorSubtitle() {
               <span className="text-sm text-black">{state.isPlaying ? "⏸" : "🔊"}</span>
             </button>
             <button 
-              onClick={() => stopNarration()}
+              onClick={() => stopNarration(true)}
               className="bg-white hover:bg-gray-100 border-2 border-black rounded-lg px-3.5 py-1.5 font-black text-xs text-black shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[0px_0px_0_0_rgba(0,0,0,1)] transition-all cursor-pointer"
             >
               Esc · leave
@@ -81,7 +81,7 @@ export default function NarratorSubtitle() {
               if (!state.isPlaying) {
                 narrator.playActiveAudio();
               } else {
-                stopNarration();
+                stopNarration(true);
               }
             }}
             className="bg-white hover:bg-amber-50 text-black border-2 border-black rounded-lg px-4 py-2 font-black text-xs shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[0px_0px_0_0_rgba(0,0,0,1)] transition-all text-left cursor-pointer flex items-center"
@@ -90,7 +90,7 @@ export default function NarratorSubtitle() {
             <span className="text-black font-extrabold">{state.isPlaying ? "Stop Voice & Continue" : "🔊 Listen to Voice & Step into History"}</span>
           </button>
           <button
-            onClick={() => stopNarration()}
+            onClick={() => stopNarration(true)}
             className="bg-white hover:bg-gray-100 text-black border-2 border-black rounded-lg px-3.5 py-2 font-bold text-xs shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[0px_0px_0_0_rgba(0,0,0,1)] transition-all text-left cursor-pointer"
           >
             <span className="text-gray-500 mr-1.5">2.</span>

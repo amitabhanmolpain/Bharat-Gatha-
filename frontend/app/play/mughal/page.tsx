@@ -7,6 +7,7 @@ import { playNarration, stopNarration } from "../../../services/narratorService"
 import { playCharacterDialogue, stopCharacterDialogue } from "../../../services/characterVoiceService";
 import NarratorSubtitle from "../../../components/NarratorSubtitle";
 import CluesModal, { MUGHAL_HISTORICAL_CLUES } from "./components/CluesModal";
+import PietraDuraPuzzleModal from "./components/PietraDuraPuzzleModal";
 
 export type SceneType =
   | "gate"
@@ -100,6 +101,10 @@ export default function MughalGameScreen() {
   const [isSymmetrySolved, setIsSymmetrySolved] = useState(false);
   const [symmetryState, setSymmetryState] = useState([true, false, true, false]);
 
+  const [showPietraDuraPuzzle, setShowPietraDuraPuzzle] = useState(false);
+  const [isPietraDuraSolved, setIsPietraDuraSolved] = useState(false);
+  const [throneGuardSpeech, setThroneGuardSpeech] = useState<string | null>(null);
+
   const [showMausoleumModal, setShowMausoleumModal] = useState(false);
   const [isMausoleumExplored, setIsMausoleumExplored] = useState(false);
 
@@ -116,27 +121,29 @@ export default function MughalGameScreen() {
   const boatSoundRef = useRef<HTMLAudioElement | null>(null);
   const hasPlayedIntroNarrationRef = useRef(false);
 
-  // Play cinematic narrator voice once when entering 1653 Mughal Era
+  // Play cinematic narrator voice once when entering 1653 Mughal Era (ONLY if at gate)
   useEffect(() => {
     if (!isLoading && !hasPlayedIntroNarrationRef.current) {
       hasPlayedIntroNarrationRef.current = true;
-      const narrationTimer = setTimeout(() => {
-        playNarration(
-          "You have entered the year 1653... the heart of the Mughal Empire.\n\n" +
-          "Mumtaz Mahal is gone... but her memory now stands immortal before you.\n\n" +
-          "The Taj Mahal.\n\n" +
-          "You now live under the rule of Emperor Shah Jahan.\n\n" +
-          "Remember, time traveller... reveal your true identity to no one.\n\n" +
-          "One wrong word... and your journey may end before it has even begun.\n\n" +
-          "Now... step carefully into history.",
-          {
-            audioUrl: "/mughal_intro_narration.wav"
-          }
-        );
-      }, 700);
-      return () => clearTimeout(narrationTimer);
+      if (scene === "gate") {
+        const narrationTimer = setTimeout(() => {
+          playNarration(
+            "You have entered the year 1653... the heart of the Mughal Empire.\n\n" +
+            "Mumtaz Mahal is gone... but her memory now stands immortal before you.\n\n" +
+            "The Taj Mahal.\n\n" +
+            "You now live under the rule of Emperor Shah Jahan.\n\n" +
+            "Remember, time traveller... reveal your true identity to no one.\n\n" +
+            "One wrong word... and your journey may end before it has even begun.\n\n" +
+            "Now... step carefully into history.",
+            {
+              audioUrl: "/mughal_intro_narration.wav"
+            }
+          );
+        }, 700);
+        return () => clearTimeout(narrationTimer);
+      }
     }
-  }, [isLoading]);
+  }, [isLoading, scene]);
 
   // Clean up narration audio when navigating away
   useEffect(() => {
@@ -159,6 +166,30 @@ export default function MughalGameScreen() {
       );
     }
   }, [punishmentState.isOpen, punishmentState.title, punishmentState.description]);
+
+  // Play Sarvam AI narrator voice when entering Diwan-i-Aam / Throne Hall (interior)
+  const hasPlayedInteriorNarrationRef = useRef(false);
+  useEffect(() => {
+    if (scene === "interior" && !hasPlayedInteriorNarrationRef.current) {
+      hasPlayedInteriorNarrationRef.current = true;
+      const timer = setTimeout(() => {
+        playNarration(
+          "King Shah Jahan has gone for his prayers. Perform the famous Pietra Dura Marble Flower Art among the military guards, and you will get your next clue.",
+          {
+            speaker: "ratan",
+            pace: 0.88,
+            language_code: "en-IN",
+            onEnd: () => {
+              if (!isPietraDuraSolved) {
+                setShowPietraDuraPuzzle(true);
+              }
+            }
+          }
+        );
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [scene, isPietraDuraSolved]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -305,7 +336,9 @@ export default function MughalGameScreen() {
   const genieX = Math.min(92, Math.max(8, playerPos.x + (facingLeft ? 7.5 : -7.5)));
   const genieY = Math.max(12, playerPos.y - 9.5);
 
-  const isNearThrone = scene === "interior" && playerPos.y <= 65.0 && playerPos.x >= 44.0 && playerPos.x <= 56.0;
+  const isNearThrone = scene === "interior" && playerPos.y <= 78.0 && playerPos.x >= 40.0 && playerPos.x <= 60.0;
+  const isNearSheeshCorridor = scene === "interior" && playerPos.x >= 68.0 && playerPos.y >= 70.0 && playerPos.y <= 86.0;
+  const isNearSheeshMahalDoor = scene === "sheesh_passage" && playerPos.y <= 82.0 && playerPos.x >= 38.0 && playerPos.x <= 62.0;
   const isNearMirrorFountain = scene === "sheesh_mahal" && playerPos.y <= 78.0 && playerPos.y >= 63.0 && playerPos.x >= 40.0 && playerPos.x <= 60.0;
   const isNearKhasFountain = scene === "khas_mahal" && playerPos.y <= 78.0 && playerPos.y >= 64.0 && playerPos.x >= 40.0 && playerPos.x <= 60.0;
 
@@ -328,19 +361,80 @@ export default function MughalGameScreen() {
   const isNearDiwaniKhasExit = scene === "red_fort_diwani_khas" && playerPos.y >= 88.0;
   const isNearRangMahalExit = scene === "red_fort_rang_mahal" && playerPos.y >= 88.0;
 
+  const playerPosRef = useRef(playerPos);
+  playerPosRef.current = playerPos;
+
+  const sceneRef = useRef(scene);
+  sceneRef.current = scene;
+
   useEffect(() => {
     if (isLoading || isTransitioning) return;
 
     const keysHeld = new Set<string>();
 
     const onKeyDown = (e: KeyboardEvent) => {
-      keysHeld.add(e.key.toLowerCase());
-      if (e.key.toLowerCase() === "e") {
-        if (isNearGuard) {
+      const key = e.key.toLowerCase();
+      keysHeld.add(key);
+      const pos = playerPosRef.current;
+      const curScene = sceneRef.current;
+
+      // Handle 'F' Key (Quick Exits / Crossings)
+      if (key === "f") {
+        if (curScene === "sheesh_mahal") {
+          setScene("sheesh_passage");
+          setPlayerPos({ x: 50.0, y: 78.0 });
+        } else if (curScene === "sheesh_passage") {
+          setScene("interior");
+          setPlayerPos({ x: 68.0, y: 76.0 });
+        } else if (curScene === "interior") {
+          setScene("courtyard");
+          setPlayerPos({ x: 26.0, y: 46.0 });
+        } else if (curScene === "brown_passage") {
+          setScene("courtyard");
+          setPlayerPos({ x: 82.0, y: 56.0 });
+        } else if (curScene === "khas_mahal") {
+          setScene("brown_passage");
+          setPlayerPos({ x: 50.0, y: 64.0 });
+        } else if (curScene === "taj_exterior") {
+          if (pos.x >= 68.0) {
+            setScene("taj_mehtab_bagh");
+            setPlayerPos({ x: 50.0, y: 50.0 });
+          } else {
+            setScene("taj_charbagh");
+            setPlayerPos({ x: 45.0, y: 20.0 });
+          }
+        } else if (curScene === "taj_mehtab_bagh") {
+          setScene("taj_exterior");
+          setPlayerPos({ x: 75.0, y: 80.0 });
+        } else if (curScene === "taj_mausoleum") {
+          setScene("taj_exterior");
+          setPlayerPos({ x: 50.0, y: 76.0 });
+        } else if (curScene === "taj_charbagh") {
+          if (pos.y <= 30.0) {
+            setScene("taj_exterior");
+            setPlayerPos({ x: 50.0, y: 86.0 });
+          } else {
+            setScene("taj_gate");
+            setPlayerPos({ x: 50.0, y: 74.0 });
+          }
+        } else if (curScene === "taj_gate") {
+          if (pos.y >= 80.0) {
+            setScene("gate");
+            setPlayerPos({ x: 50.0, y: 88.0 });
+          }
+        } else if (curScene === "passage") {
+          setScene("gate");
+          setPlayerPos({ x: 50.0, y: 73.5 });
+        }
+        return;
+      }
+
+      // Handle 'E' Key (Interactions & Dialogue)
+      if (key === "e") {
+        if (curScene === "gate" && Math.hypot(pos.x - 43.5, pos.y - 72.0) < 14.0) {
           setShowDialogue(true);
           setGuardAttempts((prev) => {
             const next = prev + 1;
-            // Only give clue after various failed attempts (3 attempts)
             if (next >= 3) {
               discoverClue("guard_permit");
             }
@@ -351,35 +445,56 @@ export default function MughalGameScreen() {
             text: "Halt, intruder! Stop right where you stand! Beyond this Amar Singh Gate is restricted imperial ground! Answer immediately, or you will be seized!"
           });
         }
-        if (isNearThrone) {
-          discoverClue("pietra_dura_seal");
-          setShowThroneScroll((prev) => !prev);
+        if (curScene === "interior") {
+          if (pos.x >= 65.0) {
+            if (isPietraDuraSolved) {
+              setScene("sheesh_passage");
+              setPlayerPos({ x: 50.0, y: 86.0 });
+            } else {
+              setThroneGuardSpeech("Halt! You must perform the Pietra Dura floral art before entering the Sheesh Mahal!");
+              setTimeout(() => setThroneGuardSpeech(null), 5000);
+              setShowPietraDuraPuzzle(true);
+            }
+          } else if (pos.x >= 35.0 && pos.x <= 65.0 && pos.y <= 85.0) {
+            if (!isPietraDuraSolved) {
+              setShowPietraDuraPuzzle(true);
+            } else {
+              setShowThroneScroll((prev) => !prev);
+            }
+          }
         }
-        if (isNearMirrorFountain) {
-          discoverClue("sheesh_mirror_shard");
-          setShowMirrorModal((prev) => !prev);
-        }
-        if (isNearKhasFountain) {
-          setShowKhasModal(true);
-        }
-        if (isNearCalligraphy && !isCalligraphySolved) {
-          setShowCalligraphyPuzzle(true);
-        }
-        if (isNearPool && !isSymmetrySolved) {
-          setShowSymmetryPuzzle(true);
-        }
-        if (isNearTajPishtaq) {
-          setScene("taj_mausoleum");
+        if (curScene === "sheesh_passage" && pos.y <= 85.0) {
+          setScene("sheesh_mahal");
           setPlayerPos({ x: 50.0, y: 86.0 });
         }
-        if (isNearCharbaghReturn) {
-          setScene("taj_charbagh");
-          setPlayerPos({ x: 45.0, y: 20.0 });
+        if (curScene === "sheesh_mahal") {
+          if (pos.y <= 85.0 && pos.x >= 28.0 && pos.x <= 72.0) {
+            discoverClue("sheesh_mirror_shard");
+            setShowMirrorModal((prev) => !prev);
+          }
         }
-        if (isNearCenotaphs && !isMausoleumExplored) {
+        if (curScene === "khas_mahal" && pos.y <= 85.0 && pos.x >= 28.0 && pos.x <= 72.0) {
+          setShowKhasModal(true);
+        }
+        if (curScene === "taj_gate" && pos.y <= 78.0 && pos.x >= 38.0 && pos.x <= 62.0 && !isCalligraphySolved) {
+          setShowCalligraphyPuzzle(true);
+        }
+        if (curScene === "taj_charbagh" && pos.y <= 65.0 && pos.y >= 35.0 && pos.x >= 35.0 && pos.x <= 65.0 && !isSymmetrySolved) {
+          setShowSymmetryPuzzle(true);
+        }
+        if (curScene === "taj_exterior") {
+          if (pos.y <= 80.0 && pos.x >= 38.0 && pos.x <= 62.0) {
+            setScene("taj_mausoleum");
+            setPlayerPos({ x: 50.0, y: 86.0 });
+          } else if (pos.y >= 90.0) {
+            setScene("taj_charbagh");
+            setPlayerPos({ x: 45.0, y: 20.0 });
+          }
+        }
+        if (curScene === "taj_mausoleum" && pos.y <= 80.0 && pos.x >= 20.0 && pos.x <= 80.0 && !isMausoleumExplored) {
           setShowMausoleumModal(true);
         }
-        if (isNearArchaeologist) {
+        if (curScene === "taj_mehtab_bagh" && Math.hypot(pos.x - 45.0, pos.y - 72.0) < 14.0) {
           discoverClue("mehtab_bagh_journal");
           setIsArchaeologistTalked(true);
           setShowArchaeologistDialogue((prev) => !prev);
@@ -388,22 +503,23 @@ export default function MughalGameScreen() {
             text: "Greetings! I am the caretaker archaeologist here. You are standing on the ruins of Mehtab Bagh's pond foundations."
           });
         }
-        if (isNearLahoriGate) {
+        if (curScene === "red_fort_lahori" && pos.y <= 68.0 && pos.x >= 44.0 && pos.x <= 56.0) {
           setScene("red_fort_plaza");
           setPlayerPos({ x: 50.0, y: 88.0 });
         }
-        if (isNearDiwanIKhas) {
-          setShowCampaignComplete(true);
+        if (curScene === "red_fort_diwani_khas") {
+          if (pos.y <= 68.0 && pos.x >= 32.0 && pos.x <= 68.0) {
+            setShowCampaignComplete(true);
+          } else if (pos.y >= 84.0) {
+            setScene("red_fort_plaza");
+            setPlayerPos({ x: 35.0, y: 78.0 });
+          }
         }
-        if (isNearDiwaniKhasExit) {
-          setScene("red_fort_plaza");
-          setPlayerPos({ x: 35.0, y: 78.0 });
-        }
-        if (isNearRangMahalExit) {
+        if (curScene === "red_fort_rang_mahal" && pos.y >= 84.0) {
           setScene("red_fort_plaza");
           setPlayerPos({ x: 65.0, y: 78.0 });
         }
-        if (isNearCarriage || isNearRedFortCarriage) {
+        if ((curScene === "taj_mehtab_bagh" && isArchaeologistTalked && pos.x >= 75.0 && pos.y >= 75.0) || (curScene === "red_fort_lahori" && pos.x <= 30.0 && pos.y >= 70.0)) {
           setIsCarriageTravelling(true);
           setTravelOverlayPhase(1);
           setTimeout(() => {
@@ -411,7 +527,7 @@ export default function MughalGameScreen() {
             setTimeout(() => {
               setTravelOverlayPhase(3);
               setTimeout(() => {
-                if (isNearCarriage) {
+                if (curScene === "taj_mehtab_bagh") {
                   setScene("red_fort_lahori");
                   setPlayerPos({ x: 50.0, y: 88.0 });
                 } else {
@@ -423,11 +539,6 @@ export default function MughalGameScreen() {
               }, 400);
             }, 1500);
           }, 500);
-        }
-      } else if (e.key.toLowerCase() === "f") {
-        if (isNearMehtabBaghCross) {
-          setScene("taj_mehtab_bagh");
-          setPlayerPos({ x: 50.0, y: 50.0 });
         }
       }
       if (e.key === "Escape") {
@@ -582,17 +693,25 @@ export default function MughalGameScreen() {
 
             return { x: nextX, y: nextY };
           } else if (scene === "interior") {
-            const minX = 20.0;
-            const maxX = 78.0;
-            const minY = 62.0;
+            const minX = 14.0;
+            const maxX = isPietraDuraSolved ? 82.0 : 69.0;
+            const minY = 72.0;
             const maxY = 88.0;
 
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
 
-            if (nextX >= 74.0 && nextY <= 74.0) {
-              setScene("sheesh_passage");
-              setPlayerPos({ x: 50.0, y: 86.0 });
+            if (isPietraDuraSolved) {
+              if (nextX >= 70.0 && nextY >= 70.0 && nextY <= 85.0) {
+                setScene("sheesh_passage");
+                setPlayerPos({ x: 50.0, y: 86.0 });
+              }
+            } else {
+              if (prev.x + dx >= 69.0 && nextY >= 70.0 && nextY <= 85.0) {
+                setThroneGuardSpeech("Halt! You must perform the Pietra Dura floral art before entering the Sheesh Mahal!");
+                setTimeout(() => setThroneGuardSpeech(null), 5000);
+                setShowPietraDuraPuzzle(true);
+              }
             }
 
             if (nextY >= 87.5) {
@@ -602,39 +721,35 @@ export default function MughalGameScreen() {
 
             return { x: nextX, y: nextY };
           } else if (scene === "sheesh_passage") {
-            const minX = 32.0;
-            const maxX = 68.0;
-            const minY = 58.0;
-            const maxY = 88.0;
+            const minX = 36.0;
+            const maxX = 64.0;
+            const minY = 74.0;
+            const maxY = 90.0;
 
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
 
-            if (nextY <= 60.0 && nextX >= 44.0 && nextX <= 56.0) {
+            if (nextY <= 76.5 && nextX >= 40.0 && nextX <= 60.0) {
               setScene("sheesh_mahal");
               setPlayerPos({ x: 50.0, y: 86.0 });
             }
 
-            if (nextY >= 87.5) {
+            if (nextY >= 89.0) {
               setScene("interior");
-              setPlayerPos({ x: 70.0, y: 70.0 });
+              setPlayerPos({ x: 68.0, y: 76.0 });
             }
 
             return { x: nextX, y: nextY };
           } else if (scene === "sheesh_mahal") {
             const minX = 18.0;
             const maxX = 82.0;
-            const minY = 60.0;
+            const minY = 62.0;
             const maxY = 88.0;
 
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
 
-            if (nextY >= 87.5) {
-              setScene("sheesh_passage");
-              setPlayerPos({ x: 50.0, y: 64.0 });
-            }
-
+            // Only exit when F key is pressed or exit button clicked
             return { x: nextX, y: nextY };
           } else if (scene === "brown_passage") {
             const minX = 22.0;
@@ -943,9 +1058,9 @@ export default function MughalGameScreen() {
     : scene === "courtyard"
     ? 0.90 + ((playerPos.y - 40.0) / 36.0) * 0.50
     : scene === "interior"
-    ? 0.95 + ((playerPos.y - 62.0) / 26.0) * 0.45
+    ? 1.0 + ((playerPos.y - 72.0) / 16.0) * 0.25
     : scene === "sheesh_passage"
-    ? 0.90 + ((playerPos.y - 58.0) / 30.0) * 0.50
+    ? 0.85 + ((playerPos.y - 74.0) / 16.0) * 0.35
     : scene === "sheesh_mahal"
     ? 0.95 + ((playerPos.y - 60.0) / 28.0) * 0.45
     : scene === "brown_passage"
@@ -1131,17 +1246,20 @@ export default function MughalGameScreen() {
         </div>
       </div>
 
-      {/* Throne Inspection Prompt (Interior Scene) */}
-      {scene === "interior" && isNearThrone && !showThroneScroll && (
+      {/* Throne Inspection / Art Performance Prompt (Interior Scene) */}
+      {scene === "interior" && isNearThrone && !showThroneScroll && !showPietraDuraPuzzle && (
         <div 
           className="absolute top-[52%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 cursor-pointer z-10 animate-bounce"
           onClick={() => {
-            discoverClue("pietra_dura_seal");
-            setShowThroneScroll(true);
+            if (!isPietraDuraSolved) {
+              setShowPietraDuraPuzzle(true);
+            } else {
+              setShowThroneScroll(true);
+            }
           }}
         >
           <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
-          Inspect Imperial Throne Dais
+          {isPietraDuraSolved ? "Inspect Imperial Throne Dais" : "🎨 Perform Pietra Dura Marble Flower Art"}
         </div>
       )}
 
@@ -1207,9 +1325,24 @@ export default function MughalGameScreen() {
         </div>
       )}
 
-      {scene === "interior" && playerPos.x >= 70.0 && (
-        <div className="absolute top-[64%] right-[12%] bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
-          ► Walk right to Sheesh Mahal Corridor
+      {scene === "interior" && playerPos.x >= 65.0 && (
+        <div 
+          className={`absolute top-[64%] right-[10%] border-2 border-black px-3.5 py-1.5 rounded-full text-xs font-bold tracking-wider animate-bounce z-10 cursor-pointer shadow-[3px_3px_0_0_rgba(0,0,0,1)] ${
+            isPietraDuraSolved ? "bg-amber-400 text-black" : "bg-[#fed7aa] text-amber-950"
+          }`}
+          onClick={() => {
+            if (isPietraDuraSolved) {
+              setScene("sheesh_passage");
+              setPlayerPos({ x: 50.0, y: 86.0 });
+            } else {
+              setThroneGuardSpeech("Halt! You must perform the Pietra Dura floral art before entering the Sheesh Mahal!");
+              setTimeout(() => setThroneGuardSpeech(null), 5000);
+              setShowPietraDuraPuzzle(true);
+            }
+          }}
+        >
+          <span className="bg-black text-amber-400 px-1.5 py-0.5 rounded mr-1.5 text-[10px]">E</span>
+          {isPietraDuraSolved ? "Enter Sheesh Mahal Corridor" : "🔒 Corridor Locked (Perform Art First)"}
         </div>
       )}
 
@@ -1219,9 +1352,16 @@ export default function MughalGameScreen() {
         </div>
       )}
 
-      {scene === "sheesh_passage" && playerPos.y <= 62.0 && (
-        <div className="absolute top-[46%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
-          ▲ Enter Sheesh Mahal (Palace of Mirrors)
+      {scene === "sheesh_passage" && playerPos.y <= 82.0 && (
+        <div 
+          className="absolute top-[48%] left-1/2 -translate-x-1/2 bg-amber-400 border-2 border-black px-4 py-1.5 rounded-full text-xs font-black text-black tracking-wider animate-bounce z-10 cursor-pointer shadow-[3px_3px_0_0_rgba(0,0,0,1)]"
+          onClick={() => {
+            setScene("sheesh_mahal");
+            setPlayerPos({ x: 50.0, y: 86.0 });
+          }}
+        >
+          <span className="bg-black text-amber-400 px-1.5 py-0.5 rounded mr-1.5 text-[10px]">E</span>
+          Enter Sheesh Mahal (Palace of Mirrors)
         </div>
       )}
 
@@ -1231,9 +1371,16 @@ export default function MughalGameScreen() {
         </div>
       )}
 
-      {scene === "sheesh_mahal" && playerPos.y >= 84.0 && (
-        <div className="absolute bottom-[8%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
-          ▼ Walk down to exit Sheesh Mahal
+      {scene === "sheesh_mahal" && (
+        <div 
+          className="absolute bottom-[6%] left-1/2 -translate-x-1/2 bg-amber-400 border-2 border-black px-4 py-1.5 rounded-full text-xs font-black text-black tracking-wider animate-bounce z-10 cursor-pointer shadow-[3px_3px_0_0_rgba(0,0,0,1)]"
+          onClick={() => {
+            setScene("sheesh_passage");
+            setPlayerPos({ x: 50.0, y: 78.0 });
+          }}
+        >
+          <span className="bg-black text-amber-400 px-1.5 py-0.5 rounded mr-1.5 text-[10px]">F</span>
+          Exit Sheesh Mahal (Return to Corridor)
         </div>
       )}
 
@@ -1577,7 +1724,7 @@ export default function MughalGameScreen() {
               : scene === "courtyard"
               ? "Go to the white marble Diwan-i-Khas building (top-left palace) across the Anguri Bagh garden."
               : scene === "interior"
-              ? "Inspect the imperial throne dais, then proceed right to the Sheesh Mahal corridor."
+              ? "King Shah Jahan has gone for his prayers. Perform the famous Pietra Dura Marble Flower Art among the military guards or inspect the throne dais."
               : scene === "sheesh_passage"
               ? "Walk forward through the golden archway to enter the Sheesh Mahal (Palace of Mirrors)."
               : scene === "sheesh_mahal"
@@ -1771,6 +1918,37 @@ export default function MughalGameScreen() {
           {/* Brown Palace Arcade Guard (Right) */}
           <div className="absolute pointer-events-none z-10" style={{ left: '84%', top: '52%', transform: 'translate(-50%, -96%) scale(0.95)' }}>
             <img src="/guard.png" alt="Palace Guard" className="w-26 h-26 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
+          </div>
+        </>
+      )}
+
+      {/* Mughal Military Guards stationed in Imperial Throne Room (Interior) */}
+      {scene === "interior" && (
+        <>
+          {/* Left Foreground Pillar Guard */}
+          <div className="absolute pointer-events-none z-10" style={{ left: '13%', top: '88%', transform: 'translate(-50%, -96%) scale(1.15)' }}>
+            <img src="/guard.png" alt="Imperial Guard" className="w-32 h-32 object-contain" style={{ imageRendering: "pixelated" }} />
+          </div>
+          {/* Left Midground Colonnade Guard */}
+          <div className="absolute pointer-events-none z-10" style={{ left: '28%', top: '78%', transform: 'translate(-50%, -96%) scale(0.95)' }}>
+            <img src="/guard.png" alt="Imperial Guard" className="w-28 h-28 object-contain" style={{ imageRendering: "pixelated" }} />
+          </div>
+          {/* Throne Dais Standing Guard (Beside Steps, Grounded on Carpet) */}
+          <div className="absolute pointer-events-none z-15 flex flex-col items-center" style={{ left: '38%', top: '78%', transform: 'translate(-50%, -96%) scale(0.92)' }}>
+            {throneGuardSpeech && (
+              <div className="animate-bounce mb-1 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[11px] font-black text-black max-w-[200px] text-center leading-tight whitespace-normal">
+                {throneGuardSpeech}
+              </div>
+            )}
+            <img src="/guard.png" alt="Throne Dais Guard" className="w-28 h-28 object-contain" style={{ imageRendering: "pixelated" }} />
+          </div>
+          {/* Right Midground Colonnade Guard */}
+          <div className="absolute pointer-events-none z-10" style={{ left: '72%', top: '78%', transform: 'translate(-50%, -96%) scale(0.95)' }}>
+            <img src="/guard.png" alt="Imperial Guard" className="w-28 h-28 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
+          </div>
+          {/* Right Foreground Pillar Guard */}
+          <div className="absolute pointer-events-none z-10" style={{ left: '87%', top: '88%', transform: 'translate(-50%, -96%) scale(1.15)' }}>
+            <img src="/guard.png" alt="Imperial Guard" className="w-32 h-32 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
           </div>
         </>
       )}
@@ -2330,6 +2508,36 @@ export default function MughalGameScreen() {
           </div>
         </div>
       )}
+
+      {/* --- PIETRA DURA MARBLE FLOWER PUZZLE (50s Timer + Punishment) --- */}
+      <PietraDuraPuzzleModal
+        isOpen={showPietraDuraPuzzle}
+        onClose={() => setShowPietraDuraPuzzle(false)}
+        onSuccess={() => {
+          setIsPietraDuraSolved(true);
+          setShowPietraDuraPuzzle(false);
+          discoverClue("pietra_dura_seal");
+          setShowThroneScroll(true);
+          setThroneGuardSpeech("Bahut khoob! I give you as a prize permission to visit the Sheesh Mahal!");
+          setTimeout(() => setThroneGuardSpeech(null), 10000);
+          playCharacterDialogue({
+            character: "guard",
+            text: "Bahut khoob! I give you as a prize permission to visit the Sheesh Mahal! Proceed through the royal corridor."
+          });
+        }}
+        onTimeout={() => {
+          setShowPietraDuraPuzzle(false);
+          stopCharacterDialogue();
+          setPunishmentState({
+            isOpen: true,
+            title: "Failed the Court Art Performance",
+            subtitle: "DISGRACED BEFORE THE GUARDS",
+            description: "Time ran out before you could arrange the sacred Pietra Dura marble floral art. The Emperor's military guards saw through your deception and expelled you outside the palace gates!"
+          });
+          setScene("gate");
+          setPlayerPos({ x: 50.0, y: 88.0 });
+        }}
+      />
 
       {/* --- CINEMATIC NARRATOR SUBTITLES & AUDIO CONTROLS (Hidden during punishment screen) --- */}
       {!punishmentState.isOpen && <NarratorSubtitle />}
