@@ -20,11 +20,14 @@ export type SceneType =
   | "taj_mehtab_bagh"
   | "red_fort_lahori"
   | "red_fort_plaza"
-  | "red_fort_interior";
+  | "red_fort_interior"
+  | "red_fort_diwani_khas"
+  | "red_fort_rang_mahal"
+  | "red_fort_corridor";
 
 export default function MughalGameScreen() {
   const [isLoading, setIsLoading] = useState(true);
-  const [scene, setScene] = useState<"gate" | "passage" | "courtyard" | "interior" | "sheesh_passage" | "sheesh_mahal" | "brown_passage" | "khas_mahal" | "taj_gate" | "taj_charbagh" | "taj_exterior" | "taj_mausoleum" | "taj_mehtab_bagh" | "red_fort_lahori" | "red_fort_plaza" | "red_fort_interior" | "red_fort_diwani_khas" | "red_fort_rang_mahal" | "red_fort_corridor">("gate");
+  const [scene, setScene] = useState<SceneType>("gate");
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [playerPos, setPlayerPos] = useState({ x: 50, y: 85 });
   const [facingLeft, setFacingLeft] = useState(false);
@@ -70,7 +73,7 @@ export default function MughalGameScreen() {
     }
   }, []);
 
-  const startBoatTransition = (targetScene: any, targetPos: { x: number; y: number }, durationMs: number = 5000) => {
+  const startBoatTransition = (targetScene: SceneType, targetPos: { x: number; y: number }, durationMs: number = 5000) => {
     setIsTransitioning(true);
     if (boatSoundRef.current) {
       boatSoundRef.current.currentTime = 0;

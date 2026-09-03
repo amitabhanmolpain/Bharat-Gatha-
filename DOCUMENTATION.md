@@ -405,39 +405,84 @@ graph TD
 | **3** | `palace_ruins` | **Bhangarh Palace Ruins** | Searchable ruins spots, ambient ghost silhouettes, glowing Hanuman Chalisa manuscript search | SUCCESS $\rightarrow$ Dawn cutscene $\rightarrow$ Jaisalmer / `/dashboard` |
 | **4** | `bhangarh_chase` | **Shadow Chase (Failure Path)** | Non-combat obstacle dodge run back to entrance gate. Resets timer on exit while retaining temple clue mercy. | Bottom Gate $\rightarrow$ `bhangarh_gate` (Retry with mercy) |
 
-### Great Rajputana Campaign — Stage 6: Jaisalmer Golden City & Campaign Finale ("The Golden City That Still Lives")
+### Great Vijayanagara Empire Campaign — 4-Stage Complete Arc (`/play/vijayanagara`)
 
+* **Engine:** [`frontend/app/play/vijayanagara/page.tsx`](file:///d:/sih_proj/Bharat-Gatha-/frontend/app/play/vijayanagara/page.tsx)
+* **Storage Key:** `vijayanagara_save_v1`
+* **Central Mystery:** *The Missing Merchant's Master Ledger (Ramayya's Archive)*
+
+#### Stage 1: Anegundi — "Where It All Began" (1336 AD)
 | # | Scene Identifier | Location Name | Key Interactions & Mechanics | Exit / Transition Paths |
 |---|---|---|---|---|
-| **1** | `jaisalmer_streets` | **Living Golden Streets** | Vibrant inhabited sandstone city, active merchants & balconies | Top Arch $\rightarrow$ `kathputli_square` |
-| **2** | `kathputli_square` | **Kathputli Square** | Master Ustadi Ustaad NPC, **Kathputli Rhythm Puppetry Mini-Game** (puppet string pull timing) | Top Arch $\rightarrow$ `final_courtyard`, Bottom $\rightarrow$ `jaisalmer_streets` |
-| **3** | `final_courtyard` | **Final Relic Courtyard** | **Great Rajputana Sun Relic Mosaic Assembly** (combines all 6 stage relics), **GRAND FINALE CUTSCENE**, Campaign Completion Modal (+1500 XP) | Campaign Hub $\rightarrow$ `/dashboard` |
+| **1** | `anegundi_river_crossing` | **Tungabhadra Riverbank** | Serene river rapids, coracle ferry dock, path to old fort | Uphill $\rightarrow$ `anegundi_old_fort`, River Coracle (Requires Blessing) $\rightarrow$ `hampi_bazaar_entry` |
+| **2** | `anegundi_old_fort` | **Anegundi Old Fort Ruins** | Sage Vidyaranya NPC dialogue, **Chowka Bara Board Game** (4-cowrie roll, friendly 2-loss mercy rule), Founding Benediction Cutscene | Downhill $\rightarrow$ `anegundi_river_crossing` |
+
+#### Stage 2: Hampi Bazaar — "The Missing Merchant's Ledger" (c. 1520 AD)
+| # | Scene Identifier | Location Name | Key Interactions & Mechanics | Exit / Transition Paths |
+|---|---|---|---|---|
+| **1** | `hampi_bazaar_entry` | **Virupaksha Car Street** | Bustling global market colonnade, Portuguese Chronicler Duarte NPC | Left $\rightarrow$ `gem_traders_row`, Center $\rightarrow$ `toymaker_stall`, North Coracle $\rightarrow$ `anegundi_river_crossing`, East Road $\rightarrow$ `stone_chariot_entry` |
+| **2** | `gem_traders_row` | **Gem Traders' Row** | Master Gem Assessor Setti Somappa NPC, Merchant Ramayya rumor | Exit $\rightarrow$ `hampi_bazaar_entry` |
+| **3** | `toymaker_stall` | **Kinhal Artisan Workshop** | Master Kallappa NPC, **Toy Inspection Puzzle** (360° inspection of Kinhal wooden toys), **Ledger Fragment I: The Scribe's Seal (1/3)** | Exit $\rightarrow$ `hampi_bazaar_entry` |
+
+#### Stage 3: Vittala Temple — "The Golden Age" (c. 1540 AD)
+| # | Scene Identifier | Location Name | Key Interactions & Mechanics | Exit / Transition Paths |
+|---|---|---|---|---|
+| **1** | `stone_chariot_entry` | **Stone Chariot Courtyard** | Monolithic Garuda Shrine, Maestoso Raghavendra NPC (Krishnadevaraya lore & Musician's Warning) | East $\rightarrow$ `musical_pillars`, West $\rightarrow$ `hazara_rama_walls`, South $\rightarrow$ `hampi_bazaar_entry`, North Road $\rightarrow$ `mahanavami_celebration` |
+| **2** | `musical_pillars` | **Ranga Mandapa Pillars** | **56 Resonant Musical Pillars Puzzle** (5-Swara Sa-Re-Ga-Pa-Dha acoustic synthesis via Web Audio API), **Ledger Fragment II: Guild Account Notebook (2/3)** | Exit $\rightarrow$ `stone_chariot_entry` |
+| **3** | `hazara_rama_walls` | **Hazara Rama Narrative Walls** | Optional inspection of continuous Ramayana, dancers, and cavalry stone bas-reliefs | Exit $\rightarrow$ `stone_chariot_entry` |
+
+#### Stage 4: Mahanavami Dibba — "The Fall & Eternal Memory" (1565 AD)
+| # | Scene Identifier | Location Name | Key Interactions & Mechanics | Exit / Transition Paths |
+|---|---|---|---|---|
+| **1** | `mahanavami_celebration` | **Mahanavami Platform Complex** | Multi-tiered granite ceremonial platform, **Festival Reconstruction Memory Puzzle** (reconstructing the 9-day imperial celebration), **Ledger Fragment III: Royal Trust & Master Ledger Assembly Revelation** | South $\rightarrow$ `closing_reflection`, West $\rightarrow$ `stone_chariot_entry` |
+| **2** | `closing_reflection` | **Pushkarani Stepped Tank** | Geometric stepped tank at sunset, **Battle of Talikota Chronicle Narration**, Keeper of Memory NPC, **Carved Gandaberunda Stone Seal Keepsake**, 15/15 Journal Unlock, Campaign Complete Modal (+1000 XP) | Hub $\rightarrow$ `/dashboard` |
 
 ---
 
 ## 8. Asset Catalog & Media Inventory
 
 ### Visual Backgrounds (`/public`)
-* `bg-agra-fort.jpg`: High-detail pixel artwork of the outer red sandstone Amar Singh Gate.
-* `bg-agra-passage.jpg`: Perspective view of the sloping stone defensive ramp.
-* `bg-agra-courtyard.jpg`: Expansive view of the Anguri Bagh geometric garden and Diwan-i-Aam.
-* `bg-agra-interior.jpg`: Golden imperial throne dais inside the Diwan-i-Aam.
-* `bg-agra-sheesh-passage.jpg`: Carved marble passage leading to the bathhouse suites.
-* `bg-agra-sheesh-mahal.jpg`: Glittering mirror-mosaic vaulted interior of Sheesh Mahal.
-* `bg-agra-brown-passage.jpg`: Classical red sandstone gallery in Jahangiri Mahal.
-* `bg-agra-khas-mahal.jpg`: Shah Jahan's white marble riverfront palace overlooking the Yamuna.
+* `bg-agra-fort.jpg`: Outer red sandstone Amar Singh Gate.
+* `bg-agra-passage.jpg`: Sloping stone defensive ramp.
+* `bg-agra-courtyard.jpg`: Anguri Bagh geometric garden and Diwan-i-Aam.
+* `bg-agra-interior.jpg`: Golden imperial throne dais inside Diwan-i-Aam.
+* `bg-agra-sheesh-passage.jpg`: Carved marble passage leading to bathhouse suites.
+* `bg-agra-sheesh-mahal.jpg`: Mirror-mosaic vaulted interior of Sheesh Mahal.
+* `bg-agra-brown-passage.jpg`: Red sandstone gallery in Jahangiri Mahal.
+* `bg-agra-khas-mahal.jpg`: White marble riverfront palace overlooking the Yamuna.
 * `bg-taj-gate.jpg`: The monumental Darwaza-i-Rauza gate with calligraphy borders.
-* `bg-taj-charbagh.jpg`: Symmetrical four-quadrant garden with waterways and reflection pool.
+* `bg-taj-charbagh.jpg`: Four-quadrant garden with waterways and reflection pool.
 * `bg-taj-exterior.jpg`: Panoramic outside marble terrace facing the central Pishtaq arch.
-* `bg-taj-mausoleum.jpg`: Octagonal inner chamber with pierced marble *jali* screens and cenotaphs.
+* `bg-taj-mausoleum.jpg`: Octagonal inner chamber with pierced marble *jali* screens.
 * `bg-taj-mehtab-bagh.jpg`: Riverfront view across the Yamuna with archaeological foundations.
 * `bg-red-fort-lahori.jpg`: The monumental red sandstone Lahori Gate in Old Delhi.
 * `bg-red-fort-plaza.jpg`: Inner ceremonial courtyard behind Lahori Gate.
 * `bg-red-fort-interior.jpg`: The arched, vaulted Chatta Chowk covered bazaar.
+* `bg-chittorgarh-ram-pol.jpg`: Outer gate of Chittorgarh Fort.
+* `bg-chittorgarh-courtyard.jpg`: Chittorgarh inner courtyard.
+* `bg-chittorgarh-vijay-stambh.jpg`: Tower of Victory (Vijay Stambh).
+* `bg-chittorgarh-jauhar-kund.jpg`: Jauhar Kund sacred garden.
+* `bg-kumbhalgarh-wall.jpg`: Continuous Great Wall of Kumbhalgarh.
+* `bg-kumbhalgarh-gates.jpg`: Winding defensive gate ramparts.
+* `bg-kumbhalgarh-quarters.jpg`: Soldiers' barracks courtyard.
+* `bg-kumbhalgarh-badal-mahal.jpg`: Badal Mahal Cloud Palace.
+* `bg-vijayanagara-anegundi-river.jpg`: Tungabhadra river crossing with granite crags.
+* `bg-vijayanagara-anegundi-fort.jpg`: Ancient granite bastions and mandapa at Anegundi.
+* `bg-vijayanagara-hampi-bazaar.jpg`: Grand Virupaksha Car Street bazaar colonnade.
+* `bg-vijayanagara-gem-row.jpg`: Covered stone arcade for gemstone commerce.
+* `bg-vijayanagara-toymaker.jpg`: Traditional Kinhal lacquered wooden toy workshop.
+* `bg-vijayanagara-vittala-chariot.jpg`: Monolithic Stone Chariot (Garuda Shrine) courtyard.
+* `bg-vijayanagara-musical-pillars.jpg`: 56 Resonant monolithic granite musical pillars in Ranga Mandapa.
+* `bg-vijayanagara-hazara-rama.jpg`: Continuous stone narrative bas-reliefs of Hazara Rama.
+* `bg-vijayanagara-mahanavami-ruins.jpg`: 3-tiered granite Mahanavami Dibba platform ruins.
+* `bg-vijayanagara-mahanavami-festival.jpg`: 16th-century vibrant Mahanavami Navaratri festival celebration.
+* `bg-vijayanagara-pushkarani.jpg`: Geometric stepped Pushkarani tank under tranquil sunset.
 
 ### Sprites & Audio
 * `player.png`: Protagonist sprite with pixel-art rendering.
 * `guard.png`: Mughal royal guard sentry sprite.
+* `rajasthan-guard.jpg`: Rajasthani royal warrior sentry sprite.
+* `rajasthan-camel.jpg`: Rajasthani camel sprite.
 * `npc-archaeologist.png`: Archaeological caretaker sprite.
 * `carriage2_transparent.png`: Imperial horse-drawn carriage sprite.
 * `horse_sound.webm`: Looping audio of horse galloping.
@@ -477,15 +522,75 @@ npm run build
 npm run start
 ```
 
+### Great Vijayanagara Empire Campaign — Architecture & 4-Stage Foundation
+
+| Stage | Historic Monument & Theme | Key Sub-Locations | Core Puzzles & Planned Mechanics | Historic Context |
+|---|---|---|---|---|
+| **Stage 1** | **Anegundi — "Where It All Began"** (1336 AD) | • `anegundi_river_crossing`<br>• `anegundi_fort_ruins`<br>• `anegundi_chowka_bara` | • Coracle river navigation across Tungabhadra<br>• Sage Vidyaranya meeting<br>• Traditional Chowka Bara strategy match | 1336 AD foundation of Vijayanagara by Harihara I & Bukka Raya I under spiritual guidance of Sage Vidyaranya. |
+| **Stage 2** | **Hampi Bazaar — "The Missing Merchant's Ledger"** (c. 1520 AD) | • `hampi_bazaar_entry`<br>• `gem_traders_row`<br>• `toymaker_stall`<br>• `foreign_traveler_corner` | • Gem weighing market inquiry<br>• Kinhal wooden toy inspection<br>• Foreign traveler chronicle discovery<br>• First Ledger Fragment | 16th-century global trade center where diamonds and rubies were weighed by dry measure. |
+| **Stage 3** | **Vittala Temple — "The Golden Age"** (c. 1540 AD) | • `stone_chariot_entry`<br>• `musical_pillars`<br>• `hazara_rama_walls`<br>• `musicians_warning` | • Monolithic Stone Chariot inspection<br>• 56 Musical Pillars acoustic resonance calibration<br>• Hazara Rama bas-reliefs<br>• Second Ledger Fragment | Cultural & architectural zenith under King Krishnadevaraya; monolithic acoustic resonance mandapas. |
+| **Stage 4** | **Mahanavami Dibba — "The Fall"** (1565 AD) | • `mahanavami_celebration`<br>• `final_ledger_fragment`<br>• `talikota_narration`<br>• `closing_reflection` | • 3-tiered platform inspection<br>• Underground Pushkarani secret vault<br>• Final Ledger Fragment assembly<br>• Battle of Talikota solemn chronicle | Navaratri imperial celebrations; 1565 Battle of Talikota; eternal preservation of cultural memory. |
+
+---
+
+## 8. Asset Catalog & Media Inventory
+
+### Visual Backgrounds (`/public`)
+* **Agra Fort & Taj Mahal (Mughal)**: `bg-agra-fort.jpg`, `bg-agra-passage.jpg`, `bg-agra-courtyard.jpg`, `bg-agra-interior.jpg`, `bg-agra-sheesh-passage.jpg`, `bg-agra-sheesh-mahal.jpg`, `bg-agra-brown-passage.jpg`, `bg-agra-khas-mahal.jpg`, `bg-taj-gate.jpg`, `bg-taj-charbagh.jpg`, `bg-taj-exterior.jpg`, `bg-taj-mausoleum.jpg`, `bg-taj-mehtab-bagh.jpg`, `bg-red-fort-lahori.jpg`, `bg-red-fort-plaza.jpg`, `bg-red-fort-interior.jpg`
+* **Rajputana Forts (Rajasthan)**: `bg-chittorgarh-ram-pol.jpg`, `bg-chittorgarh-courtyard.jpg`, `bg-chittorgarh-vijay-stambh.jpg`, `bg-chittorgarh-jauhar-kund.jpg`, `bg-chittorgarh-desert-side.jpg`, `bg-kumbhalgarh-wall.jpg`, `bg-kumbhalgarh-gates.jpg`, `bg-kumbhalgarh-quarters.jpg`, `bg-kumbhalgarh-badal-mahal.jpg`, `bg-badal-mahal-courtyard.jpg`, `bg-badal-mahal-interior.jpg`, `bg-badal-mahal-terrace.jpg`, `bg-rajasthan-gate.jpg`, `bg-rajasthan-rampart.jpg`, `bg-rajasthan-court.jpg`, `bg-rajasthan-armory.jpg`, `bg-rajasthan-tunnel.jpg`
+* **Vijayanagara Empire (Karnataka)**: `bg-vijayanagara-anegundi-river.jpg` (Anegundi River Crossing at dawn), `bg-vijayanagara.jpg` (Hampi granite stone mandapa landscape)
+
+### Sprites & Audio
+* `player.png`: Protagonist sprite with pixel-art rendering.
+* `guard.png` / `rajasthan-guard.jpg` / `rajasthan-guard-v2.png`: Regional sentry and guard sprites.
+* `rajasthan-camel.jpg` / `rajasthan-camel.png`: Decorated desert camel sprite.
+* `npc-archaeologist.png`: Archaeological caretaker sprite.
+* `carriage2_transparent.png`: Imperial horse-drawn carriage sprite.
+* `boat-transition.webm` / `horse_sound.webm`: Transition media assets.
+
+---
+
+## 9. Developer Guide, Setup & Deployment
+
+### Prerequisites
+* **Node.js:** v20.x or higher
+* **Package Manager:** npm, yarn, pnpm, or bun
+
+### Installation & Local Execution
+```bash
+# 1. Navigate to frontend directory
+cd frontend
+
+# 2. Install dependencies
+npm install
+
+# 3. Start development server
+npm run dev
+
+# 4. Access in browser
+# Open http://localhost:3000
+```
+
+### Production Build & Linting
+```bash
+# Run ESLint validation
+npm run lint
+
+# Build production bundle
+npm run build
+
+# Start production server
+npm run start
+```
+
 ---
 
 ## 10. Future Roadmap & Hackathon Next Steps
 
 1. **Generative AI Story Engine Integration:** Connect OpenAI / Gemini / Claude APIs to generate dynamic narrative choices and character dialogues in real time based on player actions.
 2. **Additional Historical Campaigns:**
-   * **Great Rajputana:** Chittorgarh & Mehrangarh fort sieges, desert navigation, Rajput warrior lore.
-   * **Great Vijayanagara:** Hampi's Virupaksha temple, market trade simulation, royal elephant stables.
-   * **Chola Maritime Empire:** Naval expeditions across the Indian Ocean and temple architecture.
+   * **Great Vijayanagara (In Progress):** 4-stage campaign across Anegundi, Hampi Bazaar, Vittala Temple, and Mahanavami Dibba.
+   * **Chola Maritime Empire:** Naval expeditions across the Indian Ocean and Thanjavur temple architecture.
 3. **Multiplayer Historical Expeditions:** Co-op puzzle solving and historical debate duels between players.
 4. **Mobile & PWA Optimization:** On-screen virtual joystick and touch gestures for mobile browser gameplay.
 

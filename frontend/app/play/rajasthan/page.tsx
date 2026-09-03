@@ -75,27 +75,30 @@ export default function RajasthanGameScreen() {
   // Restore saved state from URL or localStorage on load
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const urlParams = new URLSearchParams(window.location.search);
-      const urlScene = urlParams.get("scene") as RajasthanSceneType | null;
-      const urlStage = urlParams.get("stage");
-      const saved = localStorage.getItem("rajasthan_game_state");
+      const timer = setTimeout(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlScene = urlParams.get("scene") as RajasthanSceneType | null;
+        const urlStage = urlParams.get("stage");
+        const saved = localStorage.getItem("rajasthan_game_state");
 
-      if (urlStage) {
-        setStage(parseInt(urlStage, 10) as RajasthanStage);
-      }
-      if (urlScene) {
-        setScene(urlScene);
-      } else if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (parsed.stage) setStage(parsed.stage);
-          if (parsed.scene) setScene(parsed.scene);
-          if (parsed.playerPos) setPlayerPos(parsed.playerPos);
-          if (typeof parsed.cluesFound === "number") setCluesFound(parsed.cluesFound);
-        } catch (e) {
-          console.error("Failed to load saved state", e);
+        if (urlStage) {
+          setStage(parseInt(urlStage, 10) as RajasthanStage);
         }
-      }
+        if (urlScene) {
+          setScene(urlScene);
+        } else if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            if (parsed.stage) setStage(parsed.stage);
+            if (parsed.scene) setScene(parsed.scene);
+            if (parsed.playerPos) setPlayerPos(parsed.playerPos);
+            if (typeof parsed.cluesFound === "number") setCluesFound(parsed.cluesFound);
+          } catch (e) {
+            console.error("Failed to load saved state", e);
+          }
+        }
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, []);
 
@@ -288,56 +291,59 @@ export default function RajasthanGameScreen() {
 
   // --- ARCHITECTURE: KEYBOARD & GAME LOOP ---
   const keysHeldRef = useRef(new Set<string>());
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const interactionStateRef = useRef<any>({});
 
-  // Centralize state in ref updated on every render
-  interactionStateRef.current = {
-    isLoading,
-    isTransitioning,
-    stage,
-    scene,
-    playerPos,
-    isNearRamPolDoor,
-    isNearChacha,
-    isNearCourtyardStairsTop,
-    isNearCourtyardExit,
-    isNearVijayStambhDoor,
-    isNearJauharPath,
-    isNearVijayStambhExit,
-    isNearJauharKundDoor,
-    isNearPassageBottomDoor,
-    isNearJauharPavilionStairs,
-    isNearJauharDesertExit,
-    isNearDesertPalaceGate,
-    isNearCamel,
-    isNearKumbhalgarhGateDoor,
-    isNearKumbhalgarhInteriorExit,
-    isNearKumbhalgarhStairsTop,
-    isNearGreatWallStairs,
-    isNearWallEndZigzag,
-    isNearZigzagLowerExit,
-    isNearZigzagUpperGate,
-    isNearCourtyardColonnadeDoor,
-    isNearCourtyardExitZigzag,
-    isNearBadalMahalInteriorExit,
-    isNearBadalMahalTerraceDoor,
-    isNearBadalMahalTerraceExit,
-    cluesFound,
+  // Centralize state in ref updated on state changes
+  useEffect(() => {
+    interactionStateRef.current = {
+      isLoading,
+      isTransitioning,
+      stage,
+      scene,
+      playerPos,
+      isNearRamPolDoor,
+      isNearChacha,
+      isNearCourtyardStairsTop,
+      isNearCourtyardExit,
+      isNearVijayStambhDoor,
+      isNearJauharPath,
+      isNearVijayStambhExit,
+      isNearJauharKundDoor,
+      isNearPassageBottomDoor,
+      isNearJauharPavilionStairs,
+      isNearJauharDesertExit,
+      isNearDesertPalaceGate,
+      isNearCamel,
+      isNearKumbhalgarhGateDoor,
+      isNearKumbhalgarhInteriorExit,
+      isNearKumbhalgarhStairsTop,
+      isNearGreatWallStairs,
+      isNearWallEndZigzag,
+      isNearZigzagLowerExit,
+      isNearZigzagUpperGate,
+      isNearCourtyardColonnadeDoor,
+      isNearCourtyardExitZigzag,
+      isNearBadalMahalInteriorExit,
+      isNearBadalMahalTerraceDoor,
+      isNearBadalMahalTerraceExit,
+      cluesFound,
 
-    // Actions
-    setStage,
-    setScene,
-    setPlayerPos,
-    setIsTransitioning,
-    setShowChachaDialogue,
-    setShowChauparGame,
-    setShowVijayStambhModal,
-    setShowJauharModal,
-    setCluesFound,
-    setIsWalking,
-    setFacingLeft,
-    setWalkPhase,
-  };
+      // Actions
+      setStage,
+      setScene,
+      setPlayerPos,
+      setIsTransitioning,
+      setShowChachaDialogue,
+      setShowChauparGame,
+      setShowVijayStambhModal,
+      setShowJauharModal,
+      setCluesFound,
+      setIsWalking,
+      setFacingLeft,
+      setWalkPhase,
+    };
+  });
 
   // Focus Window on Load
   useEffect(() => {
@@ -1565,10 +1571,10 @@ export default function RajasthanGameScreen() {
             </div>
             <div className="text-amber-950 font-serif text-sm leading-relaxed">
               <p className="mb-3 font-semibold">
-                "Khamma Ghani, young traveller! Welcome to the royal courtyard of Chittorgarh. I have sat beneath this canopy playing Chaupar for decades."
+                &quot;Khamma Ghani, young traveller! Welcome to the royal courtyard of Chittorgarh. I have sat beneath this canopy playing Chaupar for decades.&quot;
               </p>
               <p className="text-amber-900 text-xs italic">
-                "Challenge me to a game of Chaupar to test your wisdom and fortune!"
+                &quot;Challenge me to a game of Chaupar to test your wisdom and fortune!&quot;
               </p>
             </div>
             <div className="flex gap-3 mt-2">
