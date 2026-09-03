@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { soundFx } from "../../../../services/soundService";
 
 interface PietraDuraPuzzleModalProps {
   isOpen: boolean;
@@ -72,6 +73,7 @@ export default function PietraDuraPuzzleModal({
 
   const handleTileClick = (idx: number) => {
     if (isSolved) return;
+    soundFx.playTileSwap();
 
     if (selectedIdx === null) {
       setSelectedIdx(idx);
@@ -90,6 +92,7 @@ export default function PietraDuraPuzzleModal({
       const solved = nextTiles.every((val, index) => val === SOLVED_TILES[index]);
       if (solved) {
         setIsSolved(true);
+        soundFx.playClueChime();
         if (timerRef.current) clearInterval(timerRef.current);
         setTimeout(() => {
           onSuccess();

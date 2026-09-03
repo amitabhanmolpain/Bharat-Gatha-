@@ -152,8 +152,14 @@ class NarratorManager {
       let audioSrc: string | null = options?.audioUrl || null;
       const lowerText = trimmed.toLowerCase();
 
-      if (!audioSrc && (lowerText.includes("you have entered the year 1653") || lowerText.includes("heart of the mughal empire"))) {
-        audioSrc = "/mughal_intro_narration.wav";
+      if (!audioSrc) {
+        if (lowerText.includes("you have entered the year 1653") || lowerText.includes("heart of the mughal empire")) {
+          audioSrc = "/mughal_intro_narration.wav";
+        } else if (lowerText.includes("starlight reflections in the sheesh mahal") || lowerText.includes("royal passage to khas mahal")) {
+          audioSrc = "/sheesh_mahal_solved_narration.wav";
+        } else if (lowerText.includes("pietra dura marble art") && lowerText.includes("sheesh mahal")) {
+          audioSrc = "/pietra_dura_solved_narration.wav";
+        }
       }
 
       // Check cache or fetch from Sarvam AI TTS backend
@@ -176,8 +182,9 @@ class NarratorManager {
 
             if (res.ok) {
               const data = await res.json();
-              if (typeof data?.audio_base64 === "string" && data.audio_base64) {
-                const b64Src = `data:audio/wav;base64,${data.audio_base64}`;
+              const base64Data = data?.audio || data?.audio_base64;
+              if (typeof base64Data === "string" && base64Data) {
+                const b64Src = `data:audio/wav;base64,${base64Data}`;
                 audioSrc = b64Src;
                 this.audioCache.set(trimmed, b64Src);
               } else if (typeof data?.audio_url === "string" && data.audio_url) {
@@ -214,7 +221,7 @@ class NarratorManager {
           window.speechSynthesis.speak(utterance);
           return null;
         }
-        audioSrc = "/mughal_intro_narration.wav";
+        audioSrc = "/sheesh_mahal_solved_narration.wav";
       }
 
       this.currentAudioSrc = audioSrc;

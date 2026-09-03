@@ -45,9 +45,11 @@ def create_app():
     from app.controllers.main_controller import main_bp
     from app.controllers.tts_controller import tts_bp
     from app.controllers.ai_controller import ai_bp
+    from app.controllers.game_controller import game_bp
 
     app.register_blueprint(main_bp, url_prefix='/api')
     app.register_blueprint(tts_bp, url_prefix='/api/tts')
     app.register_blueprint(ai_bp, url_prefix='/api/ai')
+    app.register_blueprint(game_bp, url_prefix='/api/game')
     
     return app

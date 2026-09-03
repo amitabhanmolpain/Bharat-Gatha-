@@ -1,0 +1,13 @@
+{
+  "default_traveller_mughal": {
+    "user_id": "default_traveller",
+    "era": "mughal",
+    "solved_puzzles": [
+      "sheesh_mahal_reflection"
+    ],
+    "prizes_unlocked": [
+      "Permission to Khas Mahal"
+    ],
+    "total_score": 750
+  }
+}

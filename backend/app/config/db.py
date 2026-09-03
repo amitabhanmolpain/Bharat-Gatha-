@@ -13,33 +13,34 @@ load_dotenv()
 MONGO_URI = os.getenv("MONGO_URI")
 
 
+_client = None
+
+
 def get_db_client():
-    """Create and return a MongoDB client connected to the configured URI.
-
-    Reads the MONGO_URI environment variable and establishes a connection
-    using PyMongo.
-
-    Returns:
-        MongoClient: An active MongoDB client instance.
-
-    Raises:
-        ValueError: If the MONGO_URI environment variable is not defined.
-    """
-    if not MONGO_URI:
-        raise ValueError("MONGO_URI is not set in the .env file.")
-    
-    client = MongoClient(MONGO_URI)
-    return client
+    """Create and return a cached MongoDB client connected to the configured URI."""
+    global _client
+    if _client is None:
+        if not MONGO_URI:
+            raise ValueError("MONGO_URI is not set in the .env file.")
+        try:
+            import certifi
+            ca_file = certifi.where()
+            _client = MongoClient(
+                MONGO_URI,
+                serverSelectionTimeoutMS=5000,
+                tlsCAFile=ca_file,
+                tlsAllowInvalidCertificates=True
+            )
+        except Exception:
+            _client = MongoClient(
+                MONGO_URI,
+                serverSelectionTimeoutMS=5000,
+                tlsAllowInvalidCertificates=True
+            )
+    return _client
 
 
 def get_db():
-    """Retrieve the default MongoDB database instance for Bharat Gatha.
-
-    Initializes the database client and returns a handle to the 'bharat_gatha'
-    database collection namespace.
-
-    Returns:
-        Database: The PyMongo Database object for 'bharat_gatha'.
-    """
+    """Retrieve the default MongoDB database instance for Bharat Gatha."""
     client = get_db_client()
     return client['bharat_gatha']

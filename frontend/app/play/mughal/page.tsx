@@ -8,6 +8,10 @@ import { playCharacterDialogue, stopCharacterDialogue } from "../../../services/
 import NarratorSubtitle from "../../../components/NarratorSubtitle";
 import CluesModal, { MUGHAL_HISTORICAL_CLUES } from "./components/CluesModal";
 import PietraDuraPuzzleModal from "./components/PietraDuraPuzzleModal";
+import SheeshMirrorReflectionModal from "./components/SheeshMirrorReflectionModal";
+import KhasMahalPermissionModal from "./components/KhasMahalPermissionModal";
+import { soundFx } from "../../../services/soundService";
+import { recordGameWinToDatabase, fetchUserWinsFromDatabase, fetchSolvedStatusFromDatabase } from "../../../services/gameProgressService";
 
 export type SceneType =
   | "gate"
@@ -74,6 +78,7 @@ export default function MughalGameScreen() {
       if (prev.includes(clueId)) return prev;
       const next = [...prev, clueId];
       setCluesFound(next.length);
+      soundFx.playClueChime();
       const clue = MUGHAL_HISTORICAL_CLUES.find((c) => c.id === clueId);
       if (clue) {
         setClueNotification(`✨ New Historical Clue: ${clue.title}`);
@@ -102,8 +107,33 @@ export default function MughalGameScreen() {
   const [symmetryState, setSymmetryState] = useState([true, false, true, false]);
 
   const [showPietraDuraPuzzle, setShowPietraDuraPuzzle] = useState(false);
-  const [isPietraDuraSolved, setIsPietraDuraSolved] = useState(false);
+  const [isPietraDuraSolved, setIsPietraDuraSolved] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("mughal_is_pietra_dura_solved") === "true";
+    }
+    return false;
+  });
+  const isPietraDuraSolvedRef = useRef(isPietraDuraSolved);
+  useEffect(() => {
+    isPietraDuraSolvedRef.current = isPietraDuraSolved;
+  }, [isPietraDuraSolved]);
+
+  const [showSheeshMirrorPuzzle, setShowSheeshMirrorPuzzle] = useState(false);
+  const [isSheeshMirrorSolved, setIsSheeshMirrorSolved] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("mughal_is_sheesh_mirror_solved") === "true";
+    }
+    return false;
+  });
+  const isSheeshMirrorSolvedRef = useRef(isSheeshMirrorSolved);
+  useEffect(() => {
+    isSheeshMirrorSolvedRef.current = isSheeshMirrorSolved;
+  }, [isSheeshMirrorSolved]);
+
+  const [showKhasPermissionModal, setShowKhasPermissionModal] = useState(false);
+  const [showRestartConfirmModal, setShowRestartConfirmModal] = useState(false);
   const [throneGuardSpeech, setThroneGuardSpeech] = useState<string | null>(null);
+  const [hasTalkedToJolly, setHasTalkedToJolly] = useState<boolean>(false);
 
   const [showMausoleumModal, setShowMausoleumModal] = useState(false);
   const [isMausoleumExplored, setIsMausoleumExplored] = useState(false);
@@ -170,26 +200,100 @@ export default function MughalGameScreen() {
   // Play Sarvam AI narrator voice when entering Diwan-i-Aam / Throne Hall (interior)
   const hasPlayedInteriorNarrationRef = useRef(false);
   useEffect(() => {
-    if (scene === "interior" && !hasPlayedInteriorNarrationRef.current) {
+    if (!isLoading && scene === "interior" && !hasPlayedInteriorNarrationRef.current) {
       hasPlayedInteriorNarrationRef.current = true;
       const timer = setTimeout(() => {
-        playNarration(
-          "King Shah Jahan has gone for his prayers. Perform the famous Pietra Dura Marble Flower Art among the military guards, and you will get your next clue.",
-          {
-            speaker: "ratan",
-            pace: 0.88,
-            language_code: "en-IN",
-            onEnd: () => {
-              if (!isPietraDuraSolved) {
-                setShowPietraDuraPuzzle(true);
+        let solved = isPietraDuraSolvedRef.current || isPietraDuraSolved;
+        if (typeof window !== "undefined") {
+          if (localStorage.getItem("mughal_is_pietra_dura_solved") === "true") solved = true;
+          try {
+            const saved = localStorage.getItem("mughal_save");
+            if (saved && JSON.parse(saved).discoveredClueIds?.includes("pietra_dura_seal")) solved = true;
+          } catch(e) {}
+        }
+
+        if (solved) {
+          playNarration(
+            "You have earned royal clearance with your Pietra Dura marble art! The passage to the Sheesh Mahal is open.",
+            {
+              audioUrl: "/pietra_dura_solved_narration.wav",
+              speaker: "ratan",
+              pace: 0.88,
+              language_code: "en-IN"
+            }
+          );
+        } else {
+          playNarration(
+            "King Shah Jahan has gone for his prayers. Perform the famous Pietra Dura Marble Flower Art among the military guards, and you will get your next clue.",
+            {
+              speaker: "ratan",
+              pace: 0.88,
+              language_code: "en-IN",
+              onEnd: () => {
+                let recheckSolved = isPietraDuraSolvedRef.current;
+                if (typeof window !== "undefined") {
+                  if (localStorage.getItem("mughal_is_pietra_dura_solved") === "true") recheckSolved = true;
+                }
+                if (!recheckSolved) {
+                  setShowPietraDuraPuzzle(true);
+                }
               }
             }
-          }
-        );
+          );
+        }
       }, 400);
       return () => clearTimeout(timer);
     }
-  }, [scene, isPietraDuraSolved]);
+  }, [isLoading, scene, isPietraDuraSolved]);
+
+  // Play Sarvam AI narrator voice when entering Sheesh Mahal (Palace of Mirrors)
+  const hasPlayedSheeshNarrationRef = useRef(false);
+  useEffect(() => {
+    if (!isLoading && scene === "sheesh_mahal" && !hasPlayedSheeshNarrationRef.current) {
+      hasPlayedSheeshNarrationRef.current = true;
+      const timer = setTimeout(() => {
+        let solved = isSheeshMirrorSolvedRef.current || isSheeshMirrorSolved;
+        if (typeof window !== "undefined") {
+          if (localStorage.getItem("mughal_is_sheesh_mirror_solved") === "true") solved = true;
+          try {
+            const saved = localStorage.getItem("mughal_save");
+            if (saved && JSON.parse(saved).discoveredClueIds?.includes("sheesh_mirror_shard")) solved = true;
+          } catch(e) {}
+        }
+
+        if (solved) {
+          playNarration(
+            "The starlight reflections in the Sheesh Mahal shine brightly under your mastery! The royal passage to Khas Mahal is clear.",
+            {
+              audioUrl: "/sheesh_mahal_solved_narration.wav",
+              speaker: "ratan",
+              pace: 0.88,
+              language_code: "en-IN"
+            }
+          );
+        } else {
+          playNarration(
+            "Welcome to the Sheesh Mahal, the Palace of Mirrors. In 1653, Mughal architects embedded thousands of mirror-glass inlays into the walls so a single candle would scatter light like a starry sky. Play this game of Sheesh Mahal: angle the mirror tiles to bounce the candlelight and reveal the hidden royal signet on the wall.",
+            {
+              speaker: "ratan",
+              pace: 0.88,
+              language_code: "en-IN",
+              onEnd: () => {
+                let recheckSolved = isSheeshMirrorSolvedRef.current;
+                if (typeof window !== "undefined") {
+                  if (localStorage.getItem("mughal_is_sheesh_mirror_solved") === "true") recheckSolved = true;
+                }
+                if (!recheckSolved) {
+                  setShowSheeshMirrorPuzzle(true);
+                }
+              }
+            }
+          );
+        }
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, scene, isSheeshMirrorSolved]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -197,6 +301,21 @@ export default function MughalGameScreen() {
       horseSoundRef.current.volume = 0.5;
       boatSoundRef.current = new Audio('/boat-transition.webm');
       boatSoundRef.current.volume = 0.7;
+
+      // Global tactile game sound feedback for all clickable UI buttons
+      const handleGlobalClick = (e: MouseEvent) => {
+        const target = e.target as HTMLElement | null;
+        if (!target) return;
+        const isInteractive = target.closest('button, [role="button"], a, input[type="submit"], .cursor-pointer');
+        if (isInteractive) {
+          soundFx.playButtonClick();
+        }
+      };
+
+      window.addEventListener('click', handleGlobalClick, { capture: true });
+      return () => {
+        window.removeEventListener('click', handleGlobalClick, { capture: true });
+      };
     }
   }, []);
 
@@ -248,17 +367,30 @@ export default function MughalGameScreen() {
       setShowSymmetryPuzzle(false);
       setIsSymmetrySolved(false);
       setSymmetryState([true, false, true, false]);
+      setShowPietraDuraPuzzle(false);
+      setIsPietraDuraSolved(false);
+      isPietraDuraSolvedRef.current = false;
+      setShowSheeshMirrorPuzzle(false);
+      setIsSheeshMirrorSolved(false);
+      isSheeshMirrorSolvedRef.current = false;
+      setShowKhasPermissionModal(false);
       setShowMausoleumModal(false);
       setIsMausoleumExplored(false);
       setShowArchaeologistDialogue(false);
       setIsArchaeologistTalked(false);
       setIsTransitioning(false);
+      setHasTalkedToJolly(false);
+      hasPlayedIntroNarrationRef.current = false;
+      hasPlayedInteriorNarrationRef.current = false;
+      hasPlayedSheeshNarrationRef.current = false;
       localStorage.removeItem('mughal_save');
+      localStorage.removeItem('mughal_is_pietra_dura_solved');
+      localStorage.removeItem('mughal_is_sheesh_mirror_solved');
     }, 400);
   };
 
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
       if (typeof window !== 'undefined') {
         const urlParams = new URLSearchParams(window.location.search);
         const urlScene = urlParams.get('scene') as SceneType | null;
@@ -270,7 +402,6 @@ export default function MughalGameScreen() {
           try {
             const parsed = JSON.parse(saved);
             if (!urlScene && parsed.scene) {
-               // Only restore inner scenes if player had guard clearance
                if (parsed.scene === "gate" || parsed.hasGuardPermission) {
                  finalScene = parsed.scene as SceneType;
                  if (parsed.playerPos) setPlayerPos(parsed.playerPos);
@@ -284,6 +415,8 @@ export default function MughalGameScreen() {
               hasGuardPermissionRef.current = true;
             }
             if (parsed.cluesFound !== undefined) setCluesFound(parsed.cluesFound);
+            if (parsed.isPietraDuraSolved !== undefined) setIsPietraDuraSolved(parsed.isPietraDuraSolved);
+            if (parsed.isSheeshMirrorSolved !== undefined) setIsSheeshMirrorSolved(parsed.isSheeshMirrorSolved);
             if (parsed.isCalligraphySolved !== undefined) setIsCalligraphySolved(parsed.isCalligraphySolved);
             if (parsed.isSymmetrySolved !== undefined) setIsSymmetrySolved(parsed.isSymmetrySolved);
             if (parsed.isMausoleumExplored !== undefined) setIsMausoleumExplored(parsed.isMausoleumExplored);
@@ -293,6 +426,21 @@ export default function MughalGameScreen() {
             console.error("Failed to load save state", e);
           }
         }
+
+        // Also sync explicit solved status from MongoDB
+        try {
+          const dbStatus = await fetchSolvedStatusFromDatabase("mughal");
+          if (dbStatus.isPietraDuraSolved || dbStatus.solvedPuzzles.includes("pietra_dura_flower_art")) {
+            setIsPietraDuraSolved(true);
+            isPietraDuraSolvedRef.current = true;
+            localStorage.setItem("mughal_is_pietra_dura_solved", "true");
+          }
+          if (dbStatus.isSheeshMirrorSolved || dbStatus.solvedPuzzles.includes("sheesh_mahal_reflection")) {
+            setIsSheeshMirrorSolved(true);
+            isSheeshMirrorSolvedRef.current = true;
+            localStorage.setItem("mughal_is_sheesh_mirror_solved", "true");
+          }
+        } catch (e) {}
         
         setScene(finalScene);
       }
@@ -318,6 +466,8 @@ export default function MughalGameScreen() {
         cluesFound,
         discoveredClueIds,
         hasGuardPermission,
+        isPietraDuraSolved,
+        isSheeshMirrorSolved,
         isCalligraphySolved,
         isSymmetrySolved,
         isMausoleumExplored,
@@ -325,7 +475,7 @@ export default function MughalGameScreen() {
       };
       localStorage.setItem('mughal_save', JSON.stringify(saveState));
     }
-  }, [scene, playerPos, cluesFound, discoveredClueIds, hasGuardPermission, isCalligraphySolved, isSymmetrySolved, isMausoleumExplored, isArchaeologistTalked, isLoading]);
+  }, [scene, playerPos, cluesFound, discoveredClueIds, hasGuardPermission, isPietraDuraSolved, isSheeshMirrorSolved, isCalligraphySolved, isSymmetrySolved, isMausoleumExplored, isArchaeologistTalked, isLoading]);
 
   const guardPos = { x: 43.5, y: 72.0 };
   const distToGuard = Math.sqrt(
@@ -468,7 +618,9 @@ export default function MughalGameScreen() {
           setPlayerPos({ x: 50.0, y: 86.0 });
         }
         if (curScene === "sheesh_mahal") {
-          if (pos.y <= 85.0 && pos.x >= 28.0 && pos.x <= 72.0) {
+          if (!isSheeshMirrorSolved) {
+            setShowSheeshMirrorPuzzle(true);
+          } else {
             discoverClue("sheesh_mirror_shard");
             setShowMirrorModal((prev) => !prev);
           }
@@ -1215,11 +1367,18 @@ export default function MughalGameScreen() {
       <div
         className="absolute z-20 pointer-events-auto cursor-pointer group transition-all duration-700 ease-out"
         onClick={() => {
+          const speechText = !hasTalkedToJolly
+            ? "Ah! Hello, traveller! I am Jolly Bhai. I was born many centuries ago and have witnessed great wars, powerful kingdoms, and the changing of history. But remember... only you can see me. I will guide you through this journey. And whenever you see me shaking and dancing like a madman... come quickly! It means I have something very important to tell you!"
+            : "Mere aaka, how can I help you?";
+
           setShowJollyDialogue(true);
           playCharacterDialogue({
             character: "jolly",
-            text: "Ah! Hello, traveller! I am Jolly Bhai. I was born many centuries ago and have witnessed great wars, powerful kingdoms, and the changing of history. But remember... only you can see me. I will guide you through this journey. And whenever you see me shaking and dancing like a madman... come quickly! It means I have something very important to tell you!"
+            text: speechText
           });
+          if (!hasTalkedToJolly) {
+            setHasTalkedToJolly(true);
+          }
         }}
         style={{
           left: `${genieX}%`,
@@ -1682,7 +1841,11 @@ export default function MughalGameScreen() {
             nearby_monuments: "Taj Mahal, Agra Fort, Amar Singh Gate, Yamuna River, Red Fort",
             historical_events: "Reign of Shah Jahan, completion of Taj Mahal, Mughal golden age"
           }}
-          dialogueText="Ah! Hello, traveller! I am Jolly Bhai. I was born many centuries ago and have witnessed great wars, powerful kingdoms, and the changing of history. But remember... only you can see me. I will guide you through this journey. And whenever you see me shaking and dancing like a madman... come quickly! It means I have something very important to tell you!"
+          dialogueText={
+            hasTalkedToJolly
+              ? "Mere aaka, how can I help you?"
+              : "Ah! Hello, traveller! I am Jolly Bhai. I was born many centuries ago and have witnessed great wars, powerful kingdoms, and the changing of history. But remember... only you can see me. I will guide you through this journey. And whenever you see me shaking and dancing like a madman... come quickly! It means I have something very important to tell you!"
+          }
           isSpeaking={true}
           showInput={true}
           options={[
@@ -1724,11 +1887,15 @@ export default function MughalGameScreen() {
               : scene === "courtyard"
               ? "Go to the white marble Diwan-i-Khas building (top-left palace) across the Anguri Bagh garden."
               : scene === "interior"
-              ? "King Shah Jahan has gone for his prayers. Perform the famous Pietra Dura Marble Flower Art among the military guards or inspect the throne dais."
+              ? isPietraDuraSolved
+                ? "Pietra Dura Art performed! The passage to Sheesh Mahal is open to proceed."
+                : "King Shah Jahan has gone for his prayers. Perform the famous Pietra Dura Marble Flower Art among the military guards or inspect the throne dais."
               : scene === "sheesh_passage"
               ? "Walk forward through the golden archway to enter the Sheesh Mahal (Palace of Mirrors)."
               : scene === "sheesh_mahal"
-              ? "Examine the central mirror mosaic fountain to uncover the final royal signet."
+              ? isSheeshMirrorSolved
+                ? "The starlight reflection is complete! The passage to Khas Mahal is open (Press F or door)."
+                : "Position the candle and mirrors to form the Celestial Star on the ceiling dome."
               : scene === "brown_passage"
               ? "Walk through the colonnade to enter Khas Mahal, or walk down to return to the garden."
               : scene === "khas_mahal"
@@ -1802,7 +1969,10 @@ export default function MughalGameScreen() {
           </button>
 
           <button 
-            onClick={handleResetGame}
+            onClick={() => {
+              soundFx.playButtonClick();
+              setShowRestartConfirmModal(true);
+            }}
             title="Restart to Beginning"
             className="h-10 bg-red-600 border-2 border-black rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all flex items-center justify-center px-3 gap-1.5 group cursor-pointer"
           >
@@ -2515,11 +2685,34 @@ export default function MughalGameScreen() {
         onClose={() => setShowPietraDuraPuzzle(false)}
         onSuccess={() => {
           setIsPietraDuraSolved(true);
+          isPietraDuraSolvedRef.current = true;
+          if (typeof window !== "undefined") {
+            localStorage.setItem("mughal_is_pietra_dura_solved", "true");
+          }
           setShowPietraDuraPuzzle(false);
           discoverClue("pietra_dura_seal");
           setShowThroneScroll(true);
           setThroneGuardSpeech("Bahut khoob! I give you as a prize permission to visit the Sheesh Mahal!");
           setTimeout(() => setThroneGuardSpeech(null), 10000);
+
+          // Persist Win in MongoDB Database
+          recordGameWinToDatabase({
+            era: "mughal",
+            gameType: "pietra_dura_flower_art",
+            prizeUnlocked: "Sheesh Mahal Corridor Clearance",
+            score: 150
+          });
+
+          playNarration(
+            "You have earned royal clearance with your Pietra Dura marble art! The passage to the Sheesh Mahal is open.",
+            {
+              audioUrl: "/pietra_dura_solved_narration.wav",
+              speaker: "ratan",
+              pace: 0.88,
+              language_code: "en-IN"
+            }
+          );
+
           playCharacterDialogue({
             character: "guard",
             text: "Bahut khoob! I give you as a prize permission to visit the Sheesh Mahal! Proceed through the royal corridor."
@@ -2538,6 +2731,89 @@ export default function MughalGameScreen() {
           setPlayerPos({ x: 50.0, y: 88.0 });
         }}
       />
+
+      {/* --- SHEESH MAHAL MIRROR REFLECTION PUZZLE --- */}
+      <SheeshMirrorReflectionModal
+        isOpen={showSheeshMirrorPuzzle}
+        onClose={() => setShowSheeshMirrorPuzzle(false)}
+        onSuccess={() => {
+          setIsSheeshMirrorSolved(true);
+          isSheeshMirrorSolvedRef.current = true;
+          if (typeof window !== "undefined") {
+            localStorage.setItem("mughal_is_sheesh_mirror_solved", "true");
+          }
+          setShowSheeshMirrorPuzzle(false);
+          discoverClue("sheesh_mirror_shard");
+          setShowKhasPermissionModal(true);
+
+          // Persist Win in MongoDB Database
+          recordGameWinToDatabase({
+            era: "mughal",
+            gameType: "sheesh_mahal_reflection",
+            prizeUnlocked: "Permission to Khas Mahal",
+            score: 250
+          });
+
+          playNarration(
+            "The starlight reflections in the Sheesh Mahal shine brightly under your mastery! The royal passage to Khas Mahal is clear.",
+            {
+              audioUrl: "/sheesh_mahal_solved_narration.wav",
+              speaker: "ratan",
+              pace: 0.88,
+              language_code: "en-IN"
+            }
+          );
+        }}
+      />
+
+      {/* --- PRIZE UNLOCKED: PERMISSION TO KHAS MAHAL --- */}
+      <KhasMahalPermissionModal
+        isOpen={showKhasPermissionModal}
+        onClose={() => setShowKhasPermissionModal(false)}
+        onProceedToKhasMahal={() => {
+          setShowKhasPermissionModal(false);
+          setScene("brown_passage");
+          setPlayerPos({ x: 30.0, y: 86.0 });
+        }}
+      />
+
+      {/* --- RESTART CONFIRMATION MODAL --- */}
+      {showRestartConfirmModal && (
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 select-none animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-[#fff9ea] border-4 border-black rounded-2xl p-6 max-w-md w-full shadow-[6px_6px_0_0_rgba(0,0,0,1)] text-center">
+            <div className="w-14 h-14 bg-red-100 border-2 border-black rounded-full flex items-center justify-center mx-auto mb-3 text-3xl shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
+              ⚠️
+            </div>
+            <h3 className="text-xl font-black text-black mb-2">
+              Restart Mughal Odyssey?
+            </h3>
+            <p className="text-xs text-gray-700 font-medium leading-relaxed mb-6">
+              Are you sure you want to start from again? Your current puzzle clearances, unlocked clues, and clearance decrees will be reset.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  soundFx.playButtonClick();
+                  setShowRestartConfirmModal(false);
+                  handleResetGame();
+                }}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs py-3.5 rounded-xl border-2 border-black shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 cursor-pointer transition-all"
+              >
+                Yes, Start Again
+              </button>
+              <button
+                onClick={() => {
+                  soundFx.playClose();
+                  setShowRestartConfirmModal(false);
+                }}
+                className="flex-1 bg-white hover:bg-gray-100 text-black font-bold text-xs py-3.5 rounded-xl border-2 border-black shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 cursor-pointer transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* --- CINEMATIC NARRATOR SUBTITLES & AUDIO CONTROLS (Hidden during punishment screen) --- */}
       {!punishmentState.isOpen && <NarratorSubtitle />}
