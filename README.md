@@ -8,15 +8,7 @@
 [![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-v4-38bdf8?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 
----
 
-## 📖 Complete Documentation
-
-For the full architectural breakdown, game engine physics, collision detection formulas, scene traversal graph, and puzzle mechanics, please refer to:
-
-👉 **[DOCUMENTATION.md](./DOCUMENTATION.md)**
-
----
 
 ## 🚀 Quick Start
 
