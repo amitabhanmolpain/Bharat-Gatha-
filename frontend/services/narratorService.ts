@@ -2,7 +2,7 @@
  * Narrator Service for Bharat Gatha Game.
  *
  * Provides a cinematic, immersive historical storyteller voice (Ratan, en-IN, pace 0.88-0.90)
- * either via pre-uploaded high-speed Cloudinary CDN audio or dynamically synthesized via backend Sarvam AI TTS.
+ * Plays from local offline audio files (`/mughal_intro_narration.wav`), with 0 remote latency.
  */
 
 export interface NarrationOptions {
@@ -27,6 +27,8 @@ type Listener = (state: NarratorState) => void;
 
 class NarratorManager {
   private activeAudio: HTMLAudioElement | null = null;
+  private currentAudioSrc: string | null = null;
+  private currentOptions: NarrationOptions | undefined = undefined;
   private audioCache: Map<string, string> = new Map();
   private listeners: Set<Listener> = new Set();
 
@@ -39,10 +41,7 @@ class NarratorManager {
 
   private getBackendUrl(): string {
     if (typeof window !== "undefined") {
-      return (
-        process.env.NEXT_PUBLIC_BACKEND_URL ||
-        "http://localhost:5001"
-      );
+      return process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5001";
     }
     return "http://localhost:5001";
   }
@@ -77,21 +76,43 @@ class NarratorManager {
    */
   public stopNarration(): void {
     if (this.activeAudio) {
-      try {
-        this.activeAudio.pause();
-        this.activeAudio.currentTime = 0;
-      } catch (e) {
-        console.warn("Error stopping narration audio:", e);
-      }
+      const audioToStop = this.activeAudio;
       this.activeAudio = null;
+      try {
+        audioToStop.pause();
+        audioToStop.currentTime = 0;
+      } catch (e) {
+        // Safe to ignore interruption
+      }
     }
     this.updateState({ isPlaying: false, isLoading: false, currentText: null });
   }
 
   /**
-   * Play narration with cinematic historical pacing.
-   * If `audioUrl` is provided (e.g. Cloudinary CDN link), plays directly with 0 API calls.
-   * Automatically terminates any currently playing narration first.
+   * Resume / Trigger active narrator audio playback directly upon user click.
+   */
+  public async playActiveAudio(): Promise<void> {
+    if (this.activeAudio) {
+      try {
+        await this.activeAudio.play();
+        this.updateState({ isPlaying: true, isLoading: false });
+      } catch (e) {
+        // Retry with local fallback
+        if (this.currentAudioSrc) {
+          const freshAudio = new Audio(this.currentAudioSrc);
+          this.activeAudio = freshAudio;
+          freshAudio.play().catch(() => {});
+          this.updateState({ isPlaying: true, isLoading: false });
+        }
+      }
+    } else if (this.state.currentText) {
+      this.playNarration(this.state.currentText, this.currentOptions);
+    }
+  }
+
+  /**
+   * Play narration locally with cinematic historical pacing.
+   * Prioritizes local `/mughal_intro_narration.wav` for instant offline playback.
    */
   public async playNarration(
     text: string,
@@ -100,8 +121,16 @@ class NarratorManager {
     const trimmed = text.trim();
     if (!trimmed) return null;
 
+    this.currentOptions = options;
+
     // 1. Stop any previous narrator audio immediately
-    this.stopNarration();
+    if (this.activeAudio) {
+      try {
+        this.activeAudio.pause();
+        this.activeAudio.currentTime = 0;
+      } catch (e) {}
+      this.activeAudio = null;
+    }
 
     this.updateState({
       isLoading: true,
@@ -111,57 +140,25 @@ class NarratorManager {
     });
 
     try {
-      let audioSrc: string;
+      // 2. Prioritize local file playback
+      let audioSrc: string = options?.audioUrl || "/mughal_intro_narration.wav";
+      const lowerText = trimmed.toLowerCase();
 
-      // 2. If a pre-uploaded Cloudinary or local audio URL is provided, use it directly!
-      if (options?.audioUrl) {
-        audioSrc = options.audioUrl;
-      } else {
-        // Check in-memory cache
-        let audioBase64 = this.audioCache.get(trimmed);
-
-        if (!audioBase64) {
-          const backendUrl = this.getBackendUrl();
-          const response = await fetch(`${backendUrl}/api/tts/narrate`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              text: trimmed,
-              speaker: options?.speaker || "ratan",
-              pace: options?.pace ?? 0.88,
-              language_code: options?.language_code || "en-IN",
-              model: options?.model || "bulbul:v3",
-            }),
-          });
-
-          if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            throw new Error(
-              errData.message || `TTS request failed with status ${response.status}`
-            );
-          }
-
-          const data = await response.json();
-          if (data.status !== "success" || !data.audio_base64) {
-            throw new Error(data.message || "No audio returned from backend.");
-          }
-
-          audioBase64 = data.audio_base64;
-          this.audioCache.set(trimmed, audioBase64!);
-        }
-
-        audioSrc = `data:audio/wav;base64,${audioBase64}`;
+      if (lowerText.includes("you have entered the year 1653") || lowerText.includes("heart of the mughal empire")) {
+        audioSrc = "/mughal_intro_narration.wav";
       }
 
-      // 3. Create and play the audio element
+      this.currentAudioSrc = audioSrc;
+
+      // 3. Create and prepare audio element
       const audio = new Audio(audioSrc);
       audio.volume = 1.0;
       this.activeAudio = audio;
 
       audio.onplay = () => {
-        this.updateState({ isPlaying: true, isLoading: false });
+        if (this.activeAudio === audio) {
+          this.updateState({ isPlaying: true, isLoading: false });
+        }
         options?.onStart?.();
       };
 
@@ -174,26 +171,64 @@ class NarratorManager {
       };
 
       audio.onerror = (e) => {
-        console.error("Narration playback error:", e);
         if (this.activeAudio === audio) {
-          this.activeAudio = null;
           this.updateState({
             isPlaying: false,
             isLoading: false,
-            error: "Playback failed.",
+            error: null,
           });
         }
         options?.onError?.(e);
       };
 
-      await audio.play();
+      try {
+        await audio.play();
+      } catch (playErr: any) {
+        if (
+          playErr?.name === "AbortError" ||
+          playErr?.message?.includes("interrupted") ||
+          playErr?.message?.includes("pause")
+        ) {
+          return null;
+        }
+
+        // Browser autoplay blocked until user gesture
+        if (
+          playErr?.name === "NotAllowedError" ||
+          playErr?.message?.includes("interact")
+        ) {
+          this.updateState({ isLoading: false, isPlaying: false });
+
+          const unlockAndPlay = () => {
+            if (this.activeAudio === audio) {
+              audio.play().catch(() => {});
+            }
+            window.removeEventListener("click", unlockAndPlay);
+            window.removeEventListener("keydown", unlockAndPlay);
+            window.removeEventListener("touchstart", unlockAndPlay);
+          };
+          window.addEventListener("click", unlockAndPlay, { once: true });
+          window.addEventListener("keydown", unlockAndPlay, { once: true });
+          window.addEventListener("touchstart", unlockAndPlay, { once: true });
+          return audio;
+        }
+
+        throw playErr;
+      }
+
       return audio;
     } catch (err: any) {
-      console.error("Failed to generate or play narration:", err);
+      if (
+        err?.name !== "NotAllowedError" &&
+        err?.name !== "AbortError" &&
+        !err?.message?.includes("interrupted")
+      ) {
+        console.error("Narration playback error:", err);
+      }
       this.updateState({
         isPlaying: false,
         isLoading: false,
-        error: err.message || "Narration failed.",
+        error: null,
       });
       options?.onError?.(err);
       return null;

@@ -6,3 +6,6 @@ python-dotenv
 openai
 requests
 cloudinary
+langchain
+langchain-core
+langchain-groq

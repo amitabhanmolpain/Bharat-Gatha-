@@ -4,7 +4,9 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import DialoguePanel from "../../components/DialoguePanel";
 import { playNarration, stopNarration } from "../../../services/narratorService";
+import { playCharacterDialogue } from "../../../services/characterVoiceService";
 import NarratorSubtitle from "../../../components/NarratorSubtitle";
+import CluesModal, { MUGHAL_HISTORICAL_CLUES } from "./components/CluesModal";
 
 export type SceneType =
   | "gate"
@@ -36,10 +38,57 @@ export default function MughalGameScreen() {
   const [isWalking, setIsWalking] = useState(false);
   const [walkPhase, setWalkPhase] = useState(0);
   const [showDialogue, setShowDialogue] = useState(false);
+  const [showJollyDialogue, setShowJollyDialogue] = useState(false);
   const [showThroneScroll, setShowThroneScroll] = useState(false);
   const [showMirrorModal, setShowMirrorModal] = useState(false);
   const [showKhasModal, setShowKhasModal] = useState(false);
   const [cluesFound, setCluesFound] = useState(0);
+  const [guardAttempts, setGuardAttempts] = useState(0);
+  const [hasGuardPermission, setHasGuardPermission] = useState(false);
+  const hasGuardPermissionRef = useRef(false);
+
+  // Dynamic Historical Clues & Silent Timer state
+  const [discoveredClueIds, setDiscoveredClueIds] = useState<string[]>([]);
+  const [showCluesModal, setShowCluesModal] = useState(false);
+  const [clueNotification, setClueNotification] = useState<string | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [isTimerVisible, setIsTimerVisible] = useState(false);
+
+  // Dynamic Guard Punishment / Retribution Screen state
+  const [punishmentState, setPunishmentState] = useState<{
+    isOpen: boolean;
+    title: string;
+    subtitle: string;
+    description: string;
+  }>({
+    isOpen: false,
+    title: "Punished at Amar Singh Gate",
+    subtitle: "THE TRESPASS",
+    description: "You attempted to sneak past the Amar Singh Gate without sentry clearance. The royal guards seize you immediately, inflicting harsh imperial punishment before casting you back down the ramparts."
+  });
+
+  // Discover clue helper
+  const discoverClue = (clueId: string) => {
+    setDiscoveredClueIds((prev) => {
+      if (prev.includes(clueId)) return prev;
+      const next = [...prev, clueId];
+      setCluesFound(next.length);
+      const clue = MUGHAL_HISTORICAL_CLUES.find((c) => c.id === clueId);
+      if (clue) {
+        setClueNotification(`✨ New Historical Clue: ${clue.title}`);
+        setTimeout(() => setClueNotification(null), 4000);
+      }
+      return next;
+    });
+  };
+
+  // Silent Background Exploration Timer
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setElapsedSeconds((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // New Taj Mahal & Red Fort state variables
   const [showCalligraphyPuzzle, setShowCalligraphyPuzzle] = useState(false);
@@ -67,7 +116,7 @@ export default function MughalGameScreen() {
   const boatSoundRef = useRef<HTMLAudioElement | null>(null);
   const hasPlayedIntroNarrationRef = useRef(false);
 
-  // Play cinematic narrator voice once from Cloudinary CDN when entering 1653 Mughal Era
+  // Play cinematic narrator voice once when entering 1653 Mughal Era
   useEffect(() => {
     if (!isLoading && !hasPlayedIntroNarrationRef.current) {
       hasPlayedIntroNarrationRef.current = true;
@@ -81,7 +130,7 @@ export default function MughalGameScreen() {
           "One wrong word... and your journey may end before it has even begun.\n\n" +
           "Now... step carefully into history.",
           {
-            audioUrl: "https://res.cloudinary.com/urk5afel/video/upload/v1788432688/bharat_gatha/audio/mughal_intro_narration.wav"
+            audioUrl: "/mughal_intro_narration.wav"
           }
         );
       }, 700);
@@ -140,6 +189,10 @@ export default function MughalGameScreen() {
       setPlayerPos({ x: 50, y: 85 });
       setFacingLeft(false);
       setCluesFound(0);
+      setGuardAttempts(0);
+      setHasGuardPermission(false);
+      hasGuardPermissionRef.current = false;
+      setDiscoveredClueIds([]);
       setShowDialogue(false);
       setShowThroneScroll(false);
       setShowMirrorModal(false);
@@ -154,15 +207,11 @@ export default function MughalGameScreen() {
       setShowArchaeologistDialogue(false);
       setIsArchaeologistTalked(false);
       setIsTransitioning(false);
-      
-      // Clear localStorage save state to ensure a clean start
       localStorage.removeItem('mughal_save');
     }, 400);
   };
 
-  // Handle URL Endpoints and Save State
   useEffect(() => {
-    // Simulate loading screen and load save state asynchronously
     const timer = setTimeout(() => {
       if (typeof window !== 'undefined') {
         const urlParams = new URLSearchParams(window.location.search);
@@ -175,14 +224,25 @@ export default function MughalGameScreen() {
           try {
             const parsed = JSON.parse(saved);
             if (!urlScene && parsed.scene) {
-               finalScene = parsed.scene as SceneType;
-               if (parsed.playerPos) setPlayerPos(parsed.playerPos);
+               // Only restore inner scenes if player had guard clearance
+               if (parsed.scene === "gate" || parsed.hasGuardPermission) {
+                 finalScene = parsed.scene as SceneType;
+                 if (parsed.playerPos) setPlayerPos(parsed.playerPos);
+               } else {
+                 finalScene = "gate";
+                 setPlayerPos({ x: 50, y: 85 });
+               }
+            }
+            if (parsed.hasGuardPermission) {
+              setHasGuardPermission(true);
+              hasGuardPermissionRef.current = true;
             }
             if (parsed.cluesFound !== undefined) setCluesFound(parsed.cluesFound);
             if (parsed.isCalligraphySolved !== undefined) setIsCalligraphySolved(parsed.isCalligraphySolved);
             if (parsed.isSymmetrySolved !== undefined) setIsSymmetrySolved(parsed.isSymmetrySolved);
             if (parsed.isMausoleumExplored !== undefined) setIsMausoleumExplored(parsed.isMausoleumExplored);
             if (parsed.isArchaeologistTalked !== undefined) setIsArchaeologistTalked(parsed.isArchaeologistTalked);
+            if (parsed.discoveredClueIds) setDiscoveredClueIds(parsed.discoveredClueIds);
           } catch (e) {
             console.error("Failed to load save state", e);
           }
@@ -191,12 +251,11 @@ export default function MughalGameScreen() {
         setScene(finalScene);
       }
       setIsLoading(false);
-    }, 2500);
+    }, 50);
     
     return () => clearTimeout(timer);
   }, []);
 
-  // Sync endpoint URL on scene change
   useEffect(() => {
     if (typeof window !== 'undefined' && scene !== 'gate') {
       window.history.replaceState(null, '', `?scene=${scene}`);
@@ -205,13 +264,14 @@ export default function MughalGameScreen() {
     }
   }, [scene]);
 
-  // Save game progress automatically on state changes & beforeunload
   useEffect(() => {
     if (typeof window !== 'undefined' && !isLoading) {
       const saveState = {
         scene,
         playerPos,
         cluesFound,
+        discoveredClueIds,
+        hasGuardPermission,
         isCalligraphySolved,
         isSymmetrySolved,
         isMausoleumExplored,
@@ -219,71 +279,40 @@ export default function MughalGameScreen() {
       };
       localStorage.setItem('mughal_save', JSON.stringify(saveState));
     }
-  }, [scene, playerPos, cluesFound, isCalligraphySolved, isSymmetrySolved, isMausoleumExplored, isArchaeologistTalked, isLoading]);
+  }, [scene, playerPos, cluesFound, discoveredClueIds, hasGuardPermission, isCalligraphySolved, isSymmetrySolved, isMausoleumExplored, isArchaeologistTalked, isLoading]);
 
-
-  // Guard NPC Position (In 'gate' scene)
   const guardPos = { x: 43.5, y: 72.0 };
-
-  // Calculate distance to guard for interaction prompt
   const distToGuard = Math.sqrt(
     Math.pow(playerPos.x - guardPos.x, 2) + Math.pow(playerPos.y - guardPos.y, 2)
   );
   const isNearGuard = scene === "gate" && distToGuard < 9.0;
 
-  // Calculate distance to Royal Throne in interior scene
+  const genieX = Math.min(92, Math.max(8, playerPos.x + (facingLeft ? 7.5 : -7.5)));
+  const genieY = Math.max(12, playerPos.y - 9.5);
+
   const isNearThrone = scene === "interior" && playerPos.y <= 65.0 && playerPos.x >= 44.0 && playerPos.x <= 56.0;
-
-  // Calculate distance to Mirror Fountain in Sheesh Mahal scene
   const isNearMirrorFountain = scene === "sheesh_mahal" && playerPos.y <= 78.0 && playerPos.y >= 63.0 && playerPos.x >= 40.0 && playerPos.x <= 60.0;
-
-  // Calculate distance to Khas Mahal Pool / Pavilion
   const isNearKhasFountain = scene === "khas_mahal" && playerPos.y <= 78.0 && playerPos.y >= 64.0 && playerPos.x >= 40.0 && playerPos.x <= 60.0;
 
-  // Archaeologist NPC Position (In 'taj_mehtab_bagh' scene)
   const archaeologistPos = { x: 45.0, y: 72.0 };
   const distToArchaeologist = Math.sqrt(
     Math.pow(playerPos.x - archaeologistPos.x, 2) + Math.pow(playerPos.y - archaeologistPos.y, 2)
   );
   const isNearArchaeologist = scene === "taj_mehtab_bagh" && distToArchaeologist < 9.0;
 
-  // Calligraphy Gate Proximity (In 'taj_gate' scene)
   const isNearCalligraphy = scene === "taj_gate" && playerPos.y <= 72.0 && playerPos.x >= 44.0 && playerPos.x <= 56.0;
-
-  // Symmetry Pool Proximity (In 'taj_charbagh' scene)
   const isNearPool = scene === "taj_charbagh" && playerPos.y <= 58.0 && playerPos.y >= 42.0 && playerPos.x >= 42.0 && playerPos.x <= 58.0;
-
-  // Outside Taj Pishtaq Arch Proximity (In 'taj_exterior' scene)
   const isNearTajPishtaq = scene === "taj_exterior" && playerPos.y <= 75.0 && playerPos.x >= 42.0 && playerPos.x <= 58.0;
-
-  // Cenotaphs Proximity (In 'taj_mausoleum' scene)
   const isNearCenotaphs = scene === "taj_mausoleum" && playerPos.y <= 72.0 && playerPos.y >= 30.0 && playerPos.x >= 25.0 && playerPos.x <= 75.0;
-
-  // Return to Charbagh Proximity (In 'taj_exterior' scene)
   const isNearCharbaghReturn = scene === "taj_exterior" && playerPos.y >= 94.0;
-
-  // Carriage Exit Proximity (In 'taj_mehtab_bagh' scene)
   const isNearCarriage = scene === "taj_mehtab_bagh" && isArchaeologistTalked && playerPos.x >= 80.0 && playerPos.y >= 80.0;
-
-  // Red Fort Carriage Proximity (In 'red_fort_lahori' scene)
   const isNearRedFortCarriage = scene === "red_fort_lahori" && playerPos.x <= 25.0 && playerPos.y >= 75.0;
-
-  // Mehtab Bagh Cross Proximity (In 'taj_exterior' scene)
   const isNearMehtabBaghCross = scene === "taj_exterior" && playerPos.x >= 73.0 && playerPos.y <= 84.0;
-
-  // Lahori Gate Archway Proximity (In 'red_fort_lahori' scene)
   const isNearLahoriGate = scene === "red_fort_lahori" && playerPos.y <= 68.0 && playerPos.x >= 44.0 && playerPos.x <= 56.0;
-
-  // Diwan-i-Khas Proximity (In 'red_fort_diwani_khas' scene)
   const isNearDiwanIKhas = scene === "red_fort_diwani_khas" && playerPos.y <= 65.0 && playerPos.x >= 35.0 && playerPos.x <= 65.0;
-
-  // Diwan-i-Khas Exit Proximity
   const isNearDiwaniKhasExit = scene === "red_fort_diwani_khas" && playerPos.y >= 88.0;
-
-  // Rang Mahal Exit Proximity
   const isNearRangMahalExit = scene === "red_fort_rang_mahal" && playerPos.y >= 88.0;
 
-  // Smooth continuous 60fps movement game loop
   useEffect(() => {
     if (isLoading || isTransitioning) return;
 
@@ -293,22 +322,27 @@ export default function MughalGameScreen() {
       keysHeld.add(e.key.toLowerCase());
       if (e.key.toLowerCase() === "e") {
         if (isNearGuard) {
-          setShowDialogue((prev) => {
-            if (!prev && cluesFound === 0) setCluesFound(1);
-            return !prev;
+          setShowDialogue(true);
+          setGuardAttempts((prev) => {
+            const next = prev + 1;
+            // Only give clue after various failed attempts (3 attempts)
+            if (next >= 3) {
+              discoverClue("guard_permit");
+            }
+            return next;
+          });
+          playCharacterDialogue({
+            character: "guard",
+            text: "Halt, intruder! Stop right where you stand! Beyond this Amar Singh Gate is restricted imperial ground! Answer immediately, or you will be seized!"
           });
         }
         if (isNearThrone) {
-          setShowThroneScroll((prev) => {
-            if (!prev && cluesFound < 2) setCluesFound(2);
-            return !prev;
-          });
+          discoverClue("pietra_dura_seal");
+          setShowThroneScroll((prev) => !prev);
         }
         if (isNearMirrorFountain) {
-          setShowMirrorModal((prev) => {
-            if (!prev && cluesFound < 3) setCluesFound(3);
-            return !prev;
-          });
+          discoverClue("sheesh_mirror_shard");
+          setShowMirrorModal((prev) => !prev);
         }
         if (isNearKhasFountain) {
           setShowKhasModal(true);
@@ -321,17 +355,23 @@ export default function MughalGameScreen() {
         }
         if (isNearTajPishtaq) {
           setScene("taj_mausoleum");
-                setPlayerPos({ x: 50.0, y: 86.0 });
+          setPlayerPos({ x: 50.0, y: 86.0 });
         }
         if (isNearCharbaghReturn) {
           setScene("taj_charbagh");
-                setPlayerPos({ x: 45.0, y: 20.0 });
+          setPlayerPos({ x: 45.0, y: 20.0 });
         }
         if (isNearCenotaphs && !isMausoleumExplored) {
           setShowMausoleumModal(true);
         }
         if (isNearArchaeologist) {
+          discoverClue("mehtab_bagh_journal");
+          setIsArchaeologistTalked(true);
           setShowArchaeologistDialogue((prev) => !prev);
+          playCharacterDialogue({
+            character: "archaeologist",
+            text: "Greetings! I am the caretaker archaeologist here. You are standing on the ruins of Mehtab Bagh's pond foundations."
+          });
         }
         if (isNearLahoriGate) {
           setScene("red_fort_plaza");
@@ -350,7 +390,6 @@ export default function MughalGameScreen() {
         }
         if (isNearCarriage || isNearRedFortCarriage) {
           setIsCarriageTravelling(true);
-          
           setTravelOverlayPhase(1);
           setTimeout(() => {
             setTravelOverlayPhase(2);
@@ -373,11 +412,12 @@ export default function MughalGameScreen() {
       } else if (e.key.toLowerCase() === "f") {
         if (isNearMehtabBaghCross) {
           setScene("taj_mehtab_bagh");
-                setPlayerPos({ x: 50.0, y: 50.0 });
+          setPlayerPos({ x: 50.0, y: 50.0 });
         }
       }
       if (e.key === "Escape") {
         setShowDialogue(false);
+        setShowJollyDialogue(false);
         setShowThroneScroll(false);
         setShowMirrorModal(false);
         setShowKhasModal(false);
@@ -386,6 +426,7 @@ export default function MughalGameScreen() {
         setShowMausoleumModal(false);
         setShowArchaeologistDialogue(false);
         setShowCampaignComplete(false);
+        setShowCluesModal(false);
       }
     };
 
@@ -402,7 +443,7 @@ export default function MughalGameScreen() {
     const gameLoop = () => {
       let dx = 0;
       let dy = 0;
-      const speed = 0.35; // Smooth 60fps movement speed
+      const speed = 0.35;
 
       if (keysHeld.has("arrowleft") || keysHeld.has("a")) dx -= speed;
       if (keysHeld.has("arrowright") || keysHeld.has("d")) dx += speed;
@@ -421,7 +462,6 @@ export default function MughalGameScreen() {
 
         setPlayerPos((prev) => {
           if (scene === "gate") {
-            // Dynamic bridge width along perspective ramp
             const rampProgress = Math.max(0, Math.min(1, (prev.y - 71.5) / (92.0 - 71.5)));
             const minX = 42.0 - rampProgress * 4.0;
             const maxX = 58.0 + rampProgress * 4.0;
@@ -429,26 +469,64 @@ export default function MughalGameScreen() {
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             const nextY = Math.max(71.0, Math.min(98.0, prev.y + dy));
 
-            // Check trigger to enter passage through the archway
-            if (nextY <= 71.8 && nextX >= 47.0 && nextX <= 53.0) {
-              setIsTransitioning(true);
-              setTimeout(() => {
-                setScene("passage");
-                setPlayerPos({ x: 33.0, y: 90.0 });
-                setIsTransitioning(false);
-                if (cluesFound < 1) setCluesFound(1);
-              }, 400);
+            // If player moves up towards the archway without speaking to the guard
+            if (nextY <= 73.8) {
+              if (!hasGuardPermissionRef.current) {
+                setPunishmentState({
+                  isOpen: true,
+                  title: "Expelled from the Imperial Gates",
+                  subtitle: "THE FALL",
+                  description: "You entered without taking permission from the royal guard. Under the fierce glare of the Amar Singh Gate sentries, your attempt to sneak into the palace of Emperor Shah Jahan has ended in disaster. You are seized, disciplined with the iron mace, and thrown outside the locked gates into the dust."
+                });
+                playCharacterDialogue({
+                  character: "guard",
+                  text: "Halt, intruder! Stop right where you stand! Beyond this Amar Singh Gate is restricted imperial ground! Answer immediately, or you will be seized!"
+                });
+                return { x: 50.0, y: 88.0 };
+              }
             }
 
-            // Walk backward out of the Agra Fort to Taj Gate
+            if (nextY <= 71.8 && nextX >= 47.0 && nextX <= 53.0) {
+              if (!hasGuardPermissionRef.current) {
+                setPunishmentState({
+                  isOpen: true,
+                  title: "Expelled from the Imperial Gates",
+                  subtitle: "THE FALL",
+                  description: "You entered without taking permission from the royal guard. Under the fierce glare of the Amar Singh Gate sentries, your attempt to sneak into the palace of Emperor Shah Jahan has ended in disaster. You are seized, disciplined with the iron mace, and thrown outside the locked gates into the dust."
+                });
+                playCharacterDialogue({
+                  character: "guard",
+                  text: "Halt, intruder! Stop right where you stand! Beyond this Amar Singh Gate is restricted imperial ground! Answer immediately, or you will be seized!"
+                });
+                return { x: 50.0, y: 88.0 };
+              } else {
+                setIsTransitioning(true);
+                setTimeout(() => {
+                  setScene("passage");
+                  setPlayerPos({ x: 33.0, y: 90.0 });
+                  setIsTransitioning(false);
+                }, 400);
+              }
+            }
+
             if (nextY >= 96.0) {
               startBoatTransition("taj_gate", { x: 50.0, y: 88.0 }, 5000);
             }
 
             return { x: nextX, y: nextY };
           } else if (scene === "passage") {
-            // In Inner Passage Scene: Curving stone ramp ascending towards Elephant Gate
-            const t = Math.max(0, Math.min(1, (prev.y - 58.0) / (91.0 - 58.0))); // 0 at top gate, 1 at bottom
+            // Safety check: if inside passage without permission, eject immediately
+            if (!hasGuardPermissionRef.current) {
+              setPunishmentState({
+                isOpen: true,
+                title: "Expelled from the Imperial Gates",
+                subtitle: "THE FALL",
+                description: "You entered without taking permission from the royal guard. Under the fierce glare of the Amar Singh Gate sentries, your attempt to sneak into the palace of Emperor Shah Jahan has ended in disaster. You are seized, disciplined with the iron mace, and thrown outside the locked gates into the dust."
+              });
+              setScene("gate");
+              return { x: 50.0, y: 88.0 };
+            }
+            const t = Math.max(0, Math.min(1, (prev.y - 58.0) / (91.0 - 58.0)));
             const centerX = 52.0 - (1.0 - Math.pow(1.0 - t, 1.6)) * 19.0;
             const halfWidth = 4.0 + t * 8.0;
 
@@ -458,96 +536,83 @@ export default function MughalGameScreen() {
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             const nextY = Math.max(58.0, Math.min(92.0, prev.y + dy));
 
-            // Walk up into the Elephant Gate arch to enter Diwan-i-Aam & Anguri Bagh
             if (nextY <= 59.2 && nextX >= 48.0 && nextX <= 56.0) {
               setScene("courtyard");
-                setPlayerPos({ x: 18.0, y: 72.0 });
+              setPlayerPos({ x: 18.0, y: 72.0 });
             }
 
-            // Walk back down to return to gate
             if (nextY >= 91.5) {
               setScene("gate");
-                setPlayerPos({ x: 50.0, y: 73.5 });
+              setPlayerPos({ x: 50.0, y: 73.5 });
             }
 
             return { x: nextX, y: nextY };
           } else if (scene === "courtyard") {
-            // In Courtyard Scene (Diwan-i-Aam & Anguri Bagh Garden)
             const minX = 8.0;
             const maxX = 92.0;
-            const minY = 40.0; // White marble palace terrace
-            const maxY = 76.0; // Foreground marble avenue
+            const minY = 40.0;
+            const maxY = 76.0;
 
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
 
-            // Walk up the marble pavilion stairs on left into Diwan-i-Aam interior
             if (nextX <= 32.0 && nextY <= 43.5) {
               setScene("interior");
-                setPlayerPos({ x: 50.0, y: 86.0 });
+              setPlayerPos({ x: 50.0, y: 86.0 });
             }
 
-            // Walk into the brown palace arcade on right into Brown Hallway
             if (nextX >= 78.0 && nextY <= 54.0) {
               setScene("brown_passage");
-                setPlayerPos({ x: 30.0, y: 86.0 });
+              setPlayerPos({ x: 30.0, y: 86.0 });
             }
 
-            // Walk to bottom-left entrance edge to return to passage ramp
             if (nextX <= 9.0 && nextY >= 68.0) {
               setScene("passage");
-                setPlayerPos({ x: 51.0, y: 61.0 });
+              setPlayerPos({ x: 51.0, y: 61.0 });
             }
 
             return { x: nextX, y: nextY };
           } else if (scene === "interior") {
-            // In Diwan-i-Aam Interior Scene (Throne Room)
             const minX = 20.0;
             const maxX = 78.0;
-            const minY = 62.0; // At foot of imperial throne
-            const maxY = 88.0; // Entrance carpet
+            const minY = 62.0;
+            const maxY = 88.0;
 
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
 
-            // Walk to the right colonnade passage to enter Sheesh Mahal corridor
             if (nextX >= 74.0 && nextY <= 74.0) {
               setScene("sheesh_passage");
-                setPlayerPos({ x: 50.0, y: 86.0 });
+              setPlayerPos({ x: 50.0, y: 86.0 });
             }
 
-            // Walk down to exit back to garden courtyard
             if (nextY >= 87.5) {
               setScene("courtyard");
-                setPlayerPos({ x: 26.0, y: 46.0 });
+              setPlayerPos({ x: 26.0, y: 46.0 });
             }
 
             return { x: nextX, y: nextY };
           } else if (scene === "sheesh_passage") {
-            // In Sheesh Mahal Royal Corridor Scene
             const minX = 32.0;
             const maxX = 68.0;
-            const minY = 58.0; // At golden archway at end of corridor
-            const maxY = 88.0; // Entrance from Diwan-i-Aam
+            const minY = 58.0;
+            const maxY = 88.0;
 
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
 
-            // Walk into the golden archway to enter Sheesh Mahal (Palace of Mirrors)
             if (nextY <= 60.0 && nextX >= 44.0 && nextX <= 56.0) {
               setScene("sheesh_mahal");
-                setPlayerPos({ x: 50.0, y: 86.0 });
+              setPlayerPos({ x: 50.0, y: 86.0 });
             }
 
-            // Walk down to return to Diwan-i-Aam interior
             if (nextY >= 87.5) {
               setScene("interior");
-                setPlayerPos({ x: 70.0, y: 70.0 });
+              setPlayerPos({ x: 70.0, y: 70.0 });
             }
 
             return { x: nextX, y: nextY };
           } else if (scene === "sheesh_mahal") {
-            // In Sheesh Mahal (Palace of Mirrors) Scene
             const minX = 18.0;
             const maxX = 82.0;
             const minY = 60.0;
@@ -556,38 +621,33 @@ export default function MughalGameScreen() {
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
 
-            // Walk down to exit back to the corridor
             if (nextY >= 87.5) {
               setScene("sheesh_passage");
-                setPlayerPos({ x: 50.0, y: 64.0 });
+              setPlayerPos({ x: 50.0, y: 64.0 });
             }
 
             return { x: nextX, y: nextY };
           } else if (scene === "brown_passage") {
-            // In Brown Palace Hallway (Jahangiri Mahal Gallery) Scene
             const minX = 22.0;
             const maxX = 65.0;
-            const minY = 60.0; // Archway leading to Khas Mahal
-            const maxY = 88.0; // Entrance from Anguri Bagh
+            const minY = 60.0;
+            const maxY = 88.0;
 
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
 
-            // Walk through the sunlit archway into Khas Mahal
             if (nextY <= 62.0 && nextX >= 34.0 && nextX <= 50.0) {
               setScene("khas_mahal");
-                setPlayerPos({ x: 50.0, y: 86.0 });
+              setPlayerPos({ x: 50.0, y: 86.0 });
             }
 
-            // Walk down to return to Anguri Bagh courtyard
             if (nextY >= 87.5) {
               setScene("courtyard");
-                setPlayerPos({ x: 78.0, y: 52.0 });
+              setPlayerPos({ x: 78.0, y: 52.0 });
             }
 
             return { x: nextX, y: nextY };
           } else if (scene === "khas_mahal") {
-            // In Khas Mahal Palace (Shah Jahan's Private Palace) Scene
             const minX = 18.0;
             const maxX = 82.0;
             const minY = 64.0;
@@ -596,10 +656,9 @@ export default function MughalGameScreen() {
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
 
-            // Walk down to exit back to the brown hallway
             if (nextY >= 87.5) {
               setScene("brown_passage");
-                setPlayerPos({ x: 42.0, y: 65.0 });
+              setPlayerPos({ x: 42.0, y: 65.0 });
             }
 
             return { x: nextX, y: nextY };
@@ -612,12 +671,10 @@ export default function MughalGameScreen() {
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
 
-            // Walking backward out of the Taj Gate to Agra Fort
             if (nextY >= 96.0) {
               startBoatTransition("gate", { x: 50.0, y: 88.0 }, 5000);
             }
 
-            // Walking through the archway to Charbagh (requires calligraphy solved)
             if (nextY <= 68.5 && nextX >= 45.0 && nextX <= 55.0) {
               if (isCalligraphySolved) {
                 setScene("taj_charbagh");
@@ -637,20 +694,16 @@ export default function MughalGameScreen() {
             let nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             let nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
 
-            // Central water pool obstacle: block moving directly onto it (x in [48.5, 51.5] and y in [48.5, 51.5])
-            // Independent axis checking to allow sliding along the edges
             if (nextX >= 48.5 && nextX <= 51.5 && nextY >= 48.5 && nextY <= 51.5) {
               if (prev.x < 48.5 || prev.x > 51.5) {
-                nextX = prev.x; // Block horizontal entry
+                nextX = prev.x;
               } else if (prev.y < 48.5 || prev.y > 51.5) {
-                nextY = prev.y; // Block vertical entry
+                nextY = prev.y;
               } else {
-                // If somehow spawned inside, push them out
                 nextY = 51.6;
               }
             }
 
-            // Exiting to Taj Mahal outside exterior terrace (requires symmetry solved)
             if (nextY <= 16.0 && nextX >= 45.0 && nextX <= 55.0) {
               if (isSymmetrySolved) {
                 setScene("taj_exterior");
@@ -660,10 +713,9 @@ export default function MughalGameScreen() {
               }
             }
 
-            // Exiting back to taj_gate
             if (nextY >= 89.0) {
               setScene("taj_gate");
-                setPlayerPos({ x: 50.0, y: 69.0 });
+              setPlayerPos({ x: 50.0, y: 69.0 });
             }
 
             return { x: nextX, y: nextY };
@@ -675,17 +727,13 @@ export default function MughalGameScreen() {
             let nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             let nextY = Math.min(maxY, prev.y + dy);
 
-            // Wall boundary at Y=69.0, except for the central archway opening
             if (nextY < 69.0) {
               if (nextX >= 44.0 && nextX <= 56.0) {
-                // Inside the central arch
                 nextY = Math.max(58.0, nextY);
               } else {
-                // Collide with the wall outside the arch
                 if (prev.y >= 69.0) {
                   nextY = 69.0;
                 } else {
-                  // Sliding collision if inside the arch trying to walk left/right into wall
                   nextX = prev.x;
                   nextY = Math.max(58.0, nextY);
                 }
@@ -700,9 +748,8 @@ export default function MughalGameScreen() {
             const maxY = 88.0;
 
             let nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
-            let nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
+            let nextY = Math.min(maxY, prev.y + dy);
 
-            // Central jali screen obstacle: block x in [32, 68] and y in [38, 66]
             if (nextX > 32.0 && nextX < 68.0 && nextY > 38.0 && nextY < 66.0) {
               if (!(prev.x + dx > 32.0 && prev.x + dx < 68.0 && prev.y > 38.0 && prev.y < 66.0)) {
                 nextX = prev.x + dx;
@@ -716,10 +763,9 @@ export default function MughalGameScreen() {
               }
             }
 
-            // Exiting back to Taj Mahal outside exterior terrace
             if (nextY >= 87.5) {
               setScene("taj_exterior");
-                setPlayerPos({ x: 50.0, y: 74.0 });
+              setPlayerPos({ x: 50.0, y: 74.0 });
             }
 
             return { x: nextX, y: nextY };
@@ -732,21 +778,18 @@ export default function MughalGameScreen() {
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
 
-            // Walking north on the river pier bridge to return to Taj Mahal exterior
             if (nextY <= 48.0 && nextX >= 44.0 && nextX <= 56.0) {
               setScene("taj_exterior");
-                setPlayerPos({ x: 80.0, y: 78.0 });
+              setPlayerPos({ x: 80.0, y: 78.0 });
             }
 
             return { x: nextX, y: nextY };
           } else if (scene === "red_fort_lahori") {
-            // In red_fort_lahori scene
             const minX = 5.0;
             const maxX = 95.0;
             let minY = 75.0;
             const maxY = 95.0;
 
-            // Allow walking up into the gate archway
             if (prev.x >= 44.0 && prev.x <= 56.0) {
               minY = 65.0;
             }
@@ -754,13 +797,11 @@ export default function MughalGameScreen() {
             let nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             let nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
 
-            // Restrict horizontal movement when inside the archway path
             if (nextY < 75.0 && (nextX < 44.0 || nextX > 56.0)) {
                nextX = prev.x;
                nextY = Math.max(75.0, nextY);
             }
 
-            // Enter Red Fort Plaza
             if (nextY <= 56.0 && nextX >= 45.0 && nextX <= 55.0) {
               setScene("red_fort_plaza");
               setPlayerPos({ x: 50.0, y: 88.0 });
@@ -768,34 +809,29 @@ export default function MughalGameScreen() {
 
             return { x: nextX, y: nextY };
           } else if (scene === "red_fort_plaza") {
-            // In red_fort_plaza scene
             const minX = 15.0;
             const maxX = 85.0;
-            const minY = 48.0; // Increased to prevent flying into walls/archway
+            const minY = 48.0;
             const maxY = 90.0;
 
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
 
-            // Walk back out to Lahori Gate
             if (nextY >= 89.0) {
               setScene("red_fort_lahori");
               setPlayerPos({ x: 50.0, y: 58.0 });
             }
 
-            // Walk forward to Chatta Chowk interior (market)
             if (nextY <= 49.0 && nextX > 35.0 && nextX < 65.0) {
               setScene("red_fort_interior");
               setPlayerPos({ x: 50.0, y: 88.0 });
             }
 
-            // Walk up the left stairs to Diwan-i-Khas
             if (nextX <= 35.0 && nextY <= 72.0) {
               setScene("red_fort_diwani_khas");
               setPlayerPos({ x: 50.0, y: 88.0 });
             }
 
-            // Walk up the right stairs to Rang Mahal
             if (nextX >= 65.0 && nextY <= 72.0) {
               setScene("red_fort_rang_mahal");
               setPlayerPos({ x: 50.0, y: 88.0 });
@@ -803,7 +839,6 @@ export default function MughalGameScreen() {
 
             return { x: nextX, y: nextY };
           } else if (scene === "red_fort_interior") {
-            // In red_fort_interior scene
             const progress = Math.max(0, Math.min(1, (prev.y - 45.0) / (90.0 - 45.0)));
             const minX = 35.0 - progress * 20.0;
             const maxX = 65.0 + progress * 20.0;
@@ -813,7 +848,6 @@ export default function MughalGameScreen() {
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
 
-            // Walk back out to Plaza
             if (nextY >= 89.0) {
               setScene("red_fort_plaza");
               setPlayerPos({ x: 50.0, y: 52.0 });
@@ -821,16 +855,14 @@ export default function MughalGameScreen() {
 
             return { x: nextX, y: nextY };
           } else if (scene === "red_fort_diwani_khas") {
-            // In red_fort_diwani_khas scene
             const minX = 25.0;
-            const maxX = 85.0; // Expanded to allow exiting to the right
+            const maxX = 85.0;
             const minY = 50.0;
             const maxY = 98.0;
 
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
 
-            // Walk off to the right side to enter the corridor
             if (nextX >= 83.0) {
               setScene("red_fort_corridor");
               setPlayerPos({ x: 50.0, y: 88.0 });
@@ -838,7 +870,6 @@ export default function MughalGameScreen() {
 
             return { x: nextX, y: nextY };
           } else if (scene === "red_fort_corridor") {
-            // In red_fort_corridor scene
             const minX = 25.0;
             const maxX = 75.0;
             const minY = 50.0;
@@ -847,15 +878,13 @@ export default function MughalGameScreen() {
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
 
-            // Walk back out of the corridor to Diwan-i-Khas
             if (nextY >= 96.0) {
               setScene("red_fort_diwani_khas");
-              setPlayerPos({ x: 80.0, y: 88.0 }); // Spawn correctly on the floor
+              setPlayerPos({ x: 80.0, y: 88.0 });
             }
 
             return { x: nextX, y: nextY };
           } else {
-            // In red_fort_rang_mahal scene
             const minX = 25.0;
             const maxX = 75.0;
             const minY = 50.0;
@@ -879,12 +908,11 @@ export default function MughalGameScreen() {
       window.removeEventListener("keyup", onKeyUp);
       cancelAnimationFrame(animationFrameId);
     };
-  }, [isLoading, isTransitioning, scene, isNearGuard, isNearThrone, isNearMirrorFountain, isNearKhasFountain, isNearCalligraphy, isNearPool, isNearTajPishtaq, isNearCenotaphs, isNearArchaeologist, isNearCarriage, isNearLahoriGate, isNearDiwanIKhas, isNearDiwaniKhasExit, isNearRangMahalExit, isNearCharbaghReturn, isCalligraphySolved, isSymmetrySolved, isMausoleumExplored, isArchaeologistTalked, cluesFound]);
+  }, [isLoading, isTransitioning, scene, isNearGuard, isNearThrone, isNearMirrorFountain, isNearKhasFountain, isNearCalligraphy, isNearPool, isNearTajPishtaq, isNearCenotaphs, isNearArchaeologist, isNearCarriage, isNearLahoriGate, isNearDiwanIKhas, isNearDiwaniKhasExit, isNearRangMahalExit, isNearCharbaghReturn, isCalligraphySolved, isSymmetrySolved, isMausoleumExplored, isArchaeologistTalked, cluesFound, guardAttempts]);
 
   if (isLoading) {
     return (
       <div className="flex min-h-screen w-full bg-[#050403] items-center justify-center flex-col relative overflow-hidden font-sans">
-        {/* Subtle background texture for loading screen */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#91714b]/20 via-[#050403] to-[#050403]"></div>
         
         <div className="relative z-10 flex flex-col items-center">
@@ -899,7 +927,6 @@ export default function MughalGameScreen() {
     );
   }
 
-  // Perspective depth scaling (Enlarged for clear prominence and hero presence)
   const depthScale = scene === "gate"
     ? 1.22 + ((playerPos.y - 71.5) / 20.5) * 0.28
     : scene === "passage"
@@ -1006,7 +1033,7 @@ export default function MughalGameScreen() {
         className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none transition-opacity duration-300"
       />
 
-      {/* Screen Darkening/Vignette Overlay */}
+      {/* Screen Vignette Overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/30 pointer-events-none"></div>
 
       {/* Fade Transition Overlay */}
@@ -1028,13 +1055,21 @@ export default function MughalGameScreen() {
             transform: `translate(-50%, -96%) scale(1.15)`,
           }}
           onClick={() => {
-            setShowDialogue((prev) => {
-              if (!prev && cluesFound === 0) setCluesFound(1);
-              return !prev;
+            setShowDialogue(true);
+            setGuardAttempts((prev) => {
+              const next = prev + 1;
+              if (next >= 3) {
+                discoverClue("guard_permit");
+              }
+              return next;
+            });
+            playCharacterDialogue({
+              character: "guard",
+              text: "Halt, intruder! Stop right where you stand! Beyond this Amar Singh Gate is restricted imperial ground! Answer immediately, or you will be seized!"
             });
           }}
         >
-          {/* Guard Proximity Indicator / Speech Bubble */}
+          {/* Guard Proximity Indicator */}
           {isNearGuard && !showDialogue && (
             <div className="animate-bounce mb-2 bg-[#fff9ea] border-2 border-black rounded-lg px-2.5 py-1 shadow-[2px_2px_0_0_rgba(0,0,0,1)] text-[11px] font-bold text-black flex items-center gap-1.5 whitespace-nowrap">
               <span className="bg-amber-400 border border-black rounded px-1 text-[9px]">E</span>
@@ -1052,31 +1087,49 @@ export default function MughalGameScreen() {
         </div>
       )}
 
-      {/* Genie in Starting Scene (Gate) */}
-      {scene === "gate" && (
-        <div
-          className="absolute pointer-events-none z-10 animate-bounce"
-          style={{
-            left: '75%',
-            top: '55%',
-            transform: 'translate(-50%, -50%)',
-            animationDuration: '3s'
-          }}
-        >
+      {/* --- JOLLY BHAI (GENIE) COMPANION FOLLOWER --- */}
+      <div
+        className="absolute z-20 pointer-events-auto cursor-pointer group transition-all duration-700 ease-out"
+        onClick={() => {
+          setShowJollyDialogue(true);
+          playCharacterDialogue({
+            character: "jolly",
+            text: "Ah! Hello, traveller! I am Jolly Bhai. I was born many centuries ago and have witnessed great wars, powerful kingdoms, and the changing of history. But remember... only you can see me. I will guide you through this journey. And whenever you see me shaking and dancing like a madman... come quickly! It means I have something very important to tell you!"
+          });
+        }}
+        style={{
+          left: `${genieX}%`,
+          top: `${genieY}%`,
+          transform: 'translate(-50%, -50%)',
+        }}
+        title="Click to talk to Jolly Bhai (AI Genie Guide)"
+      >
+        <div className="relative animate-bounce" style={{ animationDuration: '3.5s' }}>
           <img
             src="/genie_rajasthani_transparent.png"
-            alt="Rajasthani Genie"
-            className="w-48 h-48 object-contain"
-            style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }}
+            alt="Jolly Bhai Genie Companion"
+            className="w-24 h-24 md:w-28 md:h-28 object-contain transition-transform group-hover:scale-110 drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]"
+            style={{
+              imageRendering: "pixelated",
+              transform: facingLeft ? "scaleX(1)" : "scaleX(-1)",
+            }}
           />
+          {!showJollyDialogue && (
+            <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded px-2 py-0.5 shadow-[2px_2px_0_0_rgba(0,0,0,1)] text-[10px] font-black text-black whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+              Ask Jolly Bhai 🧞
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Throne Inspection Prompt (Interior Scene) */}
       {scene === "interior" && isNearThrone && !showThroneScroll && (
         <div 
           className="absolute top-[52%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 cursor-pointer z-10 animate-bounce"
-          onClick={() => setShowThroneScroll(true)}
+          onClick={() => {
+            discoverClue("pietra_dura_seal");
+            setShowThroneScroll(true);
+          }}
         >
           <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
           Inspect Imperial Throne Dais
@@ -1087,70 +1140,73 @@ export default function MughalGameScreen() {
       {scene === "sheesh_mahal" && isNearMirrorFountain && !showMirrorModal && (
         <div 
           className="absolute top-[62%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 cursor-pointer z-10 animate-bounce"
-          onClick={() => setShowMirrorModal(true)}
+          onClick={() => {
+            discoverClue("sheesh_mirror_shard");
+            setShowMirrorModal(true);
+          }}
         >
           <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
-          Examine Fountain & Mirror Mosaics
+          Inspect Palace Mirror Fountain
         </div>
       )}
 
-      {/* Khas Mahal Pool / River View Prompt (Khas Mahal Scene) */}
+      {/* Khas Mahal Fountain Prompt */}
       {scene === "khas_mahal" && isNearKhasFountain && !showKhasModal && (
         <div 
           className="absolute top-[62%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 cursor-pointer z-10 animate-bounce"
           onClick={() => setShowKhasModal(true)}
         >
           <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
-          Gaze Across Yamuna River & Inspect Pavilion
+          Inspect Khas Mahal Pool
         </div>
       )}
 
-      {/* Navigation Prompts */}
-      {scene === "gate" && playerPos.y <= 74.0 && (
-        <div className="absolute top-[63%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
-          ▲ Walk forward into the archway
+      {/* Boat Ride Banner at Agra Fort / Taj Gate */}
+      {scene === "gate" && playerPos.y >= 90.0 && (
+        <div className="absolute bottom-[10%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-4 py-1.5 rounded-full text-xs font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          ▼ Walk down to take the royal ferry across Yamuna to Taj Mahal
         </div>
       )}
 
       {scene === "passage" && playerPos.y <= 62.0 && (
-        <div className="absolute top-[48%] left-[52%] -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
-          ▲ Enter Elephant Gate (Hathi Pol)
+        <div className="absolute top-[48%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          ▲ Enter Diwan-i-Aam & Anguri Bagh
         </div>
       )}
 
       {scene === "passage" && playerPos.y >= 88.0 && (
-        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+        <div className="absolute bottom-[8%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
           ▼ Walk down to return to Amar Singh Gate
         </div>
       )}
 
-      {scene === "courtyard" && playerPos.x <= 35.0 && playerPos.y <= 48.0 && (
+      {scene === "courtyard" && playerPos.y <= 46.0 && (
         <div className="absolute top-[34%] left-[24%] -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
-          ▲ Walk up the stairs into Diwan-i-Aam
+          ▲ Enter Diwan-i-Aam (Imperial Throne Hall)
         </div>
       )}
 
-      {scene === "courtyard" && playerPos.x >= 70.0 && playerPos.y <= 58.0 && (
-        <div className="absolute top-[34%] right-[10%] bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
-          ► Enter Brown Palace (Jahangiri Mahal)
+      {scene === "courtyard" && playerPos.x >= 75.0 && (
+        <div className="absolute top-[46%] right-[10%] bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          ► Enter Brown Palace Hallway
         </div>
       )}
 
-      {scene === "courtyard" && playerPos.x <= 16.0 && (
-        <div className="absolute bottom-[20%] left-6 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
-          ◄ Walk left to return to passage ramp
+      {scene === "courtyard" && playerPos.x <= 15.0 && playerPos.y >= 65.0 && (
+        <div className="absolute bottom-[18%] left-[10%] bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          ◄ Return to Ramp Passage
         </div>
       )}
 
       {scene === "interior" && playerPos.x >= 70.0 && (
-        <div className="absolute top-[50%] right-6 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
-          ► Walk right to Sheesh Mahal corridor
+        <div className="absolute top-[64%] right-[12%] bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
+          ► Walk right to Sheesh Mahal Corridor
         </div>
       )}
 
       {scene === "interior" && playerPos.y >= 84.0 && (
         <div className="absolute bottom-[8%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
-          ▼ Walk down to exit to garden courtyard
+          ▼ Walk down to return to Anguri Bagh courtyard
         </div>
       )}
 
@@ -1213,7 +1269,7 @@ export default function MughalGameScreen() {
           className="absolute top-[38%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 cursor-pointer z-10 animate-bounce"
           onClick={() => {
             setScene("taj_mausoleum");
-                setPlayerPos({ x: 50.0, y: 86.0 });
+            setPlayerPos({ x: 50.0, y: 86.0 });
           }}
         >
           <span className="bg-amber-400 border border-black rounded px-1.5 py-0.5 text-[10px]">E</span>
@@ -1226,7 +1282,7 @@ export default function MughalGameScreen() {
           className="absolute top-[52%] right-6 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 cursor-pointer z-10 animate-bounce"
           onClick={() => {
             setScene("taj_mehtab_bagh");
-                setPlayerPos({ x: 50.0, y: 50.0 });
+            setPlayerPos({ x: 50.0, y: 50.0 });
           }}
         >
           <span className="bg-amber-400 border border-black rounded px-1.5 py-0.5 text-[10px]">F</span>
@@ -1239,16 +1295,13 @@ export default function MughalGameScreen() {
           className="absolute bottom-[10%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 cursor-pointer z-10 animate-bounce"
           onClick={() => {
             setScene("taj_charbagh");
-                setPlayerPos({ x: 45.0, y: 20.0 });
+            setPlayerPos({ x: 45.0, y: 20.0 });
           }}
         >
           <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
           Return to Charbagh Gardens
         </div>
       )}
-
-      {/* Taj Exterior Pishtaq Interaction Button */}
-
 
       {scene === "taj_mausoleum" && playerPos.y >= 85.0 && (
         <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400/90 backdrop-blur-xs text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold tracking-wider animate-pulse z-10 pointer-events-none">
@@ -1274,7 +1327,7 @@ export default function MughalGameScreen() {
         </div>
       )}
 
-      {/* --- MAIN GUY PLAYER CHARACTER SPRITE --- */}
+      {/* --- MAIN HERO PLAYER CHARACTER SPRITE --- */}
       <div 
         className="absolute pointer-events-none flex flex-col items-center z-20"
         style={{
@@ -1284,7 +1337,6 @@ export default function MughalGameScreen() {
           transform: `translate(-50%, -96%) scale(${depthScale}) scaleX(${facingLeft ? -1 : 1})`,
         }}
       >
-        {/* Character Sprite Image with smooth footstep cadence */}
         <img 
           src="/player.png" 
           alt="Main Hero" 
@@ -1307,7 +1359,7 @@ export default function MughalGameScreen() {
               </span>
               <button 
                 onClick={() => setShowThroneScroll(false)}
-                className="text-gray-500 hover:text-black font-bold text-sm"
+                className="text-gray-500 hover:text-black font-bold text-sm cursor-pointer"
               >
                 ✕ Close
               </button>
@@ -1322,7 +1374,7 @@ export default function MughalGameScreen() {
             </div>
             <button 
               onClick={() => setShowThroneScroll(false)}
-              className="bg-amber-400 hover:bg-amber-300 border-2 border-black rounded-lg py-2 text-xs font-bold text-black shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5"
+              className="bg-amber-400 hover:bg-amber-300 border-2 border-black rounded-lg py-2 text-xs font-bold text-black shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 cursor-pointer"
             >
               Continue to Sheesh Mahal
             </button>
@@ -1340,7 +1392,7 @@ export default function MughalGameScreen() {
               </span>
               <button 
                 onClick={() => setShowMirrorModal(false)}
-                className="text-gray-500 hover:text-black font-bold text-sm"
+                className="text-gray-500 hover:text-black font-bold text-sm cursor-pointer"
               >
                 ✕ Close
               </button>
@@ -1355,7 +1407,7 @@ export default function MughalGameScreen() {
             </div>
             <button 
               onClick={() => setShowMirrorModal(false)}
-              className="bg-amber-400 hover:bg-amber-300 border-2 border-black rounded-lg py-2 text-xs font-bold text-black shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5"
+              className="bg-amber-400 hover:bg-amber-300 border-2 border-black rounded-lg py-2 text-xs font-bold text-black shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 cursor-pointer"
             >
               Admire the Palace of Mirrors
             </button>
@@ -1373,20 +1425,17 @@ export default function MughalGameScreen() {
               </span>
               <button 
                 onClick={() => setShowKhasModal(false)}
-                className="text-gray-500 hover:text-black font-bold text-sm"
+                className="text-gray-500 hover:text-black font-bold text-sm cursor-pointer"
               >
                 ✕ Close
               </button>
             </div>
             <div className="text-black font-serif text-[14px] leading-relaxed">
-              <p className="mb-2 text-amber-950">
-                &ldquo;As you gaze out across the tranquil Yamuna River from the royal pavilion, the shimmering white domes of the Taj Mahal appear across the water. A message left on the carved marble balustrade reads:&rdquo;
+              <p className="mb-2 text-amber-950 font-bold">
+                &ldquo;From this golden pavilion, Emperor Shah Jahan spent his twilight years gazing across the sparkling Yamuna River towards the Taj Mahal.&rdquo;
               </p>
-              <div className="my-3 p-3 bg-amber-100 border-2 border-amber-500 rounded-xl text-amber-950 font-bold text-center text-[15px] shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
-                &ldquo;Go outside across the river to the Taj Mahal for your next clue!&rdquo;
-              </div>
-              <p className="text-xs font-sans text-amber-900 font-semibold bg-amber-50 border border-amber-300 p-2 rounded">
-                ★ <strong className="text-black">Next Quest Milestone:</strong> Your companion has crossed the Yamuna towards the Taj Mahal!
+              <p className="text-xs font-sans text-gray-700">
+                ★ <strong className="text-black">Travel Option:</strong> Board a royal barge to cross the Yamuna River and explore the Taj Mahal complex directly!
               </p>
             </div>
             <button 
@@ -1407,113 +1456,210 @@ export default function MughalGameScreen() {
         <DialoguePanel 
           characterName="Amar Singh Gate Sentry"
           characterTitle="Agra Fort Royal Guard"
-          dialogueText="Halt, traveler! Beyond this Amar Singh Gate lies the imperial ramp passage leading to the Elephant Gate (Hathi Pol). Your missing companion was seen ascending the ramp toward the upper court! You may proceed through the arch."
+          characterId="guard"
+          historicalContext={{
+            current_year: 1653,
+            era: "Mughal Empire",
+            location: "Agra Fort - Amar Singh Gate",
+            ruler: "Emperor Shah Jahan",
+            nearby_monuments: "Amar Singh Gate, Elephant Gate (Hathi Pol), Yamuna River, Taj Mahal",
+            historical_events: "Reign of Shah Jahan, construction of Taj Mahal across the Yamuna"
+          }}
+          dialogueText="Halt, intruder! Stop right where you stand! Beyond this Amar Singh Gate is restricted imperial ground! Answer immediately, or you will be seized!"
           isSpeaking={true}
           options={[
-            { id: 1, text: "Thank you, guard. I will proceed." },
-            { id: 2, text: "Wait, who took my companion?" }
+            { id: 1, text: "I am here to perform my talent in front of the court." },
+            { id: 2, text: "Wait, who controls this imperial fort?" }
           ]}
-          onOptionSelect={() => setShowDialogue(false)}
+          onOptionSelect={(opt) => {
+            if (opt.id === 1) {
+              hasGuardPermissionRef.current = true;
+              setHasGuardPermission(true);
+              discoverClue("guard_permit");
+            } else {
+              setGuardAttempts((prev) => {
+                const next = prev + 1;
+                if (next >= 3) {
+                  hasGuardPermissionRef.current = true;
+                  setHasGuardPermission(true);
+                  discoverClue("guard_permit");
+                }
+                return next;
+              });
+            }
+          }}
+          onPunish={(punish) => {
+            setShowDialogue(false);
+            setPunishmentState({
+              isOpen: true,
+              ...punish
+            });
+          }}
           onClose={() => setShowDialogue(false)}
         />
       )}
 
-      {/* --- UI OVERLAYS (Light Neo-Brutalism) --- */}
-      
-      {/* Top Left: Quest Panel */}
-      <div className="absolute top-6 left-6 flex flex-col gap-3">
-        {/* Main Quest Box */}
-        <div className="bg-[#fff9ea] border-2 border-black rounded-lg p-4 shadow-[4px_4px_0_0_rgba(0,0,0,1)] w-84">
-          <div className="text-[10px] font-bold text-gray-500 tracking-wider uppercase mb-2">
-            Mughal Empire - {
-              scene === "gate" ? "Amar Singh Gate" :
-              scene === "passage" ? "Inner Ramp Passage" :
-              scene === "courtyard" ? "Diwan-i-Aam & Anguri Bagh" :
-              scene === "interior" ? "Imperial Throne Hall (Diwan-i-Aam)" :
-              scene === "sheesh_passage" ? "Royal Marble Corridor" :
-              scene === "sheesh_mahal" ? "Sheesh Mahal (Palace of Mirrors)" :
-              scene === "brown_passage" ? "Jahangiri Palace (Brown Hallway)" :
-              scene === "khas_mahal" ? "Khas Mahal (Private River Palace)" :
-              scene === "taj_gate" ? "Darwaza-i-Rauza (Great Gate)" :
-              scene === "taj_charbagh" ? "Charbagh Gardens" :
-              scene === "taj_exterior" ? "Taj Mahal Outside Terrace" :
-              scene === "taj_mausoleum" ? "Main Taj Mausoleum" :
-              scene === "taj_mehtab_bagh" ? "Mehtab Bagh (Moonlight Garden)" :
-              "Lahori Gate (Red Fort)"
-            }
-          </div>
-          <div className="text-[14px] font-bold text-black leading-snug">
-            {scene === "gate"
-              ? cluesFound === 0
-                ? "Go talk with the guard."
-                : "Walk into the archway to ascend the fort passage."
+      {/* --- JOLLY BHAI (GENIE) DIALOGUE MODAL WITH GROQ & LANGCHAIN ASK AI --- */}
+      {showJollyDialogue && (
+        <DialoguePanel 
+          characterName="Jolly Bhai"
+          characterTitle="Ancient Time-Traveling Genie Companion"
+          characterId="jolly"
+          historicalContext={{
+            current_year: 1653,
+            era: "Mughal Empire",
+            location: scene === "gate" ? "Agra Fort - Amar Singh Gate" :
+                      scene === "passage" ? "Agra Fort - Inner Ramp Passage" :
+                      scene === "courtyard" ? "Agra Fort - Diwan-i-Aam Courtyard" :
+                      scene === "interior" ? "Diwan-i-Aam (Imperial Throne Hall)" :
+                      scene === "sheesh_passage" ? "Royal Marble Corridor" :
+                      scene === "sheesh_mahal" ? "Sheesh Mahal (Palace of Mirrors)" :
+                      scene === "khas_mahal" ? "Khas Mahal & Anguri Bagh" :
+                      scene === "taj_gate" ? "Taj Mahal - Darwaza-i-Rauza (Great Gate)" :
+                      scene === "taj_charbagh" ? "Taj Mahal - Charbagh Persian Gardens" :
+                      scene === "taj_mausoleum" ? "Taj Mahal - Central Marble Chamber" :
+                      scene === "taj_mehtab_bagh" ? "Mehtab Bagh (Moonlight Garden)" :
+                      scene === "red_fort_plaza" ? "Red Fort - Lahori Gate Plaza" :
+                      scene === "red_fort_interior" ? "Red Fort - Chatta Chowk Bazaars" :
+                      "Red Fort - Diwan-i-Khas",
+            ruler: "Emperor Shah Jahan",
+            nearby_monuments: "Taj Mahal, Agra Fort, Amar Singh Gate, Yamuna River, Red Fort",
+            historical_events: "Reign of Shah Jahan, completion of Taj Mahal, Mughal golden age"
+          }}
+          dialogueText="Ah! Hello, traveller! I am Jolly Bhai. I was born many centuries ago and have witnessed great wars, powerful kingdoms, and the changing of history. But remember... only you can see me. I will guide you through this journey. And whenever you see me shaking and dancing like a madman... come quickly! It means I have something very important to tell you!"
+          isSpeaking={true}
+          showInput={true}
+          options={[
+            { id: 1, text: "Who built the Taj Mahal and why?" },
+            { id: 2, text: "Tell me about Emperor Shah Jahan's reign." },
+            { id: 3, text: "Why is Agra Fort fortified so strongly?" }
+          ]}
+          onClose={() => setShowJollyDialogue(false)}
+        />
+      )}
+
+      {/* Top Left: Scenario Quest Box & Clues */}
+      <div className="absolute top-6 left-6 flex flex-col gap-2 z-10 pointer-events-auto">
+        <div className="bg-[#fff9ea] border-2 border-black rounded-lg p-3 w-80 shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
+          <div className="text-[10px] font-extrabold text-amber-800 uppercase tracking-widest mb-0.5">
+            {scene.startsWith("red_fort")
+              ? "MUGHAL EMPIRE - RED FORT (OLD DELHI)"
+              : scene.startsWith("taj")
+              ? "MUGHAL EMPIRE - TAJ MAHAL COMPLEX"
+              : scene === "gate"
+              ? "MUGHAL EMPIRE - AGRA FORT (1653 AD)"
               : scene === "passage"
-              ? "Ascend the royal ramp towards the upper palaces (Hathi Pol)."
-              : scene === "courtyard"
-              ? "Explore Anguri Bagh. Enter Diwan-i-Aam on the left, or Brown Palace on the right."
+              ? "MUGHAL EMPIRE - INNER PASSAGE"
               : scene === "interior"
-              ? "Inspect the golden throne, then proceed right to the Sheesh Mahal corridor."
-              : scene === "sheesh_passage"
-              ? "Walk through the arched gallery towards the golden entrance of Sheesh Mahal."
+              ? "MUGHAL EMPIRE - DIWAN-I-AAM THRONE ROOM"
               : scene === "sheesh_mahal"
-              ? "Approach and examine the central marble fountain and glittering mirror ceiling."
-              : scene === "brown_passage"
-              ? "Proceed through the carved red sandstone gallery towards Khas Mahal."
+              ? "MUGHAL EMPIRE - SHEESH MAHAL"
               : scene === "khas_mahal"
-              ? "Gaze out at the Yamuna and read the clue, then continue across the river."
+              ? "MUGHAL EMPIRE - KHAS MAHAL"
+              : "MUGHAL EMPIRE - DIWAN-I-AAM & ANGURI BAGH"}
+          </div>
+          <div className="text-[13px] font-black text-black leading-snug">
+            {scene === "gate"
+              ? guardAttempts >= 1
+                ? "You have to find your companion. Walk through the passage to reach the Diwan-i-Khas."
+                : "You have to find your companion. Talk to the Royal Guard at the gate to gain entry into the palace."
+              : scene === "passage"
+              ? "Walk up the curving ramp to enter the Diwan-i-Aam courtyard."
+              : scene === "courtyard"
+              ? "Search the royal courtyard for traces of your companion. Enter Diwan-i-Aam or the palace galleries."
+              : scene === "interior"
+              ? "Inspect the imperial throne dais, then proceed right to the Sheesh Mahal corridor."
+              : scene === "sheesh_passage"
+              ? "Walk forward through the golden archway to enter the Sheesh Mahal (Palace of Mirrors)."
+              : scene === "sheesh_mahal"
+              ? "Examine the central mirror mosaic fountain to uncover the final royal signet."
+              : scene === "brown_passage"
+              ? "Walk through the colonnade to enter Khas Mahal, or walk down to return to the garden."
+              : scene === "khas_mahal"
+              ? "Inspect Khas Mahal and board the royal barge across Yamuna River to Taj Mahal."
               : scene === "taj_gate"
               ? !isCalligraphySolved
-                ? "Approach the Great Gate and examine the calligraphy puzzle (press E)."
-                : "Walk through the Great Gate archway."
+                ? "Decipher the sacred Thuluth calligraphy on the Great Gate to enter the Charbagh gardens."
+                : "Walk through the Great Gate archway into the Charbagh gardens."
               : scene === "taj_charbagh"
               ? !isSymmetrySolved
-                ? "Approach the central lotus pool and examine the symmetry puzzle (press E)."
-                : "Walk up the central marble path to the Taj Mahal outside terrace."
+                ? "Balance the Charbagh water gates to restore the fountains and unlock the path."
+                : "Walk up the marble avenue to the Taj Mahal outside terrace."
               : scene === "taj_exterior"
-              ? "Enter the Mausoleum through the central arch, or move to the right to cross the Yamuna to Mehtab Bagh."
+              ? "Approach the main Pishtaq archway to enter the central mausoleum chamber, or press F to cross Yamuna."
               : scene === "taj_mausoleum"
               ? !isMausoleumExplored
-                ? "Approach the central jali screen and examine the cenotaphs (press E)."
-                : "Exit back out to the marble terrace."
+                ? "Inspect the royal cenotaphs of Emperor Shah Jahan and Empress Mumtaz Mahal."
+                : "Mausoleum fully explored! Walk down to exit to the terrace."
               : scene === "taj_mehtab_bagh"
               ? !isArchaeologistTalked
-                ? "Explore Mehtab Bagh and talk to the Caretaker Archaeologist (press E)."
+                ? "Explore Mehtab Bagh and talk to the Caretaker Archaeologist to locate your companion."
                 : "Proceed to the bottom-right carriage to Delhi, or walk up across the pier to return to Taj exterior."
               : "Walk forward into the monumental Lahori Gate of the Red Fort."}
           </div>
         </div>
 
-        {/* Clues Box */}
-        <div className="bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 w-max shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex items-center gap-3">
-          <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        {/* Interactive Dynamic Clues Box */}
+        <div 
+          onClick={() => setShowCluesModal(true)}
+          className="bg-[#fff9ea] hover:bg-[#fff2cc] border-2 border-black rounded-lg px-4 py-2 w-max shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex items-center gap-3 cursor-pointer transition-all active:translate-y-0.5 active:shadow-[1px_1px_0_0_rgba(0,0,0,1)] group"
+          title="Click to inspect discovered historical clues"
+        >
+          <svg className="w-4 h-4 text-amber-600 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
           <div className="flex gap-1">
-            <div className={`w-3 h-1 ${cluesFound >= 1 ? "bg-amber-500" : "bg-amber-200"}`}></div>
-            <div className={`w-3 h-1 ${cluesFound >= 2 ? "bg-amber-500" : "bg-amber-200"}`}></div>
-            <div className={`w-3 h-1 ${cluesFound >= 3 ? "bg-amber-500" : "bg-amber-200"}`}></div>
+            {MUGHAL_HISTORICAL_CLUES.map((clue) => (
+              <div 
+                key={clue.id}
+                className={`w-3.5 h-1.5 rounded-sm transition-all ${
+                  discoveredClueIds.includes(clue.id) ? "bg-amber-500 shadow-sm" : "bg-amber-200"
+                }`}
+              ></div>
+            ))}
           </div>
-          <span className="text-[12px] font-bold text-black">{cluesFound}/3 clues</span>
+          <span className="text-[12px] font-extrabold text-black flex items-center gap-1.5">
+            {discoveredClueIds.length}/{MUGHAL_HISTORICAL_CLUES.length} clues
+            <span className="text-[10px] text-amber-700 underline font-bold group-hover:text-black">open</span>
+          </span>
         </div>
       </div>
 
       {/* Top Right: Actions & Minimap */}
       <div className="absolute top-6 right-6 flex flex-col items-end gap-3">
-        {/* Buttons Row */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
+          {/* Silent Switchable Timer Button */}
+          <button 
+            onClick={() => setIsTimerVisible(!isTimerVisible)}
+            title={isTimerVisible ? "Timer Active (Click to hide)" : "Click to view session timer"}
+            className={`h-10 px-3.5 border-2 border-black rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all flex items-center justify-center gap-1.5 font-black text-xs cursor-pointer ${
+              isTimerVisible ? "bg-[#fcd34d] text-black" : "bg-white/90 hover:bg-white text-gray-800"
+            }`}
+          >
+            <span>⏱️</span>
+            {isTimerVisible ? (
+              <span>
+                {String(Math.floor(elapsedSeconds / 60)).padStart(2, '0')}:
+                {String(elapsedSeconds % 60).padStart(2, '0')}
+              </span>
+            ) : (
+              <span className="text-[11px] font-bold uppercase tracking-wider text-black">Timer</span>
+            )}
+          </button>
+
           <button 
             onClick={handleResetGame}
             title="Restart to Beginning"
-            className="h-10 bg-red-600 border-2 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all flex items-center justify-center px-3 gap-1.5 group"
+            className="h-10 bg-red-600 border-2 border-black rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all flex items-center justify-center px-3 gap-1.5 group cursor-pointer"
           >
             <svg className="w-5 h-5 text-white group-hover:-rotate-180 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
             <span className="text-[13px] font-bold text-white">Restart</span>
           </button>
-          <button className="w-10 h-10 bg-amber-400 border-2 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all flex items-center justify-center">
+          <button className="w-10 h-10 bg-amber-400 border-2 border-black rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all flex items-center justify-center cursor-pointer">
             <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
           </button>
-          <button className="w-10 h-10 bg-amber-400 border-2 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all flex items-center justify-center">
+          <button className="w-10 h-10 bg-amber-400 border-2 border-black rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all flex items-center justify-center cursor-pointer">
             <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.898a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>
           </button>
-          <button onClick={() => router.push('/dashboard')} className="h-10 bg-red-600 border-2 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all flex items-center justify-center px-4">
+          <button onClick={() => router.push('/dashboard')} className="h-10 bg-red-600 border-2 border-black rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all flex items-center justify-center px-4 cursor-pointer">
             <span className="text-[13px] font-bold text-white">Leave world</span>
           </button>
         </div>
@@ -1522,22 +1668,20 @@ export default function MughalGameScreen() {
         <div className="bg-[#fff9ea] border-2 border-black rounded-lg p-3 w-44 h-36 shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex flex-col">
           {["gate", "passage", "courtyard", "interior", "sheesh_passage", "sheesh_mahal", "brown_passage", "khas_mahal"].includes(scene) ? (
             <div className="flex-1 grid grid-cols-3 grid-rows-3 gap-1 p-1 bg-amber-50/50 rounded">
-               {/* Dynamic Minimap of Agra Fort 8-room complex */}
-               <div className={scene === "sheesh_mahal" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div> {/* Sheesh Mahal */}
-               <div className={scene === "sheesh_passage" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div> {/* Sheesh Corridor */}
-               <div className={scene === "khas_mahal" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div> {/* Khas Mahal */}
+               <div className={scene === "sheesh_mahal" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
+               <div className={scene === "sheesh_passage" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
+               <div className={scene === "khas_mahal" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
                
-               <div className={scene === "interior" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div> {/* Diwan-i-Aam Interior */}
-               <div className={scene === "courtyard" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div> {/* Courtyard */}
-               <div className={scene === "brown_passage" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div> {/* Brown Hallway */}
+               <div className={scene === "interior" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
+               <div className={scene === "courtyard" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
+               <div className={scene === "brown_passage" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
 
                <div className="bg-transparent"></div>
-               <div className={scene === "passage" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div> {/* Ramp Passage */}
-               <div className={scene === "gate" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div> {/* Amar Singh Gate */}
+               <div className={scene === "passage" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
+               <div className={scene === "gate" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
             </div>
           ) : ["taj_gate", "taj_charbagh", "taj_exterior", "taj_mausoleum", "taj_mehtab_bagh"].includes(scene) ? (
             <div className="flex-1 grid grid-cols-3 grid-rows-2 gap-1 p-1 bg-amber-50/50 rounded">
-               {/* Minimap of Taj Mahal complex */}
                <div className={scene === "taj_charbagh" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
                <div className={scene === "taj_exterior" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
                <div className={scene === "taj_mausoleum" ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
@@ -1548,7 +1692,6 @@ export default function MughalGameScreen() {
             </div>
           ) : (
             <div className="flex-1 flex bg-amber-50/50 rounded p-1 items-center justify-center">
-               {/* Red Fort minimap */}
                <div className="w-20 h-20 bg-amber-400 rounded-lg shadow-[0_0_8px_rgba(251,191,36,0.8)] border-2 border-black flex flex-col items-center justify-center text-center p-1 text-black">
                  <span className="text-[14px]">🚩</span>
                  <span className="text-[9px] font-extrabold tracking-wider uppercase mt-1 leading-none">Red Fort</span>
@@ -1568,9 +1711,7 @@ export default function MughalGameScreen() {
         </div>
       </div>
 
-
-
-      {/* --- ARCHAEOLOGIST NPC (Only in Mehtab Bagh Scene) --- */}
+      {/* --- ARCHAEOLOGIST NPC (Mehtab Bagh) --- */}
       {scene === "taj_mehtab_bagh" && (
         <div
           className="absolute pointer-events-auto cursor-pointer z-10 flex flex-col items-center"
@@ -1581,9 +1722,12 @@ export default function MughalGameScreen() {
           }}
           onClick={() => {
             setShowArchaeologistDialogue((prev) => !prev);
+            playCharacterDialogue({
+              character: "archaeologist",
+              text: "Greetings! I am the caretaker archaeologist here. You are standing on the ruins of Mehtab Bagh's pond foundations."
+            });
           }}
         >
-          {/* Proximity Speech Bubble */}
           {isNearArchaeologist && !showArchaeologistDialogue && (
             <div className="animate-bounce mb-2 bg-[#fff9ea] border-2 border-black rounded-lg px-2.5 py-1 shadow-[2px_2px_0_0_rgba(0,0,0,1)] text-[11px] font-bold text-black flex items-center gap-1.5 whitespace-nowrap">
               <span className="bg-amber-400 border border-black rounded px-1 text-[9px]">E</span>
@@ -1591,7 +1735,6 @@ export default function MughalGameScreen() {
             </div>
           )}
 
-          {/* Archaeologist Sprite */}
           <img
             src="/npc-archaeologist.png"
             alt="Caretaker Archaeologist NPC"
@@ -1601,34 +1744,26 @@ export default function MughalGameScreen() {
         </div>
       )}
 
-      {/* Mughal Traders in Taj Gate (Darwaza-i-Rauza) */}
+      {/* Mughal Traders in Taj Gate */}
       {scene === "taj_gate" && (
         <>
-          {/* Left Guard near gate */}
           <div className="absolute pointer-events-none z-10" style={{ left: '41%', top: '74%', transform: 'translate(-50%, -96%)' }}>
             <img src="/guard.png" alt="Mughal Guard" className="w-32 h-32 object-contain" style={{ imageRendering: "pixelated" }} />
           </div>
-          {/* Right Guard near gate */}
           <div className="absolute pointer-events-none z-10" style={{ left: '59%', top: '74%', transform: 'translate(-50%, -96%)' }}>
             <img src="/guard.png" alt="Mughal Guard" className="w-32 h-32 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
           </div>
-
-          {/* Pot Trader (Left Side far) */}
           <div className="absolute pointer-events-none z-10" style={{ left: '18%', top: '88%', transform: 'translate(-50%, -96%)' }}>
             <img src="/trader_pots_transparent.png" alt="Pot Trader" className="w-40 h-40 object-contain" style={{ imageRendering: "pixelated" }} />
           </div>
-          {/* Toy Trader (Left Side inner) */}
           <div className="absolute pointer-events-none z-10" style={{ left: '32%', top: '88%', transform: 'translate(-50%, -96%)' }}>
             <img src="/trader_toys_transparent.png" alt="Toy Trader" className="w-40 h-40 object-contain" style={{ imageRendering: "pixelated" }} />
           </div>
-
-          {/* Marble Trader (Right Side inner) */}
           <div className="absolute pointer-events-none z-10" style={{ left: '68%', top: '88%', transform: 'translate(-50%, -96%)' }}>
             <img src="/trader_marble_transparent.png" alt="Marble Trader" className="w-40 h-40 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
           </div>
-          {/* Painting Trader (Right Side far) */}
           <div className="absolute pointer-events-none z-10" style={{ left: '82%', top: '88%', transform: 'translate(-50%, -96%)' }}>
-            <img src="/trader_paintings_transparent.png" alt="Painting Trader" className="w-40 h-40 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
+            <img src="/trader_spices_transparent.png" alt="Spice Trader" className="w-40 h-40 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
           </div>
         </>
       )}
@@ -1638,9 +1773,9 @@ export default function MughalGameScreen() {
         <div
           className="absolute pointer-events-none"
           style={{
-            right: `2%`,
-            top: `82%`,
-            transform: `translate(0, -90%)`,
+            left: `78%`,
+            top: `92%`,
+            transform: `translate(-50%, -90%)`,
             zIndex: 5,
           }}
         >
@@ -1676,33 +1811,27 @@ export default function MughalGameScreen() {
       {/* Mughal Guards in Red Fort Plaza */}
       {scene === "red_fort_plaza" && (
         <>
-          {/* Top Left Guard */}
           <div className="absolute pointer-events-none z-10" style={{ left: '41%', top: '51%', transform: 'translate(-50%, -96%) scale(0.95)' }}>
             <img src="/guard.png" alt="Mughal Guard" className="w-24 h-24 object-contain opacity-90" style={{ imageRendering: "pixelated", transform: "scaleX(1)" }} />
           </div>
-          {/* Top Right Guard */}
           <div className="absolute pointer-events-none z-10" style={{ left: '59%', top: '51%', transform: 'translate(-50%, -96%) scale(0.95)' }}>
             <img src="/guard.png" alt="Mughal Guard" className="w-24 h-24 object-contain opacity-90" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
           </div>
-          {/* Bottom Left Guard */}
           <div className="absolute pointer-events-none z-10" style={{ left: '38%', top: '76%', transform: 'translate(-50%, -96%) scale(1.15)' }}>
             <img src="/guard.png" alt="Mughal Guard" className="w-24 h-24 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(1)" }} />
           </div>
-          {/* Bottom Right Guard */}
           <div className="absolute pointer-events-none z-10" style={{ left: '62%', top: '76%', transform: 'translate(-50%, -96%) scale(1.15)' }}>
             <img src="/guard.png" alt="Mughal Guard" className="w-24 h-24 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
           </div>
         </>
       )}
 
-      {/* Mughal Traders in Red Fort Interior (Chatta Chowk Market) */}
+      {/* Mughal Traders in Red Fort Interior */}
       {scene === "red_fort_interior" && (
         <>
-          {/* Silk Trader (Left Shop) */}
           <div className="absolute pointer-events-none z-10" style={{ left: '26%', top: '82%', transform: 'translate(-50%, -96%)' }}>
             <img src="/trader_silk_transparent.png" alt="Silk Trader" className="w-64 h-64 object-contain" style={{ imageRendering: "pixelated" }} />
           </div>
-          {/* Jewel Trader (Right Shop) */}
           <div className="absolute pointer-events-none z-10" style={{ left: '72%', top: '80%', transform: 'translate(-50%, -96%)' }}>
             <img src="/trader_jewels_transparent.png" alt="Jewel Trader" className="w-64 h-64 object-contain" style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }} />
           </div>
@@ -1821,54 +1950,51 @@ export default function MughalGameScreen() {
           onClick={() => setShowCalligraphyPuzzle(true)}
         >
           <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
-          Examine Calligraphy Inscription
+          Decipher Inscription on Great Gate
         </div>
       )}
 
-      {/* Symmetry Puzzle Prompt (Taj Charbagh) */}
+      {/* Symmetry Pool Inspection Prompt (Taj Charbagh) */}
       {scene === "taj_charbagh" && isNearPool && !showSymmetryPuzzle && !isSymmetrySolved && (
         <div 
-          className="absolute top-[52%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 cursor-pointer z-10 animate-bounce"
+          className="absolute top-[48%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 cursor-pointer z-10 animate-bounce"
           onClick={() => setShowSymmetryPuzzle(true)}
         >
           <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
-          Examine Lotus Pool & Fountains
+          Inspect Charbagh Central Pool & Fountains
         </div>
       )}
 
-      {/* Cenotaph Detail Prompt (Taj Mausoleum) */}
-      {scene === "taj_mausoleum" && isNearCenotaphs && !showMausoleumModal && !isMausoleumExplored && (
+      {/* Cenotaphs Inspection Prompt (Taj Mausoleum) */}
+      {scene === "taj_mausoleum" && isNearCenotaphs && !showMausoleumModal && (
         <div 
-          className="absolute top-[52%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 cursor-pointer z-10 animate-bounce"
+          className="absolute top-[48%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 cursor-pointer z-10 animate-bounce"
           onClick={() => setShowMausoleumModal(true)}
         >
           <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
-          Inspect Royal Cenotaphs
+          Examine Royal Cenotaphs & Inscriptions
         </div>
       )}
 
-      {/* --- CALLIGRAPHY INSCRIPTION PUZZLE MODAL --- */}
+      {/* --- CALLIGRAPHY PUZZLE MODAL --- */}
       {showCalligraphyPuzzle && scene === "taj_gate" && (
         <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-6 z-30 pointer-events-auto">
           <div className="bg-[#fff9ea] border-3 border-black rounded-2xl p-6 shadow-[8px_8px_0_0_rgba(0,0,0,1)] max-w-md w-full flex flex-col gap-4 relative animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b-2 border-amber-200 pb-2">
               <span className="text-[12px] font-bold text-amber-900 uppercase tracking-widest flex items-center gap-2">
-                <span>✍️</span> Great Gate Inscription Puzzle
+                <span>✒️</span> Darwaza-i-Rauza Calligraphy
               </span>
               <button 
-                onClick={() => {
-                  setShowCalligraphyPuzzle(false);
-                  setCalligraphyError(false);
-                }}
-                className="text-gray-500 hover:text-black font-bold text-sm"
+                onClick={() => setShowCalligraphyPuzzle(false)}
+                className="text-gray-500 hover:text-black font-bold text-sm cursor-pointer"
               >
                 ✕ Close
               </button>
             </div>
-            
-            <div className="text-black font-serif text-[14.5px] leading-relaxed">
-              <p className="mb-3 text-amber-950">
-                The massive red sandstone arch of the Darwaza-i-Rauza is inscribed with calligraphy. To unlock the gates, decode the given calligraphy:
+
+            <div className="text-black font-serif text-[14px] leading-relaxed">
+              <p className="mb-2">
+                The Great Gate is inscribed with black marble Arabic calligraphy created by the master calligrapher <strong>Amanat Khan</strong>. Complete the sacred verse from Surah Al-Fajr:
               </p>
               <div className="bg-amber-100/70 p-3 rounded-lg border border-amber-300 font-serif italic text-amber-900 text-center my-3 text-[15px]">
                 &ldquo;O Soul, art thou at rest? Return to thy Lord at peace with Him, and He at <strong className="text-amber-600 uppercase underline">[?]</strong> with thee.&rdquo;
@@ -1878,18 +2004,19 @@ export default function MughalGameScreen() {
             <div className="flex flex-col gap-2">
               <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Enter the missing word:</label>
               <input 
-                type="text"
+                type="text" 
                 value={calligraphyInput}
                 onChange={(e) => {
                   setCalligraphyInput(e.target.value);
                   setCalligraphyError(false);
                 }}
                 placeholder="Type word here..."
-                className="border-2 border-black rounded-lg px-3 py-2 text-black bg-white focus:outline-hidden focus:ring-2 focus:ring-amber-500 font-sans"
+                className="border-2 border-black rounded-lg px-3 py-2 text-black bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-sans"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     if (calligraphyInput.trim().toLowerCase() === "peace") {
                       setIsCalligraphySolved(true);
+                      discoverClue("calligraphy_scroll");
                       setShowCalligraphyPuzzle(false);
                     } else {
                       setCalligraphyError(true);
@@ -1909,12 +2036,13 @@ export default function MughalGameScreen() {
                 onClick={() => {
                   if (calligraphyInput.trim().toLowerCase() === "peace") {
                     setIsCalligraphySolved(true);
+                    discoverClue("calligraphy_scroll");
                     setShowCalligraphyPuzzle(false);
                   } else {
                     setCalligraphyError(true);
                   }
                 }}
-                className="flex-1 bg-amber-400 hover:bg-amber-300 border-2 border-black rounded-lg py-2.5 text-xs font-bold text-black shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5"
+                className="flex-1 bg-amber-400 hover:bg-amber-300 border-2 border-black rounded-lg py-2.5 text-xs font-bold text-black shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 cursor-pointer"
               >
                 Decipher Inscription
               </button>
@@ -1933,7 +2061,7 @@ export default function MughalGameScreen() {
               </span>
               <button 
                 onClick={() => setShowSymmetryPuzzle(false)}
-                className="text-gray-500 hover:text-black font-bold text-sm"
+                className="text-gray-500 hover:text-black font-bold text-sm cursor-pointer"
               >
                 ✕ Close
               </button>
@@ -1948,7 +2076,6 @@ export default function MughalGameScreen() {
               </p>
             </div>
 
-            {/* Symmetry Toggle Buttons */}
             <div className="grid grid-cols-2 gap-3 my-2">
               {["North-West", "North-East", "South-West", "South-East"].map((label, idx) => (
                 <button
@@ -1960,7 +2087,7 @@ export default function MughalGameScreen() {
                       return next;
                     });
                   }}
-                  className={`border-2 border-black rounded-lg py-3 px-2 flex flex-col items-center justify-center shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 transition-colors ${
+                  className={`border-2 border-black rounded-lg py-3 px-2 flex flex-col items-center justify-center shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 transition-colors cursor-pointer ${
                     symmetryState[idx]
                       ? "bg-emerald-100 hover:bg-emerald-200 border-emerald-900 text-emerald-950"
                       : "bg-red-100 hover:bg-red-200 border-red-900 text-red-950"
@@ -1979,6 +2106,7 @@ export default function MughalGameScreen() {
                 const allActive = symmetryState.every((val) => val === true);
                 if (allActive) {
                   setIsSymmetrySolved(true);
+                  discoverClue("charbagh_paradise_map");
                   setShowSymmetryPuzzle(false);
                 }
               }}
@@ -2005,7 +2133,7 @@ export default function MughalGameScreen() {
               </span>
               <button 
                 onClick={() => setShowMausoleumModal(false)}
-                className="text-gray-500 hover:text-black font-bold text-sm"
+                className="text-gray-500 hover:text-black font-bold text-sm cursor-pointer"
               >
                 ✕ Close
               </button>
@@ -2028,7 +2156,7 @@ export default function MughalGameScreen() {
                 setIsMausoleumExplored(true);
                 setShowMausoleumModal(false);
               }}
-              className="bg-amber-400 hover:bg-amber-300 border-2 border-black rounded-lg py-2.5 text-xs font-bold text-black shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5"
+              className="bg-amber-400 hover:bg-amber-300 border-2 border-black rounded-lg py-2.5 text-xs font-bold text-black shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 cursor-pointer"
             >
               Understand & Continue
             </button>
@@ -2041,6 +2169,14 @@ export default function MughalGameScreen() {
         <DialoguePanel 
           characterName="Mehtab Bagh Caretaker"
           characterTitle="Archaeologist"
+          historicalContext={{
+            current_year: 1653,
+            era: "Mughal Empire",
+            location: "Mehtab Bagh (Moonlight Garden) - Agra",
+            ruler: "Emperor Shah Jahan",
+            nearby_monuments: "Taj Mahal across Yamuna River, Octagonal Pool ruins, Agra Fort",
+            historical_events: "Myth of the Black Taj Mahal, completion of Taj Mahal complex"
+          }}
           dialogueText="Greetings! I am the caretaker archaeologist here. You are standing on the ruins of Mehtab Bagh's pond foundations. See these scattered dark stone blocks? They inspired the legend that Shah Jahan wanted to build a 'Black Taj' out of black marble across the river as his own tomb. However, our excavations show these are actually part of a garden pool. The Black Taj remains a beautiful legend. Go to the bottom-right, a royal carriage is waiting to carry you to Delhi!"
           isSpeaking={true}
           options={[
@@ -2054,83 +2190,110 @@ export default function MughalGameScreen() {
         />
       )}
 
-      {/* Carriage Journey Fullscreen Overlay */}
-      {isCarriageTravelling && (
-        <div className="absolute inset-0 bg-[#0d0a07] z-50 flex items-center justify-center pointer-events-auto animate-in fade-in duration-700">
-          {/* Background Map/Texture Pattern */}
-          <div className="absolute inset-0 opacity-40 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-amber-700/30 via-[#0d0a07] to-[#0d0a07]"></div>
-          <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'url("/panel-bg.jpg")', backgroundSize: 'cover', backgroundPosition: 'center', mixBlendMode: 'overlay' }}></div>
-          
-          <div className="relative z-10 bg-[#fff9ea] border-4 border-black rounded-2xl p-8 max-w-lg w-full shadow-[16px_16px_0_0_rgba(0,0,0,1)] flex flex-col items-center text-center">
-            
-            {/* Icon / Emblem */}
-            <div className="w-20 h-20 mb-6 bg-amber-100 rounded-full border-2 border-black flex items-center justify-center shadow-[inset_0_4px_4px_rgba(0,0,0,0.1)] relative overflow-hidden">
-               <div className="absolute inset-0 opacity-50" style={{ backgroundImage: 'url("/panel-bg.jpg")', backgroundSize: 'cover' }}></div>
-               <img src="/carriage2_transparent.png" alt="Horse Carriage" className="w-14 h-14 object-contain relative z-10 animate-bounce" style={{ animationDuration: '1s' }} />
-            </div>
-            
-            <h2 className="text-2xl sm:text-3xl font-serif text-amber-950 font-black tracking-widest uppercase mb-3">
-              {travelOverlayPhase === 1 ? "Departing Agra" : travelOverlayPhase === 2 ? "The Imperial Road" : "Approaching Delhi"}
-            </h2>
-            
-            <div className="w-full h-3 bg-amber-200 my-4 border-2 border-black rounded-full overflow-hidden relative shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)]">
-               <div className="absolute top-0 left-0 h-full bg-amber-500 transition-all duration-1000 ease-in-out" style={{ width: travelOverlayPhase === 1 ? '33%' : travelOverlayPhase === 2 ? '66%' : '100%' }}></div>
-            </div>
-
-            <p className="text-amber-900 font-serif font-bold italic text-[15px] mb-8 h-6">
-              {travelOverlayPhase === 1 && "Leaving the majestic Taj Mahal behind..."}
-              {travelOverlayPhase === 2 && "A long journey across the Mughal Empire..."}
-              {travelOverlayPhase === 3 && "The imposing red walls of the capital emerge..."}
+      {/* --- CAMPAIGN COMPLETE MODAL --- */}
+      {showCampaignComplete && (
+        <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-6 z-40 pointer-events-auto">
+          <div className="bg-[#fff9ea] border-4 border-black rounded-2xl p-8 shadow-[10px_10px_0_0_rgba(0,0,0,1)] max-w-xl w-full flex flex-col items-center text-center gap-5 relative animate-in zoom-in-95 duration-200">
+            <span className="text-5xl">👑</span>
+            <h2 className="text-2xl font-black text-black tracking-tight">Mughal Dynasty Campaign Mastered!</h2>
+            <p className="text-sm font-serif text-gray-800 leading-relaxed">
+              From the towering red ramparts of Agra Fort and the celestial marble domes of the Taj Mahal to the imperial Peacock Throne chamber at Red Fort Diwan-i-Khas, you have traversed 17th-century India and restored the lost chronicles of Emperor Shah Jahan!
             </p>
+            <div className="bg-amber-100 border-2 border-black rounded-xl p-4 w-full text-xs font-bold text-amber-900 flex justify-around">
+              <div>🎯 Clues Uncovered: <span className="text-black font-black">{discoveredClueIds.length}/6</span></div>
+              <div>⏱️ Total Time: <span className="text-black font-black">{Math.floor(elapsedSeconds / 60)}m {elapsedSeconds % 60}s</span></div>
+              <div>⭐ Status: <span className="text-emerald-700 font-black">History Restored</span></div>
+            </div>
+            <button 
+              onClick={() => router.push('/dashboard')}
+              className="bg-amber-400 hover:bg-amber-300 border-3 border-black rounded-xl px-8 py-3 text-sm font-black text-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 cursor-pointer transition-all"
+            >
+              Return to Timeline Portal 🚀
+            </button>
+          </div>
+        </div>
+      )}
 
-            {/* Timeline */}
-            <div className="flex items-center justify-between w-full px-4 mt-2">
-               <div className={`flex flex-col items-center transition-opacity duration-500 ${travelOverlayPhase >= 1 ? 'opacity-100' : 'opacity-30'}`}>
-                 <div className="w-5 h-5 rounded-full bg-amber-500 border-2 border-black mb-2 shadow-[2px_2px_0_0_rgba(0,0,0,1)]"></div>
-                 <span className="text-[11px] font-black text-black uppercase tracking-wider">Agra</span>
-               </div>
-               <div className={`flex-1 h-1 bg-black mx-2 transition-opacity duration-500 ${travelOverlayPhase >= 2 ? 'opacity-100' : 'opacity-30'}`}></div>
-               <div className={`flex flex-col items-center transition-opacity duration-500 ${travelOverlayPhase >= 2 ? 'opacity-100' : 'opacity-30'}`}>
-                 <div className="w-5 h-5 rounded-full bg-amber-500 border-2 border-black mb-2 shadow-[2px_2px_0_0_rgba(0,0,0,1)]"></div>
-                 <span className="text-[11px] font-black text-black uppercase tracking-wider">Journey</span>
-               </div>
-               <div className={`flex-1 h-1 bg-black mx-2 transition-opacity duration-500 ${travelOverlayPhase >= 3 ? 'opacity-100' : 'opacity-30'}`}></div>
-               <div className={`flex flex-col items-center transition-opacity duration-500 ${travelOverlayPhase >= 3 ? 'opacity-100' : 'opacity-30'}`}>
-                 <div className="w-5 h-5 rounded-full bg-amber-500 border-2 border-black mb-2 shadow-[2px_2px_0_0_rgba(0,0,0,1)]"></div>
-                 <span className="text-[11px] font-black text-black uppercase tracking-wider">Delhi</span>
-               </div>
+      {/* --- CARRIAGE TRAVEL TRANSITION OVERLAY --- */}
+      {isCarriageTravelling && (
+        <div className="absolute inset-0 bg-black/90 z-50 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-300 pointer-events-auto">
+          <div className="max-w-md flex flex-col items-center gap-4">
+            <span className="text-5xl animate-bounce">🐎</span>
+            <h3 className="text-xl font-serif text-amber-300 tracking-widest uppercase">
+              {travelOverlayPhase === 1 ? "Harnessing Royal Steeds..." : travelOverlayPhase === 2 ? "Travelling Grand Trunk Road..." : "Arriving at Shahjahanabad..."}
+            </h3>
+            <p className="text-xs font-sans text-gray-300 leading-relaxed">
+              {travelOverlayPhase === 1 && "Boarding the imperial Mughal carriage equipped with four swift stallions."}
+              {travelOverlayPhase === 2 && "Galloping 200 kilometers north along the historic Grand Trunk Road towards Old Delhi."}
+              {travelOverlayPhase === 3 && "The monumental Lahori Gate of Lal Qila (Red Fort) rises majestically before you."}
+            </p>
+            <div className="w-48 bg-gray-800 rounded-full h-2 overflow-hidden mt-2 border border-gray-600">
+              <div 
+                className="bg-amber-400 h-full transition-all duration-700 rounded-full"
+                style={{ width: `${travelOverlayPhase * 33.3}%` }}
+              ></div>
             </div>
           </div>
         </div>
       )}
 
-      {/* --- CAMPAIGN COMPLETE MODAL --- */}
-      {showCampaignComplete && (
-        <div className="absolute inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-6 z-30 pointer-events-auto">
-          <div className="bg-[#fff9ea] border-3 border-black rounded-2xl p-6 shadow-[8px_8px_0_0_rgba(0,0,0,1)] max-w-lg w-full flex flex-col gap-4 relative animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b-2 border-amber-200 pb-2">
-              <span className="text-[12px] font-bold text-amber-900 uppercase tracking-widest flex items-center gap-2">
-                <span>🏆</span> Mughal Campaign Complete!
-              </span>
-            </div>
+      {/* --- CLUES INSPECTION MODAL --- */}
+      {showCluesModal && (
+        <CluesModal
+          discoveredIds={discoveredClueIds}
+          onClose={() => setShowCluesModal(false)}
+        />
+      )}
 
-            <div className="text-black font-serif text-[14px] leading-relaxed flex flex-col gap-3">
-              <p className="font-bold text-amber-950">
-                Congratulations, Historian!
-              </p>
-              <p>
-                You have successfully completed your journey through the Mughal Empire&apos;s campaigns. From the defensive ramps of Agra Fort to the symmetrical gardens and sacred tombs of the Taj Mahal, and finally to the imperial Lahori Gate of the Red Fort in Delhi, you have unraveled the rich histories, architectural wonders, and long-standing mysteries of the Mughal dynasty.
-              </p>
-              <p className="text-xs font-sans text-emerald-800 font-semibold bg-emerald-50 border border-emerald-300 p-2 rounded">
-                ✔ Completed 14 scenes of the Mughal Campaign!
-              </p>
-            </div>
+      {/* --- CLUE DISCOVERY POPUP NOTIFICATION --- */}
+      {clueNotification && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-[#fcd34d] border-3 border-black rounded-xl px-5 py-3 shadow-[5px_5px_0_0_rgba(0,0,0,1)] animate-bounce font-black text-sm text-black flex items-center gap-2 pointer-events-none">
+          <span>💎</span>
+          <span>{clueNotification}</span>
+        </div>
+      )}
 
-            <button 
-              onClick={() => router.push('/dashboard')}
-              className="bg-amber-400 hover:bg-amber-300 border-2 border-black rounded-lg py-2.5 text-xs font-bold text-black shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 cursor-pointer"
+      {/* --- CINEMATIC RETRIBUTION / PUNISHMENT SCREEN (The Fall Style) --- */}
+      {punishmentState.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-auto bg-black select-none animate-in fade-in duration-300">
+          {/* Background Artwork - fully visible with natural lighting */}
+          <img 
+            src="/guard_punishment_cinematic.jpg" 
+            alt="Imperial Guard Punishment"
+            className="absolute inset-0 w-full h-full object-cover object-center"
+          />
+
+          {/* Balanced cinematic shading: soft vignette that keeps artwork vibrant and text 100% readable */}
+          <div className="absolute inset-0 bg-black/40"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/70"></div>
+
+          {/* Centered Content Card matching user 2nd image */}
+          <div className="relative z-10 max-w-xl mx-auto px-6 py-12 text-center flex flex-col items-center animate-in zoom-in-95 duration-200">
+            {/* Small Orange Subtitle */}
+            <span className="text-[#f97316] font-black text-xs sm:text-sm tracking-[0.35em] uppercase mb-2 drop-shadow-[0_2px_4px_rgba(0,0,0,1)]">
+              {punishmentState.subtitle}
+            </span>
+
+            {/* Bold White Title */}
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight mb-5 drop-shadow-[0_4px_16px_rgba(0,0,0,1)]">
+              {punishmentState.title}
+            </h1>
+
+            {/* Narrative Description with subtle dark backdrop for maximum legibility */}
+            <p className="text-[14px] sm:text-[15.5px] text-gray-100 font-sans leading-relaxed mb-8 max-w-lg drop-shadow-[0_2px_8px_rgba(0,0,0,1)] font-medium bg-black/30 backdrop-blur-[2px] p-3 rounded-xl border border-white/10">
+              {punishmentState.description}
+            </p>
+
+            {/* Yellow / Gold Rounded CTA Button */}
+            <button
+              onClick={() => {
+                setPunishmentState(prev => ({ ...prev, isOpen: false }));
+                setScene("gate");
+                setPlayerPos({ x: 50.0, y: 88.0 });
+              }}
+              className="bg-[#f59e0b] hover:bg-[#d97706] text-black font-extrabold text-sm px-8 py-3.5 rounded-lg shadow-[4px_4px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 transition-all cursor-pointer"
             >
-              Return to Dashboard
+              Return to Gates
             </button>
           </div>
         </div>
@@ -2138,7 +2301,6 @@ export default function MughalGameScreen() {
 
       {/* --- CINEMATIC NARRATOR SUBTITLES & AUDIO CONTROLS --- */}
       <NarratorSubtitle />
-
     </div>
   );
 }
