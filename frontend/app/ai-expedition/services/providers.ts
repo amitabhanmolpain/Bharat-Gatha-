@@ -14,9 +14,13 @@ export class MockLLMProvider implements LLMProvider {
   async generateWorldDefinition(prompt: string): Promise<{ world: WorldDefinition; isFallback: boolean }> {
     await new Promise((resolve) => setTimeout(resolve, 100));
     const isAgra = prompt.toLowerCase().includes("agra") || prompt.toLowerCase().includes("mughal") || prompt.toLowerCase().includes("fort");
-    const world = isAgra ? MOCK_AGRA_WORLD : MOCK_RAJASTHAN_WORLD;
+    const baseWorld = isAgra ? MOCK_AGRA_WORLD : MOCK_RAJASTHAN_WORLD;
+    const clonedWorld: WorldDefinition = JSON.parse(JSON.stringify(baseWorld));
+    clonedWorld.worldId = `expedition-mock-${Date.now().toString(36)}`;
+    clonedWorld.userPrompt = prompt;
+    clonedWorld.createdAt = new Date().toISOString();
     return {
-      world,
+      world: clonedWorld,
       isFallback: true,
     };
   }

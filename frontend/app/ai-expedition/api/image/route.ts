@@ -19,11 +19,47 @@ const ARCHETYPE_FALLBACKS: Record<SceneArchetype, string> = {
   port: "/bg-agra-fort.jpg",
 };
 
+// In-memory sliding-window rate-limiting store (max 15 requests per 1-minute window per IP)
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const MAX_REQUESTS_PER_WINDOW = 15;
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+
+  if (entry.count >= MAX_REQUESTS_PER_WINDOW) {
+    return false;
+  }
+
+  entry.count += 1;
+  return true;
+}
+
 export async function POST(req: NextRequest) {
   try {
+    // 1. Rate Limiting Check (by IP / client header)
+    const clientIp =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      req.headers.get("x-real-ip") ||
+      "127.0.0.1";
+
+    if (!checkRateLimit(clientIp)) {
+      return NextResponse.json(
+        { status: "error", message: "Rate limit exceeded. Please wait a moment before requesting another visual." },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json();
     const { world, scene, forceProvider } = body;
 
+    // 2. Request Body Validation
     if (
       !world ||
       typeof world.region !== "string" ||
