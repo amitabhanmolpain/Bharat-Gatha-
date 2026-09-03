@@ -20,9 +20,13 @@ export default function TransitionModal({
   if (!isActive) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-lg animate-fadeIn p-4">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="transition-title"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-lg animate-fadeIn p-4"
+    >
       <div className="relative w-full max-w-2xl bg-[#1e1b18] border-4 border-[#5a4d3f] rounded-2xl p-8 text-center text-[#f6ede0] shadow-[0_0_60px_rgba(0,0,0,0.95)] overflow-hidden">
-        
         {/* Top Decorative Border Accent */}
         <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-transparent via-[#d4a359] to-transparent"></div>
 
@@ -41,7 +45,7 @@ export default function TransitionModal({
         </div>
 
         {/* Title */}
-        <h2 className="text-2xl md:text-3xl font-serif font-bold text-[#f6ede0] tracking-wide mb-3">
+        <h2 id="transition-title" className="text-2xl md:text-3xl font-serif font-bold text-[#f6ede0] tracking-wide mb-3">
           {title}
         </h2>
 
@@ -51,7 +55,14 @@ export default function TransitionModal({
         </p>
 
         {/* Progress Bar Container */}
-        <div className="w-full bg-[#141210] rounded-full h-3.5 border border-[#4a4034] p-0.5 overflow-hidden shadow-inner mb-3">
+        <div
+          role="progressbar"
+          aria-valuenow={Math.round(progress)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="Journey Travel Progress"
+          className="w-full bg-[#141210] rounded-full h-3.5 border border-[#4a4034] p-0.5 overflow-hidden shadow-inner mb-3"
+        >
           <div
             className="bg-gradient-to-r from-[#8b6528] via-[#d4a359] to-[#f3cb85] h-full rounded-full transition-all duration-100 ease-out shadow-[0_0_12px_rgba(212,163,89,0.6)]"
             style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
