@@ -104,23 +104,42 @@ export default function RajasthanGameScreen() {
   const [isBhangarhTravelling, setIsBhangarhTravelling] = useState(false);
   const [bhangarhTravelPhase, setBhangarhTravelPhase] = useState<1 | 2 | 3 | 4>(1);
 
-  // --- STAGE 4 STATE (Bhangarh Fort — Final Stage) ---
-  const [moonriseTimer, setMoonriseTimer] = useState(180); // 3-minute moonrise countdown
+  // --- STAGE 4 STATE (Bhangarh Fort 1-Min Relic Challenge) ---
+  const [bhangarhTimer, setBhangarhTimer] = useState(60); // 1-minute countdown timer (60s)
+  const [showBhangarhTimeOutModal, setShowBhangarhTimeOutModal] = useState(false);
+  const [moonriseTimer, setMoonriseTimer] = useState(180);
   const [isMoonriseActive, setIsMoonriseActive] = useState(false);
 
-  // Stage 4 Clues
-  const [hasBhangarhChronicleClue, setHasBhangarhChronicleClue] = useState(false); // Clue 1 (Gate Inscription)
-  const [hasTempleArchitectureClue, setHasTempleArchitectureClue] = useState(false); // Clue 2 (Gopinath Art)
-  const [hasFamineRecordClue, setHasFamineRecordClue] = useState(false); // Clue 3 (Palace Stratum 1783 CE)
-  const [hasFolkloreDistinctionClue, setHasFolkloreDistinctionClue] = useState(false); // Clue 4 (Folklore vs Fact)
+  // Stage 4 Hidden Relic Artifacts
+  const [hasKathputliFragment, setHasKathputliFragment] = useState(false); // Relic 1: Kathputli Sandstone Fragment
+  const [hasPaliwalSeal, setHasPaliwalSeal] = useState(false); // Relic 2: Paliwal Horse Ledger Seal
+  const [hasWanderersVerse, setHasWanderersVerse] = useState(false); // Relic 3: Wanderer's Verse Antelope Medallion
+  const [hasBhangarhChronicleClue, setHasBhangarhChronicleClue] = useState(false);
+  const [hasTempleArchitectureClue, setHasTempleArchitectureClue] = useState(false);
+  const [hasFamineRecordClue, setHasFamineRecordClue] = useState(false);
+  const [hasFolkloreDistinctionClue, setHasFolkloreDistinctionClue] = useState(false);
 
   // Stage 4 Modals
+  const [showKathputliModal, setShowKathputliModal] = useState(false);
+  const [showPaliwalSealModal, setShowPaliwalSealModal] = useState(false);
+  const [showWanderersVerseModal, setShowWanderersVerseModal] = useState(false);
   const [showGateFragmentPuzzleModal, setShowGateFragmentPuzzleModal] = useState(false);
   const [showTorchlightRestorationModal, setShowTorchlightRestorationModal] = useState(false);
   const [showRuinsClueTrailModal, setShowRuinsClueTrailModal] = useState(false);
   const [showFolkloreClassifierModal, setShowFolkloreClassifierModal] = useState(false);
   const [showFinalEvidenceBoardModal, setShowFinalEvidenceBoardModal] = useState(false);
   const [showGrandCampaignCompleteModal, setShowGrandCampaignCompleteModal] = useState(false);
+
+  // Restart Bhangarh Challenge Handler
+  const handleRestartBhangarhFort = useCallback(() => {
+    setShowBhangarhTimeOutModal(false);
+    setScene("bhangarh_gate");
+    setPlayerPos({ x: 50.0, y: 86.0 });
+    setBhangarhTimer(60);
+    setHasKathputliFragment(false);
+    setHasPaliwalSeal(false);
+    setHasWanderersVerse(false);
+  }, []);
 
   // Puzzle 1 State: Gate Inscription Fragments Sequence
   const [gateFragmentsOrder, setGateFragmentsOrder] = useState<number[]>([]);
@@ -158,13 +177,12 @@ export default function RajasthanGameScreen() {
   // Dynamic Clue Count Calculation per Stage
   const cluesFound =
     stage === 4
-      ? (hasBhangarhChronicleClue ? 1 : 0) +
-        (hasTempleArchitectureClue ? 1 : 0) +
-        (hasFamineRecordClue ? 1 : 0) +
-        (hasFolkloreDistinctionClue ? 1 : 0)
+      ? (hasKathputliFragment ? 1 : 0) +
+        (hasPaliwalSeal ? 1 : 0) +
+        (hasWanderersVerse ? 1 : 0)
       : (hasWeddingOrnament ? 1 : 0) + (hasTaxLedger ? 1 : 0) + (hasWaterPotsSupplies ? 1 : 0);
 
-  const maxClues = stage === 4 ? 4 : 3;
+  const maxClues = 3;
 
   // Reset Game Handler
   const handleResetGame = () => {
@@ -307,24 +325,25 @@ export default function RajasthanGameScreen() {
     return () => clearTimeout(timer);
   }, []);
 
-  // --- MOONRISE TIMER EFFECT (Stage 4) ---
+  // --- BHANGARH 1-MINUTE CHALLENGE TIMER (Stage 4) ---
   useEffect(() => {
-    if (stage !== 4 || isCampaignComplete || !isMoonriseActive) return;
+    if (stage !== 4 || isCampaignComplete) return;
+
+    const allRelicsFound = hasKathputliFragment && hasPaliwalSeal && hasWanderersVerse;
+    if (allRelicsFound) return; // Freeze countdown when all 3 artifacts collected
 
     const interval = setInterval(() => {
-      setMoonriseTimer((prev) => {
+      setBhangarhTimer((prev) => {
         if (prev <= 1) {
-          // Timer reached 0 -> trigger misty escape chase retry (mercy flow)
-          setScene("bhangarh_chase");
-          setPlayerPos({ x: 20.0, y: 78.0 });
-          return 180;
+          setShowBhangarhTimeOutModal(true);
+          return 0;
         }
         return prev - 1;
       });
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [stage, isCampaignComplete, isMoonriseActive]);
+  }, [stage, isCampaignComplete, hasKathputliFragment, hasPaliwalSeal, hasWanderersVerse]);
 
   // --- ELEPHANT JOURNEY SEQUENCE (Stage 2 -> Stage 3) ---
   const startElephantJourney = useCallback(() => {
@@ -423,20 +442,23 @@ export default function RajasthanGameScreen() {
   const isNearChhatriDeduction = scene === "village_square" && playerPos.x >= 28.0 && playerPos.x <= 72.0 && playerPos.y >= 55.0 && playerPos.y <= 88.0;
   const isNearSquareWellExit = scene === "village_square" && playerPos.x <= 20.0 && playerPos.y >= 70.0;
 
-  // --- STAGE 4 (BHANGARH FORT) PROXIMITY TRIGGERS ---
+  // --- STAGE 4 (BHANGARH FORT 1-MIN CHALLENGE) PROXIMITY TRIGGERS ---
   // Scene 1: Bhangarh Gate
+  const isNearKathputliFragment = scene === "bhangarh_gate" && !hasKathputliFragment && playerPos.y >= 60.0;
   const isNearBhangarhGateMarker = scene === "bhangarh_gate" && playerPos.x >= 52.0 && playerPos.y >= 60.0;
   const isNearBhangarhGateArch = scene === "bhangarh_gate" && playerPos.y <= 78.0;
 
-  // Scene 2: Gopinath Temple Sanctuary
+  // Scene 2: Gopinath Temple / Royal Baoli
+  const isNearPaliwalSeal = scene === "gopinath_temple" && !hasPaliwalSeal && playerPos.y <= 85.0;
   const isNearTempleSanctuary = scene === "gopinath_temple" && playerPos.x <= 54.0 && playerPos.y <= 75.0;
   const isNearTemplePalaceDoor = scene === "gopinath_temple" && playerPos.y <= 82.0;
   const isNearTempleGateExit = scene === "gopinath_temple" && playerPos.y >= 75.0;
 
-  // Scene 3: Bhangarh Palace Ruins (Multi-point investigation)
+  // Scene 3: Bhangarh Palace Ruins
+  const isNearWanderersVerse = scene === "palace_ruins" && !hasWanderersVerse && playerPos.y <= 85.0;
   const isNearPalaceStratum = scene === "palace_ruins" && playerPos.x <= 40.0 && playerPos.y >= 65.0; // Point A: 1783 CE famine stratum
   const isNearFolkloreBoard = scene === "palace_ruins" && playerPos.x >= 65.0 && playerPos.y >= 65.0; // Point B: Folklore vs Evidence
-  const isNearFinalEvidenceBoard = scene === "palace_ruins" && playerPos.y <= 88.0; // Point C: Final synthesis chhatri
+  const isNearFinalEvidenceBoard = scene === "palace_ruins" && playerPos.y <= 88.0 && hasKathputliFragment && hasPaliwalSeal && hasWanderersVerse;
   const isNearPalaceTempleExit = scene === "palace_ruins" && playerPos.y >= 75.0;
 
   // Scene 4: Bhangarh Chase Escape
@@ -497,7 +519,13 @@ export default function RajasthanGameScreen() {
       isNearStepwellTreasuryExit,
       isNearChhatriDeduction,
       isNearSquareWellExit,
-      // Stage 4 Triggers
+      // Stage 4 Triggers & Artifacts
+      isNearKathputliFragment,
+      isNearPaliwalSeal,
+      isNearWanderersVerse,
+      hasKathputliFragment,
+      hasPaliwalSeal,
+      hasWanderersVerse,
       isNearBhangarhGateMarker,
       isNearBhangarhGateArch,
       isNearTempleSanctuary,
@@ -528,9 +556,13 @@ export default function RajasthanGameScreen() {
       setHasWeddingOrnament,
       setHasTaxLedger,
       setHasWaterPotsSupplies,
-      setHasTempleArchitectureClue,
-      setHasFamineRecordClue,
-      setHasFolkloreDistinctionClue,
+      setHasKathputliFragment,
+      setHasPaliwalSeal,
+      setHasWanderersVerse,
+      setShowKathputliModal,
+      setShowPaliwalSealModal,
+      setShowWanderersVerseModal,
+      setShowBhangarhTimeOutModal,
       startElephantJourney,
       startBhangarhJourney,
       // Stage 4 Modals
@@ -710,8 +742,20 @@ export default function RajasthanGameScreen() {
         } else if (state.isNearChhatriDeduction) {
           state.setShowStage3CompleteModal(true);
         }
-        // Stage 4 (Bhangarh Fort)
-        else if (state.isNearBhangarhGateMarker) {
+        // Stage 4 (Bhangarh Fort 1-Min Relic Challenge)
+        else if (state.isNearKathputliFragment) {
+          state.setHasKathputliFragment?.(true);
+          state.setShowKathputliModal?.(true);
+          soundFx.playClueChime();
+        } else if (state.isNearPaliwalSeal) {
+          state.setHasPaliwalSeal?.(true);
+          state.setShowPaliwalSealModal?.(true);
+          soundFx.playClueChime();
+        } else if (state.isNearWanderersVerse) {
+          state.setHasWanderersVerse?.(true);
+          state.setShowWanderersVerseModal?.(true);
+          soundFx.playClueChime();
+        } else if (state.isNearBhangarhGateMarker) {
           state.setShowGateFragmentPuzzleModal?.(true);
         } else if (state.isNearBhangarhGateArch) {
           state.setIsTransitioning(true);
@@ -720,8 +764,6 @@ export default function RajasthanGameScreen() {
             state.setPlayerPos({ x: 50.0, y: 86.0 });
             state.setIsTransitioning(false);
           }, 400);
-        } else if (state.isNearTempleSanctuary) {
-          state.setHasTempleArchitectureClue?.(true);
         } else if (state.isNearTemplePalaceDoor) {
           state.setIsTransitioning(true);
           setTimeout(() => {
@@ -729,11 +771,7 @@ export default function RajasthanGameScreen() {
             state.setPlayerPos({ x: 50.0, y: 86.0 });
             state.setIsTransitioning(false);
           }, 400);
-        } else if (state.isNearPalaceStratum) {
-          state.setHasFamineRecordClue?.(true);
-        } else if (state.isNearFolkloreBoard) {
-          state.setHasFolkloreDistinctionClue?.(true);
-        } else if (state.isNearFinalEvidenceBoard || state.scene === "palace_ruins") {
+        } else if (state.isNearFinalEvidenceBoard || (state.scene === "palace_ruins" && state.hasKathputliFragment && state.hasPaliwalSeal && state.hasWanderersVerse)) {
           if (typeof state.setShowGrandCampaignCompleteModal === "function") {
             state.setShowGrandCampaignCompleteModal(true);
           } else if (typeof state.setShowFinalEvidenceBoardModal === "function") {
@@ -1508,17 +1546,21 @@ export default function RajasthanGameScreen() {
           </div>
         </div>
 
-        {/* Stage 4 Moonrise Progress Card (Clean Mughal Timer Style) */}
+        {/* Stage 4 1-MIN CHALLENGE TIMER CARD */}
         {stage === 4 && (
-          <div className="bg-[#fff9ea] border-2 border-black rounded-xl px-3.5 py-1.5 w-64 shadow-[3px_3px_0_0_rgba(0,0,0,1)] flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
-              <span>{moonriseTimer > 135 ? "🌒" : moonriseTimer > 90 ? "🌓" : moonriseTimer > 45 ? "🌔" : "🌕"}</span>
-              <span className="text-[11px] font-extrabold uppercase text-amber-900 tracking-wider">
-                {moonriseTimer > 135 ? "Dusk Horizon" : moonriseTimer > 90 ? "Crescent Ascent" : moonriseTimer > 45 ? "Waxing Gibbous" : "Full Moon"}
+          <div className="bg-[#fff9ea] border-2 border-black rounded-xl px-3.5 py-2 w-64 shadow-[3px_3px_0_0_rgba(0,0,0,1)] flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-950">
+              <span className="animate-pulse text-sm">⏱️</span>
+              <span className="text-[11px] font-black uppercase tracking-wider text-amber-950">
+                1-MIN CHALLENGE
               </span>
             </div>
-            <span className="text-[12px] font-mono font-black text-red-600 bg-red-100 px-2 py-0.5 rounded border border-red-300">
-              {Math.floor(moonriseTimer / 60)}:{(moonriseTimer % 60).toString().padStart(2, "0")}
+            <span className={`text-[13px] font-mono font-black px-2.5 py-0.5 rounded border ${
+              bhangarhTimer <= 15
+                ? "bg-red-600 text-white border-black animate-pulse shadow-[0_0_8px_rgba(220,38,38,0.8)]"
+                : "bg-red-100 text-red-600 border-red-300"
+            }`}>
+              {Math.floor(bhangarhTimer / 60)}:{(bhangarhTimer % 60).toString().padStart(2, "0")}
             </span>
           </div>
         )}
@@ -1834,7 +1876,48 @@ export default function RajasthanGameScreen() {
         </div>
       )}
 
-      {/* --- STAGE 4 PROMPTS (BHANGARH FORT) --- */}
+      {/* --- STAGE 4 PROMPTS (BHANGARH FORT 1-MIN CHALLENGE) --- */}
+      {isNearKathputliFragment && (
+        <div
+          className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black rounded-xl px-5 py-2.5 shadow-[5px_5px_0_0_rgba(0,0,0,1)] text-[13px] font-black tracking-wide flex items-center gap-2.5 z-30 animate-bounce cursor-pointer pointer-events-auto"
+          onClick={() => {
+            soundFx.playClueChime();
+            setHasKathputliFragment(true);
+            setShowKathputliModal(true);
+          }}
+        >
+          <span className="bg-black text-amber-400 rounded px-2 py-0.5 text-[11px] font-mono">E</span>
+          ✨ Collect Kathputli Fragment (Stories Carved in Sand)
+        </div>
+      )}
+
+      {isNearPaliwalSeal && (
+        <div
+          className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black rounded-xl px-5 py-2.5 shadow-[5px_5px_0_0_rgba(0,0,0,1)] text-[13px] font-black tracking-wide flex items-center gap-2.5 z-30 animate-bounce cursor-pointer pointer-events-auto"
+          onClick={() => {
+            soundFx.playClueChime();
+            setHasPaliwalSeal(true);
+            setShowPaliwalSealModal(true);
+          }}
+        >
+          <span className="bg-black text-amber-400 rounded px-2 py-0.5 text-[11px] font-mono">E</span>
+          ✨ Collect Paliwal Ledger Seal (Horse Emblem Medallion)
+        </div>
+      )}
+
+      {isNearWanderersVerse && (
+        <div
+          className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black rounded-xl px-5 py-2.5 shadow-[5px_5px_0_0_rgba(0,0,0,1)] text-[13px] font-black tracking-wide flex items-center gap-2.5 z-30 animate-bounce cursor-pointer pointer-events-auto"
+          onClick={() => {
+            soundFx.playClueChime();
+            setHasWanderersVerse(true);
+            setShowWanderersVerseModal(true);
+          }}
+        >
+          <span className="bg-black text-amber-400 rounded px-2 py-0.5 text-[11px] font-mono">E</span>
+          ✨ Collect Wanderer&apos;s Verse (Antelope Medallion)
+        </div>
+      )}
       {isNearBhangarhGateMarker && (
         <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2.5 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce cursor-pointer pointer-events-auto" onClick={() => setShowGateFragmentPuzzleModal(true)}>
           <span className="bg-amber-400 border border-black rounded px-1.5 text-[11px]">E</span>
@@ -2256,6 +2339,102 @@ export default function RajasthanGameScreen() {
                 Return to Dashboard
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- STAGE 4 ARTIFACT MODAL 1: KATHPUTLI FRAGMENT --- */}
+      {showKathputliModal && (
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 pointer-events-auto">
+          <div className="bg-[#fff9ea] border-4 border-amber-900 rounded-2xl p-5 shadow-[12px_12px_0_0_rgba(0,0,0,1)] max-w-md w-full flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b-2 border-amber-800/30 pb-2">
+              <span className="text-sm font-black text-amber-950 uppercase tracking-wider flex items-center gap-2">
+                🎭 Kathputli Fragment (Jaisalmer)
+              </span>
+              <button onClick={() => setShowKathputliModal(false)} className="text-amber-900 font-bold text-xs bg-amber-200/80 hover:bg-amber-300 px-2 py-0.5 rounded cursor-pointer">✕ Close</button>
+            </div>
+            <div className="relative w-full h-56 rounded-xl overflow-hidden border-2 border-amber-900 shadow-md">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/artifact-kathputli-fragment.jpg" alt="Kathputli Fragment" className="w-full h-full object-cover" />
+            </div>
+            <div className="bg-amber-100/90 border-l-4 border-amber-600 p-2.5 rounded text-xs text-amber-950 leading-relaxed italic">
+              &quot;Even in the desert, stories find a way to dance. A sandstone fragment symbolizing the tradition of storytelling, resilience and joy that keeps Rajputana&apos;s heritage alive.&quot;
+            </div>
+            <button onClick={() => setShowKathputliModal(false)} className="bg-amber-600 hover:bg-amber-700 text-white font-black py-2.5 px-5 rounded-xl border-2 border-black text-xs uppercase tracking-wider cursor-pointer self-end">
+              Add to Collection
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* --- STAGE 4 ARTIFACT MODAL 2: PALIWAL LEDGER SEAL --- */}
+      {showPaliwalSealModal && (
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 pointer-events-auto">
+          <div className="bg-[#fff9ea] border-4 border-amber-900 rounded-2xl p-5 shadow-[12px_12px_0_0_rgba(0,0,0,1)] max-w-md w-full flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b-2 border-amber-800/30 pb-2">
+              <span className="text-sm font-black text-amber-950 uppercase tracking-wider flex items-center gap-2">
+                🐎 Paliwal Ledger Seal (Horse Seal)
+              </span>
+              <button onClick={() => setShowPaliwalSealModal(false)} className="text-amber-900 font-bold text-xs bg-amber-200/80 hover:bg-amber-300 px-2 py-0.5 rounded cursor-pointer">✕ Close</button>
+            </div>
+            <div className="relative w-full h-56 rounded-xl overflow-hidden border-2 border-amber-900 shadow-md">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/artifact-paliwal-ledger-seal.jpg" alt="Paliwal Ledger Seal" className="w-full h-full object-cover" />
+            </div>
+            <div className="bg-amber-100/90 border-l-4 border-amber-600 p-2.5 rounded text-xs text-amber-950 leading-relaxed italic">
+              &quot;They left behind empty homes, but a fuller history. A seal fragment from Kuldhara symbolizing administrative acumen, economic strength, and dignity.&quot;
+            </div>
+            <button onClick={() => setShowPaliwalSealModal(false)} className="bg-amber-600 hover:bg-amber-700 text-white font-black py-2.5 px-5 rounded-xl border-2 border-black text-xs uppercase tracking-wider cursor-pointer self-end">
+              Add to Collection
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* --- STAGE 4 ARTIFACT MODAL 3: WANDERER'S VERSE --- */}
+      {showWanderersVerseModal && (
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 pointer-events-auto">
+          <div className="bg-[#fff9ea] border-4 border-amber-900 rounded-2xl p-5 shadow-[12px_12px_0_0_rgba(0,0,0,1)] max-w-md w-full flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b-2 border-amber-800/30 pb-2">
+              <span className="text-sm font-black text-amber-950 uppercase tracking-wider flex items-center gap-2">
+                🦌 Wanderer&apos;s Verse (Antelope Medallion)
+              </span>
+              <button onClick={() => setShowWanderersVerseModal(false)} className="text-amber-900 font-bold text-xs bg-amber-200/80 hover:bg-amber-300 px-2 py-0.5 rounded cursor-pointer">✕ Close</button>
+            </div>
+            <div className="relative w-full h-56 rounded-xl overflow-hidden border-2 border-amber-900 shadow-md">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/artifact-wanderers-verse.jpg" alt="Wanderer's Verse" className="w-full h-full object-cover" />
+            </div>
+            <div className="bg-amber-100/90 border-l-4 border-amber-600 p-2.5 rounded text-xs text-amber-950 leading-relaxed italic">
+              &quot;Some paths are lost, but their stories never stop walking. A fragment inspired by Bhangarh symbolizing freedom, grace, and resilience.&quot;
+            </div>
+            <button onClick={() => setShowWanderersVerseModal(false)} className="bg-amber-600 hover:bg-amber-700 text-white font-black py-2.5 px-5 rounded-xl border-2 border-black text-xs uppercase tracking-wider cursor-pointer self-end">
+              Add to Collection
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* --- BHANGARH 1-MIN CHALLENGE TIMEOUT MODAL --- */}
+      {showBhangarhTimeOutModal && (
+        <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-6 z-50 pointer-events-auto">
+          <div className="bg-[#fff9ea] border-4 border-red-900 rounded-2xl p-6 shadow-[14px_14px_0_0_rgba(0,0,0,1)] max-w-md w-full flex flex-col gap-4 text-center animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 bg-red-100 border-2 border-red-600 rounded-full flex items-center justify-center mx-auto text-3xl animate-bounce">
+              ⏳
+            </div>
+            <div className="flex flex-col gap-1">
+              <h2 className="text-xl font-black text-red-950 uppercase tracking-wide">1-Minute Time Expired!</h2>
+              <p className="text-xs font-semibold text-red-800 uppercase tracking-widest">Bhangarh Challenge Failed</p>
+            </div>
+            <div className="bg-red-50 border-2 border-red-200 rounded-xl p-3.5 text-xs text-red-950 leading-relaxed text-left font-serif">
+              You failed to discover all 3 ancient artifact fragments within 1 minute! The eerie night shadows overtake you. You have been returned to the entrance gate of Bhangarh Fort.
+            </div>
+            <button
+              onClick={handleRestartBhangarhFort}
+              className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-3 px-4 rounded-xl border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-xs uppercase tracking-widest cursor-pointer transition-all active:translate-y-0.5"
+            >
+              🔄 Try Again (Restart Bhangarh Fort)
+            </button>
           </div>
         </div>
       )}
