@@ -1971,161 +1971,129 @@ export default function RajasthanGameScreen() {
         </div>
       )}
 
-      {/* Kuldhara Deduction Puzzle Modal - Interactive Matching Board */}
+      {/* Kuldhara Deduction Puzzle Modal - Sleek RPG Matching Board */}
       {showDeductionModal && (
-        <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 z-40 pointer-events-auto">
-          <div className="bg-[#fff9ea] border-4 border-amber-950 rounded-2xl p-5 sm:p-6 shadow-[16px_16px_0_0_rgba(0,0,0,1)] max-w-3xl w-full flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b-2 border-amber-800/40 pb-3">
-              <div>
-                <h3 className="font-extrabold text-amber-950 uppercase tracking-widest text-sm sm:text-base">🏛️ Kuldhara Memorial Chhatri — Evidence Matching Board</h3>
-                <p className="text-[11px] font-semibold text-amber-800 mt-0.5">Select an Evidence Clue on the left, then click its matching Historical Meaning on the right.</p>
+        <div className="absolute inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 z-40 pointer-events-auto">
+          <div className="bg-[#1c140e] border-2 border-amber-600/50 rounded-2xl p-6 shadow-[0_20px_50px_rgba(0,0,0,0.9)] max-w-2xl w-full flex flex-col gap-5 animate-in fade-in zoom-in-95 duration-200">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-amber-700/30 pb-3">
+              <div className="flex items-center gap-2.5">
+                <span className="text-xl">🏛️</span>
+                <div>
+                  <h3 className="font-extrabold text-amber-100 uppercase tracking-widest text-sm sm:text-base font-serif">Kuldhara Memorial Chhatri</h3>
+                  <p className="text-[11px] font-medium text-amber-400/80">Match each discovered clue with its true historical meaning.</p>
+                </div>
               </div>
-              <button onClick={() => setShowDeductionModal(false)} className="text-amber-950 font-bold text-xs px-2.5 py-1 rounded-lg border border-amber-800 cursor-pointer hover:bg-amber-200/50">✕ Close</button>
+              <button 
+                onClick={() => setShowDeductionModal(false)} 
+                className="text-amber-300/70 hover:text-amber-100 font-bold text-xs px-3 py-1 rounded-lg border border-amber-700/40 hover:bg-amber-900/40 transition-all cursor-pointer"
+              >
+                ✕ Close
+              </button>
             </div>
 
-            {/* Interactive Matching Columns */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-1">
+            {/* 3 Clean Evidence Pairs */}
+            <div className="flex flex-col gap-3.5 my-1">
               
-              {/* Left Column: Discovered Clues */}
-              <div className="flex flex-col gap-2.5">
-                <span className="text-[11px] font-black uppercase text-amber-900 tracking-wider">1. Select Discovered Clue:</span>
-                
-                {/* Clue 1: Ornament */}
-                <div 
-                  onClick={() => setSelectedDeductionClue("ornament")}
-                  className={`p-3 rounded-xl border-2 transition-all cursor-pointer flex flex-col gap-1 ${
-                    selectedDeductionClue === "ornament" 
-                      ? "bg-amber-100 border-amber-600 shadow-[0_0_12px_rgba(217,119,6,0.3)] ring-2 ring-amber-500" 
-                      : "bg-white border-amber-900/30 hover:border-amber-500"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black text-amber-950 uppercase flex items-center gap-1.5">
-                      💍 1. Bridal Wedding Ornament
-                    </span>
-                    {deductionState.ornamentChoice && (
-                      <span className="text-[10px] bg-amber-600 text-white font-extrabold px-2 py-0.5 rounded-full">MATCHED</span>
-                    )}
+              {/* Pair 1: Ornament */}
+              <div className="bg-[#281c13] border border-amber-700/30 p-3.5 rounded-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-md hover:border-amber-600/60 transition-all">
+                <div className="flex items-center gap-2.5 sm:w-1/2">
+                  <span className="text-lg bg-amber-950/80 border border-amber-700/40 rounded-lg p-1.5 flex items-center justify-center">💍</span>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold text-amber-100 uppercase tracking-wide">1. Bridal Wedding Ornament</span>
+                    <span className="text-[10px] text-amber-400/60">Discovered at Chief&apos;s Haveli</span>
                   </div>
-                  <span className="text-[10px] font-medium text-amber-800">
-                    {deductionState.ornamentChoice === "marriage" ? "Linked: Forced Marriage Ultimatum" :
-                     deductionState.ornamentChoice === "plague" ? "Linked: Plague Outbreak" :
-                     "Click to select and assign match..."}
-                  </span>
                 </div>
 
-                {/* Clue 2: Tax Ledger */}
-                <div 
-                  onClick={() => setSelectedDeductionClue("ledger")}
-                  className={`p-3 rounded-xl border-2 transition-all cursor-pointer flex flex-col gap-1 ${
-                    selectedDeductionClue === "ledger" 
-                      ? "bg-amber-100 border-amber-600 shadow-[0_0_12px_rgba(217,119,6,0.3)] ring-2 ring-amber-500" 
-                      : "bg-white border-amber-900/30 hover:border-amber-500"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black text-amber-950 uppercase flex items-center gap-1.5">
-                      📖 2. Torn Tax Ledger
-                    </span>
-                    {deductionState.ledgerChoice && (
-                      <span className="text-[10px] bg-amber-600 text-white font-extrabold px-2 py-0.5 rounded-full">MATCHED</span>
-                    )}
-                  </div>
-                  <span className="text-[10px] font-medium text-amber-800">
-                    {deductionState.ledgerChoice === "extortion" ? "Linked: Oppressive Extortion" :
-                     deductionState.ledgerChoice === "trade" ? "Linked: Market Accounting" :
-                     "Click to select and assign match..."}
-                  </span>
-                </div>
-
-                {/* Clue 3: Water Pots */}
-                <div 
-                  onClick={() => setSelectedDeductionClue("supplies")}
-                  className={`p-3 rounded-xl border-2 transition-all cursor-pointer flex flex-col gap-1 ${
-                    selectedDeductionClue === "supplies" 
-                      ? "bg-amber-100 border-amber-600 shadow-[0_0_12px_rgba(217,119,6,0.3)] ring-2 ring-amber-500" 
-                      : "bg-white border-amber-900/30 hover:border-amber-500"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black text-amber-950 uppercase flex items-center gap-1.5">
-                      🏺 3. Intact Water Pots &amp; Supplies
-                    </span>
-                    {deductionState.suppliesChoice && (
-                      <span className="text-[10px] bg-amber-600 text-white font-extrabold px-2 py-0.5 rounded-full">MATCHED</span>
-                    )}
-                  </div>
-                  <span className="text-[10px] font-medium text-amber-800">
-                    {deductionState.suppliesChoice === "evacuation" ? "Linked: Secret Evacuation" :
-                     deductionState.suppliesChoice === "panic" ? "Linked: Earthquake Fleeing" :
-                     "Click to select and assign match..."}
-                  </span>
+                <div className="flex items-center gap-2 sm:w-1/2">
+                  <span className="text-amber-500/70 text-xs hidden sm:inline">➔</span>
+                  <select 
+                    value={deductionState.ornamentChoice || ""} 
+                    onChange={(e) => setDeductionState((prev) => ({ ...prev, ornamentChoice: e.target.value || null }))} 
+                    className="bg-[#140d08] border border-amber-600/50 rounded-lg text-xs font-semibold p-2 text-amber-200 w-full focus:outline-none focus:border-amber-400 cursor-pointer shadow-inner"
+                  >
+                    <option value="">Select Historical Meaning...</option>
+                    <option value="marriage">📜 Salim Singh&apos;s Forced Marriage Ultimatum</option>
+                    <option value="plague">🦠 An Outbreak of Plague in the Desert</option>
+                  </select>
                 </div>
               </div>
 
-              {/* Right Column: Historical Meanings */}
-              <div className="flex flex-col gap-2.5">
-                <span className="text-[11px] font-black uppercase text-amber-900 tracking-wider">2. Click Matching Historical Meaning:</span>
-                
-                {[
-                  { id: "marriage", label: "📜 Salim Singh's Forced Marriage Ultimatum" },
-                  { id: "extortion", label: "⚖️ Oppressive Extortion & Economic Ruin" },
-                  { id: "evacuation", label: "👣 Secret Coordinated Overnight Evacuation" },
-                  { id: "plague", label: "🦠 An Outbreak of Plague in the Desert" },
-                  { id: "panic", label: "🌋 Panic Fleeing during Earthquake" },
-                ].map((option) => {
-                  const isLinkedToOrnament = deductionState.ornamentChoice === option.id;
-                  const isLinkedToLedger = deductionState.ledgerChoice === option.id;
-                  const isLinkedToSupplies = deductionState.suppliesChoice === option.id;
-                  const isLinked = isLinkedToOrnament || isLinkedToLedger || isLinkedToSupplies;
+              {/* Pair 2: Tax Ledger */}
+              <div className="bg-[#281c13] border border-amber-700/30 p-3.5 rounded-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-md hover:border-amber-600/60 transition-all">
+                <div className="flex items-center gap-2.5 sm:w-1/2">
+                  <span className="text-lg bg-amber-950/80 border border-amber-700/40 rounded-lg p-1.5 flex items-center justify-center">📖</span>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold text-amber-100 uppercase tracking-wide">2. Torn Tax Ledger</span>
+                    <span className="text-[10px] text-amber-400/60">Discovered at Village Treasury</span>
+                  </div>
+                </div>
 
-                  return (
-                    <button
-                      key={option.id}
-                      onClick={() => {
-                        if (!selectedDeductionClue) return;
-                        setDeductionState((prev) => ({
-                          ...prev,
-                          [selectedDeductionClue === "ornament" ? "ornamentChoice" : selectedDeductionClue === "ledger" ? "ledgerChoice" : "suppliesChoice"]: option.id,
-                        }));
-                      }}
-                      className={`text-left p-2.5 rounded-xl border-2 transition-all cursor-pointer flex items-center justify-between gap-2 ${
-                        isLinked 
-                          ? "bg-amber-200/80 border-amber-700 font-bold shadow-sm" 
-                          : "bg-white border-amber-950/20 hover:bg-amber-100/50 hover:border-amber-600"
-                      }`}
-                    >
-                      <span className="text-xs font-bold text-amber-950">{option.label}</span>
-                      {isLinkedToOrnament && <span className="text-[9px] bg-amber-800 text-amber-50 font-black px-1.5 py-0.5 rounded">💍 Clue 1</span>}
-                      {isLinkedToLedger && <span className="text-[9px] bg-amber-800 text-amber-50 font-black px-1.5 py-0.5 rounded">📖 Clue 2</span>}
-                      {isLinkedToSupplies && <span className="text-[9px] bg-amber-800 text-amber-50 font-black px-1.5 py-0.5 rounded">🏺 Clue 3</span>}
-                    </button>
-                  );
-                })}
+                <div className="flex items-center gap-2 sm:w-1/2">
+                  <span className="text-amber-500/70 text-xs hidden sm:inline">➔</span>
+                  <select 
+                    value={deductionState.ledgerChoice || ""} 
+                    onChange={(e) => setDeductionState((prev) => ({ ...prev, ledgerChoice: e.target.value || null }))} 
+                    className="bg-[#140d08] border border-amber-600/50 rounded-lg text-xs font-semibold p-2 text-amber-200 w-full focus:outline-none focus:border-amber-400 cursor-pointer shadow-inner"
+                  >
+                    <option value="">Select Historical Meaning...</option>
+                    <option value="extortion">⚖️ Oppressive Extortion &amp; Economic Ruin</option>
+                    <option value="trade">💼 Routine Annual Market Accounting</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Pair 3: Water Pots */}
+              <div className="bg-[#281c13] border border-amber-700/30 p-3.5 rounded-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-md hover:border-amber-600/60 transition-all">
+                <div className="flex items-center gap-2.5 sm:w-1/2">
+                  <span className="text-lg bg-amber-950/80 border border-amber-700/40 rounded-lg p-1.5 flex items-center justify-center">🏺</span>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold text-amber-100 uppercase tracking-wide">3. Intact Water Pots &amp; Supplies</span>
+                    <span className="text-[10px] text-amber-400/60">Discovered at Stepwell Platform</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 sm:w-1/2">
+                  <span className="text-amber-500/70 text-xs hidden sm:inline">➔</span>
+                  <select 
+                    value={deductionState.suppliesChoice || ""} 
+                    onChange={(e) => setDeductionState((prev) => ({ ...prev, suppliesChoice: e.target.value || null }))} 
+                    className="bg-[#140d08] border border-amber-600/50 rounded-lg text-xs font-semibold p-2 text-amber-200 w-full focus:outline-none focus:border-amber-400 cursor-pointer shadow-inner"
+                  >
+                    <option value="">Select Historical Meaning...</option>
+                    <option value="evacuation">👣 Secret Coordinated Overnight Evacuation</option>
+                    <option value="panic">🌋 Panic Fleeing during Earthquake</option>
+                  </select>
+                </div>
               </div>
 
             </div>
 
+            {/* Feedback Message */}
             {deductionFeedback && (
-              <div className="bg-amber-900/10 border-2 border-amber-600 p-2.5 rounded-xl text-center text-xs font-bold text-amber-950">
+              <div className="bg-amber-950/80 border border-amber-600/60 p-3 rounded-xl text-center text-xs font-medium text-amber-200 animate-in fade-in duration-200">
                 {deductionFeedback}
               </div>
             )}
 
-            <div className="flex items-center justify-between border-t-2 border-amber-800/20 pt-3">
+            {/* Footer Buttons */}
+            <div className="flex items-center justify-between border-t border-amber-700/30 pt-3">
               <button 
                 onClick={() => setDeductionState({ ornamentChoice: null, ledgerChoice: null, suppliesChoice: null })}
-                className="text-xs font-bold text-amber-900 hover:text-amber-950 underline cursor-pointer"
+                className="text-xs font-semibold text-amber-400/70 hover:text-amber-300 transition-all cursor-pointer"
               >
-                Reset Matches
+                Reset Selections
               </button>
+
               <button 
                 onClick={handleEvaluateDeduction} 
-                className="bg-amber-600 hover:bg-amber-700 text-white font-extrabold py-2.5 px-6 rounded-xl border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-xs uppercase tracking-wider cursor-pointer"
+                className="bg-amber-600 hover:bg-amber-500 text-amber-950 font-black py-2.5 px-6 rounded-xl border border-amber-400 shadow-[0_4px_14px_rgba(217,119,6,0.4)] text-xs uppercase tracking-wider transition-all cursor-pointer hover:scale-[1.02] active:scale-95"
               >
-                Submit Historical Deduction
+                Submit Deduction
               </button>
             </div>
+
           </div>
         </div>
       )}
