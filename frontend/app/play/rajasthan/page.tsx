@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { soundFx } from "../../../services/soundService";
 
 export type RajasthanStage = 1 | 2 | 3 | 4;
 
@@ -53,13 +54,31 @@ export default function RajasthanGameScreen() {
   const [isWalking, setIsWalking] = useState(false);
   const [walkPhase, setWalkPhase] = useState(0);
 
-  // --- STAGE 1 STATE (Chittorgarh) ---
+  // --- UNIFIED MUGHAL HUD & AUDIO CONTROL STATE ---
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [isTimerVisible, setIsTimerVisible] = useState(false);
+  const [isMusicMuted, setIsMusicMuted] = useState(false);
+  const [isSoundMuted, setIsSoundMuted] = useState(false);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setElapsedSeconds((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // --- STAGE 1 STATE (Chittorgarh - Chaupar Game) ---
   const [showChachaDialogue, setShowChachaDialogue] = useState(false);
   const [showChauparGame, setShowChauparGame] = useState(false);
   const [chauparScore, setChauparScore] = useState({ player: 0, chacha: 0 });
-  const [chauparMessage, setChauparMessage] = useState("Roll the dice to challenge Buzurg Chacha in ancient Chaupar!");
+  const [chauparMessage, setChauparMessage] = useState("Roll the long wooden pasa dice to challenge Buzurg Chacha in ancient Chaupar!");
   const [isDiceRolling, setIsDiceRolling] = useState(false);
   const [lastRoll, setLastRoll] = useState<number | null>(null);
+  const [diceRoll1, setDiceRoll1] = useState(3);
+  const [diceRoll2, setDiceRoll2] = useState(4);
+  const [playerPawnPos, setPlayerPawnPos] = useState(0); // 0 to 12 along board track
+  const [chachaPawnPos, setChachaPawnPos] = useState(0); // 0 to 12 along board track
+  const [isPawnMoving, setIsPawnMoving] = useState(false);
   const [showVijayStambhModal, setShowVijayStambhModal] = useState(false);
   const [showJauharModal, setShowJauharModal] = useState(false);
 
@@ -67,7 +86,9 @@ export default function RajasthanGameScreen() {
   const [isElephantTravelling, setIsElephantTravelling] = useState(false);
   const [elephantTravelPhase, setElephantTravelPhase] = useState<1 | 2 | 3 | 4>(1);
 
-  // --- STAGE 3 STATE (Kuldhara) ---
+  // --- STAGE 3 STATE (Kuldhara 2-Min Clue Challenge) ---
+  const [kuldharaTimer, setKuldharaTimer] = useState(120); // 2-minute countdown timer (120s)
+  const [showKuldharaTimeOutModal, setShowKuldharaTimeOutModal] = useState(false);
   const [hasPillar83Inspected, setHasPillar83Inspected] = useState(false);
   const [hasWeddingOrnament, setHasWeddingOrnament] = useState(false);
   const [hasTaxLedger, setHasTaxLedger] = useState(false);
@@ -84,28 +105,64 @@ export default function RajasthanGameScreen() {
     suppliesChoice: null,
   });
   const [deductionFeedback, setDeductionFeedback] = useState<string | null>(null);
+  const [selectedDeductionClue, setSelectedDeductionClue] = useState<"ornament" | "ledger" | "supplies" | null>("ornament");
+
+  // Restart Kuldhara Challenge Handler
+  const handleRestartKuldhara = useCallback(() => {
+    setShowKuldharaTimeOutModal(false);
+    setScene("kuldhara_gate");
+    setPlayerPos({ x: 50.0, y: 88.0 });
+    setKuldharaTimer(120);
+    setHasWeddingOrnament(false);
+    setHasTaxLedger(false);
+    setHasWaterPotsSupplies(false);
+    setDeductionState({ ornamentChoice: null, ledgerChoice: null, suppliesChoice: null });
+  }, []);
 
   // --- STAGE 3 -> STAGE 4 TRANSITION (Nightfall Caravan) ---
   const [isBhangarhTravelling, setIsBhangarhTravelling] = useState(false);
   const [bhangarhTravelPhase, setBhangarhTravelPhase] = useState<1 | 2 | 3 | 4>(1);
 
-  // --- STAGE 4 STATE (Bhangarh Fort — Final Stage) ---
-  const [moonriseTimer, setMoonriseTimer] = useState(180); // 3-minute moonrise countdown
+  // --- STAGE 4 STATE (Bhangarh Fort 2-Min Relic Challenge) ---
+  const [bhangarhTimer, setBhangarhTimer] = useState(120); // 2-minute countdown timer (120s)
+  const [showBhangarhTimeOutModal, setShowBhangarhTimeOutModal] = useState(false);
+  const [hasShield, setHasShield] = useState(false);
+  const [showShieldModal, setShowShieldModal] = useState(false);
+  const [moonriseTimer, setMoonriseTimer] = useState(180);
   const [isMoonriseActive, setIsMoonriseActive] = useState(false);
 
-  // Stage 4 Clues
-  const [hasBhangarhChronicleClue, setHasBhangarhChronicleClue] = useState(false); // Clue 1 (Gate Inscription)
-  const [hasTempleArchitectureClue, setHasTempleArchitectureClue] = useState(false); // Clue 2 (Gopinath Art)
-  const [hasFamineRecordClue, setHasFamineRecordClue] = useState(false); // Clue 3 (Palace Stratum 1783 CE)
-  const [hasFolkloreDistinctionClue, setHasFolkloreDistinctionClue] = useState(false); // Clue 4 (Folklore vs Fact)
+  // Stage 4 Hidden Relic Artifacts
+  const [hasKathputliFragment, setHasKathputliFragment] = useState(false); // Relic 1: Kathputli Sandstone Fragment
+  const [hasPaliwalSeal, setHasPaliwalSeal] = useState(false); // Relic 2: Paliwal Horse Ledger Seal
+  const [hasWanderersVerse, setHasWanderersVerse] = useState(false); // Relic 3: Wanderer's Verse Antelope Medallion
+  const [hasBhangarhChronicleClue, setHasBhangarhChronicleClue] = useState(false);
+  const [hasTempleArchitectureClue, setHasTempleArchitectureClue] = useState(false);
+  const [hasFamineRecordClue, setHasFamineRecordClue] = useState(false);
+  const [hasFolkloreDistinctionClue, setHasFolkloreDistinctionClue] = useState(false);
 
   // Stage 4 Modals
+  const [showKathputliModal, setShowKathputliModal] = useState(false);
+  const [showPaliwalSealModal, setShowPaliwalSealModal] = useState(false);
+  const [showWanderersVerseModal, setShowWanderersVerseModal] = useState(false);
   const [showGateFragmentPuzzleModal, setShowGateFragmentPuzzleModal] = useState(false);
   const [showTorchlightRestorationModal, setShowTorchlightRestorationModal] = useState(false);
   const [showRuinsClueTrailModal, setShowRuinsClueTrailModal] = useState(false);
   const [showFolkloreClassifierModal, setShowFolkloreClassifierModal] = useState(false);
   const [showFinalEvidenceBoardModal, setShowFinalEvidenceBoardModal] = useState(false);
   const [showGrandCampaignCompleteModal, setShowGrandCampaignCompleteModal] = useState(false);
+
+  // Restart Bhangarh Challenge Handler
+  const handleRestartBhangarhFort = useCallback(() => {
+    setShowBhangarhTimeOutModal(false);
+    setScene("bhangarh_gate");
+    setPlayerPos({ x: 50.0, y: 86.0 });
+    setBhangarhTimer(120);
+    setHasKathputliFragment(false);
+    setHasPaliwalSeal(false);
+    setHasWanderersVerse(false);
+    setHasShield(false);
+    setShowShieldModal(false);
+  }, []);
 
   // Puzzle 1 State: Gate Inscription Fragments Sequence
   const [gateFragmentsOrder, setGateFragmentsOrder] = useState<number[]>([]);
@@ -143,13 +200,12 @@ export default function RajasthanGameScreen() {
   // Dynamic Clue Count Calculation per Stage
   const cluesFound =
     stage === 4
-      ? (hasBhangarhChronicleClue ? 1 : 0) +
-        (hasTempleArchitectureClue ? 1 : 0) +
-        (hasFamineRecordClue ? 1 : 0) +
-        (hasFolkloreDistinctionClue ? 1 : 0)
+      ? (hasKathputliFragment ? 1 : 0) +
+        (hasPaliwalSeal ? 1 : 0) +
+        (hasWanderersVerse ? 1 : 0)
       : (hasWeddingOrnament ? 1 : 0) + (hasTaxLedger ? 1 : 0) + (hasWaterPotsSupplies ? 1 : 0);
 
-  const maxClues = stage === 4 ? 4 : 3;
+  const maxClues = 3;
 
   // Reset Game Handler
   const handleResetGame = () => {
@@ -292,24 +348,51 @@ export default function RajasthanGameScreen() {
     return () => clearTimeout(timer);
   }, []);
 
-  // --- MOONRISE TIMER EFFECT (Stage 4) ---
+  // --- KULDHARA 2-MINUTE CHALLENGE TIMER (Stage 3) ---
   useEffect(() => {
-    if (stage !== 4 || isCampaignComplete || !isMoonriseActive) return;
+    if (stage !== 3 || showStage3CompleteModal) return;
+
+    const allCluesSolved = hasWeddingOrnament && hasTaxLedger && hasWaterPotsSupplies && showStage3CompleteModal;
+    if (allCluesSolved) return; // Freeze countdown when Stage 3 mystery is solved
 
     const interval = setInterval(() => {
-      setMoonriseTimer((prev) => {
+      setKuldharaTimer((prev) => {
         if (prev <= 1) {
-          // Timer reached 0 -> trigger misty escape chase retry (mercy flow)
-          setScene("bhangarh_chase");
-          setPlayerPos({ x: 20.0, y: 78.0 });
-          return 180;
+          setShowKuldharaTimeOutModal(true);
+          return 0;
         }
         return prev - 1;
       });
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [stage, isCampaignComplete, isMoonriseActive]);
+  }, [stage, showStage3CompleteModal, hasWeddingOrnament, hasTaxLedger, hasWaterPotsSupplies]);
+
+  // --- BHANGARH 2-MINUTE CHALLENGE TIMER (Stage 4) ---
+  useEffect(() => {
+    if (stage !== 4 || isCampaignComplete) return;
+
+    const allRelicsFound = hasKathputliFragment && hasPaliwalSeal && hasWanderersVerse;
+    if (allRelicsFound) {
+      if (!hasShield) {
+        setHasShield(true);
+        setShowShieldModal(true);
+      }
+      return; // Freeze countdown when all 3 artifacts collected
+    }
+
+    const interval = setInterval(() => {
+      setBhangarhTimer((prev) => {
+        if (prev <= 1) {
+          setShowBhangarhTimeOutModal(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [stage, isCampaignComplete, hasKathputliFragment, hasPaliwalSeal, hasWanderersVerse, hasShield]);
 
   // --- ELEPHANT JOURNEY SEQUENCE (Stage 2 -> Stage 3) ---
   const startElephantJourney = useCallback(() => {
@@ -408,21 +491,24 @@ export default function RajasthanGameScreen() {
   const isNearChhatriDeduction = scene === "village_square" && playerPos.x >= 28.0 && playerPos.x <= 72.0 && playerPos.y >= 55.0 && playerPos.y <= 88.0;
   const isNearSquareWellExit = scene === "village_square" && playerPos.x <= 20.0 && playerPos.y >= 70.0;
 
-  // --- STAGE 4 (BHANGARH FORT) PROXIMITY TRIGGERS ---
+  // --- STAGE 4 (BHANGARH FORT 1-MIN CHALLENGE) PROXIMITY TRIGGERS ---
   // Scene 1: Bhangarh Gate
+  const isNearKathputliFragment = scene === "bhangarh_gate" && !hasKathputliFragment && playerPos.y >= 60.0;
   const isNearBhangarhGateMarker = scene === "bhangarh_gate" && playerPos.x >= 52.0 && playerPos.y >= 60.0;
-  const isNearBhangarhGateArch = scene === "bhangarh_gate" && playerPos.y <= 58.0 && playerPos.x >= 35.0 && playerPos.x <= 68.0;
+  const isNearBhangarhGateArch = scene === "bhangarh_gate" && playerPos.y <= 78.0;
 
-  // Scene 2: Gopinath Temple Sanctuary
+  // Scene 2: Gopinath Temple / Royal Baoli
+  const isNearPaliwalSeal = scene === "gopinath_temple" && !hasPaliwalSeal && playerPos.y <= 85.0;
   const isNearTempleSanctuary = scene === "gopinath_temple" && playerPos.x <= 54.0 && playerPos.y <= 75.0;
-  const isNearTemplePalaceDoor = scene === "gopinath_temple" && playerPos.x >= 72.0 && playerPos.y <= 70.0;
-  const isNearTempleGateExit = scene === "gopinath_temple" && playerPos.y >= 88.0;
+  const isNearTemplePalaceDoor = scene === "gopinath_temple" && playerPos.y <= 82.0;
+  const isNearTempleGateExit = scene === "gopinath_temple" && playerPos.y >= 75.0;
 
-  // Scene 3: Bhangarh Palace Ruins (Multi-point investigation)
+  // Scene 3: Bhangarh Palace Ruins
+  const isNearWanderersVerse = scene === "palace_ruins" && !hasWanderersVerse && playerPos.y <= 85.0;
   const isNearPalaceStratum = scene === "palace_ruins" && playerPos.x <= 40.0 && playerPos.y >= 65.0; // Point A: 1783 CE famine stratum
   const isNearFolkloreBoard = scene === "palace_ruins" && playerPos.x >= 65.0 && playerPos.y >= 65.0; // Point B: Folklore vs Evidence
-  const isNearFinalEvidenceBoard = scene === "palace_ruins" && playerPos.y <= 58.0; // Point C: Final synthesis chhatri
-  const isNearPalaceTempleExit = scene === "palace_ruins" && playerPos.y >= 90.0;
+  const isNearFinalEvidenceBoard = scene === "palace_ruins" && playerPos.y <= 88.0 && hasKathputliFragment && hasPaliwalSeal && hasWanderersVerse;
+  const isNearPalaceTempleExit = scene === "palace_ruins" && playerPos.y >= 75.0;
 
   // Scene 4: Bhangarh Chase Escape
   const isNearChaseGateExit = scene === "bhangarh_chase" && playerPos.x >= 68.0 && playerPos.y <= 65.0;
@@ -482,7 +568,13 @@ export default function RajasthanGameScreen() {
       isNearStepwellTreasuryExit,
       isNearChhatriDeduction,
       isNearSquareWellExit,
-      // Stage 4 Triggers
+      // Stage 4 Triggers & Artifacts
+      isNearKathputliFragment,
+      isNearPaliwalSeal,
+      isNearWanderersVerse,
+      hasKathputliFragment,
+      hasPaliwalSeal,
+      hasWanderersVerse,
       isNearBhangarhGateMarker,
       isNearBhangarhGateArch,
       isNearTempleSanctuary,
@@ -507,10 +599,19 @@ export default function RajasthanGameScreen() {
       setShowTaxLedgerModal,
       setShowStepwellModal,
       setShowDeductionModal,
+      setShowStage3CompleteModal,
+      setShowGrandCampaignCompleteModal,
       setHasPillar83Inspected,
       setHasWeddingOrnament,
       setHasTaxLedger,
       setHasWaterPotsSupplies,
+      setHasKathputliFragment,
+      setHasPaliwalSeal,
+      setHasWanderersVerse,
+      setShowKathputliModal,
+      setShowPaliwalSealModal,
+      setShowWanderersVerseModal,
+      setShowBhangarhTimeOutModal,
       startElephantJourney,
       startBhangarhJourney,
       // Stage 4 Modals
@@ -688,11 +789,23 @@ export default function RajasthanGameScreen() {
             state.setIsTransitioning(false);
           }, 400);
         } else if (state.isNearChhatriDeduction) {
-          state.setShowDeductionModal(true);
+          state.setShowStage3CompleteModal(true);
         }
-        // Stage 4 (Bhangarh Fort)
-        else if (state.isNearBhangarhGateMarker) {
-          state.setShowGateFragmentPuzzleModal(true);
+        // Stage 4 (Bhangarh Fort 1-Min Relic Challenge)
+        else if (state.isNearKathputliFragment) {
+          state.setHasKathputliFragment?.(true);
+          state.setShowKathputliModal?.(true);
+          soundFx.playClueChime();
+        } else if (state.isNearPaliwalSeal) {
+          state.setHasPaliwalSeal?.(true);
+          state.setShowPaliwalSealModal?.(true);
+          soundFx.playClueChime();
+        } else if (state.isNearWanderersVerse) {
+          state.setHasWanderersVerse?.(true);
+          state.setShowWanderersVerseModal?.(true);
+          soundFx.playClueChime();
+        } else if (state.isNearBhangarhGateMarker) {
+          state.setShowGateFragmentPuzzleModal?.(true);
         } else if (state.isNearBhangarhGateArch) {
           state.setIsTransitioning(true);
           setTimeout(() => {
@@ -700,8 +813,6 @@ export default function RajasthanGameScreen() {
             state.setPlayerPos({ x: 50.0, y: 86.0 });
             state.setIsTransitioning(false);
           }, 400);
-        } else if (state.isNearTempleSanctuary) {
-          state.setShowTorchlightRestorationModal(true);
         } else if (state.isNearTemplePalaceDoor) {
           state.setIsTransitioning(true);
           setTimeout(() => {
@@ -709,12 +820,12 @@ export default function RajasthanGameScreen() {
             state.setPlayerPos({ x: 50.0, y: 86.0 });
             state.setIsTransitioning(false);
           }, 400);
-        } else if (state.isNearPalaceStratum) {
-          state.setShowRuinsClueTrailModal(true);
-        } else if (state.isNearFolkloreBoard) {
-          state.setShowFolkloreClassifierModal(true);
-        } else if (state.isNearFinalEvidenceBoard) {
-          state.setShowFinalEvidenceBoardModal(true);
+        } else if (state.isNearFinalEvidenceBoard || (state.scene === "palace_ruins" && state.hasKathputliFragment && state.hasPaliwalSeal && state.hasWanderersVerse)) {
+          if (typeof state.setShowGrandCampaignCompleteModal === "function") {
+            state.setShowGrandCampaignCompleteModal(true);
+          } else if (typeof state.setShowFinalEvidenceBoardModal === "function") {
+            state.setShowFinalEvidenceBoardModal(true);
+          }
         } else if (state.isNearChaseGateExit) {
           state.setIsTransitioning(true);
           setTimeout(() => {
@@ -1126,28 +1237,55 @@ export default function RajasthanGameScreen() {
     };
   }, [isLoading]);
 
-  // Chaupar Dice Roll Handler
+  // Chaupar Long Wooden Pasa Dice Roll & Goti Movement Handler
   const handleRollDice = () => {
-    if (isDiceRolling) return;
+    if (isDiceRolling || isPawnMoving) return;
     setIsDiceRolling(true);
+    soundFx.playButtonClick();
 
     setTimeout(() => {
-      const pRoll = Math.floor(Math.random() * 6) + 1;
-      const cRoll = Math.floor(Math.random() * 6) + 1;
-      setLastRoll(pRoll);
+      // Long wooden dice (Pasa) face values: 1, 2, 3, 4, 6
+      const possibleRolls = [1, 2, 3, 4, 6];
+      const d1 = possibleRolls[Math.floor(Math.random() * possibleRolls.length)];
+      const d2 = possibleRolls[Math.floor(Math.random() * possibleRolls.length)];
+      const c1 = possibleRolls[Math.floor(Math.random() * possibleRolls.length)];
+      const c2 = possibleRolls[Math.floor(Math.random() * possibleRolls.length)];
 
-      if (pRoll > cRoll) {
+      const pTotal = d1 + d2;
+      const cTotal = c1 + c2;
+
+      setDiceRoll1(d1);
+      setDiceRoll2(d2);
+      setLastRoll(pTotal);
+      setIsDiceRolling(false);
+      setIsPawnMoving(true);
+
+      if (pTotal > cTotal) {
         setChauparScore((prev) => ({ ...prev, player: prev.player + 1 }));
-        setChauparMessage(`You rolled ${pRoll}! Buzurg Chacha rolled ${cRoll}. You win this round!`);
-      } else if (cRoll > pRoll) {
+        setPlayerPawnPos((prev) => Math.min(12, prev + Math.ceil(pTotal / 2)));
+        setChauparMessage(`🎲 You rolled ${d1} & ${d2} (${pTotal} pips)! Chacha rolled ${c1} & ${c2} (${cTotal}). Your Golden Goti advances on the Chaupar board!`);
+      } else if (cTotal > pTotal) {
         setChauparScore((prev) => ({ ...prev, chacha: prev.chacha + 1 }));
-        setChauparMessage(`You rolled ${pRoll}. Buzurg Chacha rolled ${cRoll} and takes the point!`);
+        setChachaPawnPos((prev) => Math.min(12, prev + Math.ceil(cTotal / 2)));
+        setChauparMessage(`🎲 You rolled ${d1} & ${d2} (${pTotal} pips). Chacha rolled ${c1} & ${c2} (${cTotal}). Chacha's Ruby Goti takes the point!`);
       } else {
-        setChauparMessage(`Both rolled ${pRoll}! It's a tie round.`);
+        setChauparMessage(`🎲 Both rolled ${pTotal} pips! It's a tie round — pawns hold position.`);
       }
 
-      setIsDiceRolling(false);
-    }, 600);
+      setTimeout(() => {
+        setIsPawnMoving(false);
+      }, 600);
+    }, 750);
+  };
+
+  const handleResetChauparMatch = () => {
+    setChauparScore({ player: 0, chacha: 0 });
+    setPlayerPawnPos(0);
+    setChachaPawnPos(0);
+    setDiceRoll1(3);
+    setDiceRoll2(4);
+    setChauparMessage("Match reset! Roll the pasa dice to challenge Buzurg Chacha.");
+    soundFx.playButtonClick();
   };
 
   // Stage 3 Deduction Puzzle Handler
@@ -1360,7 +1498,7 @@ export default function RajasthanGameScreen() {
       case "bhangarh_gate":
         return "/bg-bhangarh-gate.jpg";
       case "gopinath_temple":
-        return "/bg-bhangarh-gopinath-temple.jpg";
+        return "/bg-bhangarh-baoli-scary-night.jpg";
       case "palace_ruins":
         return "/bg-bhangarh-palace-ruins.jpg";
       case "bhangarh_chase":
@@ -1395,19 +1533,19 @@ export default function RajasthanGameScreen() {
       case "kumbhalgarh_great_wall":
         return "Walk along the Great Wall of India straight to the far end to reach the fortified Zigzag Gates!";
       case "kumbhalgarh_zigzag_gates":
-        return "Walk forward along the bridge path to enter Badal Mahal. Walk backward with F to return to the Great Wall.";
+        return "Pass through the defensive zigzag gates to reach Badal Mahal Courtyard.";
       case "badal_mahal_courtyard":
-        return "Stand in the royal courtyard of Badal Mahal. Walk forward through the colonnade to enter the palace interior.";
+        return "Enter Badal Mahal Courtyard and press E to go inside the Palace of Clouds.";
       case "badal_mahal_interior":
-        return "Admire the elephant battle frescoes where Maharana Pratap was born. Walk left to ascend to the Cloud Terrace.";
+        return "Explore the regal chambers of Badal Mahal. Ascend the interior stairs to the top terrace.";
       case "badal_mahal_terrace":
-        return "Stand atop the peak of Kumbhalgarh! Approach the Royal Elephant Caravan and press E to travel to Kuldhara (Stage 3).";
+        return "Stand atop Badal Mahal terrace. Walk to the Royal Elephant and press E to travel to Kuldhara Ghost Village (Stage 3).";
       case "kuldhara_gate":
-        return "Arrive at Kuldhara. Inspect the inscribed '83' marker (Press E) and walk north into the village.";
+        return "Enter the eerie entrance of Kuldhara Ghost Village. Walk north into the Chief's Haveli.";
       case "chiefs_house":
-        return "Search the ruined Haveli of the Village Chief. Examine the bridal wedding ornament (Press E) for evidence.";
+        return "Inspect the inscribed '83' marker pillar (Press E) proving all 84 Paliwal Brahmin villages fled together overnight!";
       case "treasury":
-        return "Examine the merchant storage and torn tax ledger (Press E) to uncover Salim Singh's extortion.";
+        return "Search the stepwell platform. Inspect the intact clay water pots and caches (Press E) proving coordinated evacuation.";
       case "well":
         return "Search the stepwell platform. Inspect the intact clay water pots and caches (Press E) proving coordinated evacuation.";
       case "village_square":
@@ -1415,7 +1553,7 @@ export default function RajasthanGameScreen() {
       case "bhangarh_gate":
         return "You arrive at Bhangarh Fort at dusk. Inspect the gate inscription stone (Press E) to decode the foundation chronicle before entering.";
       case "gopinath_temple":
-        return "Investigate Gopinath Temple. Use torchlight to restore and decode the sacred Nagara motifs on the sanctuary wall (Press E).";
+        return "Investigate Bhangarh Royal Baoli & Colonnade. Examine sacred Nagara temple motifs and stepwell reliefs (Press E).";
       case "palace_ruins":
         return "Search the 7-story palace ruins. Inspect the famine stratum (left), classify folklore vs evidence (right), and assemble the final evidence board (top)!";
       case "bhangarh_chase":
@@ -1445,117 +1583,198 @@ export default function RajasthanGameScreen() {
         }`}
       />
 
-      {/* --- TOP LEFT HUD CARDS --- */}
-      <div className="absolute top-6 left-6 z-20 flex flex-col gap-3">
-        {/* Goal / Instruction Box Card */}
-        <div className="bg-[#fff9ea] border-2 border-black rounded-xl p-4 max-w-sm shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex flex-col gap-1">
-          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+      {/* --- TOP LEFT HUD CARDS (EXACT MUGHAL ENGINE FORMAT) --- */}
+      <div className="absolute top-6 left-6 z-20 flex flex-col gap-2.5">
+        {/* Objective / Location Card */}
+        <div className="bg-[#fff9ea] border-2 border-black rounded-xl p-3.5 w-80 shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
+          <div className="text-[10px] font-extrabold text-amber-800 uppercase tracking-widest mb-1">
             {stage === 1
-              ? "RAJASTHAN - CHITTORGARH FORT (STAGE 1)"
+              ? "RAJASTHAN - CHITTORGARH FORT"
               : stage === 2
-              ? "RAJASTHAN - KUMBHALGARH FORT (STAGE 2)"
+              ? "RAJASTHAN - KUMBHALGARH FORT"
               : stage === 3
-              ? "RAJASTHAN - KULDHARA GHOST VILLAGE (STAGE 3)"
-              : "RAJASTHAN - BHANGARH FORT (STAGE 4 - FINAL)"}
-          </span>
-          <div className="text-[14px] font-bold text-black leading-snug">
+              ? "RAJASTHAN - KULDHARA GHOST VILLAGE"
+              : "RAJASTHAN - BHANGARH FORT (STAGE 4)"}
+          </div>
+          <div className="text-[13px] font-black text-black leading-snug">
             {getSceneInstruction()}
           </div>
         </div>
 
-        {/* Clues Box Card */}
-        <div className="bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 w-max shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex items-center gap-3">
-          <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-          </svg>
-          <div className="flex gap-1">
-            <div className={`w-3 h-1.5 rounded-sm ${cluesFound >= 1 ? "bg-amber-500" : "bg-amber-200"}`}></div>
-            <div className={`w-3 h-1.5 rounded-sm ${cluesFound >= 2 ? "bg-amber-500" : "bg-amber-200"}`}></div>
-            <div className={`w-3 h-1.5 rounded-sm ${cluesFound >= 3 ? "bg-amber-500" : "bg-amber-200"}`}></div>
-            {stage === 4 && <div className={`w-3 h-1.5 rounded-sm ${cluesFound >= 4 ? "bg-amber-500" : "bg-amber-200"}`}></div>}
-          </div>
-          <span className="text-[12px] font-bold text-black">{cluesFound}/{maxClues} Evidence Clues</span>
-        </div>
-
-        {/* Stage 4 Moonrise Progress Card */}
-        {stage === 4 && (
-          <div className="bg-[#0f172a]/90 text-amber-200 border-2 border-amber-500 rounded-lg px-4 py-2 w-max shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex items-center gap-3 animate-pulse">
-            <span className="text-base">
-              {moonriseTimer > 135 ? "🌒" : moonriseTimer > 90 ? "🌓" : moonriseTimer > 45 ? "🌔" : "🌕"}
-            </span>
-            <div className="flex flex-col">
-              <span className="text-[10px] font-mono uppercase font-extrabold text-amber-400">
-                Moonrise Phase: {moonriseTimer > 135 ? "Dusk Horizon" : moonriseTimer > 90 ? "Crescent Ascent" : moonriseTimer > 45 ? "Waxing Gibbous" : "Peak Full Moon"}
-              </span>
-              <span className="text-[11px] font-mono text-white font-bold">
-                Time Remaining: {Math.floor(moonriseTimer / 60)}:{(moonriseTimer % 60).toString().padStart(2, "0")}
-              </span>
+        {/* Clues Counter Card (Exact Mughal Pill Style: Image 2) */}
+        <div className="bg-[#fff9ea] border-2 border-black rounded-full px-3.5 py-1.5 w-fit min-w-[210px] shadow-[3px_3px_0_0_rgba(0,0,0,1)] flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <svg className="w-4 h-4 text-amber-700 font-bold" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+            <div className="flex gap-1.5">
+              <div className={`w-3.5 h-1.5 rounded-full transition-colors duration-300 ${cluesFound >= 1 ? "bg-amber-500 border border-amber-600 shadow-[0_0_4px_rgba(245,158,11,0.5)]" : "bg-amber-200/90"}`}></div>
+              <div className={`w-3.5 h-1.5 rounded-full transition-colors duration-300 ${cluesFound >= 2 ? "bg-amber-500 border border-amber-600 shadow-[0_0_4px_rgba(245,158,11,0.5)]" : "bg-amber-200/90"}`}></div>
+              <div className={`w-3.5 h-1.5 rounded-full transition-colors duration-300 ${cluesFound >= 3 ? "bg-amber-500 border border-amber-600 shadow-[0_0_4px_rgba(245,158,11,0.5)]" : "bg-amber-200/90"}`}></div>
+              {stage === 4 && (
+                <div className={`w-3.5 h-1.5 rounded-full transition-colors duration-300 ${cluesFound >= 4 ? "bg-amber-500 border border-amber-600 shadow-[0_0_4px_rgba(245,158,11,0.5)]" : "bg-amber-200/90"}`}></div>
+              )}
             </div>
           </div>
+          <div className="text-[12px] font-black text-black flex items-center gap-1">
+            <span>{cluesFound}/{maxClues} clues</span>
+            <span className="text-amber-800 font-extrabold">open</span>
+          </div>
+        </div>
+
+        {/* Stage 3 & Stage 4 2-MIN TIMER CARD */}
+        {(stage === 3 || stage === 4) && (
+          <div className="bg-[#fff9ea] border-2 border-black rounded-xl px-3.5 py-2 w-64 shadow-[3px_3px_0_0_rgba(0,0,0,1)] flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-950">
+              <span className="animate-pulse text-sm">⏱️</span>
+              <span className="text-[11px] font-black uppercase tracking-wider text-amber-950">
+                TIMER
+              </span>
+            </div>
+            <span className={`text-[13px] font-mono font-black px-2.5 py-0.5 rounded border ${
+              (stage === 3 ? kuldharaTimer : bhangarhTimer) <= 20
+                ? "bg-red-600 text-white border-black animate-pulse shadow-[0_0_8px_rgba(220,38,38,0.8)]"
+                : "bg-red-100 text-red-600 border-red-300"
+            }`}>
+              {Math.floor((stage === 3 ? kuldharaTimer : bhangarhTimer) / 60)}:{((stage === 3 ? kuldharaTimer : bhangarhTimer) % 60).toString().padStart(2, "0")}
+            </span>
+          </div>
+        )}
+
+        {/* Stage 4 Ambient BGM YouTube Audio Player (Plays unless muted) */}
+        {stage === 4 && !isMusicMuted && (
+          <iframe
+            className="w-1 h-1 opacity-0 absolute pointer-events-none"
+            src="https://www.youtube.com/embed/-ldS2caI16I?autoplay=1&loop=1&playlist=-ldS2caI16I&enablejsapi=1"
+            title="Bhangarh Fort Ambient BGM"
+            allow="autoplay; encrypted-media"
+          />
         )}
       </div>
 
-      {/* --- TOP RIGHT HUD CARDS --- */}
+      {/* --- TOP RIGHT ACTION BUTTONS (EXACT MUGHAL ENGINE FORMAT: IMAGE 2) --- */}
       <div className="absolute top-6 right-6 z-20 flex flex-col items-end gap-3">
         {/* Action Buttons Row */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleResetGame}
-            title="Restart to Beginning"
-            className="h-10 bg-red-600 border-2 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all flex items-center justify-center px-3 gap-1.5 group cursor-pointer"
+        <div className="flex items-center gap-2">
+          {/* Silent Switchable Timer Button */}
+          <button 
+            onClick={() => {
+              soundFx.playButtonClick();
+              setIsTimerVisible(!isTimerVisible);
+            }}
+            title={isTimerVisible ? "Timer Active (Click to hide)" : "Click to view session timer"}
+            className={`h-10 px-3.5 border-2 border-black rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all flex items-center justify-center gap-1.5 font-black text-xs cursor-pointer ${
+              isTimerVisible ? "bg-[#fcd34d] text-black" : "bg-white/90 hover:bg-white text-gray-800"
+            }`}
           >
-            <svg className="w-5 h-5 text-white group-hover:-rotate-180 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-            </svg>
-            <span className="text-[13px] font-bold text-white">Restart</span>
+            <span>⏱️</span>
+            {isTimerVisible ? (
+              <span>
+                {stage === 3
+                  ? `${Math.floor(kuldharaTimer / 60)}:${(kuldharaTimer % 60).toString().padStart(2, "0")}`
+                  : stage === 4
+                  ? `${Math.floor(bhangarhTimer / 60)}:${(bhangarhTimer % 60).toString().padStart(2, "0")}`
+                  : `${String(Math.floor(elapsedSeconds / 60)).padStart(2, '0')}:${String(elapsedSeconds % 60).padStart(2, '0')}`}
+              </span>
+            ) : (
+              <span className="text-[11px] font-bold uppercase tracking-wider text-black">TIMER</span>
+            )}
           </button>
+
           <button
-            onClick={() => router.push("/dashboard")}
-            className="h-10 bg-red-600 border-2 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all flex items-center justify-center px-4 cursor-pointer"
+            onClick={() => {
+              soundFx.playButtonClick();
+              handleResetGame();
+            }}
+            title="Restart to Beginning"
+            className="h-10 bg-red-600 text-white border-2 border-black rounded-lg px-3.5 text-[13px] font-extrabold shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:bg-red-700 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-1.5 cursor-pointer group"
           >
-            <span className="text-[13px] font-bold text-white">Leave world</span>
+            <svg className="w-4 h-4 text-white group-hover:-rotate-180 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+            <span>Restart</span>
+          </button>
+
+          <button
+            onClick={() => {
+              soundFx.playButtonClick();
+              setIsMusicMuted(!isMusicMuted);
+            }}
+            title={isMusicMuted ? "Unmute Background Music" : "Mute Background Music"}
+            className={`w-10 h-10 border-2 border-black rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all flex items-center justify-center cursor-pointer ${
+              isMusicMuted ? "bg-gray-200 text-gray-500" : "bg-amber-400 text-black"
+            }`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path>
+            </svg>
+          </button>
+
+          <button
+            onClick={() => {
+              const muted = soundFx.toggleMute();
+              setIsSoundMuted(muted);
+            }}
+            title={isSoundMuted ? "Unmute Sound Effects" : "Mute Sound Effects"}
+            className={`w-10 h-10 border-2 border-black rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all flex items-center justify-center cursor-pointer ${
+              isSoundMuted ? "bg-gray-200 text-gray-500" : "bg-amber-400 text-black"
+            }`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.898a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>
+            </svg>
+          </button>
+
+          <button
+            onClick={() => {
+              soundFx.playButtonClick();
+              router.push("/dashboard");
+            }}
+            className="h-10 bg-red-600 text-white border-2 border-black rounded-lg px-4 text-[13px] font-extrabold shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:bg-red-700 hover:-translate-y-0.5 transition-all cursor-pointer"
+          >
+            Leave world
           </button>
         </div>
 
-        {/* Minimap Box Card */}
-        <div className="bg-[#fff9ea] border-2 border-black rounded-lg p-3 w-44 h-36 shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex flex-col">
+        {/* Minimap Box Card (Exact Mughal Style) */}
+        <div className="bg-[#fff9ea] border-2 border-black rounded-2xl p-3 w-44 h-36 shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex flex-col">
           <div className="text-[9px] font-mono font-bold text-amber-950 uppercase mb-1 tracking-wider text-center">
             {stage === 1 ? "CHITTORGARH" : stage === 2 ? "KUMBHALGARH" : stage === 3 ? "KULDHARA" : "BHANGARH FORT"}
           </div>
-          <div className="flex-1 grid grid-cols-3 grid-rows-3 gap-1 p-1 bg-amber-50/50 rounded border border-amber-300">
+          <div className="flex-1 grid grid-cols-3 grid-rows-3 gap-1.5 p-1.5 bg-[#fff5d6]/70 rounded-xl border border-amber-200">
             {stage === 1 && (
               <>
-                <div className={scene === "ram_pol" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "inner_courtyard" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "courtyard_passage" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "vijay_stambh" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "vijay_stambh_interior" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "jauhar_passage" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "jauhar_kund" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "desert_outskirts" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
+                <div className={scene === "ram_pol" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "inner_courtyard" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "courtyard_passage" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "vijay_stambh" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "vijay_stambh_interior" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "jauhar_passage" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "jauhar_kund" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "desert_outskirts" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
                 <div className="bg-transparent"></div>
               </>
             )}
             {stage === 2 && (
               <>
-                <div className={scene === "kumbhalgarh_gate" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "kumbhalgarh_interior_stairs" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "kumbhalgarh_great_wall" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "kumbhalgarh_zigzag_gates" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "badal_mahal_courtyard" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "badal_mahal_interior" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "badal_mahal_terrace" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
+                <div className={scene === "kumbhalgarh_gate" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "kumbhalgarh_interior_stairs" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "kumbhalgarh_great_wall" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "kumbhalgarh_zigzag_gates" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "badal_mahal_courtyard" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "badal_mahal_interior" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "badal_mahal_terrace" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
                 <div className="bg-transparent"></div>
                 <div className="bg-transparent"></div>
               </>
             )}
             {stage === 3 && (
               <>
-                <div className={scene === "kuldhara_gate" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "chiefs_house" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "treasury" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "well" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "village_square" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
+                <div className={scene === "kuldhara_gate" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "chiefs_house" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "treasury" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "well" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "village_square" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
                 <div className="bg-transparent"></div>
                 <div className="bg-transparent"></div>
                 <div className="bg-transparent"></div>
@@ -1564,10 +1783,10 @@ export default function RajasthanGameScreen() {
             )}
             {stage === 4 && (
               <>
-                <div className={scene === "bhangarh_gate" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "gopinath_temple" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "palace_ruins" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "bhangarh_chase" ? "bg-red-400 rounded-sm border border-red-600" : "bg-amber-100 rounded-sm"}></div>
+                <div className={scene === "bhangarh_gate" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "gopinath_temple" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "palace_ruins" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "bhangarh_chase" ? "bg-red-400 rounded-md shadow-[0_0_6px_rgba(248,113,113,0.8)] border border-red-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
                 <div className="bg-transparent"></div>
                 <div className="bg-transparent"></div>
                 <div className="bg-transparent"></div>
@@ -1730,13 +1949,54 @@ export default function RajasthanGameScreen() {
       )}
 
       {isNearChhatriDeduction && (
-        <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black rounded-xl px-5 py-3 shadow-[5px_5px_0_0_rgba(0,0,0,1)] text-[13px] font-black tracking-wide flex items-center gap-2.5 z-30 animate-bounce cursor-pointer pointer-events-auto" onClick={() => setShowDeductionModal(true)}>
+        <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black rounded-xl px-5 py-3 shadow-[5px_5px_0_0_rgba(0,0,0,1)] text-[13px] font-black tracking-wide flex items-center gap-2.5 z-30 animate-bounce cursor-pointer pointer-events-auto" onClick={() => setShowStage3CompleteModal(true)}>
           <span className="bg-black text-amber-400 rounded px-2 py-0.5 text-[11px] font-mono">E</span>
-          Assemble Evidence at Memorial Chhatri (Final Deduction)
+          Inspect Memorial Chhatri (Uncover Legend of Kuldhara)
         </div>
       )}
 
-      {/* --- STAGE 4 PROMPTS (BHANGARH FORT) --- */}
+      {/* --- STAGE 4 PROMPTS (BHANGARH FORT 1-MIN CHALLENGE) --- */}
+      {isNearKathputliFragment && (
+        <div
+          className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black rounded-xl px-5 py-2.5 shadow-[5px_5px_0_0_rgba(0,0,0,1)] text-[13px] font-black tracking-wide flex items-center gap-2.5 z-30 animate-bounce cursor-pointer pointer-events-auto"
+          onClick={() => {
+            soundFx.playClueChime();
+            setHasKathputliFragment(true);
+            setShowKathputliModal(true);
+          }}
+        >
+          <span className="bg-black text-amber-400 rounded px-2 py-0.5 text-[11px] font-mono">E</span>
+          ✨ Collect Kathputli Fragment (Stories Carved in Sand)
+        </div>
+      )}
+
+      {isNearPaliwalSeal && (
+        <div
+          className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black rounded-xl px-5 py-2.5 shadow-[5px_5px_0_0_rgba(0,0,0,1)] text-[13px] font-black tracking-wide flex items-center gap-2.5 z-30 animate-bounce cursor-pointer pointer-events-auto"
+          onClick={() => {
+            soundFx.playClueChime();
+            setHasPaliwalSeal(true);
+            setShowPaliwalSealModal(true);
+          }}
+        >
+          <span className="bg-black text-amber-400 rounded px-2 py-0.5 text-[11px] font-mono">E</span>
+          ✨ Collect Paliwal Ledger Seal (Horse Emblem Medallion)
+        </div>
+      )}
+
+      {isNearWanderersVerse && (
+        <div
+          className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black rounded-xl px-5 py-2.5 shadow-[5px_5px_0_0_rgba(0,0,0,1)] text-[13px] font-black tracking-wide flex items-center gap-2.5 z-30 animate-bounce cursor-pointer pointer-events-auto"
+          onClick={() => {
+            soundFx.playClueChime();
+            setHasWanderersVerse(true);
+            setShowWanderersVerseModal(true);
+          }}
+        >
+          <span className="bg-black text-amber-400 rounded px-2 py-0.5 text-[11px] font-mono">E</span>
+          ✨ Collect Wanderer&apos;s Verse (Antelope Medallion)
+        </div>
+      )}
       {isNearBhangarhGateMarker && (
         <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2.5 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce cursor-pointer pointer-events-auto" onClick={() => setShowGateFragmentPuzzleModal(true)}>
           <span className="bg-amber-400 border border-black rounded px-1.5 text-[11px]">E</span>
@@ -1747,7 +2007,7 @@ export default function RajasthanGameScreen() {
       {isNearTempleSanctuary && (
         <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2.5 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce cursor-pointer pointer-events-auto" onClick={() => setShowTorchlightRestorationModal(true)}>
           <span className="bg-amber-400 border border-black rounded px-1.5 text-[11px]">E</span>
-          Torchlight Reveal: Decode Nagara Temple Reliefs
+          Moonlight Inspection: Decode Nagara Reliefs &amp; Royal Baoli Motifs
         </div>
       )}
 
@@ -1798,27 +2058,67 @@ export default function RajasthanGameScreen() {
       )}
 
       {isNearBhangarhGateArch && (
-        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 pointer-events-none flex items-center gap-2 whitespace-nowrap">
-          <span>▲</span> Enter Gopinath Temple Sanctuary (Press E)
+        <div
+          className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 cursor-pointer pointer-events-auto flex items-center gap-2 whitespace-nowrap"
+          onClick={() => {
+            setIsTransitioning(true);
+            setTimeout(() => {
+              setScene("gopinath_temple");
+              setPlayerPos({ x: 50.0, y: 86.0 });
+              setIsTransitioning(false);
+            }, 400);
+          }}
+        >
+          <span>▲</span> Enter Royal Baoli &amp; Colonnade Ruins (Press E)
         </div>
       )}
 
       {isNearTemplePalaceDoor && (
-        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 pointer-events-none flex items-center gap-2 whitespace-nowrap">
+        <div
+          className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 cursor-pointer pointer-events-auto flex items-center gap-2 whitespace-nowrap"
+          onClick={() => {
+            setIsTransitioning(true);
+            setTimeout(() => {
+              setScene("palace_ruins");
+              setPlayerPos({ x: 50.0, y: 86.0 });
+              setIsTransitioning(false);
+            }, 400);
+          }}
+        >
           <span>►</span> Ascend to Royal Palace Ruins (Press E)
         </div>
       )}
 
       {/* Backward Exit Prompts */}
       {isNearTempleGateExit && (
-        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 pointer-events-none flex items-center gap-2 whitespace-nowrap">
+        <div
+          className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 cursor-pointer pointer-events-auto flex items-center gap-2 whitespace-nowrap"
+          onClick={() => {
+            setIsTransitioning(true);
+            setTimeout(() => {
+              setScene("bhangarh_gate");
+              setPlayerPos({ x: 50.0, y: 65.0 });
+              setIsTransitioning(false);
+            }, 400);
+          }}
+        >
           <span>▼</span> Walk down to return to Bhangarh Gate (Press F)
         </div>
       )}
 
       {isNearPalaceTempleExit && (
-        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 pointer-events-none flex items-center gap-2 whitespace-nowrap">
-          <span>▼</span> Walk down to return to Gopinath Temple (Press F)
+        <div
+          className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 cursor-pointer pointer-events-auto flex items-center gap-2 whitespace-nowrap"
+          onClick={() => {
+            setIsTransitioning(true);
+            setTimeout(() => {
+              setScene("gopinath_temple");
+              setPlayerPos({ x: 68.0, y: 70.0 });
+              setIsTransitioning(false);
+            }, 400);
+          }}
+        >
+          <span>▼</span> Walk down to return to Royal Baoli (Press F)
         </div>
       )}
 
@@ -1846,20 +2146,207 @@ export default function RajasthanGameScreen() {
         </div>
       )}
 
+      {/* --- AUTHENTIC VISUAL CHAUPAR (PACHISI) GAME MODAL --- */}
       {showChauparGame && (
-        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 z-40 pointer-events-auto">
-          <div className="bg-[#fef9c3] border-4 border-amber-950 rounded-2xl p-6 shadow-[12px_12px_0_0_rgba(0,0,0,1)] max-w-lg w-full flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b-2 border-amber-800/40 pb-3">
-              <h3 className="font-extrabold text-amber-950 uppercase tracking-widest text-sm">🎲 Royal Chaupar Game</h3>
-              <button onClick={() => setShowChauparGame(false)} className="text-amber-950 hover:bg-amber-200 font-bold text-xs px-2.5 py-1 rounded-lg border border-amber-800 cursor-pointer">✕ Exit Game</button>
+        <div className="absolute inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 z-50 pointer-events-auto">
+          <div className="bg-[#fff9ea] border-4 border-amber-950 rounded-3xl p-5 shadow-[16px_16px_0_0_rgba(0,0,0,1)] max-w-xl w-full flex flex-col gap-3.5 animate-in fade-in zoom-in-95 duration-200">
+            {/* Header Bar */}
+            <div className="flex items-center justify-between border-b-2 border-amber-800/40 pb-2.5">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🎲</span>
+                <div>
+                  <h3 className="font-extrabold text-amber-950 uppercase tracking-widest text-sm leading-tight">
+                    Royal Chaupar (Pachisi) Game
+                  </h3>
+                  <span className="text-[10px] font-serif text-amber-800 font-semibold italic">
+                    Traditional Rajput Board of Kings & Court
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleResetChauparMatch}
+                  className="text-amber-900 hover:bg-amber-200 font-bold text-[11px] px-2.5 py-1 rounded-lg border border-amber-800 cursor-pointer"
+                  title="Reset score and pawns"
+                >
+                  🔄 Reset
+                </button>
+                <button
+                  onClick={() => setShowChauparGame(false)}
+                  className="text-amber-950 hover:bg-amber-200 font-bold text-xs px-3 py-1 rounded-lg border-2 border-amber-900 bg-amber-100 cursor-pointer shadow-sm"
+                >
+                  ✕ Exit Game
+                </button>
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-4 bg-amber-100 border-2 border-amber-800/60 p-3 rounded-xl text-center">
-              <div><span className="text-xs font-bold text-amber-900 uppercase">You</span><div className="text-2xl font-extrabold text-amber-950">{chauparScore.player}</div></div>
-              <div><span className="text-xs font-bold text-amber-900 uppercase">Chacha</span><div className="text-2xl font-extrabold text-amber-950">{chauparScore.chacha}</div></div>
+
+            {/* Scoreboard Bar */}
+            <div className="grid grid-cols-2 gap-3 bg-gradient-to-r from-amber-100 via-amber-200/70 to-amber-100 border-2 border-amber-900/70 p-2.5 rounded-xl text-center shadow-sm">
+              <div className="flex items-center justify-between px-3 border-r-2 border-amber-800/30">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-yellow-600 via-amber-400 to-yellow-200 border-2 border-amber-950 flex items-center justify-center shadow-sm text-[10px] font-bold">
+                    👑
+                  </div>
+                  <div className="text-left">
+                    <span className="text-[10px] font-black text-amber-900 uppercase block">YOU (Gold Goti)</span>
+                    <span className="text-[11px] font-bold text-amber-950">Track Step {playerPawnPos}/12</span>
+                  </div>
+                </div>
+                <div className="text-2xl font-black text-amber-950">{chauparScore.player}</div>
+              </div>
+
+              <div className="flex items-center justify-between px-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-red-800 via-red-600 to-red-400 border-2 border-amber-950 flex items-center justify-center shadow-sm text-[10px] font-bold text-white">
+                    👳
+                  </div>
+                  <div className="text-left">
+                    <span className="text-[10px] font-black text-red-950 uppercase block">CHACHA (Ruby Goti)</span>
+                    <span className="text-[11px] font-bold text-amber-950">Track Step {chachaPawnPos}/12</span>
+                  </div>
+                </div>
+                <div className="text-2xl font-black text-amber-950">{chauparScore.chacha}</div>
+              </div>
             </div>
-            <div className="bg-amber-900/10 p-3 rounded-xl text-center text-xs font-serif font-bold text-amber-950">{chauparMessage}</div>
-            <button onClick={handleRollDice} disabled={isDiceRolling} className="bg-amber-600 hover:bg-amber-700 text-white font-extrabold py-3 px-6 rounded-xl border-3 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-xs uppercase cursor-pointer">
-              {isDiceRolling ? "Rolling Cowries..." : "Roll Dice"}
+
+            {/* Visual Chaupar Cross Board (Google Nano Banana Clean Board Image & Exact Grid Pawn Positions) */}
+            <div className="relative w-full h-72 sm:h-80 rounded-2xl overflow-hidden border-4 border-amber-950 shadow-2xl bg-[#1e0e07] flex items-center justify-center">
+              {/* Google Nano Banana Clean 2D Orthogonal Chaupar Board Background */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/chaupar-board.jpg"
+                alt="Traditional Chaupar Board (Nano Banana)"
+                className="w-full h-full object-contain p-1 opacity-95"
+              />
+
+              {/* Central Home (Charkoni) Highlight Ring */}
+              <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                <div className="w-14 h-14 rounded-full border-2 border-yellow-400/90 bg-yellow-500/25 backdrop-blur-[1px] animate-pulse flex items-center justify-center shadow-[0_0_20px_rgba(234,179,8,0.7)]">
+                  <span className="text-[10px] font-serif font-black text-yellow-100 drop-shadow-md uppercase tracking-wider">HOME</span>
+                </div>
+              </div>
+
+              {/* Player's Animated Golden Goti (Pawn) sitting precisely inside grid squares */}
+              <div
+                className={`absolute w-9 h-9 z-30 transition-all duration-700 ease-out transform -translate-x-1/2 -translate-y-1/2 ${
+                  isPawnMoving ? "scale-125 -translate-y-3 shadow-[0_12px_24px_rgba(245,158,11,0.9)] animate-pulse" : "scale-100 shadow-md"
+                }`}
+                style={
+                  playerPawnPos === 0
+                    ? { left: "50%", top: "86%" }
+                    : playerPawnPos === 1
+                    ? { left: "50%", top: "78%" }
+                    : playerPawnPos === 2
+                    ? { left: "50%", top: "70%" }
+                    : playerPawnPos === 3
+                    ? { left: "50%", top: "62%" }
+                    : playerPawnPos === 4
+                    ? { left: "50%", top: "55%" }
+                    : playerPawnPos === 5
+                    ? { left: "50%", top: "48%" }
+                    : playerPawnPos === 6
+                    ? { left: "58%", top: "50%" }
+                    : playerPawnPos === 7
+                    ? { left: "66%", top: "50%" }
+                    : playerPawnPos === 8
+                    ? { left: "74%", top: "50%" }
+                    : playerPawnPos === 9
+                    ? { left: "82%", top: "50%" }
+                    : playerPawnPos === 10
+                    ? { left: "88%", top: "50%" }
+                    : playerPawnPos === 11
+                    ? { left: "94%", top: "50%" }
+                    : { left: "50%", top: "50%" }
+                }
+              >
+                <div className="relative w-full h-full rounded-t-full rounded-b-md bg-gradient-to-tr from-amber-600 via-yellow-400 to-amber-100 border-2 border-amber-950 shadow-[0_4px_10px_rgba(0,0,0,0.8)] flex items-center justify-center">
+                  <div className="w-3 h-3 rounded-full bg-amber-100 border border-amber-900 shadow-inner flex items-center justify-center text-[9px]">👑</div>
+                </div>
+              </div>
+
+              {/* Chacha's Animated Ruby Goti (Pawn) sitting precisely inside grid squares */}
+              <div
+                className={`absolute w-9 h-9 z-30 transition-all duration-700 ease-out transform -translate-x-1/2 -translate-y-1/2 ${
+                  isPawnMoving ? "scale-125 -translate-y-3 shadow-[0_12px_24px_rgba(239,68,68,0.9)] animate-pulse" : "scale-100 shadow-md"
+                }`}
+                style={
+                  chachaPawnPos === 0
+                    ? { left: "50%", top: "14%" }
+                    : chachaPawnPos === 1
+                    ? { left: "50%", top: "22%" }
+                    : chachaPawnPos === 2
+                    ? { left: "50%", top: "30%" }
+                    : chachaPawnPos === 3
+                    ? { left: "50%", top: "38%" }
+                    : chachaPawnPos === 4
+                    ? { left: "50%", top: "45%" }
+                    : chachaPawnPos === 5
+                    ? { left: "50%", top: "52%" }
+                    : chachaPawnPos === 6
+                    ? { left: "42%", top: "50%" }
+                    : chachaPawnPos === 7
+                    ? { left: "34%", top: "50%" }
+                    : chachaPawnPos === 8
+                    ? { left: "26%", top: "50%" }
+                    : chachaPawnPos === 9
+                    ? { left: "18%", top: "50%" }
+                    : chachaPawnPos === 10
+                    ? { left: "12%", top: "50%" }
+                    : chachaPawnPos === 11
+                    ? { left: "6%", top: "50%" }
+                    : { left: "50%", top: "50%" }
+                }
+              >
+                <div className="relative w-full h-full rounded-t-full rounded-b-md bg-gradient-to-tr from-red-950 via-red-600 to-red-400 border-2 border-amber-950 shadow-[0_4px_10px_rgba(0,0,0,0.8)] flex items-center justify-center">
+                  <div className="w-3 h-3 rounded-full bg-red-200 border border-red-950 shadow-inner flex items-center justify-center text-[9px] text-white">👳</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Long Wooden Dice (Pasa) Animation Section (Image 2 style) */}
+            <div className="bg-amber-100/90 border-2 border-amber-900/60 p-2.5 rounded-xl flex flex-col items-center gap-2">
+              <span className="text-[10px] font-black text-amber-950 uppercase tracking-wider">
+                LONG WOODEN PASA DICE (ROYAL RAJASTHANI DICE)
+              </span>
+
+              <div className="flex items-center justify-center gap-6">
+                {/* Die 1 */}
+                <div className={`relative w-28 h-10 bg-gradient-to-r from-[#d89e5a] via-[#f5d09b] to-[#c68c47] border-2 border-[#4a2e12] rounded-md shadow-md flex items-center justify-around px-3 transition-all duration-500 transform ${
+                  isDiceRolling ? "rotate-45 scale-110 shadow-xl animate-bounce" : "rotate-0"
+                }`}>
+                  <div className="absolute -left-1.5 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-[#6e431a] rounded-l border-r border-[#4a2e12]"></div>
+                  <div className="absolute -right-1.5 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-[#6e431a] rounded-r border-l border-[#4a2e12]"></div>
+                  {Array.from({ length: diceRoll1 }).map((_, i) => (
+                    <div key={i} className="w-3 h-3 bg-red-700 border border-red-950 rounded-full shadow-inner"></div>
+                  ))}
+                </div>
+
+                {/* Die 2 */}
+                <div className={`relative w-28 h-10 bg-gradient-to-r from-[#d89e5a] via-[#f5d09b] to-[#c68c47] border-2 border-[#4a2e12] rounded-md shadow-md flex items-center justify-around px-3 transition-all duration-500 transform ${
+                  isDiceRolling ? "-rotate-45 scale-110 shadow-xl animate-bounce" : "rotate-0"
+                }`}>
+                  <div className="absolute -left-1.5 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-[#6e431a] rounded-l border-r border-[#4a2e12]"></div>
+                  <div className="absolute -right-1.5 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-[#6e431a] rounded-r border-l border-[#4a2e12]"></div>
+                  {Array.from({ length: diceRoll2 }).map((_, i) => (
+                    <div key={i} className="w-3 h-3 bg-red-700 border border-red-950 rounded-full shadow-inner"></div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Message Box */}
+            <div className="bg-amber-200/70 border border-amber-400 p-2.5 rounded-xl text-center text-xs font-serif font-bold text-amber-950 leading-relaxed shadow-inner">
+              {chauparMessage}
+            </div>
+
+            {/* Roll Action Button */}
+            <button
+              onClick={handleRollDice}
+              disabled={isDiceRolling || isPawnMoving}
+              className="bg-amber-600 hover:bg-amber-700 disabled:bg-gray-400 text-white font-extrabold py-3 px-6 rounded-xl border-3 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-xs uppercase tracking-widest cursor-pointer transition-all active:translate-y-0.5 flex items-center justify-center gap-2"
+            >
+              <span>🎲</span>
+              <span>{isDiceRolling ? "Rolling Wooden Pasa..." : isPawnMoving ? "Moving Goti..." : "Roll Pasa Dice"}</span>
             </button>
           </div>
         </div>
@@ -1932,81 +2419,227 @@ export default function RajasthanGameScreen() {
       )}
 
       {showHaveliOrnamentModal && (
-        <div className="absolute inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center p-6 z-40 pointer-events-auto">
-          <div className="bg-[#fff9ea] border-4 border-amber-900 rounded-2xl p-6 shadow-[12px_12px_0_0_rgba(0,0,0,1)] max-w-lg w-full flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b-2 border-amber-800/30 pb-3">
-              <span className="text-sm font-extrabold text-amber-950 uppercase tracking-widest">💍 Clue 1: Bridal Wedding Ornament</span>
-              <button onClick={() => setShowHaveliOrnamentModal(false)} className="text-amber-900 font-bold text-sm bg-amber-200/60 px-2 py-0.5 rounded cursor-pointer">✕ Close</button>
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-40 pointer-events-auto">
+          <div className="bg-[#fff9ea] border-4 border-amber-900 rounded-2xl p-5 shadow-[12px_12px_0_0_rgba(0,0,0,1)] max-w-md w-full flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b-2 border-amber-800/30 pb-2">
+              <span className="text-sm font-black text-amber-950 uppercase tracking-wider flex items-center gap-2">
+                💍 Clue 1: Bridal Wedding Ornament
+              </span>
+              <button onClick={() => setShowHaveliOrnamentModal(false)} className="text-amber-900 font-bold text-xs bg-amber-200/80 hover:bg-amber-300 px-2 py-0.5 rounded cursor-pointer">✕ Close</button>
             </div>
-            <p className="text-xs text-amber-950 leading-relaxed font-serif">Left behind in the village chief&apos;s haveli. Proves the forced marriage ultimatum by Prime Minister Salim Singh.</p>
-            <button onClick={() => setShowHaveliOrnamentModal(false)} className="bg-amber-600 text-white font-bold py-2 px-4 rounded-xl border-2 border-black text-xs uppercase cursor-pointer self-end">Add to Journal</button>
+            <div className="relative w-full h-48 rounded-xl overflow-hidden border-2 border-amber-900 shadow-md">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/clue-bridal-ornament.jpg" alt="Bridal Ornament" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-2.5">
+                <span className="text-amber-200 font-serif font-bold text-xs">💍 Village Chief&apos;s Haveli Evidence</span>
+                <span className="text-amber-400 text-[10px] uppercase font-mono">Forced Marriage Ultimatum</span>
+              </div>
+            </div>
+            <p className="text-xs text-amber-950 leading-relaxed font-serif bg-amber-100/90 border-l-4 border-amber-600 p-2.5 rounded italic">
+              &quot;Left behind in the village chief&apos;s haveli. Proves the forced marriage ultimatum by Prime Minister Salim Singh against the Paliwal daughter.&quot;
+            </p>
+            <button onClick={() => setShowHaveliOrnamentModal(false)} className="bg-amber-600 hover:bg-amber-700 text-white font-black py-2.5 px-5 rounded-xl border-2 border-black text-xs uppercase tracking-wider cursor-pointer self-end">
+              Add to Journal
+            </button>
           </div>
         </div>
       )}
 
       {showTaxLedgerModal && (
-        <div className="absolute inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center p-6 z-40 pointer-events-auto">
-          <div className="bg-[#fff9ea] border-4 border-amber-900 rounded-2xl p-6 shadow-[12px_12px_0_0_rgba(0,0,0,1)] max-w-lg w-full flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b-2 border-amber-800/30 pb-3">
-              <span className="text-sm font-extrabold text-amber-950 uppercase tracking-widest">📖 Clue 2: Torn Tax Ledger</span>
-              <button onClick={() => setShowTaxLedgerModal(false)} className="text-amber-900 font-bold text-sm bg-amber-200/60 px-2 py-0.5 rounded cursor-pointer">✕ Close</button>
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-40 pointer-events-auto">
+          <div className="bg-[#fff9ea] border-4 border-amber-900 rounded-2xl p-5 shadow-[12px_12px_0_0_rgba(0,0,0,1)] max-w-md w-full flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b-2 border-amber-800/30 pb-2">
+              <span className="text-sm font-black text-amber-950 uppercase tracking-wider flex items-center gap-2">
+                📖 Clue 2: Torn Tax Ledger (Extortion Record)
+              </span>
+              <button onClick={() => setShowTaxLedgerModal(false)} className="text-amber-900 font-bold text-xs bg-amber-200/80 hover:bg-amber-300 px-2 py-0.5 rounded cursor-pointer">✕ Close</button>
             </div>
-            <p className="text-xs text-amber-950 leading-relaxed font-serif">Found in the merchant treasury. Records quadrupled taxes and ruthless economic extortion.</p>
-            <button onClick={() => setShowTaxLedgerModal(false)} className="bg-amber-600 text-white font-bold py-2 px-4 rounded-xl border-2 border-black text-xs uppercase cursor-pointer self-end">Add to Journal</button>
+            <div className="relative w-full h-48 rounded-xl overflow-hidden border-2 border-amber-900 shadow-md">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/clue-torn-tax-ledger.jpg" alt="Torn Tax Ledger" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-2.5">
+                <span className="text-amber-200 font-serif font-bold text-xs">📜 Merchant Treasury Tax Ledger</span>
+                <span className="text-amber-400 text-[10px] uppercase font-mono">Quadrupled Taxes &amp; Economic Extortion</span>
+              </div>
+            </div>
+            <p className="text-xs text-amber-950 leading-relaxed font-serif bg-amber-100/90 border-l-4 border-amber-600 p-2.5 rounded italic">
+              &quot;Found in the merchant treasury. Records quadrupled taxes and ruthless economic extortion imposed by Salim Singh upon Kuldhara&apos;s merchants.&quot;
+            </p>
+            <button onClick={() => setShowTaxLedgerModal(false)} className="bg-amber-600 hover:bg-amber-700 text-white font-black py-2.5 px-5 rounded-xl border-2 border-black text-xs uppercase tracking-wider cursor-pointer self-end">
+              Add to Journal
+            </button>
           </div>
         </div>
       )}
 
       {showStepwellModal && (
-        <div className="absolute inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center p-6 z-40 pointer-events-auto">
-          <div className="bg-[#fff9ea] border-4 border-amber-900 rounded-2xl p-6 shadow-[12px_12px_0_0_rgba(0,0,0,1)] max-w-lg w-full flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b-2 border-amber-800/30 pb-3">
-              <span className="text-sm font-extrabold text-amber-950 uppercase tracking-widest">🏺 Clue 3: Intact Water Pots &amp; Supplies</span>
-              <button onClick={() => setShowStepwellModal(false)} className="text-amber-900 font-bold text-sm bg-amber-200/60 px-2 py-0.5 rounded cursor-pointer">✕ Close</button>
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-40 pointer-events-auto">
+          <div className="bg-[#fff9ea] border-4 border-amber-900 rounded-2xl p-5 shadow-[12px_12px_0_0_rgba(0,0,0,1)] max-w-md w-full flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b-2 border-amber-800/30 pb-2">
+              <span className="text-sm font-black text-amber-950 uppercase tracking-wider flex items-center gap-2">
+                🏺 Clue 3: Intact Water Pots &amp; Supplies
+              </span>
+              <button onClick={() => setShowStepwellModal(false)} className="text-amber-900 font-bold text-xs bg-amber-200/80 hover:bg-amber-300 px-2 py-0.5 rounded cursor-pointer">✕ Close</button>
             </div>
-            <p className="text-xs text-amber-950 leading-relaxed font-serif">Stacked neatly at the stepwell. Proves a secret, coordinated overnight evacuation in total unison.</p>
-            <button onClick={() => setShowStepwellModal(false)} className="bg-amber-600 text-white font-bold py-2 px-4 rounded-xl border-2 border-black text-xs uppercase cursor-pointer self-end">Add to Journal</button>
+            <div className="relative w-full h-48 rounded-xl overflow-hidden border-2 border-amber-900 shadow-md">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/clue-intact-water-pots.jpg" alt="Stepwell Supplies" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-2.5">
+                <span className="text-amber-200 font-serif font-bold text-xs">🏺 Kuldhara Stepwell Supplies</span>
+                <span className="text-amber-400 text-[10px] uppercase font-mono">Coordinated Overnight Evacuation</span>
+              </div>
+            </div>
+            <p className="text-xs text-amber-950 leading-relaxed font-serif bg-amber-100/90 border-l-4 border-amber-600 p-2.5 rounded italic">
+              &quot;Stacked neatly at the stepwell. Proves a secret, coordinated overnight evacuation in total unison across all 84 Paliwal Brahmin villages.&quot;
+            </p>
+            <button onClick={() => setShowStepwellModal(false)} className="bg-amber-600 hover:bg-amber-700 text-white font-black py-2.5 px-5 rounded-xl border-2 border-black text-xs uppercase tracking-wider cursor-pointer self-end">
+              Add to Journal
+            </button>
           </div>
         </div>
       )}
 
-      {/* Kuldhara Deduction Puzzle Modal */}
+
+
+      {/* --- STAGE 3 KULDHARA EVIDENCE BOARD & DEDUCTION PUZZLE MODAL --- */}
       {showDeductionModal && (
-        <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-6 z-40 pointer-events-auto">
-          <div className="bg-[#fff9ea] border-4 border-amber-950 rounded-2xl p-6 shadow-[16px_16px_0_0_rgba(0,0,0,1)] max-w-2xl w-full flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
+        <div className="absolute inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 z-50 pointer-events-auto">
+          <div className="bg-[#fff9ea] border-4 border-amber-950 rounded-3xl p-6 shadow-[16px_16px_0_0_rgba(0,0,0,1)] max-w-2xl w-full flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
+            {/* Header Bar */}
             <div className="flex items-center justify-between border-b-2 border-amber-800/40 pb-3">
-              <h3 className="font-extrabold text-amber-950 uppercase tracking-widest text-sm">🏛️ Kuldhara Memorial Chhatri — Evidence Deduction</h3>
-              <button onClick={() => setShowDeductionModal(false)} className="text-amber-950 font-bold text-xs px-2.5 py-1 rounded-lg border border-amber-800 cursor-pointer">✕ Close</button>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🏛️</span>
+                <div>
+                  <h3 className="font-extrabold text-amber-950 uppercase tracking-widest text-sm sm:text-base leading-tight">
+                    🧩 Memorial Chhatri: Evidence Board Puzzle
+                  </h3>
+                  <span className="text-[11px] font-serif text-amber-800 font-semibold italic">
+                    Piece together the 3 discovered clues to solve why Kuldhara was deserted overnight!
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowDeductionModal(false)}
+                className="text-amber-950 hover:bg-amber-200 font-bold text-xs px-3 py-1 rounded-lg border-2 border-amber-900 bg-amber-100 cursor-pointer shadow-sm"
+              >
+                ✕ Close Board
+              </button>
             </div>
-            <div className="flex flex-col gap-3 my-1">
-              <div className="bg-white border-2 border-amber-900/40 p-3 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                <span className="text-xs font-bold text-black uppercase">💍 1. Bridal Wedding Ornament</span>
-                <select value={deductionState.ornamentChoice || ""} onChange={(e) => setDeductionState((prev) => ({ ...prev, ornamentChoice: e.target.value }))} className="bg-amber-50 border-2 border-black rounded-lg text-xs font-bold p-2 text-amber-950 w-full sm:w-64">
-                  <option value="">Select Historical Meaning...</option>
-                  <option value="marriage">Salim Singh&apos;s Forced Marriage Ultimatum</option>
-                  <option value="plague">An Outbreak of Plague in the Desert</option>
+
+            {/* Clues Progress Bar */}
+            <div className="flex items-center justify-between bg-amber-100/90 border border-amber-400 p-2.5 rounded-xl text-xs font-bold text-amber-950">
+              <span>DISCOVERED EVIDENCE CLUES:</span>
+              <span className="bg-amber-600 text-white px-2.5 py-0.5 rounded-full border border-black font-mono">
+                {cluesFound}/3 Clues Found
+              </span>
+            </div>
+
+            {/* Interactive Evidence Matching Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Clue 1: Bridal Ornament */}
+              <div className={`border-2 rounded-xl p-3 flex flex-col gap-2 transition-all ${
+                hasWeddingOrnament ? "bg-amber-50/90 border-amber-800" : "bg-gray-100/60 border-gray-300 opacity-60"
+              }`}>
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-black text-amber-950 uppercase">💍 Bridal Ornament</span>
+                  {hasWeddingOrnament ? (
+                    <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold">FOUND</span>
+                  ) : (
+                    <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold">LOCKED</span>
+                  )}
+                </div>
+                <div className="relative w-full h-24 rounded-lg overflow-hidden border border-amber-900/50 bg-amber-200">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/clue-bridal-ornament.jpg" alt="Bridal Ornament" className="w-full h-full object-cover" />
+                </div>
+                <label className="text-[10px] font-bold text-amber-900 uppercase mt-1">Select Explanation:</label>
+                <select
+                  disabled={!hasWeddingOrnament}
+                  value={deductionState.ornamentChoice || ""}
+                  onChange={(e) => setDeductionState((prev) => ({ ...prev, ornamentChoice: e.target.value as any }))}
+                  className="w-full bg-white border border-amber-800 rounded p-1 text-xs font-serif font-bold text-amber-950 cursor-pointer disabled:bg-gray-200"
+                >
+                  <option value="">-- Choose Meaning --</option>
+                  <option value="marriage">1. Forced Marriage Ultimatum</option>
+                  <option value="extortion">2. Economic Tax Extortion</option>
+                  <option value="evacuation">3. Secret Overnight Evacuation</option>
                 </select>
               </div>
-              <div className="bg-white border-2 border-amber-900/40 p-3 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                <span className="text-xs font-bold text-black uppercase">📖 2. Torn Tax Ledger</span>
-                <select value={deductionState.ledgerChoice || ""} onChange={(e) => setDeductionState((prev) => ({ ...prev, ledgerChoice: e.target.value }))} className="bg-amber-50 border-2 border-black rounded-lg text-xs font-bold p-2 text-amber-950 w-full sm:w-64">
-                  <option value="">Select Historical Meaning...</option>
-                  <option value="extortion">Oppressive Extortion &amp; Economic Ruin</option>
-                  <option value="trade">Routine Annual Market Accounting</option>
+
+              {/* Clue 2: Torn Tax Ledger */}
+              <div className={`border-2 rounded-xl p-3 flex flex-col gap-2 transition-all ${
+                hasTaxLedger ? "bg-amber-50/90 border-amber-800" : "bg-gray-100/60 border-gray-300 opacity-60"
+              }`}>
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-black text-amber-950 uppercase">📖 Torn Tax Ledger</span>
+                  {hasTaxLedger ? (
+                    <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold">FOUND</span>
+                  ) : (
+                    <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold">LOCKED</span>
+                  )}
+                </div>
+                <div className="relative w-full h-24 rounded-lg overflow-hidden border border-amber-900/50 bg-amber-200">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/clue-torn-tax-ledger.jpg" alt="Torn Tax Ledger" className="w-full h-full object-cover" />
+                </div>
+                <label className="text-[10px] font-bold text-amber-900 uppercase mt-1">Select Explanation:</label>
+                <select
+                  disabled={!hasTaxLedger}
+                  value={deductionState.ledgerChoice || ""}
+                  onChange={(e) => setDeductionState((prev) => ({ ...prev, ledgerChoice: e.target.value as any }))}
+                  className="w-full bg-white border border-amber-800 rounded p-1 text-xs font-serif font-bold text-amber-950 cursor-pointer disabled:bg-gray-200"
+                >
+                  <option value="">-- Choose Meaning --</option>
+                  <option value="marriage">1. Forced Marriage Ultimatum</option>
+                  <option value="extortion">2. Quadrupled Tax Extortion</option>
+                  <option value="evacuation">3. Secret Overnight Evacuation</option>
                 </select>
               </div>
-              <div className="bg-white border-2 border-amber-900/40 p-3 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                <span className="text-xs font-bold text-black uppercase">🏺 3. Intact Water Pots &amp; Supplies</span>
-                <select value={deductionState.suppliesChoice || ""} onChange={(e) => setDeductionState((prev) => ({ ...prev, suppliesChoice: e.target.value }))} className="bg-amber-50 border-2 border-black rounded-lg text-xs font-bold p-2 text-amber-950 w-full sm:w-64">
-                  <option value="">Select Historical Meaning...</option>
-                  <option value="evacuation">Secret Coordinated Overnight Evacuation</option>
-                  <option value="panic">Panic Fleeing during Earthquake</option>
+
+              {/* Clue 3: Intact Water Pots */}
+              <div className={`border-2 rounded-xl p-3 flex flex-col gap-2 transition-all ${
+                hasWaterPotsSupplies ? "bg-amber-50/90 border-amber-800" : "bg-gray-100/60 border-gray-300 opacity-60"
+              }`}>
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-black text-amber-950 uppercase">🏺 Intact Water Pots</span>
+                  {hasWaterPotsSupplies ? (
+                    <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold">FOUND</span>
+                  ) : (
+                    <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold">LOCKED</span>
+                  )}
+                </div>
+                <div className="relative w-full h-24 rounded-lg overflow-hidden border border-amber-900/50 bg-amber-200">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/clue-intact-water-pots.jpg" alt="Stepwell Water Pots" className="w-full h-full object-cover" />
+                </div>
+                <label className="text-[10px] font-bold text-amber-900 uppercase mt-1">Select Explanation:</label>
+                <select
+                  disabled={!hasWaterPotsSupplies}
+                  value={deductionState.suppliesChoice || ""}
+                  onChange={(e) => setDeductionState((prev) => ({ ...prev, suppliesChoice: e.target.value as any }))}
+                  className="w-full bg-white border border-amber-800 rounded p-1 text-xs font-serif font-bold text-amber-950 cursor-pointer disabled:bg-gray-200"
+                >
+                  <option value="">-- Choose Meaning --</option>
+                  <option value="marriage">1. Forced Marriage Ultimatum</option>
+                  <option value="extortion">2. Economic Tax Extortion</option>
+                  <option value="evacuation">3. Coordinated Overnight Evacuation</option>
                 </select>
               </div>
             </div>
-            {deductionFeedback && <div className="bg-amber-900/10 border-2 border-amber-600 p-2.5 rounded-xl text-center text-xs font-bold text-amber-950">{deductionFeedback}</div>}
-            <button onClick={handleEvaluateDeduction} className="bg-amber-600 hover:bg-amber-700 text-white font-extrabold py-2.5 px-6 rounded-xl border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-xs uppercase tracking-wider cursor-pointer self-end">
-              Submit Historical Deduction
+
+            {/* Feedback Banner */}
+            {deductionFeedback && (
+              <div className="bg-red-100 border-l-4 border-red-600 p-2.5 rounded text-xs font-serif font-bold text-red-950 text-center animate-pulse">
+                {deductionFeedback}
+              </div>
+            )}
+
+            {/* Action Submit Button */}
+            <button
+              onClick={handleEvaluateDeduction}
+              className="w-full bg-amber-600 hover:bg-amber-700 text-white font-black py-3.5 px-4 rounded-xl border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-xs uppercase tracking-widest cursor-pointer transition-all active:translate-y-0.5"
+            >
+              📜 Submit Historical Deduction
             </button>
           </div>
         </div>
@@ -2106,202 +2739,7 @@ export default function RajasthanGameScreen() {
         </div>
       )}
 
-      {/* --- STAGE 4 PUZZLE 2: TORCHLIGHT RELIEF RESTORATION (GOPINATH TEMPLE) --- */}
-      {showTorchlightRestorationModal && (
-        <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-6 z-40 pointer-events-auto">
-          <div className="bg-[#fff9ea] border-4 border-amber-950 rounded-2xl p-6 shadow-[16px_16px_0_0_rgba(0,0,0,1)] max-w-2xl w-full flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b-2 border-amber-800/40 pb-3">
-              <div>
-                <h3 className="font-extrabold text-amber-950 uppercase tracking-widest text-sm">🪔 Puzzle 2: Torchlight Reveal &amp; Nagara Symbol Decoding</h3>
-                <span className="text-[11px] text-amber-800 font-semibold">Illuminate the carved temple sanctuary and match each motif to its civic significance</span>
-              </div>
-              <button onClick={() => setShowTorchlightRestorationModal(false)} className="text-amber-950 font-bold text-xs px-2.5 py-1 rounded-lg border border-amber-800 cursor-pointer">✕ Close</button>
-            </div>
 
-            <div className="flex flex-col gap-3 my-1">
-              <div className="bg-white border-2 border-amber-900/40 p-3 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                <div>
-                  <span className="text-xs font-bold text-black uppercase">🐘 1. Gaja-Lakshmi Bas-Relief</span>
-                  <p className="text-[11px] text-gray-600">Carved over the central lintel with flanking royal elephants.</p>
-                </div>
-                <select value={templeSymbolMatches.gajalakshmi || ""} onChange={(e) => setTempleSymbolMatches((prev) => ({ ...prev, gajalakshmi: e.target.value }))} className="bg-amber-50 border-2 border-black rounded-lg text-xs font-bold p-2 text-amber-950 w-full sm:w-64 cursor-pointer">
-                  <option value="">Select Architectural Meaning...</option>
-                  <option value="sovereignty">Royal Sovereignty &amp; Auspicious Governance</option>
-                  <option value="curse">Warning of an Ascetic&apos;s Curse</option>
-                </select>
-              </div>
-
-              <div className="bg-white border-2 border-amber-900/40 p-3 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                <div>
-                  <span className="text-xs font-bold text-black uppercase">🏺 2. Kalasa &amp; Shikhara Spire</span>
-                  <p className="text-[11px] text-gray-600">Golden pot finial crowning the stone mandapa roof.</p>
-                </div>
-                <select value={templeSymbolMatches.kalasa || ""} onChange={(e) => setTempleSymbolMatches((prev) => ({ ...prev, kalasa: e.target.value }))} className="bg-amber-50 border-2 border-black rounded-lg text-xs font-bold p-2 text-amber-950 w-full sm:w-64 cursor-pointer">
-                  <option value="">Select Architectural Meaning...</option>
-                  <option value="consecration">Sacred Consecration &amp; Civic Flourishing</option>
-                  <option value="ruin">Mark of an Incomplete Building</option>
-                </select>
-              </div>
-
-              <div className="bg-white border-2 border-amber-900/40 p-3 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                <div>
-                  <span className="text-xs font-bold text-black uppercase">🦁 3. Kirthimukha Face of Glory</span>
-                  <p className="text-[11px] text-gray-600">Fierce lion-face sculpted at the sanctum threshold.</p>
-                </div>
-                <select value={templeSymbolMatches.kirthimukha || ""} onChange={(e) => setTempleSymbolMatches((prev) => ({ ...prev, kirthimukha: e.target.value }))} className="bg-amber-50 border-2 border-black rounded-lg text-xs font-bold p-2 text-amber-950 w-full sm:w-64 cursor-pointer">
-                  <option value="">Select Architectural Meaning...</option>
-                  <option value="guardian">Spiritual Guardian of the Temple Threshold</option>
-                  <option value="monster">Demon Summoned to Haunt the Fort</option>
-                </select>
-              </div>
-            </div>
-
-            {templePuzzleFeedback && <div className="bg-amber-900/10 border-2 border-amber-600 p-2 rounded-xl text-center text-xs font-bold text-amber-950">{templePuzzleFeedback}</div>}
-
-            <button onClick={handleVerifyTemplePuzzle} className="bg-amber-600 hover:bg-amber-700 text-white font-extrabold py-2.5 px-6 rounded-xl border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-xs uppercase tracking-wider cursor-pointer self-end">
-              Submit Sacred Temple Decoding
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* --- STAGE 4 PUZZLE 3: PALACE STRATUM (1783 CE FAMINE LAYER) MODAL --- */}
-      {showRuinsClueTrailModal && (
-        <div className="absolute inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center p-6 z-40 pointer-events-auto">
-          <div className="bg-[#fff9ea] border-4 border-amber-900 rounded-2xl p-6 shadow-[12px_12px_0_0_rgba(0,0,0,1)] max-w-lg w-full flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b-2 border-amber-800/30 pb-3">
-              <span className="text-sm font-extrabold text-amber-950 uppercase tracking-widest flex items-center gap-2">
-                <span>🔍</span> Clue 3: Archaeological Stratum (1783 CE)
-              </span>
-              <button onClick={() => setShowRuinsClueTrailModal(false)} className="text-amber-900 font-bold text-sm bg-amber-200/60 px-2 py-0.5 rounded cursor-pointer">✕ Close</button>
-            </div>
-            <div className="text-amber-950 font-serif text-xs leading-relaxed space-y-3">
-              <p>You examine the fallen stone archive and subterranean granaries of the 7-story Royal Palace:</p>
-              <div className="bg-amber-100 border-l-4 border-amber-700 p-3 italic text-xs leading-relaxed">
-                &quot;Excavation records reveal scorched granary strata and dried reservoir silt dating to the catastrophic <strong>1783 CE Chalisa Famine</strong>. Consecutive monsoon failures and regional wars with Jaipur rulers caused complete depopulation.&quot;
-              </div>
-              <p className="font-bold text-emerald-800">✓ Recorded Evidence: The True Cause of Abandonment (Famines &amp; Economic Ruin)</p>
-            </div>
-            <button onClick={() => { setHasFamineRecordClue(true); setShowRuinsClueTrailModal(false); }} className="bg-amber-600 text-white font-bold py-2.5 px-4 rounded-xl border-2 border-black text-xs uppercase cursor-pointer self-end">
-              Add to Archaeological Journal
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* --- STAGE 4 PUZZLE 4: FOLKLORE VS HISTORICAL EVIDENCE CLASSIFIER --- */}
-      {showFolkloreClassifierModal && (
-        <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-6 z-40 pointer-events-auto">
-          <div className="bg-[#fff9ea] border-4 border-amber-950 rounded-2xl p-6 shadow-[16px_16px_0_0_rgba(0,0,0,1)] max-w-2xl w-full flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b-2 border-amber-800/40 pb-3">
-              <div>
-                <h3 className="font-extrabold text-amber-950 uppercase tracking-widest text-sm">⚖️ Puzzle 4: Distinguish Evidence from Folklore</h3>
-                <span className="text-[11px] text-amber-800 font-semibold">Categorize each historical account into Documented Fact vs. Oral Legend</span>
-              </div>
-              <button onClick={() => setShowFolkloreClassifierModal(false)} className="text-amber-950 font-bold text-xs px-2.5 py-1 rounded-lg border border-amber-800 cursor-pointer">✕ Close</button>
-            </div>
-
-            <div className="flex flex-col gap-2.5 my-1">
-              {[
-                { id: "statement1", text: "Founded in 1573 CE by Amber Kachwaha Rajput rulers as a thriving trade hub." },
-                { id: "statement2", text: "A tantrik wizard's dying curse darkened the sky and crushed all roofs forever." },
-                { id: "statement3", text: "Depopulated during the 1783 CE Chalisa drought and regional conflicts." },
-                { id: "statement4", text: "An ascetic's hermitage shadow was breached by palace towers, bringing destruction." },
-              ].map((item) => (
-                <div key={item.id} className="bg-white border-2 border-amber-900/40 p-3 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                  <p className="text-xs font-serif text-amber-950 font-semibold flex-1 pr-2">{item.text}</p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setFolkloreClassification((prev) => ({ ...prev, [item.id]: "evidence" }))}
-                      className={`px-3 py-1.5 rounded-lg border-2 text-[11px] font-bold cursor-pointer transition-all ${
-                        folkloreClassification[item.id] === "evidence"
-                          ? "bg-emerald-600 text-white border-black shadow-sm"
-                          : "bg-gray-100 hover:bg-emerald-50 text-gray-800 border-gray-400"
-                      }`}
-                    >
-                      📜 Historical Evidence
-                    </button>
-                    <button
-                      onClick={() => setFolkloreClassification((prev) => ({ ...prev, [item.id]: "folklore" }))}
-                      className={`px-3 py-1.5 rounded-lg border-2 text-[11px] font-bold cursor-pointer transition-all ${
-                        folkloreClassification[item.id] === "folklore"
-                          ? "bg-purple-600 text-white border-black shadow-sm"
-                          : "bg-gray-100 hover:bg-purple-50 text-gray-800 border-gray-400"
-                      }`}
-                    >
-                      🔮 Oral Folklore
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {folkloreFeedback && <div className="bg-amber-900/10 border-2 border-amber-600 p-2 rounded-xl text-center text-xs font-bold text-amber-950">{folkloreFeedback}</div>}
-
-            <button onClick={handleVerifyFolkloreClassifier} className="bg-amber-600 hover:bg-amber-700 text-white font-extrabold py-2.5 px-6 rounded-xl border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-xs uppercase tracking-wider cursor-pointer self-end">
-              Verify Evidence Classification
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* --- STAGE 4 PUZZLE 5: FINAL EVIDENCE BOARD SYNTHESIS (GRAND CLIMAX) --- */}
-      {showFinalEvidenceBoardModal && (
-        <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-6 z-50 pointer-events-auto">
-          <div className="bg-[#fff9ea] border-4 border-amber-950 rounded-2xl p-6 shadow-[16px_16px_0_0_rgba(0,0,0,1)] max-w-2xl w-full flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b-2 border-amber-800/40 pb-3">
-              <div>
-                <h3 className="font-extrabold text-amber-950 uppercase tracking-widest text-sm">👑 Final Evidence Board: The Historical Truth of Bhangarh</h3>
-                <span className="text-[11px] text-amber-800 font-semibold">Synthesize your investigative discoveries to unlock the complete chronicle</span>
-              </div>
-              <button onClick={() => setShowFinalEvidenceBoardModal(false)} className="text-amber-950 font-bold text-xs px-2.5 py-1 rounded-lg border border-amber-800 cursor-pointer">✕ Close</button>
-            </div>
-
-            {/* Checklist */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-amber-100 p-2.5 rounded-xl border border-amber-300 text-[11px] font-bold text-amber-950 text-center">
-              <div>1. Foundation: {hasBhangarhChronicleClue ? "✓ Decoded" : "✗ Missing"}</div>
-              <div>2. Temple Art: {hasTempleArchitectureClue ? "✓ Decoded" : "✗ Missing"}</div>
-              <div>3. Famine Stratum: {hasFamineRecordClue ? "✓ Found" : "✗ Missing"}</div>
-              <div>4. Folklore: {hasFolkloreDistinctionClue ? "✓ Classified" : "✗ Missing"}</div>
-            </div>
-
-            <div className="flex flex-col gap-3 my-1">
-              <div className="bg-white border-2 border-amber-900/40 p-3 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                <span className="text-xs font-bold text-black uppercase">🏛️ 1. Origin &amp; Architecture:</span>
-                <select value={finalBoardMatches.origin || ""} onChange={(e) => setFinalBoardMatches((prev) => ({ ...prev, origin: e.target.value }))} className="bg-amber-50 border-2 border-black rounded-lg text-xs font-bold p-2 text-amber-950 w-full sm:w-72 cursor-pointer">
-                  <option value="">Select Historical Synthesis...</option>
-                  <option value="amber_capital">Thriving 16th-century Amber Rajput provincial capital</option>
-                  <option value="cursed_dungeon">A haunted citadel built specifically as a dungeon</option>
-                </select>
-              </div>
-
-              <div className="bg-white border-2 border-amber-900/40 p-3 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                <span className="text-xs font-bold text-black uppercase">⚔️ 2. True Cause of Abandonment:</span>
-                <select value={finalBoardMatches.decline || ""} onChange={(e) => setFinalBoardMatches((prev) => ({ ...prev, decline: e.target.value }))} className="bg-amber-50 border-2 border-black rounded-lg text-xs font-bold p-2 text-amber-950 w-full sm:w-72 cursor-pointer">
-                  <option value="">Select Historical Synthesis...</option>
-                  <option value="famine_warfare">1783 CE Chalisa Famine, economic collapse &amp; territorial warfare</option>
-                  <option value="supernatural_spell">Supernatural spell cast during a solar eclipse</option>
-                </select>
-              </div>
-
-              <div className="bg-white border-2 border-amber-900/40 p-3 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                <span className="text-xs font-bold text-black uppercase">📜 3. The Role of Ghost Stories:</span>
-                <select value={finalBoardMatches.legends || ""} onChange={(e) => setFinalBoardMatches((prev) => ({ ...prev, legends: e.target.value }))} className="bg-amber-50 border-2 border-black rounded-lg text-xs font-bold p-2 text-amber-950 w-full sm:w-72 cursor-pointer">
-                  <option value="">Select Historical Synthesis...</option>
-                  <option value="cultural_memory">Folklore created culturally to explain the sudden silence of a great city</option>
-                  <option value="scientific_fact">Scientific proof of supernatural hauntings</option>
-                </select>
-              </div>
-            </div>
-
-            {finalBoardFeedback && <div className="bg-amber-900/10 border-2 border-amber-600 p-2 rounded-xl text-center text-xs font-bold text-amber-950">{finalBoardFeedback}</div>}
-
-            <button onClick={handleVerifyFinalBoard} className="bg-amber-600 hover:bg-amber-700 text-white font-extrabold py-3 px-6 rounded-xl border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-xs uppercase tracking-wider cursor-pointer self-end">
-              Unlock the Final Rajasthan Chronicle
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* --- GRAND RAJASTHAN CAMPAIGN COMPLETE MODAL (THE FINAL VICTORY) --- */}
       {showGrandCampaignCompleteModal && (
@@ -2353,6 +2791,200 @@ export default function RajasthanGameScreen() {
                 Return to Dashboard
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- STAGE 4 ARTIFACT MODAL 1: KATHPUTLI FRAGMENT --- */}
+      {showKathputliModal && (
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 pointer-events-auto">
+          <div className="bg-[#fff9ea] border-4 border-amber-900 rounded-2xl p-5 shadow-[12px_12px_0_0_rgba(0,0,0,1)] max-w-md w-full flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b-2 border-amber-800/30 pb-2">
+              <span className="text-sm font-black text-amber-950 uppercase tracking-wider flex items-center gap-2">
+                🎭 Kathputli Fragment (Jaisalmer)
+              </span>
+              <button onClick={() => {
+                setShowKathputliModal(false);
+                if (hasKathputliFragment && hasPaliwalSeal && hasWanderersVerse) {
+                  setHasShield(true);
+                  setShowShieldModal(true);
+                }
+              }} className="text-amber-900 font-bold text-xs bg-amber-200/80 hover:bg-amber-300 px-2 py-0.5 rounded cursor-pointer">✕ Close</button>
+            </div>
+            <div className="relative w-full h-56 rounded-xl overflow-hidden border-2 border-amber-900 shadow-md">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/artifact-kathputli-fragment.jpg" alt="Kathputli Fragment" className="w-full h-full object-cover" />
+            </div>
+            <div className="bg-amber-100/90 border-l-4 border-amber-600 p-2.5 rounded text-xs text-amber-950 leading-relaxed italic">
+              &quot;Even in the desert, stories find a way to dance. A sandstone fragment symbolizing the tradition of storytelling, resilience and joy that keeps Rajputana&apos;s heritage alive.&quot;
+            </div>
+            <button onClick={() => {
+              setShowKathputliModal(false);
+              if (hasKathputliFragment && hasPaliwalSeal && hasWanderersVerse) {
+                setHasShield(true);
+                setShowShieldModal(true);
+              }
+            }} className="bg-amber-600 hover:bg-amber-700 text-white font-black py-2.5 px-5 rounded-xl border-2 border-black text-xs uppercase tracking-wider cursor-pointer self-end">
+              Add to Collection
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* --- STAGE 4 ARTIFACT MODAL 2: PALIWAL LEDGER SEAL --- */}
+      {showPaliwalSealModal && (
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 pointer-events-auto">
+          <div className="bg-[#fff9ea] border-4 border-amber-900 rounded-2xl p-5 shadow-[12px_12px_0_0_rgba(0,0,0,1)] max-w-md w-full flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b-2 border-amber-800/30 pb-2">
+              <span className="text-sm font-black text-amber-950 uppercase tracking-wider flex items-center gap-2">
+                🐎 Paliwal Ledger Seal (Horse Seal)
+              </span>
+              <button onClick={() => {
+                setShowPaliwalSealModal(false);
+                if (hasKathputliFragment && hasPaliwalSeal && hasWanderersVerse) {
+                  setHasShield(true);
+                  setShowShieldModal(true);
+                }
+              }} className="text-amber-900 font-bold text-xs bg-amber-200/80 hover:bg-amber-300 px-2 py-0.5 rounded cursor-pointer">✕ Close</button>
+            </div>
+            <div className="relative w-full h-56 rounded-xl overflow-hidden border-2 border-amber-900 shadow-md">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/artifact-paliwal-ledger-seal.jpg" alt="Paliwal Ledger Seal" className="w-full h-full object-cover" />
+            </div>
+            <div className="bg-amber-100/90 border-l-4 border-amber-600 p-2.5 rounded text-xs text-amber-950 leading-relaxed italic">
+              &quot;They left behind empty homes, but a fuller history. A seal fragment from Kuldhara symbolizing administrative acumen, economic strength, and dignity.&quot;
+            </div>
+            <button onClick={() => {
+              setShowPaliwalSealModal(false);
+              if (hasKathputliFragment && hasPaliwalSeal && hasWanderersVerse) {
+                setHasShield(true);
+                setShowShieldModal(true);
+              }
+            }} className="bg-amber-600 hover:bg-amber-700 text-white font-black py-2.5 px-5 rounded-xl border-2 border-black text-xs uppercase tracking-wider cursor-pointer self-end">
+              Add to Collection
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* --- STAGE 4 ARTIFACT MODAL 3: WANDERER'S VERSE --- */}
+      {showWanderersVerseModal && (
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 pointer-events-auto">
+          <div className="bg-[#fff9ea] border-4 border-amber-900 rounded-2xl p-5 shadow-[12px_12px_0_0_rgba(0,0,0,1)] max-w-md w-full flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b-2 border-amber-800/30 pb-2">
+              <span className="text-sm font-black text-amber-950 uppercase tracking-wider flex items-center gap-2">
+                🦌 Wanderer&apos;s Verse (Antelope Medallion)
+              </span>
+              <button onClick={() => {
+                setShowWanderersVerseModal(false);
+                if (hasKathputliFragment && hasPaliwalSeal && hasWanderersVerse) {
+                  setHasShield(true);
+                  setShowShieldModal(true);
+                }
+              }} className="text-amber-900 font-bold text-xs bg-amber-200/80 hover:bg-amber-300 px-2 py-0.5 rounded cursor-pointer">✕ Close</button>
+            </div>
+            <div className="relative w-full h-56 rounded-xl overflow-hidden border-2 border-amber-900 shadow-md">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/artifact-wanderers-verse.jpg" alt="Wanderer's Verse" className="w-full h-full object-cover" />
+            </div>
+            <div className="bg-amber-100/90 border-l-4 border-amber-600 p-2.5 rounded text-xs text-amber-950 leading-relaxed italic">
+              &quot;Some paths are lost, but their stories never stop walking. A fragment inspired by Bhangarh symbolizing freedom, grace, and resilience.&quot;
+            </div>
+            <button onClick={() => {
+              setShowWanderersVerseModal(false);
+              if (hasKathputliFragment && hasPaliwalSeal && hasWanderersVerse) {
+                setHasShield(true);
+                setShowShieldModal(true);
+              }
+            }} className="bg-amber-600 hover:bg-amber-700 text-white font-black py-2.5 px-5 rounded-xl border-2 border-black text-xs uppercase tracking-wider cursor-pointer self-end">
+              Add to Collection
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* --- STAGE 4 SHIELD UNLOCK & GAME COMPLETE MODAL --- */}
+      {showShieldModal && (
+        <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-50 pointer-events-auto">
+          <div className="bg-[#fff9ea] border-4 border-amber-900 rounded-2xl p-6 shadow-[14px_14px_0_0_rgba(0,0,0,1)] max-w-md w-full flex flex-col gap-4 text-center animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-20 h-20 bg-gradient-to-br from-amber-300 via-yellow-400 to-amber-600 border-4 border-amber-950 rounded-full flex items-center justify-center mx-auto text-4xl shadow-[0_0_20px_rgba(245,158,11,0.6)] animate-bounce">
+              🛡️
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-[11px] font-black text-amber-800 uppercase tracking-widest bg-amber-200/70 py-0.5 px-3 rounded-full border border-amber-400 self-center">
+                ★ LEGENDARY ITEM UNLOCKED ★
+              </span>
+              <h2 className="text-xl sm:text-2xl font-serif text-amber-950 font-black tracking-wide uppercase">
+                Royal Shield of Rajputana
+              </h2>
+            </div>
+            <div className="relative w-full h-48 rounded-xl overflow-hidden border-2 border-amber-900 shadow-md bg-gradient-to-b from-amber-950 via-amber-900 to-black flex flex-col items-center justify-center p-4">
+              <div className="text-6xl drop-shadow-[0_4px_12px_rgba(255,215,0,0.8)] animate-pulse">🛡️</div>
+              <div className="mt-2 text-amber-200 font-serif text-sm font-bold tracking-wider uppercase">ROYAL KAVACH OF BHANGARH</div>
+              <div className="text-amber-400 text-[10px] uppercase tracking-widest font-sans mt-0.5 font-bold">Forged in Rajput Honor • Curse Lifted</div>
+            </div>
+            <div className="bg-amber-100/90 border-l-4 border-amber-600 p-3 rounded text-xs text-amber-950 leading-relaxed italic text-left font-serif">
+              &quot;By gathering all 3 ancient artifact fragments within 2 minutes inside Bhangarh Fort, you have unlocked the legendary Royal Shield of Rajputana! You have broken the darkness and completed the entire game!&quot;
+            </div>
+            <button
+              onClick={() => {
+                setShowShieldModal(false);
+                setIsCampaignComplete(true);
+                setShowGrandCampaignCompleteModal(true);
+                soundFx.playClueChime();
+              }}
+              className="w-full bg-amber-600 hover:bg-amber-700 text-white font-black py-3.5 px-4 rounded-xl border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-xs uppercase tracking-widest cursor-pointer transition-all active:translate-y-0.5"
+            >
+              🏆 Claim Shield & Complete Game
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* --- KULDHARA 2-MIN CHALLENGE TIMEOUT MODAL --- */}
+      {showKuldharaTimeOutModal && (
+        <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-6 z-50 pointer-events-auto">
+          <div className="bg-[#fff9ea] border-4 border-red-900 rounded-2xl p-6 shadow-[14px_14px_0_0_rgba(0,0,0,1)] max-w-md w-full flex flex-col gap-4 text-center animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 bg-red-100 border-2 border-red-600 rounded-full flex items-center justify-center mx-auto text-3xl animate-bounce">
+              ⏳
+            </div>
+            <div className="flex flex-col gap-1">
+              <h2 className="text-xl font-black text-red-950 uppercase tracking-wide">2-Minute Time Expired!</h2>
+              <p className="text-xs font-semibold text-red-800 uppercase tracking-widest">Kuldhara Challenge Failed</p>
+            </div>
+            <div className="bg-red-50 border-2 border-red-200 rounded-xl p-3.5 text-xs text-red-950 leading-relaxed text-left font-serif">
+              You failed to discover all 3 evidence clues and solve the Kuldhara mystery within 2 minutes! You have been returned to the entrance gate of Kuldhara.
+            </div>
+            <button
+              onClick={handleRestartKuldhara}
+              className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-3 px-4 rounded-xl border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-xs uppercase tracking-widest cursor-pointer transition-all active:translate-y-0.5"
+            >
+              🔄 Try Again (Restart Kuldhara)
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* --- BHANGARH 2-MIN CHALLENGE TIMEOUT MODAL --- */}
+      {showBhangarhTimeOutModal && (
+        <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-6 z-50 pointer-events-auto">
+          <div className="bg-[#fff9ea] border-4 border-red-900 rounded-2xl p-6 shadow-[14px_14px_0_0_rgba(0,0,0,1)] max-w-md w-full flex flex-col gap-4 text-center animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 bg-red-100 border-2 border-red-600 rounded-full flex items-center justify-center mx-auto text-3xl animate-bounce">
+              ⏳
+            </div>
+            <div className="flex flex-col gap-1">
+              <h2 className="text-xl font-black text-red-950 uppercase tracking-wide">2-Minute Time Expired!</h2>
+              <p className="text-xs font-semibold text-red-800 uppercase tracking-widest">Bhangarh Challenge Failed</p>
+            </div>
+            <div className="bg-red-50 border-2 border-red-200 rounded-xl p-3.5 text-xs text-red-950 leading-relaxed text-left font-serif">
+              You failed to discover all 3 ancient artifact fragments within 2 minutes! The eerie night shadows overtake you. You have been returned to the entrance gate of Bhangarh Fort.
+            </div>
+            <button
+              onClick={handleRestartBhangarhFort}
+              className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-3 px-4 rounded-xl border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-xs uppercase tracking-widest cursor-pointer transition-all active:translate-y-0.5"
+            >
+              🔄 Try Again (Restart Bhangarh Fort)
+            </button>
           </div>
         </div>
       )}

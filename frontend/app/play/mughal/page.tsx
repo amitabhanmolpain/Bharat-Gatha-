@@ -2889,24 +2889,28 @@ export default function MughalGameScreen() {
           </div>
         </div>
 
-        {/* Interactive Dynamic Clues Box */}
+        {/* Interactive Dynamic Clues Box Card (Exact Rajasthan Style) */}
         <div 
           onClick={() => setShowCluesModal(true)}
-          className="bg-[#fff9ea] hover:bg-[#fff2cc] border-2 border-black rounded-lg px-4 py-2 w-max shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex items-center gap-3 cursor-pointer transition-all active:translate-y-0.5 active:shadow-[1px_1px_0_0_rgba(0,0,0,1)] group"
+          className="bg-[#fff9ea] hover:bg-[#fff2cc] border-2 border-black rounded-lg px-3 py-1.5 w-64 shadow-[3px_3px_0_0_rgba(0,0,0,1)] flex items-center justify-between cursor-pointer transition-all active:translate-y-0.5 active:shadow-[1px_1px_0_0_rgba(0,0,0,1)] group"
           title="Click to inspect discovered historical clues"
         >
-          <svg className="w-4 h-4 text-amber-600 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-          <div className="flex gap-1">
-            {MUGHAL_HISTORICAL_CLUES.map((clue) => (
-              <div 
-                key={clue.id}
-                className={`w-3.5 h-1.5 rounded-sm transition-all ${
-                  discoveredClueIds.includes(clue.id) ? "bg-amber-500 shadow-sm" : "bg-amber-200"
-                }`}
-              ></div>
-            ))}
+          <div className="flex items-center gap-2">
+            <svg className="w-4 h-4 text-amber-700 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+            <div className="flex gap-1">
+              {MUGHAL_HISTORICAL_CLUES.map((clue) => (
+                <div 
+                  key={clue.id}
+                  className={`w-3.5 h-1.5 rounded-sm transition-all ${
+                    discoveredClueIds.includes(clue.id) ? "bg-amber-500 shadow-sm" : "bg-amber-200"
+                  }`}
+                ></div>
+              ))}
+            </div>
           </div>
-          <span className="text-[12px] font-extrabold text-black flex items-center gap-1.5">
+          <span className="text-[12px] font-extrabold text-black flex items-center gap-1">
             {discoveredClueIds.length}/{MUGHAL_HISTORICAL_CLUES.length} clues
             <span className="text-[10px] text-amber-700 underline font-bold group-hover:text-black">open</span>
           </span>
