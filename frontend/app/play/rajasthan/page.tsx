@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { soundFx } from "../../../services/soundService";
 
 export type RajasthanStage = 1 | 2 | 3 | 4;
 
@@ -52,6 +53,19 @@ export default function RajasthanGameScreen() {
   const [facingLeft, setFacingLeft] = useState(false);
   const [isWalking, setIsWalking] = useState(false);
   const [walkPhase, setWalkPhase] = useState(0);
+
+  // --- UNIFIED MUGHAL HUD & AUDIO CONTROL STATE ---
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [isTimerVisible, setIsTimerVisible] = useState(false);
+  const [isMusicMuted, setIsMusicMuted] = useState(false);
+  const [isSoundMuted, setIsSoundMuted] = useState(false);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setElapsedSeconds((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // --- STAGE 1 STATE (Chittorgarh) ---
   const [showChachaDialogue, setShowChachaDialogue] = useState(false);
@@ -1455,75 +1469,68 @@ export default function RajasthanGameScreen() {
         }`}
       />
 
-      {/* --- TOP LEFT HUD CARDS --- */}
-      {/* --- TOP LEFT HUD CARDS (EXACT MUGHAL ENGINE FORMAT: IMAGE 2) --- */}
+      {/* --- TOP LEFT HUD CARDS (EXACT MUGHAL ENGINE FORMAT) --- */}
       <div className="absolute top-6 left-6 z-20 flex flex-col gap-2.5">
         {/* Objective / Location Card */}
-        <div className="bg-[#fff9ea] border-2 border-black rounded-lg p-3 w-80 shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
-          <div className="text-[10px] font-extrabold text-amber-800 uppercase tracking-widest mb-0.5">
+        <div className="bg-[#fff9ea] border-2 border-black rounded-xl p-3.5 w-80 shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
+          <div className="text-[10px] font-extrabold text-amber-800 uppercase tracking-widest mb-1">
             {stage === 1
               ? "RAJASTHAN - CHITTORGARH FORT"
               : stage === 2
               ? "RAJASTHAN - KUMBHALGARH FORT"
               : stage === 3
               ? "RAJASTHAN - KULDHARA GHOST VILLAGE"
-              : "RAJASTHAN - BHANGARH FORT (STAGE 4 - FINAL)"}
+              : "RAJASTHAN - BHANGARH FORT (STAGE 4)"}
           </div>
           <div className="text-[13px] font-black text-black leading-snug">
             {getSceneInstruction()}
           </div>
         </div>
 
-        {/* Clues Counter Card */}
-        <div className="bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 w-64 shadow-[3px_3px_0_0_rgba(0,0,0,1)] flex items-center justify-between">
+        {/* Clues Counter Card (Exact Mughal Pill Style: Image 2) */}
+        <div className="bg-[#fff9ea] border-2 border-black rounded-full px-3.5 py-1.5 w-fit min-w-[210px] shadow-[3px_3px_0_0_rgba(0,0,0,1)] flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <svg className="w-4 h-4 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <svg className="w-4 h-4 text-amber-700 font-bold" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
             </svg>
-            <div className="flex gap-1">
-              <div className={`w-3 h-1.5 rounded-sm ${cluesFound >= 1 ? "bg-amber-500" : "bg-amber-200"}`}></div>
-              <div className={`w-3 h-1.5 rounded-sm ${cluesFound >= 2 ? "bg-amber-500" : "bg-amber-200"}`}></div>
-              <div className={`w-3 h-1.5 rounded-sm ${cluesFound >= 3 ? "bg-amber-500" : "bg-amber-200"}`}></div>
-              {stage === 4 && <div className={`w-3 h-1.5 rounded-sm ${cluesFound >= 4 ? "bg-amber-500" : "bg-amber-200"}`}></div>}
+            <div className="flex gap-1.5">
+              <div className={`w-3.5 h-1.5 rounded-full transition-colors duration-300 ${cluesFound >= 1 ? "bg-amber-500 border border-amber-600 shadow-[0_0_4px_rgba(245,158,11,0.5)]" : "bg-amber-200/90"}`}></div>
+              <div className={`w-3.5 h-1.5 rounded-full transition-colors duration-300 ${cluesFound >= 2 ? "bg-amber-500 border border-amber-600 shadow-[0_0_4px_rgba(245,158,11,0.5)]" : "bg-amber-200/90"}`}></div>
+              <div className={`w-3.5 h-1.5 rounded-full transition-colors duration-300 ${cluesFound >= 3 ? "bg-amber-500 border border-amber-600 shadow-[0_0_4px_rgba(245,158,11,0.5)]" : "bg-amber-200/90"}`}></div>
+              {stage === 4 && (
+                <div className={`w-3.5 h-1.5 rounded-full transition-colors duration-300 ${cluesFound >= 4 ? "bg-amber-500 border border-amber-600 shadow-[0_0_4px_rgba(245,158,11,0.5)]" : "bg-amber-200/90"}`}></div>
+              )}
             </div>
           </div>
-          <span className="text-[12px] font-extrabold text-black">{cluesFound}/{maxClues} Evidence Clues</span>
+          <div className="text-[12px] font-black text-black flex items-center gap-1">
+            <span>{cluesFound}/{maxClues} clues</span>
+            <span className="text-amber-800 font-extrabold">open</span>
+          </div>
         </div>
 
         {/* Stage 4 Moonrise Progress Card (Clean Mughal Timer Style) */}
         {stage === 4 && (
-          <>
-            <div className="bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 w-64 shadow-[3px_3px_0_0_rgba(0,0,0,1)] flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
-                <span>{moonriseTimer > 135 ? "🌒" : moonriseTimer > 90 ? "🌓" : moonriseTimer > 45 ? "🌔" : "🌕"}</span>
-                <span className="text-[11px] font-extrabold uppercase text-amber-900 tracking-wider">
-                  {moonriseTimer > 135 ? "Dusk Horizon" : moonriseTimer > 90 ? "Crescent Ascent" : moonriseTimer > 45 ? "Waxing Gibbous" : "Full Moon"}
-                </span>
-              </div>
-              <span className="text-[12px] font-mono font-black text-red-600 bg-red-100 px-2 py-0.5 rounded border border-red-300">
-                {Math.floor(moonriseTimer / 60)}:{(moonriseTimer % 60).toString().padStart(2, "0")}
+          <div className="bg-[#fff9ea] border-2 border-black rounded-xl px-3.5 py-1.5 w-64 shadow-[3px_3px_0_0_rgba(0,0,0,1)] flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
+              <span>{moonriseTimer > 135 ? "🌒" : moonriseTimer > 90 ? "🌓" : moonriseTimer > 45 ? "🌔" : "🌕"}</span>
+              <span className="text-[11px] font-extrabold uppercase text-amber-900 tracking-wider">
+                {moonriseTimer > 135 ? "Dusk Horizon" : moonriseTimer > 90 ? "Crescent Ascent" : moonriseTimer > 45 ? "Waxing Gibbous" : "Full Moon"}
               </span>
             </div>
+            <span className="text-[12px] font-mono font-black text-red-600 bg-red-100 px-2 py-0.5 rounded border border-red-300">
+              {Math.floor(moonriseTimer / 60)}:{(moonriseTimer % 60).toString().padStart(2, "0")}
+            </span>
+          </div>
+        )}
 
-            {/* Stage 4 Ambient BGM YouTube Audio Player */}
-            <div className="bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 w-64 shadow-[3px_3px_0_0_rgba(0,0,0,1)] flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
-                <span className="animate-pulse">🎵</span>
-                <span className="text-[11px] font-extrabold uppercase text-amber-900 tracking-wider">
-                  Bhangarh Horror BGM
-                </span>
-              </div>
-              <span className="text-[10px] font-mono font-bold bg-amber-200 text-amber-950 px-1.5 py-0.5 rounded border border-amber-400">
-                YouTube BGM
-              </span>
-              <iframe
-                className="w-1 h-1 opacity-0 absolute pointer-events-none"
-                src="https://www.youtube.com/embed/-ldS2caI16I?autoplay=1&loop=1&playlist=-ldS2caI16I&enablejsapi=1"
-                title="Bhangarh Fort Ambient BGM"
-                allow="autoplay; encrypted-media"
-              />
-            </div>
-          </>
+        {/* Stage 4 Ambient BGM YouTube Audio Player (Plays unless muted) */}
+        {stage === 4 && !isMusicMuted && (
+          <iframe
+            className="w-1 h-1 opacity-0 absolute pointer-events-none"
+            src="https://www.youtube.com/embed/-ldS2caI16I?autoplay=1&loop=1&playlist=-ldS2caI16I&enablejsapi=1"
+            title="Bhangarh Fort Ambient BGM"
+            allow="autoplay; encrypted-media"
+          />
         )}
       </div>
 
@@ -1531,63 +1538,122 @@ export default function RajasthanGameScreen() {
       <div className="absolute top-6 right-6 z-20 flex flex-col items-end gap-3">
         {/* Action Buttons Row */}
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleResetGame}
-            title="Restart to Beginning"
-            className="bg-[#e63946] text-white border-2 border-black rounded-lg px-3 py-1.5 text-[12px] font-extrabold shadow-[2px_2px_0_0_rgba(0,0,0,1)] hover:bg-[#d62839] active:translate-y-0.5 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+          {/* Silent Switchable Timer Button */}
+          <button 
+            onClick={() => {
+              soundFx.playButtonClick();
+              setIsTimerVisible(!isTimerVisible);
+            }}
+            title={isTimerVisible ? "Timer Active (Click to hide)" : "Click to view session timer"}
+            className={`h-10 px-3.5 border-2 border-black rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all flex items-center justify-center gap-1.5 font-black text-xs cursor-pointer ${
+              isTimerVisible ? "bg-[#fcd34d] text-black" : "bg-white/90 hover:bg-white text-gray-800"
+            }`}
           >
-            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <span>⏱️</span>
+            {isTimerVisible ? (
+              <span>
+                {String(Math.floor(elapsedSeconds / 60)).padStart(2, '0')}:
+                {String(elapsedSeconds % 60).padStart(2, '0')}
+              </span>
+            ) : (
+              <span className="text-[11px] font-bold uppercase tracking-wider text-black">TIMER</span>
+            )}
+          </button>
+
+          <button
+            onClick={() => {
+              soundFx.playButtonClick();
+              handleResetGame();
+            }}
+            title="Restart to Beginning"
+            className="h-10 bg-red-600 text-white border-2 border-black rounded-lg px-3.5 text-[13px] font-extrabold shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:bg-red-700 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-1.5 cursor-pointer group"
+          >
+            <svg className="w-4 h-4 text-white group-hover:-rotate-180 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
             </svg>
             <span>Restart</span>
           </button>
+
           <button
-            onClick={() => router.push("/dashboard")}
-            className="bg-[#d62839] text-white border-2 border-black rounded-lg px-3 py-1.5 text-[12px] font-extrabold shadow-[2px_2px_0_0_rgba(0,0,0,1)] hover:bg-[#b81d2c] active:translate-y-0.5 transition-all cursor-pointer"
+            onClick={() => {
+              soundFx.playButtonClick();
+              setIsMusicMuted(!isMusicMuted);
+            }}
+            title={isMusicMuted ? "Unmute Background Music" : "Mute Background Music"}
+            className={`w-10 h-10 border-2 border-black rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all flex items-center justify-center cursor-pointer ${
+              isMusicMuted ? "bg-gray-200 text-gray-500" : "bg-amber-400 text-black"
+            }`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path>
+            </svg>
+          </button>
+
+          <button
+            onClick={() => {
+              const muted = soundFx.toggleMute();
+              setIsSoundMuted(muted);
+            }}
+            title={isSoundMuted ? "Unmute Sound Effects" : "Mute Sound Effects"}
+            className={`w-10 h-10 border-2 border-black rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all flex items-center justify-center cursor-pointer ${
+              isSoundMuted ? "bg-gray-200 text-gray-500" : "bg-amber-400 text-black"
+            }`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.898a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>
+            </svg>
+          </button>
+
+          <button
+            onClick={() => {
+              soundFx.playButtonClick();
+              router.push("/dashboard");
+            }}
+            className="h-10 bg-red-600 text-white border-2 border-black rounded-lg px-4 text-[13px] font-extrabold shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:bg-red-700 hover:-translate-y-0.5 transition-all cursor-pointer"
           >
             Leave world
           </button>
         </div>
 
-        {/* Minimap Box Card */}
-        <div className="bg-[#fff9ea] border-2 border-black rounded-lg p-3 w-44 h-36 shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex flex-col">
+        {/* Minimap Box Card (Exact Mughal Style) */}
+        <div className="bg-[#fff9ea] border-2 border-black rounded-2xl p-3 w-44 h-36 shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex flex-col">
           <div className="text-[9px] font-mono font-bold text-amber-950 uppercase mb-1 tracking-wider text-center">
             {stage === 1 ? "CHITTORGARH" : stage === 2 ? "KUMBHALGARH" : stage === 3 ? "KULDHARA" : "BHANGARH FORT"}
           </div>
-          <div className="flex-1 grid grid-cols-3 grid-rows-3 gap-1 p-1 bg-amber-50/50 rounded border border-amber-300">
+          <div className="flex-1 grid grid-cols-3 grid-rows-3 gap-1.5 p-1.5 bg-[#fff5d6]/70 rounded-xl border border-amber-200">
             {stage === 1 && (
               <>
-                <div className={scene === "ram_pol" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "inner_courtyard" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "courtyard_passage" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "vijay_stambh" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "vijay_stambh_interior" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "jauhar_passage" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "jauhar_kund" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "desert_outskirts" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
+                <div className={scene === "ram_pol" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "inner_courtyard" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "courtyard_passage" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "vijay_stambh" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "vijay_stambh_interior" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "jauhar_passage" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "jauhar_kund" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "desert_outskirts" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
                 <div className="bg-transparent"></div>
               </>
             )}
             {stage === 2 && (
               <>
-                <div className={scene === "kumbhalgarh_gate" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "kumbhalgarh_interior_stairs" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "kumbhalgarh_great_wall" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "kumbhalgarh_zigzag_gates" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "badal_mahal_courtyard" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "badal_mahal_interior" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "badal_mahal_terrace" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
+                <div className={scene === "kumbhalgarh_gate" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "kumbhalgarh_interior_stairs" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "kumbhalgarh_great_wall" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "kumbhalgarh_zigzag_gates" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "badal_mahal_courtyard" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "badal_mahal_interior" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "badal_mahal_terrace" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
                 <div className="bg-transparent"></div>
                 <div className="bg-transparent"></div>
               </>
             )}
             {stage === 3 && (
               <>
-                <div className={scene === "kuldhara_gate" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "chiefs_house" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "treasury" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "well" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "village_square" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
+                <div className={scene === "kuldhara_gate" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "chiefs_house" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "treasury" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "well" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "village_square" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
                 <div className="bg-transparent"></div>
                 <div className="bg-transparent"></div>
                 <div className="bg-transparent"></div>
@@ -1596,10 +1662,10 @@ export default function RajasthanGameScreen() {
             )}
             {stage === 4 && (
               <>
-                <div className={scene === "bhangarh_gate" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "gopinath_temple" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "palace_ruins" ? "bg-amber-400 rounded-sm border border-amber-600" : "bg-amber-100 rounded-sm"}></div>
-                <div className={scene === "bhangarh_chase" ? "bg-red-400 rounded-sm border border-red-600" : "bg-amber-100 rounded-sm"}></div>
+                <div className={scene === "bhangarh_gate" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "gopinath_temple" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "palace_ruins" ? "bg-amber-400 rounded-md shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
+                <div className={scene === "bhangarh_chase" ? "bg-red-400 rounded-md shadow-[0_0_6px_rgba(248,113,113,0.8)] border border-red-600" : "bg-[#fff9ea] rounded-md border border-amber-200/60"}></div>
                 <div className="bg-transparent"></div>
                 <div className="bg-transparent"></div>
                 <div className="bg-transparent"></div>
