@@ -1384,7 +1384,7 @@ export default function RajasthanGameScreen() {
       case "bhangarh_gate":
         return "/bg-bhangarh-gate.jpg";
       case "gopinath_temple":
-        return "/bg-bhangarh-gopinath-temple.jpg";
+        return "/bg-bhangarh-baoli-scary-night.jpg";
       case "palace_ruins":
         return "/bg-bhangarh-palace-ruins.jpg";
       case "bhangarh_chase":
@@ -1419,19 +1419,19 @@ export default function RajasthanGameScreen() {
       case "kumbhalgarh_great_wall":
         return "Walk along the Great Wall of India straight to the far end to reach the fortified Zigzag Gates!";
       case "kumbhalgarh_zigzag_gates":
-        return "Walk forward along the bridge path to enter Badal Mahal. Walk backward with F to return to the Great Wall.";
+        return "Pass through the defensive zigzag gates to reach Badal Mahal Courtyard.";
       case "badal_mahal_courtyard":
-        return "Stand in the royal courtyard of Badal Mahal. Walk forward through the colonnade to enter the palace interior.";
+        return "Enter Badal Mahal Courtyard and press E to go inside the Palace of Clouds.";
       case "badal_mahal_interior":
-        return "Admire the elephant battle frescoes where Maharana Pratap was born. Walk left to ascend to the Cloud Terrace.";
+        return "Explore the regal chambers of Badal Mahal. Ascend the interior stairs to the top terrace.";
       case "badal_mahal_terrace":
-        return "Stand atop the peak of Kumbhalgarh! Approach the Royal Elephant Caravan and press E to travel to Kuldhara (Stage 3).";
+        return "Stand atop Badal Mahal terrace. Walk to the Royal Elephant and press E to travel to Kuldhara Ghost Village (Stage 3).";
       case "kuldhara_gate":
-        return "Arrive at Kuldhara. Inspect the inscribed '83' marker (Press E) and walk north into the village.";
+        return "Enter the eerie entrance of Kuldhara Ghost Village. Walk north into the Chief's Haveli.";
       case "chiefs_house":
-        return "Search the ruined Haveli of the Village Chief. Examine the bridal wedding ornament (Press E) for evidence.";
+        return "Inspect the inscribed '83' marker pillar (Press E) proving all 84 Paliwal Brahmin villages fled together overnight!";
       case "treasury":
-        return "Examine the merchant storage and torn tax ledger (Press E) to uncover Salim Singh's extortion.";
+        return "Search the stepwell platform. Inspect the intact clay water pots and caches (Press E) proving coordinated evacuation.";
       case "well":
         return "Search the stepwell platform. Inspect the intact clay water pots and caches (Press E) proving coordinated evacuation.";
       case "village_square":
@@ -1439,7 +1439,7 @@ export default function RajasthanGameScreen() {
       case "bhangarh_gate":
         return "You arrive at Bhangarh Fort at dusk. Inspect the gate inscription stone (Press E) to decode the foundation chronicle before entering.";
       case "gopinath_temple":
-        return "Investigate Gopinath Temple. Use torchlight to restore and decode the sacred Nagara motifs on the sanctuary wall (Press E).";
+        return "Investigate Bhangarh Royal Baoli & Colonnade. Examine sacred Nagara temple motifs and stepwell reliefs (Press E).";
       case "palace_ruins":
         return "Search the 7-story palace ruins. Inspect the famine stratum (left), classify folklore vs evidence (right), and assemble the final evidence board (top)!";
       case "bhangarh_chase":
@@ -1845,7 +1845,7 @@ export default function RajasthanGameScreen() {
       {isNearTempleSanctuary && (
         <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2.5 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce cursor-pointer pointer-events-auto" onClick={() => setShowTorchlightRestorationModal(true)}>
           <span className="bg-amber-400 border border-black rounded px-1.5 text-[11px]">E</span>
-          Torchlight Reveal: Decode Nagara Temple Reliefs
+          Moonlight Inspection: Decode Nagara Reliefs &amp; Royal Baoli Motifs
         </div>
       )}
 
@@ -1907,7 +1907,7 @@ export default function RajasthanGameScreen() {
             }, 400);
           }}
         >
-          <span>▲</span> Enter Gopinath Temple Sanctuary (Press E)
+          <span>▲</span> Enter Royal Baoli &amp; Colonnade Ruins (Press E)
         </div>
       )}
 
@@ -1956,7 +1956,7 @@ export default function RajasthanGameScreen() {
             }, 400);
           }}
         >
-          <span>▼</span> Walk down to return to Gopinath Temple (Press F)
+          <span>▼</span> Walk down to return to Royal Baoli (Press F)
         </div>
       )}
 
