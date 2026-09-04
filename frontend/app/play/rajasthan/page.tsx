@@ -104,9 +104,11 @@ export default function RajasthanGameScreen() {
   const [isBhangarhTravelling, setIsBhangarhTravelling] = useState(false);
   const [bhangarhTravelPhase, setBhangarhTravelPhase] = useState<1 | 2 | 3 | 4>(1);
 
-  // --- STAGE 4 STATE (Bhangarh Fort 1-Min Relic Challenge) ---
-  const [bhangarhTimer, setBhangarhTimer] = useState(60); // 1-minute countdown timer (60s)
+  // --- STAGE 4 STATE (Bhangarh Fort 2-Min Relic Challenge) ---
+  const [bhangarhTimer, setBhangarhTimer] = useState(120); // 2-minute countdown timer (120s)
   const [showBhangarhTimeOutModal, setShowBhangarhTimeOutModal] = useState(false);
+  const [hasShield, setHasShield] = useState(false);
+  const [showShieldModal, setShowShieldModal] = useState(false);
   const [moonriseTimer, setMoonriseTimer] = useState(180);
   const [isMoonriseActive, setIsMoonriseActive] = useState(false);
 
@@ -135,10 +137,12 @@ export default function RajasthanGameScreen() {
     setShowBhangarhTimeOutModal(false);
     setScene("bhangarh_gate");
     setPlayerPos({ x: 50.0, y: 86.0 });
-    setBhangarhTimer(60);
+    setBhangarhTimer(120);
     setHasKathputliFragment(false);
     setHasPaliwalSeal(false);
     setHasWanderersVerse(false);
+    setHasShield(false);
+    setShowShieldModal(false);
   }, []);
 
   // Puzzle 1 State: Gate Inscription Fragments Sequence
@@ -325,12 +329,18 @@ export default function RajasthanGameScreen() {
     return () => clearTimeout(timer);
   }, []);
 
-  // --- BHANGARH 1-MINUTE CHALLENGE TIMER (Stage 4) ---
+  // --- BHANGARH 2-MINUTE CHALLENGE TIMER (Stage 4) ---
   useEffect(() => {
     if (stage !== 4 || isCampaignComplete) return;
 
     const allRelicsFound = hasKathputliFragment && hasPaliwalSeal && hasWanderersVerse;
-    if (allRelicsFound) return; // Freeze countdown when all 3 artifacts collected
+    if (allRelicsFound) {
+      if (!hasShield) {
+        setHasShield(true);
+        setShowShieldModal(true);
+      }
+      return; // Freeze countdown when all 3 artifacts collected
+    }
 
     const interval = setInterval(() => {
       setBhangarhTimer((prev) => {
@@ -343,7 +353,7 @@ export default function RajasthanGameScreen() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [stage, isCampaignComplete, hasKathputliFragment, hasPaliwalSeal, hasWanderersVerse]);
+  }, [stage, isCampaignComplete, hasKathputliFragment, hasPaliwalSeal, hasWanderersVerse, hasShield]);
 
   // --- ELEPHANT JOURNEY SEQUENCE (Stage 2 -> Stage 3) ---
   const startElephantJourney = useCallback(() => {
@@ -1546,17 +1556,17 @@ export default function RajasthanGameScreen() {
           </div>
         </div>
 
-        {/* Stage 4 1-MIN CHALLENGE TIMER CARD */}
+        {/* Stage 4 2-MIN TIMER CARD */}
         {stage === 4 && (
           <div className="bg-[#fff9ea] border-2 border-black rounded-xl px-3.5 py-2 w-64 shadow-[3px_3px_0_0_rgba(0,0,0,1)] flex items-center justify-between">
             <div className="flex items-center gap-1.5 text-xs font-bold text-amber-950">
               <span className="animate-pulse text-sm">⏱️</span>
               <span className="text-[11px] font-black uppercase tracking-wider text-amber-950">
-                1-MIN CHALLENGE
+                TIMER
               </span>
             </div>
             <span className={`text-[13px] font-mono font-black px-2.5 py-0.5 rounded border ${
-              bhangarhTimer <= 15
+              bhangarhTimer <= 20
                 ? "bg-red-600 text-white border-black animate-pulse shadow-[0_0_8px_rgba(220,38,38,0.8)]"
                 : "bg-red-100 text-red-600 border-red-300"
             }`}>
@@ -2351,7 +2361,13 @@ export default function RajasthanGameScreen() {
               <span className="text-sm font-black text-amber-950 uppercase tracking-wider flex items-center gap-2">
                 🎭 Kathputli Fragment (Jaisalmer)
               </span>
-              <button onClick={() => setShowKathputliModal(false)} className="text-amber-900 font-bold text-xs bg-amber-200/80 hover:bg-amber-300 px-2 py-0.5 rounded cursor-pointer">✕ Close</button>
+              <button onClick={() => {
+                setShowKathputliModal(false);
+                if (hasKathputliFragment && hasPaliwalSeal && hasWanderersVerse) {
+                  setHasShield(true);
+                  setShowShieldModal(true);
+                }
+              }} className="text-amber-900 font-bold text-xs bg-amber-200/80 hover:bg-amber-300 px-2 py-0.5 rounded cursor-pointer">✕ Close</button>
             </div>
             <div className="relative w-full h-56 rounded-xl overflow-hidden border-2 border-amber-900 shadow-md">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -2360,7 +2376,13 @@ export default function RajasthanGameScreen() {
             <div className="bg-amber-100/90 border-l-4 border-amber-600 p-2.5 rounded text-xs text-amber-950 leading-relaxed italic">
               &quot;Even in the desert, stories find a way to dance. A sandstone fragment symbolizing the tradition of storytelling, resilience and joy that keeps Rajputana&apos;s heritage alive.&quot;
             </div>
-            <button onClick={() => setShowKathputliModal(false)} className="bg-amber-600 hover:bg-amber-700 text-white font-black py-2.5 px-5 rounded-xl border-2 border-black text-xs uppercase tracking-wider cursor-pointer self-end">
+            <button onClick={() => {
+              setShowKathputliModal(false);
+              if (hasKathputliFragment && hasPaliwalSeal && hasWanderersVerse) {
+                setHasShield(true);
+                setShowShieldModal(true);
+              }
+            }} className="bg-amber-600 hover:bg-amber-700 text-white font-black py-2.5 px-5 rounded-xl border-2 border-black text-xs uppercase tracking-wider cursor-pointer self-end">
               Add to Collection
             </button>
           </div>
@@ -2375,7 +2397,13 @@ export default function RajasthanGameScreen() {
               <span className="text-sm font-black text-amber-950 uppercase tracking-wider flex items-center gap-2">
                 🐎 Paliwal Ledger Seal (Horse Seal)
               </span>
-              <button onClick={() => setShowPaliwalSealModal(false)} className="text-amber-900 font-bold text-xs bg-amber-200/80 hover:bg-amber-300 px-2 py-0.5 rounded cursor-pointer">✕ Close</button>
+              <button onClick={() => {
+                setShowPaliwalSealModal(false);
+                if (hasKathputliFragment && hasPaliwalSeal && hasWanderersVerse) {
+                  setHasShield(true);
+                  setShowShieldModal(true);
+                }
+              }} className="text-amber-900 font-bold text-xs bg-amber-200/80 hover:bg-amber-300 px-2 py-0.5 rounded cursor-pointer">✕ Close</button>
             </div>
             <div className="relative w-full h-56 rounded-xl overflow-hidden border-2 border-amber-900 shadow-md">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -2384,7 +2412,13 @@ export default function RajasthanGameScreen() {
             <div className="bg-amber-100/90 border-l-4 border-amber-600 p-2.5 rounded text-xs text-amber-950 leading-relaxed italic">
               &quot;They left behind empty homes, but a fuller history. A seal fragment from Kuldhara symbolizing administrative acumen, economic strength, and dignity.&quot;
             </div>
-            <button onClick={() => setShowPaliwalSealModal(false)} className="bg-amber-600 hover:bg-amber-700 text-white font-black py-2.5 px-5 rounded-xl border-2 border-black text-xs uppercase tracking-wider cursor-pointer self-end">
+            <button onClick={() => {
+              setShowPaliwalSealModal(false);
+              if (hasKathputliFragment && hasPaliwalSeal && hasWanderersVerse) {
+                setHasShield(true);
+                setShowShieldModal(true);
+              }
+            }} className="bg-amber-600 hover:bg-amber-700 text-white font-black py-2.5 px-5 rounded-xl border-2 border-black text-xs uppercase tracking-wider cursor-pointer self-end">
               Add to Collection
             </button>
           </div>
@@ -2399,7 +2433,13 @@ export default function RajasthanGameScreen() {
               <span className="text-sm font-black text-amber-950 uppercase tracking-wider flex items-center gap-2">
                 🦌 Wanderer&apos;s Verse (Antelope Medallion)
               </span>
-              <button onClick={() => setShowWanderersVerseModal(false)} className="text-amber-900 font-bold text-xs bg-amber-200/80 hover:bg-amber-300 px-2 py-0.5 rounded cursor-pointer">✕ Close</button>
+              <button onClick={() => {
+                setShowWanderersVerseModal(false);
+                if (hasKathputliFragment && hasPaliwalSeal && hasWanderersVerse) {
+                  setHasShield(true);
+                  setShowShieldModal(true);
+                }
+              }} className="text-amber-900 font-bold text-xs bg-amber-200/80 hover:bg-amber-300 px-2 py-0.5 rounded cursor-pointer">✕ Close</button>
             </div>
             <div className="relative w-full h-56 rounded-xl overflow-hidden border-2 border-amber-900 shadow-md">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -2408,14 +2448,58 @@ export default function RajasthanGameScreen() {
             <div className="bg-amber-100/90 border-l-4 border-amber-600 p-2.5 rounded text-xs text-amber-950 leading-relaxed italic">
               &quot;Some paths are lost, but their stories never stop walking. A fragment inspired by Bhangarh symbolizing freedom, grace, and resilience.&quot;
             </div>
-            <button onClick={() => setShowWanderersVerseModal(false)} className="bg-amber-600 hover:bg-amber-700 text-white font-black py-2.5 px-5 rounded-xl border-2 border-black text-xs uppercase tracking-wider cursor-pointer self-end">
+            <button onClick={() => {
+              setShowWanderersVerseModal(false);
+              if (hasKathputliFragment && hasPaliwalSeal && hasWanderersVerse) {
+                setHasShield(true);
+                setShowShieldModal(true);
+              }
+            }} className="bg-amber-600 hover:bg-amber-700 text-white font-black py-2.5 px-5 rounded-xl border-2 border-black text-xs uppercase tracking-wider cursor-pointer self-end">
               Add to Collection
             </button>
           </div>
         </div>
       )}
 
-      {/* --- BHANGARH 1-MIN CHALLENGE TIMEOUT MODAL --- */}
+      {/* --- STAGE 4 SHIELD UNLOCK & GAME COMPLETE MODAL --- */}
+      {showShieldModal && (
+        <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-50 pointer-events-auto">
+          <div className="bg-[#fff9ea] border-4 border-amber-900 rounded-2xl p-6 shadow-[14px_14px_0_0_rgba(0,0,0,1)] max-w-md w-full flex flex-col gap-4 text-center animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-20 h-20 bg-gradient-to-br from-amber-300 via-yellow-400 to-amber-600 border-4 border-amber-950 rounded-full flex items-center justify-center mx-auto text-4xl shadow-[0_0_20px_rgba(245,158,11,0.6)] animate-bounce">
+              🛡️
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-[11px] font-black text-amber-800 uppercase tracking-widest bg-amber-200/70 py-0.5 px-3 rounded-full border border-amber-400 self-center">
+                ★ LEGENDARY ITEM UNLOCKED ★
+              </span>
+              <h2 className="text-xl sm:text-2xl font-serif text-amber-950 font-black tracking-wide uppercase">
+                Royal Shield of Rajputana
+              </h2>
+            </div>
+            <div className="relative w-full h-48 rounded-xl overflow-hidden border-2 border-amber-900 shadow-md bg-gradient-to-b from-amber-950 via-amber-900 to-black flex flex-col items-center justify-center p-4">
+              <div className="text-6xl drop-shadow-[0_4px_12px_rgba(255,215,0,0.8)] animate-pulse">🛡️</div>
+              <div className="mt-2 text-amber-200 font-serif text-sm font-bold tracking-wider uppercase">ROYAL KAVACH OF BHANGARH</div>
+              <div className="text-amber-400 text-[10px] uppercase tracking-widest font-sans mt-0.5 font-bold">Forged in Rajput Honor • Curse Lifted</div>
+            </div>
+            <div className="bg-amber-100/90 border-l-4 border-amber-600 p-3 rounded text-xs text-amber-950 leading-relaxed italic text-left font-serif">
+              &quot;By gathering all 3 ancient artifact fragments within 2 minutes inside Bhangarh Fort, you have unlocked the legendary Royal Shield of Rajputana! You have broken the darkness and completed the entire game!&quot;
+            </div>
+            <button
+              onClick={() => {
+                setShowShieldModal(false);
+                setIsCampaignComplete(true);
+                setShowGrandCampaignCompleteModal(true);
+                soundFx.playClueChime();
+              }}
+              className="w-full bg-amber-600 hover:bg-amber-700 text-white font-black py-3.5 px-4 rounded-xl border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-xs uppercase tracking-widest cursor-pointer transition-all active:translate-y-0.5"
+            >
+              🏆 Claim Shield & Complete Game
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* --- BHANGARH 2-MIN CHALLENGE TIMEOUT MODAL --- */}
       {showBhangarhTimeOutModal && (
         <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-6 z-50 pointer-events-auto">
           <div className="bg-[#fff9ea] border-4 border-red-900 rounded-2xl p-6 shadow-[14px_14px_0_0_rgba(0,0,0,1)] max-w-md w-full flex flex-col gap-4 text-center animate-in fade-in zoom-in-95 duration-200">
@@ -2423,11 +2507,11 @@ export default function RajasthanGameScreen() {
               ⏳
             </div>
             <div className="flex flex-col gap-1">
-              <h2 className="text-xl font-black text-red-950 uppercase tracking-wide">1-Minute Time Expired!</h2>
+              <h2 className="text-xl font-black text-red-950 uppercase tracking-wide">2-Minute Time Expired!</h2>
               <p className="text-xs font-semibold text-red-800 uppercase tracking-widest">Bhangarh Challenge Failed</p>
             </div>
             <div className="bg-red-50 border-2 border-red-200 rounded-xl p-3.5 text-xs text-red-950 leading-relaxed text-left font-serif">
-              You failed to discover all 3 ancient artifact fragments within 1 minute! The eerie night shadows overtake you. You have been returned to the entrance gate of Bhangarh Fort.
+              You failed to discover all 3 ancient artifact fragments within 2 minutes! The eerie night shadows overtake you. You have been returned to the entrance gate of Bhangarh Fort.
             </div>
             <button
               onClick={handleRestartBhangarhFort}
