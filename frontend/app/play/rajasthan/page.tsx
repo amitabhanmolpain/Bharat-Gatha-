@@ -74,6 +74,7 @@ export default function RajasthanGameScreen() {
   const [chauparMessage, setChauparMessage] = useState("Roll the dice to challenge Buzurg Chacha in ancient Chaupar!");
   const [isDiceRolling, setIsDiceRolling] = useState(false);
   const [lastRoll, setLastRoll] = useState<number | null>(null);
+  const [chachaRoll, setChachaRoll] = useState<number | null>(null);
   const [showVijayStambhModal, setShowVijayStambhModal] = useState(false);
   const [showJauharModal, setShowJauharModal] = useState(false);
 
@@ -2078,20 +2079,101 @@ export default function RajasthanGameScreen() {
       )}
 
       {showChauparGame && (
-        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 z-40 pointer-events-auto">
-          <div className="bg-[#fef9c3] border-4 border-amber-950 rounded-2xl p-6 shadow-[12px_12px_0_0_rgba(0,0,0,1)] max-w-lg w-full flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
+        <div className="absolute inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 z-50 pointer-events-auto">
+          <div className="bg-[#fff9ea] border-4 border-amber-950 rounded-2xl p-5 shadow-[16px_16px_0_0_rgba(0,0,0,1)] max-w-2xl w-full flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
             <div className="flex items-center justify-between border-b-2 border-amber-800/40 pb-3">
-              <h3 className="font-extrabold text-amber-950 uppercase tracking-widest text-sm">🎲 Royal Chaupar Game</h3>
-              <button onClick={() => setShowChauparGame(false)} className="text-amber-950 hover:bg-amber-200 font-bold text-xs px-2.5 py-1 rounded-lg border border-amber-800 cursor-pointer">✕ Exit Game</button>
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🎲</span>
+                <div>
+                  <h3 className="font-extrabold text-amber-950 uppercase tracking-widest text-sm sm:text-base">
+                    Ancient Chaupar (Pasa & Gotis)
+                  </h3>
+                  <p className="text-[10px] text-amber-800 font-serif italic">Traditional Rajputana Board & Wooden Pasa Dice</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowChauparGame(false)}
+                className="text-amber-950 hover:bg-amber-200 font-black text-xs px-3 py-1 rounded-lg border-2 border-amber-950 cursor-pointer shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
+              >
+                ✕ Exit Game
+              </button>
             </div>
-            <div className="grid grid-cols-2 gap-4 bg-amber-100 border-2 border-amber-800/60 p-3 rounded-xl text-center">
-              <div><span className="text-xs font-bold text-amber-900 uppercase">You</span><div className="text-2xl font-extrabold text-amber-950">{chauparScore.player}</div></div>
-              <div><span className="text-xs font-bold text-amber-900 uppercase">Chacha</span><div className="text-2xl font-extrabold text-amber-950">{chauparScore.chacha}</div></div>
+
+            {/* Score Banner */}
+            <div className="grid grid-cols-2 gap-4 bg-amber-100 border-2 border-amber-900/60 p-3 rounded-xl text-center shadow-inner">
+              <div className="flex items-center justify-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-amber-600 text-white font-black flex items-center justify-center text-xs border-2 border-black">YOU</div>
+                <div className="text-left">
+                  <span className="text-[10px] font-bold text-amber-900 uppercase tracking-wider block">Player Score</span>
+                  <div className="text-2xl font-black text-amber-950">{chauparScore.player}</div>
+                </div>
+              </div>
+              <div className="flex items-center justify-center gap-3 border-l-2 border-amber-800/30">
+                <div className="text-right">
+                  <span className="text-[10px] font-bold text-amber-900 uppercase tracking-wider block">Buzurg Chacha</span>
+                  <div className="text-2xl font-black text-amber-950">{chauparScore.chacha}</div>
+                </div>
+                <div className="w-9 h-9 rounded-full bg-red-800 text-amber-100 font-black flex items-center justify-center text-[10px] border-2 border-black">CHACHA</div>
+              </div>
             </div>
-            <div className="bg-amber-900/10 p-3 rounded-xl text-center text-xs font-serif font-bold text-amber-950">{chauparMessage}</div>
-            <button onClick={handleRollDice} disabled={isDiceRolling} className="bg-amber-600 hover:bg-amber-700 text-white font-extrabold py-3 px-6 rounded-xl border-3 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-xs uppercase cursor-pointer">
-              {isDiceRolling ? "Rolling Cowries..." : "Roll Dice"}
-            </button>
+
+            {/* Chaupar Board & Dice Arena */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+              {/* Left Column: Traditional Cross Chaupar Cloth Board */}
+              <div className="relative aspect-square w-full rounded-xl overflow-hidden border-3 border-amber-950 shadow-md bg-amber-900/10 flex items-center justify-center p-1.5">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/chaupar-board-cloth.jpg"
+                  alt="Traditional Chaupar Cloth Board"
+                  className="w-full h-full object-cover rounded-lg shadow-md"
+                />
+                <div className="absolute top-2 left-2 bg-amber-950/80 text-amber-200 text-[10px] font-mono font-bold px-2 py-0.5 rounded border border-amber-600/60 backdrop-blur-xs">
+                  TRADITIONAL CROSS BOARD
+                </div>
+              </div>
+
+              {/* Right Column: Wooden Long Pasa Dice & Roll Area */}
+              <div className="flex flex-col gap-3 items-center justify-center bg-amber-100/80 border-2 border-amber-900/40 p-4 rounded-xl">
+                <span className="text-xs font-black text-amber-950 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>🪵</span> Wooden Pasa Dice (Red Pips)
+                </span>
+
+                {/* Animated Wooden Long Dice Display */}
+                <div className="relative w-full h-40 rounded-xl overflow-hidden border-2 border-amber-950 shadow-inner bg-amber-950 flex items-center justify-center group">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/chaupar-wooden-pasa-dice.jpg"
+                    alt="Wooden Pasa Dice"
+                    className={`w-full h-full object-cover transition-transform duration-500 ${
+                      isDiceRolling ? "animate-spin scale-110 blur-[1px]" : "scale-100 group-hover:scale-105"
+                    }`}
+                  />
+                  {isDiceRolling && (
+                    <div className="absolute inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center">
+                      <span className="text-amber-300 font-mono font-black text-xs uppercase tracking-widest animate-bounce bg-black/80 px-3 py-1.5 rounded-lg border border-amber-400 shadow-md">
+                        🎲 Rolling Pasa Sticks...
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Dice Result Display */}
+                <div className="w-full bg-amber-200/90 border border-amber-800/50 p-2.5 rounded-lg text-center font-serif text-xs font-bold text-amber-950 min-h-[44px] flex items-center justify-center">
+                  {chauparMessage}
+                </div>
+
+                {/* Roll Action Button */}
+                <button
+                  onClick={handleRollDice}
+                  disabled={isDiceRolling}
+                  className="w-full bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-black py-3 px-5 rounded-xl border-3 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-xs uppercase tracking-widest cursor-pointer transition-all active:translate-y-0.5 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  <span className={`text-base ${isDiceRolling ? "animate-spin" : ""}`}>🎲</span>
+                  <span>{isDiceRolling ? "Rolling Pasa..." : "Roll Pasa Wooden Dice"}</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
