@@ -7,9 +7,12 @@ This file re-exports the Guard Agent interface to maintain 100% backward compati
 from app.agents.guard_agent import (
     get_guard_agent,
     ask_guard_agent,
+    verify_fact_grounding,
 )
 
 __all__ = [
     "get_guard_agent",
     "ask_guard_agent",
+    "verify_fact_grounding",
 ]
+

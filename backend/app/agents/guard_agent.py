@@ -165,3 +165,126 @@ def ask_guard_agent(
             "message": f"Guard Agent error: {str(e)}",
             "status_code": 500
         }
+
+
+def verify_fact_grounding(
+    answer: str,
+    source_chunks: list = None,
+    confidence_threshold: float = 0.70
+) -> dict:
+    """Verify whether key factual claims (years, names, locations) in generated answer exist in source chunks.
+
+    Args:
+        answer (str): Generated LLM response.
+        source_chunks (list, optional): Retrieved knowledge base chunks.
+        confidence_threshold (float): Minimum confidence ratio required (default 0.70).
+
+    Returns:
+        dict:
+            - is_grounded: bool
+            - confidence: float
+            - verified_answer: str (original answer or fallback if ungrounded)
+            - ungrounded_entities: list of flagged strings
+            - fallback_needed: bool
+    """
+    import re
+    import unicodedata
+    from app.config.rag_config import (
+        FACT_GROUNDING_CONFIDENCE_THRESHOLD,
+        SAFE_FALLBACK_ANSWER,
+    )
+
+    threshold = confidence_threshold or FACT_GROUNDING_CONFIDENCE_THRESHOLD
+
+    if not answer:
+        return {
+            "is_grounded": True,
+            "confidence": 1.0,
+            "verified_answer": answer,
+            "ungrounded_entities": [],
+            "fallback_needed": False
+        }
+
+    # Normalize unicode whitespace
+    normalized_answer = unicodedata.normalize("NFKD", answer)
+    chunks = source_chunks or []
+    combined_source = unicodedata.normalize("NFKD", " ".join([c.get("text", "") for c in chunks])).lower()
+
+    # Extract 4-digit years/dates (e.g. 1565, 1638, 1440)
+    dates = list(set(re.findall(r"\b(1\d{3}|20\d{2})\b", normalized_answer)))
+
+    # Find sentence starter words to avoid treating them as proper nouns
+    sentence_starters = set(re.findall(r"(?:^|[.!?]\s+)([A-Z][a-z]+)\b", normalized_answer))
+
+    COMMON_IGNORE = {
+        "The", "In", "It", "This", "That", "When", "After", "Before", "While",
+        "According", "As", "You", "He", "She", "They", "We", "My", "Our",
+        "Jolly", "Bhai", "Bharat", "Gatha", "Yes", "No", "Well", "Ah",
+        "Here", "There", "What", "Who", "Where", "How", "Why", "Indeed",
+        "Built", "Located", "Decorated", "Such", "Even", "Many", "Also",
+        "So", "Often", "Historically", "Originally", "Later", "Today",
+        "Remember", "Inside", "Outside", "Each", "Every", "Another", "Both",
+        "One", "Two", "Three", "Four", "Five", "Notable", "Remarkably"
+    }
+
+    # Extract capitalized proper noun phrases (entities/names/places)
+    entity_pattern = re.compile(r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b")
+    all_capitalized = set(entity_pattern.findall(normalized_answer))
+
+    entities = []
+    for phrase in all_capitalized:
+        words = phrase.split()
+        # If single word and it's a known non-entity or sentence starter, skip
+        if len(words) == 1 and (phrase in COMMON_IGNORE or phrase in sentence_starters):
+            continue
+        # If multi-word starting with Common Ignore word, strip it (e.g. "The Sheesh Mahal" -> "Sheesh Mahal")
+        if words[0] in COMMON_IGNORE and len(words) > 1:
+            phrase = " ".join(words[1:])
+        if phrase and phrase not in COMMON_IGNORE:
+            entities.append(phrase)
+
+    entities = list(set(entities))
+    total_facts = len(dates) + len(entities)
+    if total_facts == 0:
+        return {
+            "is_grounded": True,
+            "confidence": 1.0,
+            "verified_answer": normalized_answer,
+            "ungrounded_entities": [],
+            "fallback_needed": False
+        }
+
+    ungrounded = []
+
+    # Check dates
+    for d in dates:
+        if d not in combined_source:
+            ungrounded.append(f"Year:{d}")
+
+    # Check entities: either full phrase appears, or significant words appear
+    for ent in entities:
+        ent_lower = ent.lower()
+        if ent_lower in combined_source:
+            continue
+        
+        # Check sub-words for compound entities (e.g., "Emperor Shah Jahan" -> "shah jahan")
+        sub_words = [w for w in ent_lower.split() if w not in ("emperor", "king", "queen", "fort", "palace", "gate")]
+        if sub_words and all(w in combined_source for w in sub_words):
+            continue
+
+        ungrounded.append(f"Entity:{ent}")
+
+    grounded_count = total_facts - len(ungrounded)
+    confidence = round(max(0.0, grounded_count / total_facts), 2)
+    is_grounded = confidence >= threshold
+
+    verified_answer = normalized_answer if is_grounded else SAFE_FALLBACK_ANSWER
+
+    return {
+        "is_grounded": is_grounded,
+        "confidence": confidence,
+        "verified_answer": verified_answer,
+        "ungrounded_entities": ungrounded,
+        "fallback_needed": not is_grounded
+    }
+

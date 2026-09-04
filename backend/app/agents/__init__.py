@@ -34,6 +34,7 @@ from app.agents.genie_agent import (
 from app.agents.guard_agent import (
     get_guard_agent,
     ask_guard_agent,
+    verify_fact_grounding,
 )
 
 __all__ = [
@@ -49,4 +50,6 @@ __all__ = [
     # Guard Agent
     "get_guard_agent",
     "ask_guard_agent",
+    "verify_fact_grounding",
 ]
+
