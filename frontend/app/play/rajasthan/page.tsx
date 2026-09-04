@@ -67,14 +67,18 @@ export default function RajasthanGameScreen() {
     return () => clearInterval(timer);
   }, []);
 
-  // --- STAGE 1 STATE (Chittorgarh) ---
+  // --- STAGE 1 STATE (Chittorgarh - Chaupar Game) ---
   const [showChachaDialogue, setShowChachaDialogue] = useState(false);
   const [showChauparGame, setShowChauparGame] = useState(false);
   const [chauparScore, setChauparScore] = useState({ player: 0, chacha: 0 });
-  const [chauparMessage, setChauparMessage] = useState("Roll the dice to challenge Buzurg Chacha in ancient Chaupar!");
+  const [chauparMessage, setChauparMessage] = useState("Roll the long wooden pasa dice to challenge Buzurg Chacha in ancient Chaupar!");
   const [isDiceRolling, setIsDiceRolling] = useState(false);
   const [lastRoll, setLastRoll] = useState<number | null>(null);
-  const [chachaRoll, setChachaRoll] = useState<number | null>(null);
+  const [diceRoll1, setDiceRoll1] = useState(3);
+  const [diceRoll2, setDiceRoll2] = useState(4);
+  const [playerPawnPos, setPlayerPawnPos] = useState(0); // 0 to 12 along board track
+  const [chachaPawnPos, setChachaPawnPos] = useState(0); // 0 to 12 along board track
+  const [isPawnMoving, setIsPawnMoving] = useState(false);
   const [showVijayStambhModal, setShowVijayStambhModal] = useState(false);
   const [showJauharModal, setShowJauharModal] = useState(false);
 
@@ -1199,28 +1203,55 @@ export default function RajasthanGameScreen() {
     };
   }, [isLoading]);
 
-  // Chaupar Dice Roll Handler
+  // Chaupar Long Wooden Pasa Dice Roll & Goti Movement Handler
   const handleRollDice = () => {
-    if (isDiceRolling) return;
+    if (isDiceRolling || isPawnMoving) return;
     setIsDiceRolling(true);
+    soundFx.playButtonClick();
 
     setTimeout(() => {
-      const pRoll = Math.floor(Math.random() * 6) + 1;
-      const cRoll = Math.floor(Math.random() * 6) + 1;
-      setLastRoll(pRoll);
+      // Long wooden dice (Pasa) face values: 1, 2, 3, 4, 6
+      const possibleRolls = [1, 2, 3, 4, 6];
+      const d1 = possibleRolls[Math.floor(Math.random() * possibleRolls.length)];
+      const d2 = possibleRolls[Math.floor(Math.random() * possibleRolls.length)];
+      const c1 = possibleRolls[Math.floor(Math.random() * possibleRolls.length)];
+      const c2 = possibleRolls[Math.floor(Math.random() * possibleRolls.length)];
 
-      if (pRoll > cRoll) {
+      const pTotal = d1 + d2;
+      const cTotal = c1 + c2;
+
+      setDiceRoll1(d1);
+      setDiceRoll2(d2);
+      setLastRoll(pTotal);
+      setIsDiceRolling(false);
+      setIsPawnMoving(true);
+
+      if (pTotal > cTotal) {
         setChauparScore((prev) => ({ ...prev, player: prev.player + 1 }));
-        setChauparMessage(`You rolled ${pRoll}! Buzurg Chacha rolled ${cRoll}. You win this round!`);
-      } else if (cRoll > pRoll) {
+        setPlayerPawnPos((prev) => Math.min(12, prev + Math.ceil(pTotal / 2)));
+        setChauparMessage(`🎲 You rolled ${d1} & ${d2} (${pTotal} pips)! Chacha rolled ${c1} & ${c2} (${cTotal}). Your Golden Goti advances on the Chaupar board!`);
+      } else if (cTotal > pTotal) {
         setChauparScore((prev) => ({ ...prev, chacha: prev.chacha + 1 }));
-        setChauparMessage(`You rolled ${pRoll}. Buzurg Chacha rolled ${cRoll} and takes the point!`);
+        setChachaPawnPos((prev) => Math.min(12, prev + Math.ceil(cTotal / 2)));
+        setChauparMessage(`🎲 You rolled ${d1} & ${d2} (${pTotal} pips). Chacha rolled ${c1} & ${c2} (${cTotal}). Chacha's Ruby Goti takes the point!`);
       } else {
-        setChauparMessage(`Both rolled ${pRoll}! It's a tie round.`);
+        setChauparMessage(`🎲 Both rolled ${pTotal} pips! It's a tie round — pawns hold position.`);
       }
 
-      setIsDiceRolling(false);
-    }, 600);
+      setTimeout(() => {
+        setIsPawnMoving(false);
+      }, 600);
+    }, 750);
+  };
+
+  const handleResetChauparMatch = () => {
+    setChauparScore({ player: 0, chacha: 0 });
+    setPlayerPawnPos(0);
+    setChachaPawnPos(0);
+    setDiceRoll1(3);
+    setDiceRoll2(4);
+    setChauparMessage("Match reset! Roll the pasa dice to challenge Buzurg Chacha.");
+    soundFx.playButtonClick();
   };
 
   // Stage 3 Deduction Puzzle Handler
@@ -2078,102 +2109,163 @@ export default function RajasthanGameScreen() {
         </div>
       )}
 
+      {/* --- AUTHENTIC VISUAL CHAUPAR (PACHISI) GAME MODAL --- */}
       {showChauparGame && (
         <div className="absolute inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 z-50 pointer-events-auto">
-          <div className="bg-[#fff9ea] border-4 border-amber-950 rounded-2xl p-5 shadow-[16px_16px_0_0_rgba(0,0,0,1)] max-w-2xl w-full flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b-2 border-amber-800/40 pb-3">
+          <div className="bg-[#fff9ea] border-4 border-amber-950 rounded-3xl p-5 shadow-[16px_16px_0_0_rgba(0,0,0,1)] max-w-xl w-full flex flex-col gap-3.5 animate-in fade-in zoom-in-95 duration-200">
+            {/* Header Bar */}
+            <div className="flex items-center justify-between border-b-2 border-amber-800/40 pb-2.5">
               <div className="flex items-center gap-2">
                 <span className="text-xl">🎲</span>
                 <div>
-                  <h3 className="font-extrabold text-amber-950 uppercase tracking-widest text-sm sm:text-base">
-                    Ancient Chaupar (Pasa & Gotis)
+                  <h3 className="font-extrabold text-amber-950 uppercase tracking-widest text-sm leading-tight">
+                    Royal Chaupar (Pachisi) Game
                   </h3>
-                  <p className="text-[10px] text-amber-800 font-serif italic">Traditional Rajputana Board & Wooden Pasa Dice</p>
+                  <span className="text-[10px] font-serif text-amber-800 font-semibold italic">
+                    Traditional Rajput Board of Kings & Court
+                  </span>
                 </div>
               </div>
-              <button
-                onClick={() => setShowChauparGame(false)}
-                className="text-amber-950 hover:bg-amber-200 font-black text-xs px-3 py-1 rounded-lg border-2 border-amber-950 cursor-pointer shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
-              >
-                ✕ Exit Game
-              </button>
-            </div>
-
-            {/* Score Banner */}
-            <div className="grid grid-cols-2 gap-4 bg-amber-100 border-2 border-amber-900/60 p-3 rounded-xl text-center shadow-inner">
-              <div className="flex items-center justify-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-amber-600 text-white font-black flex items-center justify-center text-xs border-2 border-black">YOU</div>
-                <div className="text-left">
-                  <span className="text-[10px] font-bold text-amber-900 uppercase tracking-wider block">Player Score</span>
-                  <div className="text-2xl font-black text-amber-950">{chauparScore.player}</div>
-                </div>
-              </div>
-              <div className="flex items-center justify-center gap-3 border-l-2 border-amber-800/30">
-                <div className="text-right">
-                  <span className="text-[10px] font-bold text-amber-900 uppercase tracking-wider block">Buzurg Chacha</span>
-                  <div className="text-2xl font-black text-amber-950">{chauparScore.chacha}</div>
-                </div>
-                <div className="w-9 h-9 rounded-full bg-red-800 text-amber-100 font-black flex items-center justify-center text-[10px] border-2 border-black">CHACHA</div>
-              </div>
-            </div>
-
-            {/* Chaupar Board & Dice Arena */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-              {/* Left Column: Traditional Cross Chaupar Cloth Board */}
-              <div className="relative aspect-square w-full rounded-xl overflow-hidden border-3 border-amber-950 shadow-md bg-amber-900/10 flex items-center justify-center p-1.5">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/chaupar-board-cloth.jpg"
-                  alt="Traditional Chaupar Cloth Board"
-                  className="w-full h-full object-cover rounded-lg shadow-md"
-                />
-                <div className="absolute top-2 left-2 bg-amber-950/80 text-amber-200 text-[10px] font-mono font-bold px-2 py-0.5 rounded border border-amber-600/60 backdrop-blur-xs">
-                  TRADITIONAL CROSS BOARD
-                </div>
-              </div>
-
-              {/* Right Column: Wooden Long Pasa Dice & Roll Area */}
-              <div className="flex flex-col gap-3 items-center justify-center bg-amber-100/80 border-2 border-amber-900/40 p-4 rounded-xl">
-                <span className="text-xs font-black text-amber-950 uppercase tracking-wider flex items-center gap-1.5">
-                  <span>🪵</span> Wooden Pasa Dice (Red Pips)
-                </span>
-
-                {/* Animated Wooden Long Dice Display */}
-                <div className="relative w-full h-40 rounded-xl overflow-hidden border-2 border-amber-950 shadow-inner bg-amber-950 flex items-center justify-center group">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src="/chaupar-wooden-pasa-dice.jpg"
-                    alt="Wooden Pasa Dice"
-                    className={`w-full h-full object-cover transition-transform duration-500 ${
-                      isDiceRolling ? "animate-spin scale-110 blur-[1px]" : "scale-100 group-hover:scale-105"
-                    }`}
-                  />
-                  {isDiceRolling && (
-                    <div className="absolute inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center">
-                      <span className="text-amber-300 font-mono font-black text-xs uppercase tracking-widest animate-bounce bg-black/80 px-3 py-1.5 rounded-lg border border-amber-400 shadow-md">
-                        🎲 Rolling Pasa Sticks...
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Dice Result Display */}
-                <div className="w-full bg-amber-200/90 border border-amber-800/50 p-2.5 rounded-lg text-center font-serif text-xs font-bold text-amber-950 min-h-[44px] flex items-center justify-center">
-                  {chauparMessage}
-                </div>
-
-                {/* Roll Action Button */}
+              <div className="flex items-center gap-2">
                 <button
-                  onClick={handleRollDice}
-                  disabled={isDiceRolling}
-                  className="w-full bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-black py-3 px-5 rounded-xl border-3 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-xs uppercase tracking-widest cursor-pointer transition-all active:translate-y-0.5 disabled:opacity-50 flex items-center justify-center gap-2"
+                  onClick={handleResetChauparMatch}
+                  className="text-amber-900 hover:bg-amber-200 font-bold text-[11px] px-2.5 py-1 rounded-lg border border-amber-800 cursor-pointer"
+                  title="Reset score and pawns"
                 >
-                  <span className={`text-base ${isDiceRolling ? "animate-spin" : ""}`}>🎲</span>
-                  <span>{isDiceRolling ? "Rolling Pasa..." : "Roll Pasa Wooden Dice"}</span>
+                  🔄 Reset
+                </button>
+                <button
+                  onClick={() => setShowChauparGame(false)}
+                  className="text-amber-950 hover:bg-amber-200 font-bold text-xs px-3 py-1 rounded-lg border-2 border-amber-900 bg-amber-100 cursor-pointer shadow-sm"
+                >
+                  ✕ Exit Game
                 </button>
               </div>
             </div>
+
+            {/* Scoreboard Bar */}
+            <div className="grid grid-cols-2 gap-3 bg-gradient-to-r from-amber-100 via-amber-200/70 to-amber-100 border-2 border-amber-900/70 p-2.5 rounded-xl text-center shadow-sm">
+              <div className="flex items-center justify-between px-3 border-r-2 border-amber-800/30">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-yellow-600 via-amber-400 to-yellow-200 border-2 border-amber-950 flex items-center justify-center shadow-sm text-[10px] font-bold">
+                    👑
+                  </div>
+                  <div className="text-left">
+                    <span className="text-[10px] font-black text-amber-900 uppercase block">YOU (Gold Goti)</span>
+                    <span className="text-[11px] font-bold text-amber-950">Track Step {playerPawnPos}/12</span>
+                  </div>
+                </div>
+                <div className="text-2xl font-black text-amber-950">{chauparScore.player}</div>
+              </div>
+
+              <div className="flex items-center justify-between px-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-red-800 via-red-600 to-red-400 border-2 border-amber-950 flex items-center justify-center shadow-sm text-[10px] font-bold text-white">
+                    👳
+                  </div>
+                  <div className="text-left">
+                    <span className="text-[10px] font-black text-red-950 uppercase block">CHACHA (Ruby Goti)</span>
+                    <span className="text-[11px] font-bold text-amber-950">Track Step {chachaPawnPos}/12</span>
+                  </div>
+                </div>
+                <div className="text-2xl font-black text-amber-950">{chauparScore.chacha}</div>
+              </div>
+            </div>
+
+            {/* Visual Chaupar Cross Board (Image 1 style background with animated pawns overlay) */}
+            <div className="relative w-full h-64 sm:h-72 rounded-2xl overflow-hidden border-3 border-amber-950 shadow-inner bg-[#1e0e07] flex items-center justify-center">
+              {/* Authentic Chaupar Fabric Board Background Image */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/chaupar-board.jpg"
+                alt="Traditional Chaupar Board"
+                className="w-full h-full object-cover opacity-90 scale-105"
+              />
+
+              {/* Board Overlay Highlight Grids & Central Charkoni */}
+              <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                {/* Central Home (Charkoni) Glowing Ring */}
+                <div className="w-16 h-16 rounded-full border-2 border-yellow-400/80 bg-yellow-500/20 backdrop-blur-[1px] animate-pulse flex items-center justify-center shadow-[0_0_15px_rgba(234,179,8,0.5)]">
+                  <span className="text-xs font-serif font-black text-yellow-200 drop-shadow">HOME</span>
+                </div>
+              </div>
+
+              {/* Player's Animated Golden Goti (Pawn) */}
+              <div
+                className={`absolute w-8 h-8 z-20 transition-all duration-700 ease-out transform -translate-x-1/2 -translate-y-1/2 ${
+                  isPawnMoving ? "scale-125 -translate-y-4 shadow-[0_10px_20px_rgba(245,158,11,0.9)]" : "scale-100"
+                }`}
+                style={{
+                  left: `${50 + (playerPawnPos > 6 ? (playerPawnPos - 6) * 2.2 : 0)}%`,
+                  top: `${Math.max(50, 84 - playerPawnPos * 2.8)}%`,
+                }}
+              >
+                <div className="relative w-full h-full rounded-t-full rounded-b-md bg-gradient-to-tr from-amber-600 via-yellow-400 to-amber-200 border-2 border-amber-950 shadow-[0_4px_8px_rgba(0,0,0,0.6)] flex items-center justify-center">
+                  <div className="w-2.5 h-2.5 rounded-full bg-amber-100 border border-amber-900"></div>
+                </div>
+              </div>
+
+              {/* Chacha's Animated Ruby Goti (Pawn) */}
+              <div
+                className={`absolute w-8 h-8 z-20 transition-all duration-700 ease-out transform -translate-x-1/2 -translate-y-1/2 ${
+                  isPawnMoving ? "scale-125 -translate-y-4 shadow-[0_10px_20px_rgba(239,68,68,0.9)]" : "scale-100"
+                }`}
+                style={{
+                  left: `${50 - (chachaPawnPos > 6 ? (chachaPawnPos - 6) * 2.2 : 0)}%`,
+                  top: `${Math.min(50, 16 + chachaPawnPos * 2.8)}%`,
+                }}
+              >
+                <div className="relative w-full h-full rounded-t-full rounded-b-md bg-gradient-to-tr from-red-950 via-red-600 to-red-400 border-2 border-amber-950 shadow-[0_4px_8px_rgba(0,0,0,0.6)] flex items-center justify-center">
+                  <div className="w-2.5 h-2.5 rounded-full bg-red-200 border border-red-950"></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Long Wooden Dice (Pasa) Animation Section (Image 2 style) */}
+            <div className="bg-amber-100/90 border-2 border-amber-900/60 p-2.5 rounded-xl flex flex-col items-center gap-2">
+              <span className="text-[10px] font-black text-amber-950 uppercase tracking-wider">
+                LONG WOODEN PASA DICE (ROYAL RAJASTHANI DICE)
+              </span>
+
+              <div className="flex items-center justify-center gap-6">
+                {/* Die 1 */}
+                <div className={`relative w-28 h-10 bg-gradient-to-r from-[#d89e5a] via-[#f5d09b] to-[#c68c47] border-2 border-[#4a2e12] rounded-md shadow-md flex items-center justify-around px-3 transition-all duration-500 transform ${
+                  isDiceRolling ? "rotate-45 scale-110 shadow-xl animate-bounce" : "rotate-0"
+                }`}>
+                  <div className="absolute -left-1.5 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-[#6e431a] rounded-l border-r border-[#4a2e12]"></div>
+                  <div className="absolute -right-1.5 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-[#6e431a] rounded-r border-l border-[#4a2e12]"></div>
+                  {Array.from({ length: diceRoll1 }).map((_, i) => (
+                    <div key={i} className="w-3 h-3 bg-red-700 border border-red-950 rounded-full shadow-inner"></div>
+                  ))}
+                </div>
+
+                {/* Die 2 */}
+                <div className={`relative w-28 h-10 bg-gradient-to-r from-[#d89e5a] via-[#f5d09b] to-[#c68c47] border-2 border-[#4a2e12] rounded-md shadow-md flex items-center justify-around px-3 transition-all duration-500 transform ${
+                  isDiceRolling ? "-rotate-45 scale-110 shadow-xl animate-bounce" : "rotate-0"
+                }`}>
+                  <div className="absolute -left-1.5 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-[#6e431a] rounded-l border-r border-[#4a2e12]"></div>
+                  <div className="absolute -right-1.5 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-[#6e431a] rounded-r border-l border-[#4a2e12]"></div>
+                  {Array.from({ length: diceRoll2 }).map((_, i) => (
+                    <div key={i} className="w-3 h-3 bg-red-700 border border-red-950 rounded-full shadow-inner"></div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Message Box */}
+            <div className="bg-amber-200/70 border border-amber-400 p-2.5 rounded-xl text-center text-xs font-serif font-bold text-amber-950 leading-relaxed shadow-inner">
+              {chauparMessage}
+            </div>
+
+            {/* Roll Action Button */}
+            <button
+              onClick={handleRollDice}
+              disabled={isDiceRolling || isPawnMoving}
+              className="bg-amber-600 hover:bg-amber-700 disabled:bg-gray-400 text-white font-extrabold py-3 px-6 rounded-xl border-3 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-xs uppercase tracking-widest cursor-pointer transition-all active:translate-y-0.5 flex items-center justify-center gap-2"
+            >
+              <span>🎲</span>
+              <span>{isDiceRolling ? "Rolling Wooden Pasa..." : isPawnMoving ? "Moving Goti..." : "Roll Pasa Dice"}</span>
+            </button>
           </div>
         </div>
       )}
