@@ -689,7 +689,7 @@ export default function RajasthanGameScreen() {
             state.setIsTransitioning(false);
           }, 400);
         } else if (state.isNearChhatriDeduction) {
-          state.setShowDeductionModal(true);
+          state.setShowStage3CompleteModal(true);
         }
         // Stage 4 (Bhangarh Fort)
         else if (state.isNearBhangarhGateMarker) {
@@ -1731,9 +1731,9 @@ export default function RajasthanGameScreen() {
       )}
 
       {isNearChhatriDeduction && (
-        <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black rounded-xl px-5 py-3 shadow-[5px_5px_0_0_rgba(0,0,0,1)] text-[13px] font-black tracking-wide flex items-center gap-2.5 z-30 animate-bounce cursor-pointer pointer-events-auto" onClick={() => setShowDeductionModal(true)}>
+        <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black rounded-xl px-5 py-3 shadow-[5px_5px_0_0_rgba(0,0,0,1)] text-[13px] font-black tracking-wide flex items-center gap-2.5 z-30 animate-bounce cursor-pointer pointer-events-auto" onClick={() => setShowStage3CompleteModal(true)}>
           <span className="bg-black text-amber-400 rounded px-2 py-0.5 text-[11px] font-mono">E</span>
-          Assemble Evidence at Memorial Chhatri (Final Deduction)
+          Inspect Memorial Chhatri (Uncover Legend of Kuldhara)
         </div>
       )}
 
@@ -1971,132 +1971,7 @@ export default function RajasthanGameScreen() {
         </div>
       )}
 
-      {/* Kuldhara Deduction Puzzle Modal - Sleek RPG Matching Board */}
-      {showDeductionModal && (
-        <div className="absolute inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 z-40 pointer-events-auto">
-          <div className="bg-[#1c140e] border-2 border-amber-600/50 rounded-2xl p-6 shadow-[0_20px_50px_rgba(0,0,0,0.9)] max-w-2xl w-full flex flex-col gap-5 animate-in fade-in zoom-in-95 duration-200">
-            
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-amber-700/30 pb-3">
-              <div className="flex items-center gap-2.5">
-                <span className="text-xl">🏛️</span>
-                <div>
-                  <h3 className="font-extrabold text-amber-100 uppercase tracking-widest text-sm sm:text-base font-serif">Kuldhara Memorial Chhatri</h3>
-                  <p className="text-[11px] font-medium text-amber-400/80">Match each discovered clue with its true historical meaning.</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setShowDeductionModal(false)} 
-                className="text-amber-300/70 hover:text-amber-100 font-bold text-xs px-3 py-1 rounded-lg border border-amber-700/40 hover:bg-amber-900/40 transition-all cursor-pointer"
-              >
-                ✕ Close
-              </button>
-            </div>
 
-            {/* 3 Clean Evidence Pairs */}
-            <div className="flex flex-col gap-3.5 my-1">
-              
-              {/* Pair 1: Ornament */}
-              <div className="bg-[#281c13] border border-amber-700/30 p-3.5 rounded-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-md hover:border-amber-600/60 transition-all">
-                <div className="flex items-center gap-2.5 sm:w-1/2">
-                  <span className="text-lg bg-amber-950/80 border border-amber-700/40 rounded-lg p-1.5 flex items-center justify-center">💍</span>
-                  <div className="flex flex-col">
-                    <span className="text-xs font-bold text-amber-100 uppercase tracking-wide">1. Bridal Wedding Ornament</span>
-                    <span className="text-[10px] text-amber-400/60">Discovered at Chief&apos;s Haveli</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 sm:w-1/2">
-                  <span className="text-amber-500/70 text-xs hidden sm:inline">➔</span>
-                  <select 
-                    value={deductionState.ornamentChoice || ""} 
-                    onChange={(e) => setDeductionState((prev) => ({ ...prev, ornamentChoice: e.target.value || null }))} 
-                    className="bg-[#140d08] border border-amber-600/50 rounded-lg text-xs font-semibold p-2 text-amber-200 w-full focus:outline-none focus:border-amber-400 cursor-pointer shadow-inner"
-                  >
-                    <option value="">Select Historical Meaning...</option>
-                    <option value="marriage">📜 Salim Singh&apos;s Forced Marriage Ultimatum</option>
-                    <option value="plague">🦠 An Outbreak of Plague in the Desert</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Pair 2: Tax Ledger */}
-              <div className="bg-[#281c13] border border-amber-700/30 p-3.5 rounded-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-md hover:border-amber-600/60 transition-all">
-                <div className="flex items-center gap-2.5 sm:w-1/2">
-                  <span className="text-lg bg-amber-950/80 border border-amber-700/40 rounded-lg p-1.5 flex items-center justify-center">📖</span>
-                  <div className="flex flex-col">
-                    <span className="text-xs font-bold text-amber-100 uppercase tracking-wide">2. Torn Tax Ledger</span>
-                    <span className="text-[10px] text-amber-400/60">Discovered at Village Treasury</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 sm:w-1/2">
-                  <span className="text-amber-500/70 text-xs hidden sm:inline">➔</span>
-                  <select 
-                    value={deductionState.ledgerChoice || ""} 
-                    onChange={(e) => setDeductionState((prev) => ({ ...prev, ledgerChoice: e.target.value || null }))} 
-                    className="bg-[#140d08] border border-amber-600/50 rounded-lg text-xs font-semibold p-2 text-amber-200 w-full focus:outline-none focus:border-amber-400 cursor-pointer shadow-inner"
-                  >
-                    <option value="">Select Historical Meaning...</option>
-                    <option value="extortion">⚖️ Oppressive Extortion &amp; Economic Ruin</option>
-                    <option value="trade">💼 Routine Annual Market Accounting</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Pair 3: Water Pots */}
-              <div className="bg-[#281c13] border border-amber-700/30 p-3.5 rounded-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-md hover:border-amber-600/60 transition-all">
-                <div className="flex items-center gap-2.5 sm:w-1/2">
-                  <span className="text-lg bg-amber-950/80 border border-amber-700/40 rounded-lg p-1.5 flex items-center justify-center">🏺</span>
-                  <div className="flex flex-col">
-                    <span className="text-xs font-bold text-amber-100 uppercase tracking-wide">3. Intact Water Pots &amp; Supplies</span>
-                    <span className="text-[10px] text-amber-400/60">Discovered at Stepwell Platform</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 sm:w-1/2">
-                  <span className="text-amber-500/70 text-xs hidden sm:inline">➔</span>
-                  <select 
-                    value={deductionState.suppliesChoice || ""} 
-                    onChange={(e) => setDeductionState((prev) => ({ ...prev, suppliesChoice: e.target.value || null }))} 
-                    className="bg-[#140d08] border border-amber-600/50 rounded-lg text-xs font-semibold p-2 text-amber-200 w-full focus:outline-none focus:border-amber-400 cursor-pointer shadow-inner"
-                  >
-                    <option value="">Select Historical Meaning...</option>
-                    <option value="evacuation">👣 Secret Coordinated Overnight Evacuation</option>
-                    <option value="panic">🌋 Panic Fleeing during Earthquake</option>
-                  </select>
-                </div>
-              </div>
-
-            </div>
-
-            {/* Feedback Message */}
-            {deductionFeedback && (
-              <div className="bg-amber-950/80 border border-amber-600/60 p-3 rounded-xl text-center text-xs font-medium text-amber-200 animate-in fade-in duration-200">
-                {deductionFeedback}
-              </div>
-            )}
-
-            {/* Footer Buttons */}
-            <div className="flex items-center justify-between border-t border-amber-700/30 pt-3">
-              <button 
-                onClick={() => setDeductionState({ ornamentChoice: null, ledgerChoice: null, suppliesChoice: null })}
-                className="text-xs font-semibold text-amber-400/70 hover:text-amber-300 transition-all cursor-pointer"
-              >
-                Reset Selections
-              </button>
-
-              <button 
-                onClick={handleEvaluateDeduction} 
-                className="bg-amber-600 hover:bg-amber-500 text-amber-950 font-black py-2.5 px-6 rounded-xl border border-amber-400 shadow-[0_4px_14px_rgba(217,119,6,0.4)] text-xs uppercase tracking-wider transition-all cursor-pointer hover:scale-[1.02] active:scale-95"
-              >
-                Submit Deduction
-              </button>
-            </div>
-
-          </div>
-        </div>
-      )}
 
       {/* Stage 3 Complete Modal (Offers journey into Stage 4 Bhangarh) */}
       {showStage3CompleteModal && (
