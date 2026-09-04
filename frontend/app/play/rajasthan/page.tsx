@@ -2382,40 +2382,82 @@ export default function RajasthanGameScreen() {
       )}
 
       {showHaveliOrnamentModal && (
-        <div className="absolute inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center p-6 z-40 pointer-events-auto">
-          <div className="bg-[#fff9ea] border-4 border-amber-900 rounded-2xl p-6 shadow-[12px_12px_0_0_rgba(0,0,0,1)] max-w-lg w-full flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b-2 border-amber-800/30 pb-3">
-              <span className="text-sm font-extrabold text-amber-950 uppercase tracking-widest">💍 Clue 1: Bridal Wedding Ornament</span>
-              <button onClick={() => setShowHaveliOrnamentModal(false)} className="text-amber-900 font-bold text-sm bg-amber-200/60 px-2 py-0.5 rounded cursor-pointer">✕ Close</button>
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-40 pointer-events-auto">
+          <div className="bg-[#fff9ea] border-4 border-amber-900 rounded-2xl p-5 shadow-[12px_12px_0_0_rgba(0,0,0,1)] max-w-md w-full flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b-2 border-amber-800/30 pb-2">
+              <span className="text-sm font-black text-amber-950 uppercase tracking-wider flex items-center gap-2">
+                💍 Clue 1: Bridal Wedding Ornament
+              </span>
+              <button onClick={() => setShowHaveliOrnamentModal(false)} className="text-amber-900 font-bold text-xs bg-amber-200/80 hover:bg-amber-300 px-2 py-0.5 rounded cursor-pointer">✕ Close</button>
             </div>
-            <p className="text-xs text-amber-950 leading-relaxed font-serif">Left behind in the village chief&apos;s haveli. Proves the forced marriage ultimatum by Prime Minister Salim Singh.</p>
-            <button onClick={() => setShowHaveliOrnamentModal(false)} className="bg-amber-600 text-white font-bold py-2 px-4 rounded-xl border-2 border-black text-xs uppercase cursor-pointer self-end">Add to Journal</button>
+            <div className="relative w-full h-48 rounded-xl overflow-hidden border-2 border-amber-900 shadow-md">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/bg-kuldhara-chiefs-house.jpg" alt="Bridal Ornament" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-2.5">
+                <span className="text-amber-200 font-serif font-bold text-xs">💍 Village Chief&apos;s Haveli Evidence</span>
+                <span className="text-amber-400 text-[10px] uppercase font-mono">Forced Marriage Ultimatum</span>
+              </div>
+            </div>
+            <p className="text-xs text-amber-950 leading-relaxed font-serif bg-amber-100/90 border-l-4 border-amber-600 p-2.5 rounded italic">
+              &quot;Left behind in the village chief&apos;s haveli. Proves the forced marriage ultimatum by Prime Minister Salim Singh against the Paliwal daughter.&quot;
+            </p>
+            <button onClick={() => setShowHaveliOrnamentModal(false)} className="bg-amber-600 hover:bg-amber-700 text-white font-black py-2.5 px-5 rounded-xl border-2 border-black text-xs uppercase tracking-wider cursor-pointer self-end">
+              Add to Journal
+            </button>
           </div>
         </div>
       )}
 
       {showTaxLedgerModal && (
-        <div className="absolute inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center p-6 z-40 pointer-events-auto">
-          <div className="bg-[#fff9ea] border-4 border-amber-900 rounded-2xl p-6 shadow-[12px_12px_0_0_rgba(0,0,0,1)] max-w-lg w-full flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b-2 border-amber-800/30 pb-3">
-              <span className="text-sm font-extrabold text-amber-950 uppercase tracking-widest">📖 Clue 2: Torn Tax Ledger</span>
-              <button onClick={() => setShowTaxLedgerModal(false)} className="text-amber-900 font-bold text-sm bg-amber-200/60 px-2 py-0.5 rounded cursor-pointer">✕ Close</button>
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-40 pointer-events-auto">
+          <div className="bg-[#fff9ea] border-4 border-amber-900 rounded-2xl p-5 shadow-[12px_12px_0_0_rgba(0,0,0,1)] max-w-md w-full flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b-2 border-amber-800/30 pb-2">
+              <span className="text-sm font-black text-amber-950 uppercase tracking-wider flex items-center gap-2">
+                📖 Clue 2: Torn Tax Ledger (Extortion Record)
+              </span>
+              <button onClick={() => setShowTaxLedgerModal(false)} className="text-amber-900 font-bold text-xs bg-amber-200/80 hover:bg-amber-300 px-2 py-0.5 rounded cursor-pointer">✕ Close</button>
             </div>
-            <p className="text-xs text-amber-950 leading-relaxed font-serif">Found in the merchant treasury. Records quadrupled taxes and ruthless economic extortion.</p>
-            <button onClick={() => setShowTaxLedgerModal(false)} className="bg-amber-600 text-white font-bold py-2 px-4 rounded-xl border-2 border-black text-xs uppercase cursor-pointer self-end">Add to Journal</button>
+            <div className="relative w-full h-48 rounded-xl overflow-hidden border-2 border-amber-900 shadow-md">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/clue-torn-tax-ledger.jpg" alt="Torn Tax Ledger" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-2.5">
+                <span className="text-amber-200 font-serif font-bold text-xs">📜 Merchant Treasury Tax Ledger</span>
+                <span className="text-amber-400 text-[10px] uppercase font-mono">Quadrupled Taxes &amp; Economic Extortion</span>
+              </div>
+            </div>
+            <p className="text-xs text-amber-950 leading-relaxed font-serif bg-amber-100/90 border-l-4 border-amber-600 p-2.5 rounded italic">
+              &quot;Found in the merchant treasury. Records quadrupled taxes and ruthless economic extortion imposed by Salim Singh upon Kuldhara&apos;s merchants.&quot;
+            </p>
+            <button onClick={() => setShowTaxLedgerModal(false)} className="bg-amber-600 hover:bg-amber-700 text-white font-black py-2.5 px-5 rounded-xl border-2 border-black text-xs uppercase tracking-wider cursor-pointer self-end">
+              Add to Journal
+            </button>
           </div>
         </div>
       )}
 
       {showStepwellModal && (
-        <div className="absolute inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center p-6 z-40 pointer-events-auto">
-          <div className="bg-[#fff9ea] border-4 border-amber-900 rounded-2xl p-6 shadow-[12px_12px_0_0_rgba(0,0,0,1)] max-w-lg w-full flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b-2 border-amber-800/30 pb-3">
-              <span className="text-sm font-extrabold text-amber-950 uppercase tracking-widest">🏺 Clue 3: Intact Water Pots &amp; Supplies</span>
-              <button onClick={() => setShowStepwellModal(false)} className="text-amber-900 font-bold text-sm bg-amber-200/60 px-2 py-0.5 rounded cursor-pointer">✕ Close</button>
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-40 pointer-events-auto">
+          <div className="bg-[#fff9ea] border-4 border-amber-900 rounded-2xl p-5 shadow-[12px_12px_0_0_rgba(0,0,0,1)] max-w-md w-full flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b-2 border-amber-800/30 pb-2">
+              <span className="text-sm font-black text-amber-950 uppercase tracking-wider flex items-center gap-2">
+                🏺 Clue 3: Intact Water Pots &amp; Supplies
+              </span>
+              <button onClick={() => setShowStepwellModal(false)} className="text-amber-900 font-bold text-xs bg-amber-200/80 hover:bg-amber-300 px-2 py-0.5 rounded cursor-pointer">✕ Close</button>
             </div>
-            <p className="text-xs text-amber-950 leading-relaxed font-serif">Stacked neatly at the stepwell. Proves a secret, coordinated overnight evacuation in total unison.</p>
-            <button onClick={() => setShowStepwellModal(false)} className="bg-amber-600 text-white font-bold py-2 px-4 rounded-xl border-2 border-black text-xs uppercase cursor-pointer self-end">Add to Journal</button>
+            <div className="relative w-full h-48 rounded-xl overflow-hidden border-2 border-amber-900 shadow-md">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/bg-kuldhara-stepwell.jpg" alt="Stepwell Supplies" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-2.5">
+                <span className="text-amber-200 font-serif font-bold text-xs">🏺 Kuldhara Stepwell Supplies</span>
+                <span className="text-amber-400 text-[10px] uppercase font-mono">Coordinated Overnight Evacuation</span>
+              </div>
+            </div>
+            <p className="text-xs text-amber-950 leading-relaxed font-serif bg-amber-100/90 border-l-4 border-amber-600 p-2.5 rounded italic">
+              &quot;Stacked neatly at the stepwell. Proves a secret, coordinated overnight evacuation in total unison across all 84 Paliwal Brahmin villages.&quot;
+            </p>
+            <button onClick={() => setShowStepwellModal(false)} className="bg-amber-600 hover:bg-amber-700 text-white font-black py-2.5 px-5 rounded-xl border-2 border-black text-xs uppercase tracking-wider cursor-pointer self-end">
+              Add to Journal
+            </button>
           </div>
         </div>
       )}
