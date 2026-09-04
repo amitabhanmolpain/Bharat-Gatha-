@@ -3,11 +3,15 @@
     "user_id": "default_traveller",
     "era": "mughal",
     "solved_puzzles": [
-      "sheesh_mahal_reflection"
+      "sheesh_mahal_reflection",
+      "test_ping",
+      "mughal_campaign"
     ],
     "prizes_unlocked": [
-      "Permission to Khas Mahal"
+      "Permission to Khas Mahal",
+      "test",
+      "companion_rescued"
     ],
-    "total_score": 750
+    "total_score": 1350
   }
 }

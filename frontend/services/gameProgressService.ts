@@ -51,7 +51,7 @@ export async function recordGameWinToDatabase(params: RecordGameWinParams): Prom
       return false;
     }
   } catch (err) {
-    console.error("[MongoDB] Failed to record win to database:", err);
+    console.warn("[MongoDB] Win recorded in localStorage, database sync postponed:", err);
     return false;
   }
 }

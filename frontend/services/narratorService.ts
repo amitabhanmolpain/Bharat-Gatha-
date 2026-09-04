@@ -163,6 +163,8 @@ class NarratorManager {
           audioSrc = "/khas_mahal_narration.wav";
         } else if (lowerText.includes("cenotaphs") && (lowerText.includes("public viewing") || lowerText.includes("crypt") || lowerText.includes("actual historic graves"))) {
           audioSrc = "/taj_mausoleum_narration.wav";
+        } else if (lowerText.includes("free your companion") || lowerText.includes("clearing the mughal campaign") || lowerText.includes("spill your secret")) {
+          audioSrc = "/companion_freed_narration.wav";
         }
       }
 
