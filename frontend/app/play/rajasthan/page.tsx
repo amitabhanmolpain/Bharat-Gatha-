@@ -2172,51 +2172,96 @@ export default function RajasthanGameScreen() {
               </div>
             </div>
 
-            {/* Visual Chaupar Cross Board (Image 1 style background with animated pawns overlay) */}
-            <div className="relative w-full h-64 sm:h-72 rounded-2xl overflow-hidden border-3 border-amber-950 shadow-inner bg-[#1e0e07] flex items-center justify-center">
-              {/* Authentic Chaupar Fabric Board Background Image */}
+            {/* Visual Chaupar Cross Board (Google Nano Banana Clean Board Image & Exact Grid Pawn Positions) */}
+            <div className="relative w-full h-72 sm:h-80 rounded-2xl overflow-hidden border-4 border-amber-950 shadow-2xl bg-[#1e0e07] flex items-center justify-center">
+              {/* Google Nano Banana Clean 2D Orthogonal Chaupar Board Background */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/chaupar-board.jpg"
-                alt="Traditional Chaupar Board"
-                className="w-full h-full object-cover opacity-90 scale-105"
+                alt="Traditional Chaupar Board (Nano Banana)"
+                className="w-full h-full object-contain p-1 opacity-95"
               />
 
-              {/* Board Overlay Highlight Grids & Central Charkoni */}
+              {/* Central Home (Charkoni) Highlight Ring */}
               <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                {/* Central Home (Charkoni) Glowing Ring */}
-                <div className="w-16 h-16 rounded-full border-2 border-yellow-400/80 bg-yellow-500/20 backdrop-blur-[1px] animate-pulse flex items-center justify-center shadow-[0_0_15px_rgba(234,179,8,0.5)]">
-                  <span className="text-xs font-serif font-black text-yellow-200 drop-shadow">HOME</span>
+                <div className="w-14 h-14 rounded-full border-2 border-yellow-400/90 bg-yellow-500/25 backdrop-blur-[1px] animate-pulse flex items-center justify-center shadow-[0_0_20px_rgba(234,179,8,0.7)]">
+                  <span className="text-[10px] font-serif font-black text-yellow-100 drop-shadow-md uppercase tracking-wider">HOME</span>
                 </div>
               </div>
 
-              {/* Player's Animated Golden Goti (Pawn) */}
+              {/* Player's Animated Golden Goti (Pawn) sitting precisely inside grid squares */}
               <div
-                className={`absolute w-8 h-8 z-20 transition-all duration-700 ease-out transform -translate-x-1/2 -translate-y-1/2 ${
-                  isPawnMoving ? "scale-125 -translate-y-4 shadow-[0_10px_20px_rgba(245,158,11,0.9)]" : "scale-100"
+                className={`absolute w-9 h-9 z-30 transition-all duration-700 ease-out transform -translate-x-1/2 -translate-y-1/2 ${
+                  isPawnMoving ? "scale-125 -translate-y-3 shadow-[0_12px_24px_rgba(245,158,11,0.9)] animate-pulse" : "scale-100 shadow-md"
                 }`}
-                style={{
-                  left: `${50 + (playerPawnPos > 6 ? (playerPawnPos - 6) * 2.2 : 0)}%`,
-                  top: `${Math.max(50, 84 - playerPawnPos * 2.8)}%`,
-                }}
+                style={
+                  playerPawnPos === 0
+                    ? { left: "50%", top: "86%" }
+                    : playerPawnPos === 1
+                    ? { left: "50%", top: "78%" }
+                    : playerPawnPos === 2
+                    ? { left: "50%", top: "70%" }
+                    : playerPawnPos === 3
+                    ? { left: "50%", top: "62%" }
+                    : playerPawnPos === 4
+                    ? { left: "50%", top: "55%" }
+                    : playerPawnPos === 5
+                    ? { left: "50%", top: "48%" }
+                    : playerPawnPos === 6
+                    ? { left: "58%", top: "50%" }
+                    : playerPawnPos === 7
+                    ? { left: "66%", top: "50%" }
+                    : playerPawnPos === 8
+                    ? { left: "74%", top: "50%" }
+                    : playerPawnPos === 9
+                    ? { left: "82%", top: "50%" }
+                    : playerPawnPos === 10
+                    ? { left: "88%", top: "50%" }
+                    : playerPawnPos === 11
+                    ? { left: "94%", top: "50%" }
+                    : { left: "50%", top: "50%" }
+                }
               >
-                <div className="relative w-full h-full rounded-t-full rounded-b-md bg-gradient-to-tr from-amber-600 via-yellow-400 to-amber-200 border-2 border-amber-950 shadow-[0_4px_8px_rgba(0,0,0,0.6)] flex items-center justify-center">
-                  <div className="w-2.5 h-2.5 rounded-full bg-amber-100 border border-amber-900"></div>
+                <div className="relative w-full h-full rounded-t-full rounded-b-md bg-gradient-to-tr from-amber-600 via-yellow-400 to-amber-100 border-2 border-amber-950 shadow-[0_4px_10px_rgba(0,0,0,0.8)] flex items-center justify-center">
+                  <div className="w-3 h-3 rounded-full bg-amber-100 border border-amber-900 shadow-inner flex items-center justify-center text-[9px]">👑</div>
                 </div>
               </div>
 
-              {/* Chacha's Animated Ruby Goti (Pawn) */}
+              {/* Chacha's Animated Ruby Goti (Pawn) sitting precisely inside grid squares */}
               <div
-                className={`absolute w-8 h-8 z-20 transition-all duration-700 ease-out transform -translate-x-1/2 -translate-y-1/2 ${
-                  isPawnMoving ? "scale-125 -translate-y-4 shadow-[0_10px_20px_rgba(239,68,68,0.9)]" : "scale-100"
+                className={`absolute w-9 h-9 z-30 transition-all duration-700 ease-out transform -translate-x-1/2 -translate-y-1/2 ${
+                  isPawnMoving ? "scale-125 -translate-y-3 shadow-[0_12px_24px_rgba(239,68,68,0.9)] animate-pulse" : "scale-100 shadow-md"
                 }`}
-                style={{
-                  left: `${50 - (chachaPawnPos > 6 ? (chachaPawnPos - 6) * 2.2 : 0)}%`,
-                  top: `${Math.min(50, 16 + chachaPawnPos * 2.8)}%`,
-                }}
+                style={
+                  chachaPawnPos === 0
+                    ? { left: "50%", top: "14%" }
+                    : chachaPawnPos === 1
+                    ? { left: "50%", top: "22%" }
+                    : chachaPawnPos === 2
+                    ? { left: "50%", top: "30%" }
+                    : chachaPawnPos === 3
+                    ? { left: "50%", top: "38%" }
+                    : chachaPawnPos === 4
+                    ? { left: "50%", top: "45%" }
+                    : chachaPawnPos === 5
+                    ? { left: "50%", top: "52%" }
+                    : chachaPawnPos === 6
+                    ? { left: "42%", top: "50%" }
+                    : chachaPawnPos === 7
+                    ? { left: "34%", top: "50%" }
+                    : chachaPawnPos === 8
+                    ? { left: "26%", top: "50%" }
+                    : chachaPawnPos === 9
+                    ? { left: "18%", top: "50%" }
+                    : chachaPawnPos === 10
+                    ? { left: "12%", top: "50%" }
+                    : chachaPawnPos === 11
+                    ? { left: "6%", top: "50%" }
+                    : { left: "50%", top: "50%" }
+                }
               >
-                <div className="relative w-full h-full rounded-t-full rounded-b-md bg-gradient-to-tr from-red-950 via-red-600 to-red-400 border-2 border-amber-950 shadow-[0_4px_8px_rgba(0,0,0,0.6)] flex items-center justify-center">
-                  <div className="w-2.5 h-2.5 rounded-full bg-red-200 border border-red-950"></div>
+                <div className="relative w-full h-full rounded-t-full rounded-b-md bg-gradient-to-tr from-red-950 via-red-600 to-red-400 border-2 border-amber-950 shadow-[0_4px_10px_rgba(0,0,0,0.8)] flex items-center justify-center">
+                  <div className="w-3 h-3 rounded-full bg-red-200 border border-red-950 shadow-inner flex items-center justify-center text-[9px] text-white">👳</div>
                 </div>
               </div>
             </div>
