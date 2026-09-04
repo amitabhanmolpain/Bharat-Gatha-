@@ -2464,6 +2464,150 @@ export default function RajasthanGameScreen() {
 
 
 
+      {/* --- STAGE 3 KULDHARA EVIDENCE BOARD & DEDUCTION PUZZLE MODAL --- */}
+      {showDeductionModal && (
+        <div className="absolute inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 z-50 pointer-events-auto">
+          <div className="bg-[#fff9ea] border-4 border-amber-950 rounded-3xl p-6 shadow-[16px_16px_0_0_rgba(0,0,0,1)] max-w-2xl w-full flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
+            {/* Header Bar */}
+            <div className="flex items-center justify-between border-b-2 border-amber-800/40 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🏛️</span>
+                <div>
+                  <h3 className="font-extrabold text-amber-950 uppercase tracking-widest text-sm sm:text-base leading-tight">
+                    🧩 Memorial Chhatri: Evidence Board Puzzle
+                  </h3>
+                  <span className="text-[11px] font-serif text-amber-800 font-semibold italic">
+                    Piece together the 3 discovered clues to solve why Kuldhara was deserted overnight!
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowDeductionModal(false)}
+                className="text-amber-950 hover:bg-amber-200 font-bold text-xs px-3 py-1 rounded-lg border-2 border-amber-900 bg-amber-100 cursor-pointer shadow-sm"
+              >
+                ✕ Close Board
+              </button>
+            </div>
+
+            {/* Clues Progress Bar */}
+            <div className="flex items-center justify-between bg-amber-100/90 border border-amber-400 p-2.5 rounded-xl text-xs font-bold text-amber-950">
+              <span>DISCOVERED EVIDENCE CLUES:</span>
+              <span className="bg-amber-600 text-white px-2.5 py-0.5 rounded-full border border-black font-mono">
+                {cluesFound}/3 Clues Found
+              </span>
+            </div>
+
+            {/* Interactive Evidence Matching Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Clue 1: Bridal Ornament */}
+              <div className={`border-2 rounded-xl p-3 flex flex-col gap-2 transition-all ${
+                hasWeddingOrnament ? "bg-amber-50/90 border-amber-800" : "bg-gray-100/60 border-gray-300 opacity-60"
+              }`}>
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-black text-amber-950 uppercase">💍 Bridal Ornament</span>
+                  {hasWeddingOrnament ? (
+                    <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold">FOUND</span>
+                  ) : (
+                    <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold">LOCKED</span>
+                  )}
+                </div>
+                <div className="relative w-full h-24 rounded-lg overflow-hidden border border-amber-900/50 bg-amber-200">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/bg-kuldhara-chiefs-house.jpg" alt="Bridal Ornament" className="w-full h-full object-cover" />
+                </div>
+                <label className="text-[10px] font-bold text-amber-900 uppercase mt-1">Select Explanation:</label>
+                <select
+                  disabled={!hasWeddingOrnament}
+                  value={deductionState.ornamentChoice || ""}
+                  onChange={(e) => setDeductionState((prev) => ({ ...prev, ornamentChoice: e.target.value as any }))}
+                  className="w-full bg-white border border-amber-800 rounded p-1 text-xs font-serif font-bold text-amber-950 cursor-pointer disabled:bg-gray-200"
+                >
+                  <option value="">-- Choose Meaning --</option>
+                  <option value="marriage">1. Forced Marriage Ultimatum</option>
+                  <option value="extortion">2. Economic Tax Extortion</option>
+                  <option value="evacuation">3. Secret Overnight Evacuation</option>
+                </select>
+              </div>
+
+              {/* Clue 2: Torn Tax Ledger */}
+              <div className={`border-2 rounded-xl p-3 flex flex-col gap-2 transition-all ${
+                hasTaxLedger ? "bg-amber-50/90 border-amber-800" : "bg-gray-100/60 border-gray-300 opacity-60"
+              }`}>
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-black text-amber-950 uppercase">📖 Torn Tax Ledger</span>
+                  {hasTaxLedger ? (
+                    <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold">FOUND</span>
+                  ) : (
+                    <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold">LOCKED</span>
+                  )}
+                </div>
+                <div className="relative w-full h-24 rounded-lg overflow-hidden border border-amber-900/50 bg-amber-200">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/clue-torn-tax-ledger.jpg" alt="Torn Tax Ledger" className="w-full h-full object-cover" />
+                </div>
+                <label className="text-[10px] font-bold text-amber-900 uppercase mt-1">Select Explanation:</label>
+                <select
+                  disabled={!hasTaxLedger}
+                  value={deductionState.ledgerChoice || ""}
+                  onChange={(e) => setDeductionState((prev) => ({ ...prev, ledgerChoice: e.target.value as any }))}
+                  className="w-full bg-white border border-amber-800 rounded p-1 text-xs font-serif font-bold text-amber-950 cursor-pointer disabled:bg-gray-200"
+                >
+                  <option value="">-- Choose Meaning --</option>
+                  <option value="marriage">1. Forced Marriage Ultimatum</option>
+                  <option value="extortion">2. Quadrupled Tax Extortion</option>
+                  <option value="evacuation">3. Secret Overnight Evacuation</option>
+                </select>
+              </div>
+
+              {/* Clue 3: Intact Water Pots */}
+              <div className={`border-2 rounded-xl p-3 flex flex-col gap-2 transition-all ${
+                hasWaterPotsSupplies ? "bg-amber-50/90 border-amber-800" : "bg-gray-100/60 border-gray-300 opacity-60"
+              }`}>
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-black text-amber-950 uppercase">🏺 Intact Water Pots</span>
+                  {hasWaterPotsSupplies ? (
+                    <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold">FOUND</span>
+                  ) : (
+                    <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold">LOCKED</span>
+                  )}
+                </div>
+                <div className="relative w-full h-24 rounded-lg overflow-hidden border border-amber-900/50 bg-amber-200">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/clue-intact-water-pots.jpg" alt="Stepwell Water Pots" className="w-full h-full object-cover" />
+                </div>
+                <label className="text-[10px] font-bold text-amber-900 uppercase mt-1">Select Explanation:</label>
+                <select
+                  disabled={!hasWaterPotsSupplies}
+                  value={deductionState.suppliesChoice || ""}
+                  onChange={(e) => setDeductionState((prev) => ({ ...prev, suppliesChoice: e.target.value as any }))}
+                  className="w-full bg-white border border-amber-800 rounded p-1 text-xs font-serif font-bold text-amber-950 cursor-pointer disabled:bg-gray-200"
+                >
+                  <option value="">-- Choose Meaning --</option>
+                  <option value="marriage">1. Forced Marriage Ultimatum</option>
+                  <option value="extortion">2. Economic Tax Extortion</option>
+                  <option value="evacuation">3. Coordinated Overnight Evacuation</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Feedback Banner */}
+            {deductionFeedback && (
+              <div className="bg-red-100 border-l-4 border-red-600 p-2.5 rounded text-xs font-serif font-bold text-red-950 text-center animate-pulse">
+                {deductionFeedback}
+              </div>
+            )}
+
+            {/* Action Submit Button */}
+            <button
+              onClick={handleEvaluateDeduction}
+              className="w-full bg-amber-600 hover:bg-amber-700 text-white font-black py-3.5 px-4 rounded-xl border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-xs uppercase tracking-widest cursor-pointer transition-all active:translate-y-0.5"
+            >
+              📜 Submit Historical Deduction
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Stage 3 Complete Modal (Offers journey into Stage 4 Bhangarh) */}
       {showStage3CompleteModal && (
         <div className="absolute inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-6 z-50 pointer-events-auto">
