@@ -167,6 +167,8 @@ class NarratorManager {
           audioSrc = "/companion_freed_narration.wav";
         } else if (lowerText.includes("kuldhara") && (lowerText.includes("vanished") || lowerText.includes("stipulated time") || lowerText.includes("desert village"))) {
           audioSrc = "/kuldhara_narration.wav";
+        } else if (lowerText.includes("good job beta") || (lowerText.includes("kuldhara") && (lowerText.includes("salim singh") || lowerText.includes("crushing taxes")))) {
+          audioSrc = "/kuldhara_solved_narration.wav";
         }
       }
 

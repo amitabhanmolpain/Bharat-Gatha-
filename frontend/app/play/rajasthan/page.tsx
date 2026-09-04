@@ -489,13 +489,13 @@ export default function RajasthanGameScreen() {
 
   // --- KULDHARA 2-MINUTE CHALLENGE TIMER (Stage 3) ---
   useEffect(() => {
-    if (stage !== 3 || showStage3CompleteModal) return;
-
-    const allCluesSolved = hasWeddingOrnament && hasTaxLedger && hasWaterPotsSupplies && showStage3CompleteModal;
-    if (allCluesSolved) return; // Freeze countdown when Stage 3 mystery is solved
+    const allCluesFound = hasWeddingOrnament && hasTaxLedger && hasWaterPotsSupplies;
+    // When clues are found or mystery modal is shown, immediately freeze and stop timer
+    if (stage !== 3 || showStage3CompleteModal || allCluesFound) return;
 
     const interval = setInterval(() => {
       setKuldharaTimer((prev) => {
+        if (showStage3CompleteModal || allCluesFound) return prev;
         if (prev <= 1) {
           setShowKuldharaTimeOutModal(true);
           return 0;
@@ -506,6 +506,21 @@ export default function RajasthanGameScreen() {
 
     return () => clearInterval(interval);
   }, [stage, showStage3CompleteModal, hasWeddingOrnament, hasTaxLedger, hasWaterPotsSupplies]);
+
+  // Play Sarvam AI narrator when Kuldhara mystery is solved & Stage 3 Complete Card opens
+  useEffect(() => {
+    if (showStage3CompleteModal) {
+      stopCharacterDialogue();
+      stopNarration();
+      const solvedNarration = "Good job beta! You have found all the clues. The real story of Kuldhara is that the villagers did not vanish by magic. A cruel minister, Salim Singh, imposed crushing taxes, while their desert water dried up. To protect their honor, all eighty-four villages packed their wealth and evacuated overnight, cursing the barren land so no one would ever return!";
+      playNarration(solvedNarration, {
+        audioUrl: "/kuldhara_solved_narration.wav",
+        speaker: "ratan",
+        pace: 0.88,
+        language_code: "en-IN",
+      });
+    }
+  }, [showStage3CompleteModal]);
 
   // --- KULDHARA HISTORICAL NARRATOR (SARVAM AI BULBUL) ---
   const [showKuldharaNarratorBanner, setShowKuldharaNarratorBanner] = useState(false);
@@ -2938,19 +2953,70 @@ export default function RajasthanGameScreen() {
 
       {/* Stage 3 Complete Modal (Offers journey into Stage 4 Bhangarh) */}
       {showStage3CompleteModal && (
-        <div className="absolute inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-6 z-50 pointer-events-auto">
-          <div className="bg-[#fff9ea] border-4 border-amber-950 rounded-2xl p-8 max-w-xl w-full shadow-[20px_20px_0_0_rgba(0,0,0,1)] flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-200">
-            <div className="w-20 h-20 bg-amber-500 text-white border-3 border-black rounded-full flex items-center justify-center text-3xl shadow-md mb-4">🏛️</div>
-            <span className="text-xs font-mono font-bold text-amber-800 uppercase tracking-widest mb-1">STAGE 3 COMPLETED • MYSTERY SOLVED</span>
-            <h2 className="text-2xl sm:text-3xl font-serif text-amber-950 font-black tracking-wide uppercase mb-3">The Legend of Kuldhara: Preserved in Honor</h2>
-            <div className="text-amber-950 font-serif text-xs sm:text-sm leading-relaxed text-left bg-amber-100/60 p-4 rounded-xl border border-amber-400 my-3">
-              <p>When Prime Minister Salim Singh gave the village an ultimatum, all 84 Paliwal Brahmin settlements chose their dignity and evacuated in complete secrecy.</p>
+        <div className="absolute inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 z-50 pointer-events-auto">
+          <div className="bg-[#fff9ea] border-4 border-amber-950 rounded-2xl p-6 sm:p-8 max-w-2xl w-full shadow-[20px_20px_0_0_rgba(0,0,0,1)] flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-200 max-h-[92vh] overflow-y-auto">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-amber-500 text-white border-3 border-black rounded-full flex items-center justify-center text-3xl shadow-md mb-3">
+              🏛️
             </div>
-            <div className="flex gap-3 w-full mt-2">
-              <button onClick={() => setShowStage3CompleteModal(false)} className="bg-amber-100 hover:bg-amber-200 text-amber-950 font-bold py-3 px-4 rounded-xl border-2 border-black text-xs uppercase">
+            <span className="text-[11px] font-mono font-bold text-amber-800 uppercase tracking-widest mb-1">
+              STAGE 3 COMPLETED • ALL CLUES SOLVED
+            </span>
+            <h2 className="text-xl sm:text-2xl font-serif text-amber-950 font-black tracking-wide uppercase mb-2.5">
+              The True Story of Kuldhara's Disappearance
+            </h2>
+
+            {/* Narrator Voice Badge */}
+            <div className="w-full bg-amber-900/10 border-2 border-amber-800/30 rounded-xl p-3.5 mb-3 flex items-start gap-3 text-left">
+              <span className="text-xl shrink-0 mt-0.5 animate-pulse">🎙️</span>
+              <div>
+                <span className="text-[10px] font-mono font-bold text-amber-900 uppercase tracking-wider block mb-0.5">
+                  Historical Storyteller (Sarvam AI)
+                </span>
+                <p className="text-amber-950 font-bold text-xs sm:text-sm italic leading-relaxed">
+                  "Good job beta! You have found all the clues. The real story of Kuldhara is that the villagers did not vanish by magic. A cruel minister, Salim Singh, imposed crushing taxes, while their desert water dried up. To protect their honor, all eighty-four villages packed their wealth and evacuated overnight, cursing the barren land so no one would ever return!"
+                </p>
+              </div>
+            </div>
+
+            {/* Historical Summary Cards */}
+            <div className="text-amber-950 font-serif text-xs sm:text-[13px] leading-relaxed text-left bg-amber-100/60 p-4 rounded-xl border border-amber-400/80 mb-4 w-full flex flex-col gap-2.5">
+              <div className="flex items-start gap-2">
+                <span className="text-amber-800 font-bold text-sm shrink-0">1.</span>
+                <p>
+                  <strong className="text-amber-900">Tyranny &amp; Extreme Taxation:</strong> Salim Singh, the cruel prime minister of Jaisalmer, levied unsustainable taxes on the wealthy Paliwal Brahmins and threatened the village chief's family.
+                </p>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-amber-800 font-bold text-sm shrink-0">2.</span>
+                <p>
+                  <strong className="text-amber-900">Drying Desert Water:</strong> Despite their advanced water harvesting, groundwater levels depleted drastically, making life and agriculture impossible in the arid Thar desert.
+                </p>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-amber-800 font-bold text-sm shrink-0">3.</span>
+                <p>
+                  <strong className="text-amber-900">Overnight Migration &amp; The Curse:</strong> All 84 Paliwal settlements chose their dignity, secretly packing their wealth and migrating overnight. They cursed the land so none could ever settle here again, leaving the haunting ruins seen today.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 w-full">
+              <button 
+                onClick={() => {
+                  stopNarration();
+                  setShowStage3CompleteModal(false);
+                }} 
+                className="bg-amber-100 hover:bg-amber-200 text-amber-950 font-bold py-3 px-4 rounded-xl border-2 border-black text-xs uppercase cursor-pointer"
+              >
                 Explore Kuldhara
               </button>
-              <button onClick={startBhangarhJourney} className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-extrabold py-3 px-4 rounded-xl border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-xs uppercase tracking-wider animate-bounce">
+              <button 
+                onClick={() => {
+                  stopNarration();
+                  startBhangarhJourney();
+                }} 
+                className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-extrabold py-3 px-4 rounded-xl border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-xs uppercase tracking-wider animate-bounce cursor-pointer"
+              >
                 Continue to Bhangarh Fort (Stage 4 - Final) →
               </button>
             </div>

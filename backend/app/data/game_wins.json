@@ -113,5 +113,72 @@
       "completedAt": "2026-09-04T00:40:51.407Z"
     },
     "_id": "6a9a139347e4726183b84e24"
+  },
+  {
+    "user_id": "default_traveller",
+    "era": "mughal",
+    "game_type": "pietra_dura_flower_art",
+    "solved": true,
+    "is_solved": true,
+    "status": "solved",
+    "prize_unlocked": "Sheesh Mahal Corridor Clearance",
+    "clues_found": [],
+    "score": 150,
+    "moves": 0,
+    "created_at": "2026-09-04T04:06:23.081697",
+    "solved_at": "2026-09-04T04:06:23.081697",
+    "metadata": {},
+    "_id": "6a9a43bf47e4726183b84e25"
+  },
+  {
+    "user_id": "default_traveller",
+    "era": "mughal",
+    "game_type": "mughal_campaign",
+    "solved": true,
+    "is_solved": true,
+    "status": "solved",
+    "prize_unlocked": "companion_rescued",
+    "clues_found": [
+      "guard_permit",
+      "pietra_dura_seal",
+      "calligraphy_scroll",
+      "charbagh_paradise_map",
+      "mehtab_bagh_journal",
+      "red_fort_imperial_key"
+    ],
+    "score": 500,
+    "moves": 0,
+    "created_at": "2026-09-04T04:11:40.301386",
+    "solved_at": "2026-09-04T04:11:40.301386",
+    "metadata": {
+      "companionRescued": true,
+      "completedAt": "2026-09-04T04:11:39.673Z"
+    },
+    "_id": "6a9a44fc47e4726183b84e26"
+  },
+  {
+    "user_id": "default_traveller",
+    "era": "mughal",
+    "game_type": "mughal_campaign",
+    "solved": true,
+    "is_solved": true,
+    "status": "solved",
+    "prize_unlocked": "companion_rescued",
+    "clues_found": [
+      "guard_permit",
+      "calligraphy_scroll",
+      "charbagh_paradise_map",
+      "mehtab_bagh_journal",
+      "red_fort_imperial_key"
+    ],
+    "score": 500,
+    "moves": 0,
+    "created_at": "2026-09-04T06:09:23.050109",
+    "solved_at": "2026-09-04T06:09:23.050109",
+    "metadata": {
+      "companionRescued": true,
+      "completedAt": "2026-09-04T06:09:22.420Z"
+    },
+    "_id": "6a9a609347e4726183b84e27"
   }
 ]
