@@ -86,7 +86,9 @@ export default function RajasthanGameScreen() {
   const [isElephantTravelling, setIsElephantTravelling] = useState(false);
   const [elephantTravelPhase, setElephantTravelPhase] = useState<1 | 2 | 3 | 4>(1);
 
-  // --- STAGE 3 STATE (Kuldhara) ---
+  // --- STAGE 3 STATE (Kuldhara 2-Min Clue Challenge) ---
+  const [kuldharaTimer, setKuldharaTimer] = useState(120); // 2-minute countdown timer (120s)
+  const [showKuldharaTimeOutModal, setShowKuldharaTimeOutModal] = useState(false);
   const [hasPillar83Inspected, setHasPillar83Inspected] = useState(false);
   const [hasWeddingOrnament, setHasWeddingOrnament] = useState(false);
   const [hasTaxLedger, setHasTaxLedger] = useState(false);
@@ -104,6 +106,18 @@ export default function RajasthanGameScreen() {
   });
   const [deductionFeedback, setDeductionFeedback] = useState<string | null>(null);
   const [selectedDeductionClue, setSelectedDeductionClue] = useState<"ornament" | "ledger" | "supplies" | null>("ornament");
+
+  // Restart Kuldhara Challenge Handler
+  const handleRestartKuldhara = useCallback(() => {
+    setShowKuldharaTimeOutModal(false);
+    setScene("kuldhara_gate");
+    setPlayerPos({ x: 50.0, y: 88.0 });
+    setKuldharaTimer(120);
+    setHasWeddingOrnament(false);
+    setHasTaxLedger(false);
+    setHasWaterPotsSupplies(false);
+    setDeductionState({ ornamentChoice: null, ledgerChoice: null, suppliesChoice: null });
+  }, []);
 
   // --- STAGE 3 -> STAGE 4 TRANSITION (Nightfall Caravan) ---
   const [isBhangarhTravelling, setIsBhangarhTravelling] = useState(false);
@@ -333,6 +347,26 @@ export default function RajasthanGameScreen() {
     }, 800);
     return () => clearTimeout(timer);
   }, []);
+
+  // --- KULDHARA 2-MINUTE CHALLENGE TIMER (Stage 3) ---
+  useEffect(() => {
+    if (stage !== 3 || showStage3CompleteModal) return;
+
+    const allCluesSolved = hasWeddingOrnament && hasTaxLedger && hasWaterPotsSupplies && showStage3CompleteModal;
+    if (allCluesSolved) return; // Freeze countdown when Stage 3 mystery is solved
+
+    const interval = setInterval(() => {
+      setKuldharaTimer((prev) => {
+        if (prev <= 1) {
+          setShowKuldharaTimeOutModal(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [stage, showStage3CompleteModal, hasWeddingOrnament, hasTaxLedger, hasWaterPotsSupplies]);
 
   // --- BHANGARH 2-MINUTE CHALLENGE TIMER (Stage 4) ---
   useEffect(() => {
@@ -1588,8 +1622,8 @@ export default function RajasthanGameScreen() {
           </div>
         </div>
 
-        {/* Stage 4 2-MIN TIMER CARD */}
-        {stage === 4 && (
+        {/* Stage 3 & Stage 4 2-MIN TIMER CARD */}
+        {(stage === 3 || stage === 4) && (
           <div className="bg-[#fff9ea] border-2 border-black rounded-xl px-3.5 py-2 w-64 shadow-[3px_3px_0_0_rgba(0,0,0,1)] flex items-center justify-between">
             <div className="flex items-center gap-1.5 text-xs font-bold text-amber-950">
               <span className="animate-pulse text-sm">⏱️</span>
@@ -1598,11 +1632,11 @@ export default function RajasthanGameScreen() {
               </span>
             </div>
             <span className={`text-[13px] font-mono font-black px-2.5 py-0.5 rounded border ${
-              bhangarhTimer <= 20
+              (stage === 3 ? kuldharaTimer : bhangarhTimer) <= 20
                 ? "bg-red-600 text-white border-black animate-pulse shadow-[0_0_8px_rgba(220,38,38,0.8)]"
                 : "bg-red-100 text-red-600 border-red-300"
             }`}>
-              {Math.floor(bhangarhTimer / 60)}:{(bhangarhTimer % 60).toString().padStart(2, "0")}
+              {Math.floor((stage === 3 ? kuldharaTimer : bhangarhTimer) / 60)}:{((stage === 3 ? kuldharaTimer : bhangarhTimer) % 60).toString().padStart(2, "0")}
             </span>
           </div>
         )}
@@ -1636,8 +1670,11 @@ export default function RajasthanGameScreen() {
             <span>⏱️</span>
             {isTimerVisible ? (
               <span>
-                {String(Math.floor(elapsedSeconds / 60)).padStart(2, '0')}:
-                {String(elapsedSeconds % 60).padStart(2, '0')}
+                {stage === 3
+                  ? `${Math.floor(kuldharaTimer / 60)}:${(kuldharaTimer % 60).toString().padStart(2, "0")}`
+                  : stage === 4
+                  ? `${Math.floor(bhangarhTimer / 60)}:${(bhangarhTimer % 60).toString().padStart(2, "0")}`
+                  : `${String(Math.floor(elapsedSeconds / 60)).padStart(2, '0')}:${String(elapsedSeconds % 60).padStart(2, '0')}`}
               </span>
             ) : (
               <span className="text-[11px] font-bold uppercase tracking-wider text-black">TIMER</span>
@@ -2899,6 +2936,30 @@ export default function RajasthanGameScreen() {
               className="w-full bg-amber-600 hover:bg-amber-700 text-white font-black py-3.5 px-4 rounded-xl border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-xs uppercase tracking-widest cursor-pointer transition-all active:translate-y-0.5"
             >
               🏆 Claim Shield & Complete Game
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* --- KULDHARA 2-MIN CHALLENGE TIMEOUT MODAL --- */}
+      {showKuldharaTimeOutModal && (
+        <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-6 z-50 pointer-events-auto">
+          <div className="bg-[#fff9ea] border-4 border-red-900 rounded-2xl p-6 shadow-[14px_14px_0_0_rgba(0,0,0,1)] max-w-md w-full flex flex-col gap-4 text-center animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 bg-red-100 border-2 border-red-600 rounded-full flex items-center justify-center mx-auto text-3xl animate-bounce">
+              ⏳
+            </div>
+            <div className="flex flex-col gap-1">
+              <h2 className="text-xl font-black text-red-950 uppercase tracking-wide">2-Minute Time Expired!</h2>
+              <p className="text-xs font-semibold text-red-800 uppercase tracking-widest">Kuldhara Challenge Failed</p>
+            </div>
+            <div className="bg-red-50 border-2 border-red-200 rounded-xl p-3.5 text-xs text-red-950 leading-relaxed text-left font-serif">
+              You failed to discover all 3 evidence clues and solve the Kuldhara mystery within 2 minutes! You have been returned to the entrance gate of Kuldhara.
+            </div>
+            <button
+              onClick={handleRestartKuldhara}
+              className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-3 px-4 rounded-xl border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-xs uppercase tracking-widest cursor-pointer transition-all active:translate-y-0.5"
+            >
+              🔄 Try Again (Restart Kuldhara)
             </button>
           </div>
         </div>
