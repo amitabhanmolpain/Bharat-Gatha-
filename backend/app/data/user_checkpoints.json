@@ -2,18 +2,18 @@
   "default_traveller_mughal": {
     "user_id": "default_traveller",
     "era": "mughal",
-    "scene": "gate",
+    "scene": "passage",
     "playerPos": {
-      "x": 46.84999999999999,
-      "y": 78.15750000000001
+      "x": 33,
+      "y": 90
     },
-    "hasGuardPermission": false,
+    "hasGuardPermission": true,
     "hasKhasPermission": false,
     "isPietraDuraSolved": false,
     "isSheeshMirrorSolved": false,
     "isArchaeologistTalked": false,
     "isCarriageUnlocked": false,
-    "cluesFound": 0,
-    "last_saved_at": "2026-09-04T08:20:19.068853"
+    "cluesFound": 1,
+    "last_saved_at": "2026-09-04T22:11:12.850628"
   }
 }
