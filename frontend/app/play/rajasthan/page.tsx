@@ -84,6 +84,7 @@ export default function RajasthanGameScreen() {
     suppliesChoice: null,
   });
   const [deductionFeedback, setDeductionFeedback] = useState<string | null>(null);
+  const [selectedDeductionClue, setSelectedDeductionClue] = useState<"ornament" | "ledger" | "supplies" | null>("ornament");
 
   // --- STAGE 3 -> STAGE 4 TRANSITION (Nightfall Caravan) ---
   const [isBhangarhTravelling, setIsBhangarhTravelling] = useState(false);
