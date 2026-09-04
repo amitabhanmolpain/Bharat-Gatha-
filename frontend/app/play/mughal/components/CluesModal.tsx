@@ -80,6 +80,17 @@ export const MUGHAL_HISTORICAL_CLUES: ClueItem[] = [
     description:
       "Notes by Dr. Ananya detailing the octagonal moonlight viewing pavilion and eyewitness accounts of the traveler departing toward the Red Fort in Old Delhi.",
     hint: "Cross the Yamuna to Mehtab Bagh and talk with the Caretaker Archaeologist."
+  },
+  {
+    id: "red_fort_imperial_key",
+    title: "Emperor's Royal Dungeon Key",
+    location: "Red Fort - Rang Mahal (Harem)",
+    category: "Artifact",
+    icon: "🗝️",
+    discovered: false,
+    description:
+      "A golden filigree key embedded with rubies, crafted for Emperor Shah Jahan. Unlocks the hidden dungeon cell where captured prisoners and companions are held.",
+    hint: "Explore the Rang Mahal and locate the royal key before the queens return from their hunt."
   }
 ];
 

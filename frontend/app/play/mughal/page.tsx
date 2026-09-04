@@ -65,11 +65,17 @@ export default function MughalGameScreen() {
     title: string;
     subtitle: string;
     description: string;
+    returnScene?: SceneType;
+    returnPos?: { x: number; y: number };
+    buttonText?: string;
   }>({
     isOpen: false,
     title: "Punished at Amar Singh Gate",
     subtitle: "THE TRESPASS",
-    description: "You attempted to sneak past the Amar Singh Gate without sentry clearance. The royal guards seize you immediately, inflicting harsh imperial punishment before casting you back down the ramparts."
+    description: "You attempted to sneak past the Amar Singh Gate without sentry clearance. The royal guards seize you immediately, inflicting harsh imperial punishment before casting you back down the ramparts.",
+    returnScene: "gate",
+    returnPos: { x: 50.0, y: 88.0 },
+    buttonText: "Return to Gates"
   });
 
   // Discover clue helper
@@ -189,6 +195,15 @@ export default function MughalGameScreen() {
   const [travelOverlayPhase, setTravelOverlayPhase] = useState(0);
 
   const [showCampaignComplete, setShowCampaignComplete] = useState(false);
+  const [hasFoundDungeonKey, setHasFoundDungeonKey] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("mughal_has_found_dungeon_key") === "true";
+    }
+    return false;
+  });
+  const [rangMahalSecondsLeft, setRangMahalSecondsLeft] = useState(20);
+  const [showKeyFoundCard, setShowKeyFoundCard] = useState(false);
+  const [showCompanionFreedScreen, setShowCompanionFreedScreen] = useState(false);
   const router = useRouter();
 
   const horseSoundRef = useRef<HTMLAudioElement | null>(null);
@@ -240,6 +255,24 @@ export default function MughalGameScreen() {
       );
     }
   }, [punishmentState.isOpen, punishmentState.title, punishmentState.description]);
+
+  // Play cinematic Sarvam AI narrator voice on Companion Freed / Campaign Cleared Screen
+  useEffect(() => {
+    if (showCompanionFreedScreen) {
+      stopCharacterDialogue();
+      stopNarration();
+      const narrationText = "You free your companion, congratulations for clearing the Mughal campaign. If you didn't free your companion, your companion would spill your secret that you are a historian and you would be killed in the 16th century.";
+      const timer = setTimeout(() => {
+        playNarration(narrationText, {
+          audioUrl: "/companion_freed_narration.wav",
+          speaker: "ratan",
+          pace: 0.88,
+          language_code: "en-IN"
+        });
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [showCompanionFreedScreen]);
 
   // Play Sarvam AI narrator voice when entering Diwan-i-Aam / Throne Hall (interior)
   const hasPlayedInteriorNarrationRef = useRef(false);
@@ -377,6 +410,77 @@ export default function MughalGameScreen() {
     }
   }, [isLoading, scene]);
 
+  // Play Sarvam AI narrator voice when entering Rang Mahal (Queens' Palace)
+  const hasPlayedRangMahalNarrationRef = useRef(false);
+  useEffect(() => {
+    if (!isLoading && scene === "red_fort_rang_mahal" && !hasPlayedRangMahalNarrationRef.current) {
+      hasPlayedRangMahalNarrationRef.current = true;
+      stopCharacterDialogue();
+      setShowJollyDialogue(false);
+      const timer = setTimeout(() => {
+        stopCharacterDialogue();
+        setShowJollyDialogue(false);
+        playNarration(
+          "You are in the Rang Mahal, Emperor Shah Jahan's royal palace for his queens. The queens have gone out for a royal hunt. Find the imperial key quickly before the queens return!",
+          {
+            audioUrl: "/rang_mahal_narration.wav",
+            speaker: "ratan",
+            pace: 0.88,
+            language_code: "en-IN"
+          }
+        );
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, scene]);
+
+  // 20-Second Urgent Rang Mahal Countdown Timer (Find the Key before Queens Return)
+  useEffect(() => {
+    if (isLoading || scene !== "red_fort_rang_mahal" || hasFoundDungeonKey || showKeyFoundCard || punishmentState.isOpen) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setRangMahalSecondsLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          stopNarration();
+          stopCharacterDialogue();
+          setPunishmentState({
+            isOpen: true,
+            title: "Caught by the Royal Queens & Guards",
+            subtitle: "TIME RAN OUT IN THE RANG MAHAL",
+            description: "Time ran out before you could locate the imperial key! The queens returned from their royal hunt, and the imperial sentries immediately seized you!",
+            returnScene: "red_fort_lahori",
+            returnPos: { x: 50.0, y: 88.0 },
+            buttonText: "Return to Lahori Gate"
+          });
+          setScene("red_fort_lahori");
+          setPlayerPos({ x: 50.0, y: 88.0 });
+          return 20;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isLoading, scene, hasFoundDungeonKey, showKeyFoundCard, punishmentState.isOpen]);
+
+  // Proximity auto-pickup for the imperial key in Rang Mahal
+  useEffect(() => {
+    if (!isLoading && scene === "red_fort_rang_mahal" && !hasFoundDungeonKey && !showKeyFoundCard) {
+      if (Math.hypot(playerPos.x - 64.0, playerPos.y - 76.0) < 6.5) {
+        setHasFoundDungeonKey(true);
+        if (typeof window !== "undefined") {
+          localStorage.setItem("mughal_has_found_dungeon_key", "true");
+        }
+        soundFx.playClueChime();
+        discoverClue("red_fort_imperial_key");
+        setShowKeyFoundCard(true);
+      }
+    }
+  }, [isLoading, scene, playerPos, hasFoundDungeonKey, showKeyFoundCard]);
+
   // Auto-play Jolly Bhai clue when entering Red Fort Diwan-i-Khas (Peacock Throne Room)
   const hasPlayedDiwaniKhasJollyRef = useRef(false);
   useEffect(() => {
@@ -392,7 +496,7 @@ export default function MughalGameScreen() {
   // Auto-play Jolly Bhai locked dungeon door reaction when entering Red Fort Corridor / Dungeon
   const hasPlayedCorridorJollyRef = useRef(false);
   useEffect(() => {
-    if (!isLoading && (scene === "red_fort_corridor" || scene === "red_fort_rang_mahal") && !hasPlayedCorridorJollyRef.current) {
+    if (!isLoading && scene === "red_fort_corridor" && !hasPlayedCorridorJollyRef.current) {
       hasPlayedCorridorJollyRef.current = true;
       const timer = setTimeout(() => {
         triggerJollyDungeonLockedReaction();
@@ -564,7 +668,7 @@ export default function MughalGameScreen() {
     stopNarration();
     stopCharacterDialogue();
     try {
-      await fetch("http://localhost:5000/api/game/checkpoint/reset", {
+      await fetch("http://localhost:5001/api/game/checkpoint/reset", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: "default_traveller", era: "mughal" })
@@ -609,118 +713,154 @@ export default function MughalGameScreen() {
       setIsTransitioning(false);
       setHasTalkedToJolly(false);
       setHeardClueScenes([]);
+      setHasFoundDungeonKey(false);
+      setRangMahalSecondsLeft(20);
+      setShowKeyFoundCard(false);
       hasPlayedIntroNarrationRef.current = false;
       hasPlayedInteriorNarrationRef.current = false;
       hasPlayedSheeshNarrationRef.current = false;
       hasPlayedKhasNarrationRef.current = false;
       hasPlayedMausoleumNarrationRef.current = false;
+      hasPlayedRangMahalNarrationRef.current = false;
       localStorage.removeItem('mughal_save');
       localStorage.removeItem('mughal_has_talked_to_jolly');
       localStorage.removeItem('mughal_has_khas_permission');
       localStorage.removeItem('mughal_is_pietra_dura_solved');
       localStorage.removeItem('mughal_is_sheesh_mirror_solved');
+      localStorage.removeItem('mughal_has_found_dungeon_key');
       localStorage.removeItem('mughal_heard_clue_scenes');
       localStorage.removeItem('bharat_gatha_mughal_checkpoint');
     }, 400);
   };
 
   useEffect(() => {
-    const timer = setTimeout(async () => {
-      if (typeof window !== 'undefined') {
-        const urlParams = new URLSearchParams(window.location.search);
-        const urlScene = urlParams.get('scene') as SceneType | null;
-        const saved = localStorage.getItem('mughal_save');
-        
-        let finalScene: SceneType = urlScene || 'gate';
+    // Load from localStorage immediately — no blocking network calls
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlScene = urlParams.get('scene') as SceneType | null;
+      const saved = localStorage.getItem('mughal_save');
+      
+      let finalScene: SceneType = urlScene || 'gate';
 
-        if (saved) {
-          try {
-            const parsed = JSON.parse(saved);
-            if (!urlScene && parsed.scene) {
-               if (parsed.scene === "gate" || parsed.hasGuardPermission) {
-                 finalScene = parsed.scene as SceneType;
-                 if (parsed.playerPos) setPlayerPos(parsed.playerPos);
-               } else {
-                 finalScene = "gate";
-                 setPlayerPos({ x: 50, y: 85 });
-               }
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (!urlScene && parsed.scene) {
+             if (parsed.scene === "gate" || parsed.hasGuardPermission) {
+               finalScene = parsed.scene as SceneType;
+               if (parsed.playerPos) setPlayerPos(parsed.playerPos);
+             } else {
+               finalScene = "gate";
+               setPlayerPos({ x: 50, y: 85 });
+             }
+          }
+          if (parsed.hasGuardPermission) {
+            setHasGuardPermission(true);
+            hasGuardPermissionRef.current = true;
+          }
+          if (parsed.hasKhasPermission) {
+            setHasKhasPermission(true);
+            hasKhasPermissionRef.current = true;
+          }
+          if (parsed.cluesFound !== undefined) setCluesFound(parsed.cluesFound);
+          if (parsed.isPietraDuraSolved !== undefined) {
+            setIsPietraDuraSolved(parsed.isPietraDuraSolved);
+            isPietraDuraSolvedRef.current = parsed.isPietraDuraSolved;
+          }
+          if (parsed.isSheeshMirrorSolved !== undefined) {
+            setIsSheeshMirrorSolved(parsed.isSheeshMirrorSolved);
+            isSheeshMirrorSolvedRef.current = parsed.isSheeshMirrorSolved;
+          }
+          if (parsed.isCalligraphySolved !== undefined) setIsCalligraphySolved(parsed.isCalligraphySolved);
+          if (parsed.isSymmetrySolved !== undefined) setIsSymmetrySolved(parsed.isSymmetrySolved);
+          if (parsed.isMausoleumExplored !== undefined) setIsMausoleumExplored(parsed.isMausoleumExplored);
+          if (parsed.isArchaeologistTalked !== undefined) setIsArchaeologistTalked(parsed.isArchaeologistTalked);
+          if (parsed.hasTalkedToJolly !== undefined) setHasTalkedToJolly(parsed.hasTalkedToJolly);
+          if (parsed.discoveredClueIds) setDiscoveredClueIds(parsed.discoveredClueIds);
+        } catch (e) {
+          console.error("Failed to load save state", e);
+        }
+      }
+
+      // Also read individual localStorage flags
+      if (localStorage.getItem('mughal_has_talked_to_jolly') === 'true' || finalScene !== 'gate') {
+        setHasTalkedToJolly(true);
+      }
+      if (localStorage.getItem('mughal_has_khas_permission') === 'true') {
+        setHasKhasPermission(true);
+        hasKhasPermissionRef.current = true;
+      }
+      if (localStorage.getItem('mughal_is_pietra_dura_solved') === 'true') {
+        setIsPietraDuraSolved(true);
+        isPietraDuraSolvedRef.current = true;
+      }
+      if (localStorage.getItem('mughal_is_sheesh_mirror_solved') === 'true') {
+        setIsSheeshMirrorSolved(true);
+        isSheeshMirrorSolvedRef.current = true;
+      }
+      if (localStorage.getItem('mughal_has_found_dungeon_key') === 'true') {
+        setHasFoundDungeonKey(true);
+      }
+
+      setScene(finalScene);
+    }
+    // Dismiss loading screen immediately — DB sync happens in background
+    setIsLoading(false);
+
+    // Background DB sync (non-blocking, runs after game is already visible)
+    const syncFromDB = async () => {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3s max
+        const chkRes = await fetch(
+          "http://localhost:5001/api/game/checkpoint?user_id=default_traveller&era=mughal",
+          { signal: controller.signal }
+        );
+        clearTimeout(timeoutId);
+        if (chkRes.ok) {
+          const chkData = await chkRes.json();
+          if (chkData.has_checkpoint && chkData.checkpoint) {
+            const cp = chkData.checkpoint;
+            if (cp.hasKhasPermission) {
+              setHasKhasPermission(true);
+              hasKhasPermissionRef.current = true;
+              localStorage.setItem("mughal_has_khas_permission", "true");
             }
-            if (parsed.hasGuardPermission) {
+            if (cp.hasGuardPermission) {
               setHasGuardPermission(true);
               hasGuardPermissionRef.current = true;
             }
-            if (parsed.cluesFound !== undefined) setCluesFound(parsed.cluesFound);
-            if (parsed.isPietraDuraSolved !== undefined) setIsPietraDuraSolved(parsed.isPietraDuraSolved);
-            if (parsed.isSheeshMirrorSolved !== undefined) setIsSheeshMirrorSolved(parsed.isSheeshMirrorSolved);
-            if (parsed.isCalligraphySolved !== undefined) setIsCalligraphySolved(parsed.isCalligraphySolved);
-            if (parsed.isSymmetrySolved !== undefined) setIsSymmetrySolved(parsed.isSymmetrySolved);
-            if (parsed.isMausoleumExplored !== undefined) setIsMausoleumExplored(parsed.isMausoleumExplored);
-            if (parsed.isArchaeologistTalked !== undefined) setIsArchaeologistTalked(parsed.isArchaeologistTalked);
-            if (parsed.hasTalkedToJolly !== undefined) setHasTalkedToJolly(parsed.hasTalkedToJolly);
-            if (parsed.discoveredClueIds) setDiscoveredClueIds(parsed.discoveredClueIds);
-          } catch (e) {
-            console.error("Failed to load save state", e);
-          }
-        }
-
-        if (localStorage.getItem('mughal_has_talked_to_jolly') === 'true' || finalScene !== 'gate') {
-          setHasTalkedToJolly(true);
-        }
-        // Sync full checkpoint from MongoDB database
-        try {
-          const chkRes = await fetch("http://localhost:5000/api/game/checkpoint?user_id=default_traveller&era=mughal");
-          if (chkRes.ok) {
-            const chkData = await chkRes.json();
-            if (chkData.has_checkpoint && chkData.checkpoint) {
-              const cp = chkData.checkpoint;
-              if (cp.hasKhasPermission) {
-                setHasKhasPermission(true);
-                hasKhasPermissionRef.current = true;
-                localStorage.setItem("mughal_has_khas_permission", "true");
-              }
-              if (cp.hasGuardPermission) {
-                setHasGuardPermission(true);
-                hasGuardPermissionRef.current = true;
-              }
-              if (cp.scene && (!urlScene || urlScene === "gate")) {
-                finalScene = cp.scene as SceneType;
-                if (cp.playerPos) setPlayerPos(cp.playerPos);
-              }
-              if (cp.isPietraDuraSolved) {
-                setIsPietraDuraSolved(true);
-                isPietraDuraSolvedRef.current = true;
-              }
-              if (cp.isSheeshMirrorSolved) {
-                setIsSheeshMirrorSolved(true);
-                isSheeshMirrorSolvedRef.current = true;
-              }
-              if (cp.isArchaeologistTalked) setIsArchaeologistTalked(true);
-              if (cp.cluesFound !== undefined) setCluesFound(cp.cluesFound);
+            if (cp.isPietraDuraSolved) {
+              setIsPietraDuraSolved(true);
+              isPietraDuraSolvedRef.current = true;
+              localStorage.setItem("mughal_is_pietra_dura_solved", "true");
             }
+            if (cp.isSheeshMirrorSolved) {
+              setIsSheeshMirrorSolved(true);
+              isSheeshMirrorSolvedRef.current = true;
+              localStorage.setItem("mughal_is_sheesh_mirror_solved", "true");
+            }
+            if (cp.isArchaeologistTalked) setIsArchaeologistTalked(true);
+            if (cp.cluesFound !== undefined) setCluesFound(cp.cluesFound);
           }
-        } catch (e) {}
+        }
+      } catch (e) { /* silent — game already running */ }
 
-        // Also sync explicit solved status from MongoDB
-        try {
-          const dbStatus = await fetchSolvedStatusFromDatabase("mughal");
-          if (dbStatus.isPietraDuraSolved || dbStatus.solvedPuzzles.includes("pietra_dura_flower_art")) {
-            setIsPietraDuraSolved(true);
-            isPietraDuraSolvedRef.current = true;
-            localStorage.setItem("mughal_is_pietra_dura_solved", "true");
-          }
-          if (dbStatus.isSheeshMirrorSolved || dbStatus.solvedPuzzles.includes("sheesh_mahal_reflection")) {
-            setIsSheeshMirrorSolved(true);
-            isSheeshMirrorSolvedRef.current = true;
-            localStorage.setItem("mughal_is_sheesh_mirror_solved", "true");
-          }
-        } catch (e) {}
-        
-        setScene(finalScene);
-      }
-      setIsLoading(false);
-    }, 50);
-    
-    return () => clearTimeout(timer);
+      try {
+        const dbStatus = await fetchSolvedStatusFromDatabase("mughal");
+        if (dbStatus.isPietraDuraSolved || dbStatus.solvedPuzzles.includes("pietra_dura_flower_art")) {
+          setIsPietraDuraSolved(true);
+          isPietraDuraSolvedRef.current = true;
+          localStorage.setItem("mughal_is_pietra_dura_solved", "true");
+        }
+        if (dbStatus.isSheeshMirrorSolved || dbStatus.solvedPuzzles.includes("sheesh_mahal_reflection")) {
+          setIsSheeshMirrorSolved(true);
+          isSheeshMirrorSolvedRef.current = true;
+          localStorage.setItem("mughal_is_sheesh_mirror_solved", "true");
+        }
+      } catch (e) { /* silent */ }
+    };
+    syncFromDB();
   }, []);
 
   useEffect(() => {
@@ -732,6 +872,8 @@ export default function MughalGameScreen() {
   }, [scene]);
 
   // Auto-Save Checkpoint to both localStorage and MongoDB Database
+  // Debounced: localStorage saves immediately, DB POST fires max once per 2 seconds
+  const checkpointSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (typeof window !== 'undefined' && !isLoading) {
       const saveState = {
@@ -751,21 +893,24 @@ export default function MughalGameScreen() {
         isArchaeologistTalked,
         hasTalkedToJolly
       };
+      // Always persist to localStorage immediately (fast, no network)
       localStorage.setItem('mughal_save', JSON.stringify(saveState));
       localStorage.setItem('bharat_gatha_mughal_checkpoint', JSON.stringify(saveState));
       if (hasKhasPermission) localStorage.setItem('mughal_has_khas_permission', 'true');
       if (hasTalkedToJolly) localStorage.setItem('mughal_has_talked_to_jolly', 'true');
 
-      // Persist to MongoDB
-      fetch("http://localhost:5000/api/game/checkpoint", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(saveState)
-      }).catch(() => {});
+      // Debounce: send to MongoDB at most once every 2 seconds to avoid flooding
+      if (checkpointSaveTimerRef.current) clearTimeout(checkpointSaveTimerRef.current);
+      checkpointSaveTimerRef.current = setTimeout(() => {
+        fetch("http://localhost:5001/api/game/checkpoint", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(saveState)
+        }).catch(() => {});
+      }, 2000);
     }
   }, [
     scene,
-    playerPos,
     cluesFound,
     discoveredClueIds,
     hasGuardPermission,
@@ -815,6 +960,26 @@ export default function MughalGameScreen() {
   const isNearDiwanIKhas = scene === "red_fort_diwani_khas" && playerPos.y <= 65.0 && playerPos.x >= 35.0 && playerPos.x <= 65.0;
   const isNearDiwaniKhasExit = scene === "red_fort_diwani_khas" && playerPos.y >= 88.0;
   const isNearRangMahalExit = scene === "red_fort_rang_mahal" && playerPos.y >= 88.0;
+  const isNearDungeonDoor = scene === "red_fort_corridor" && playerPos.y <= 86.0 && playerPos.x >= 30.0 && playerPos.x <= 70.0;
+
+  const unlockDungeonDoor = () => {
+    soundFx.playClueChime();
+    setShowCompanionFreedScreen(true);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("mughal_campaign_cleared", "true");
+      localStorage.setItem("mughal_companion_rescued", "true");
+    }
+    recordGameWinToDatabase({
+      era: "mughal",
+      gameType: "mughal_campaign",
+      prizeUnlocked: "companion_rescued",
+      cluesFound: discoveredClueIds,
+      score: 500,
+      metadata: { companionRescued: true, completedAt: new Date().toISOString() }
+    }).catch((err) => {
+      console.warn("Could not sync victory to backend database:", err);
+    });
+  };
 
   const playerPosRef = useRef(playerPos);
   playerPosRef.current = playerPos;
@@ -1069,9 +1234,30 @@ export default function MughalGameScreen() {
             setPlayerPos({ x: 35.0, y: 78.0 });
           }
         }
-        if (curScene === "red_fort_rang_mahal" && pos.y >= 84.0) {
-          setScene("red_fort_plaza");
-          setPlayerPos({ x: 65.0, y: 78.0 });
+        if (curScene === "red_fort_rang_mahal") {
+          if (Math.hypot(pos.x - 64.0, pos.y - 76.0) < 14.0 && !hasFoundDungeonKey) {
+            setHasFoundDungeonKey(true);
+            if (typeof window !== "undefined") {
+              localStorage.setItem("mughal_has_found_dungeon_key", "true");
+            }
+            soundFx.playClueChime();
+            discoverClue("red_fort_imperial_key");
+            setShowKeyFoundCard(true);
+          } else if (pos.y >= 84.0) {
+            setScene("red_fort_plaza");
+            setPlayerPos({ x: 65.0, y: 78.0 });
+          }
+        }
+        if (curScene === "red_fort_corridor") {
+          const nearDoor = pos.y <= 86.0 && pos.x >= 30.0 && pos.x <= 70.0;
+          if (nearDoor) {
+            if (hasFoundDungeonKey) {
+              unlockDungeonDoor();
+            } else {
+              triggerJollyDungeonLockedReaction();
+            }
+            return;
+          }
         }
         if ((curScene === "taj_mehtab_bagh" && isArchaeologistTalked && pos.x >= 75.0 && pos.y >= 75.0) || (curScene === "red_fort_lahori" && pos.x <= 30.0 && pos.y >= 70.0)) {
           setIsCarriageTravelling(true);
@@ -1106,6 +1292,7 @@ export default function MughalGameScreen() {
         setShowMausoleumModal(false);
         setShowArchaeologistDialogue(false);
         setShowCampaignComplete(false);
+        setShowCompanionFreedScreen(false);
         setShowCluesModal(false);
       }
     };
@@ -2692,6 +2879,12 @@ export default function MughalGameScreen() {
               ? "Explore the Chatta Chowk covered bazaar and trade with the imperial merchants."
               : scene === "red_fort_plaza"
               ? "Proceed into the Diwan-i-Khas or trade in the Chatta Chowk arcade bazaar."
+              : scene === "red_fort_rang_mahal"
+              ? "You are in the Rang Mahal, Emperor Shah Jahan's palace for his queens. Find the imperial key before the queens return from their hunt!"
+              : scene === "red_fort_corridor"
+              ? (hasFoundDungeonKey
+                  ? "You have the royal key! Approach the door and press [E] to unlock the dungeon and rescue your companion!"
+                  : "The dungeon door is locked! Search the Rang Mahal for the royal key to rescue your companion.")
               : "Walk forward into the monumental Lahori Gate of the Red Fort."}
           </div>
         </div>
@@ -2727,24 +2920,36 @@ export default function MughalGameScreen() {
       {/* Top Right: Actions & Minimap */}
       <div className="absolute top-6 right-6 flex flex-col items-end gap-3">
         <div className="flex items-center gap-2.5">
-          {/* Silent Switchable Timer Button */}
-          <button 
-            onClick={() => setIsTimerVisible(!isTimerVisible)}
-            title={isTimerVisible ? "Timer Active (Click to hide)" : "Click to view session timer"}
-            className={`h-10 px-3.5 border-2 border-black rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all flex items-center justify-center gap-1.5 font-black text-xs cursor-pointer ${
-              isTimerVisible ? "bg-[#fcd34d] text-black" : "bg-white/90 hover:bg-white text-gray-800"
-            }`}
-          >
-            <span>⏱️</span>
-            {isTimerVisible ? (
-              <span>
-                {String(Math.floor(elapsedSeconds / 60)).padStart(2, '0')}:
-                {String(elapsedSeconds % 60).padStart(2, '0')}
-              </span>
-            ) : (
-              <span className="text-[11px] font-bold uppercase tracking-wider text-black">Timer</span>
-            )}
-          </button>
+          {/* Active 20s Rang Mahal Urgent Countdown Timer */}
+          {scene === "red_fort_rang_mahal" && !hasFoundDungeonKey ? (
+            <div 
+              className={`h-10 px-3.5 border-2 border-black rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] flex items-center justify-center gap-1.5 font-black text-xs animate-pulse ${
+                rangMahalSecondsLeft <= 7 ? "bg-red-600 text-white shadow-[0_0_12px_rgba(239,68,68,0.8)]" : "bg-[#fcd34d] text-black shadow-[0_0_10px_rgba(251,191,36,0.8)]"
+              }`}
+            >
+              <span>⏳</span>
+              <span>00:{String(rangMahalSecondsLeft).padStart(2, '0')}</span>
+              <span className="text-[10px] uppercase tracking-wider font-extrabold ml-1">Find Key!</span>
+            </div>
+          ) : (
+            <button 
+              onClick={() => setIsTimerVisible(!isTimerVisible)}
+              title={isTimerVisible ? "Timer Active (Click to hide)" : "Click to view session timer"}
+              className={`h-10 px-3.5 border-2 border-black rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all flex items-center justify-center gap-1.5 font-black text-xs cursor-pointer ${
+                isTimerVisible ? "bg-[#fcd34d] text-black" : "bg-white/90 hover:bg-white text-gray-800"
+              }`}
+            >
+              <span>⏱️</span>
+              {isTimerVisible ? (
+                <span>
+                  {String(Math.floor(elapsedSeconds / 60)).padStart(2, '0')}:
+                  {String(elapsedSeconds % 60).padStart(2, '0')}
+                </span>
+              ) : (
+                <span className="text-[11px] font-bold uppercase tracking-wider text-black">Timer</span>
+              )}
+            </button>
+          )}
 
           <button 
             onClick={() => {
@@ -3253,6 +3458,44 @@ export default function MughalGameScreen() {
         </div>
       )}
 
+      {/* Imperial Dungeon Key in Rang Mahal (Located in Red Circled Area) */}
+      {scene === "red_fort_rang_mahal" && !hasFoundDungeonKey && (
+        <div
+          className="absolute pointer-events-auto cursor-pointer z-20 flex flex-col items-center group"
+          style={{
+            left: "64%",
+            top: "76%",
+            transform: "translate(-50%, -50%)"
+          }}
+          onClick={() => {
+            setHasFoundDungeonKey(true);
+            if (typeof window !== "undefined") {
+              localStorage.setItem("mughal_has_found_dungeon_key", "true");
+            }
+            soundFx.playClueChime();
+            discoverClue("red_fort_imperial_key");
+            setShowKeyFoundCard(true);
+          }}
+        >
+          {/* Interaction Badge / Prompt */}
+          <div className="animate-bounce mb-1 bg-[#fff9ea] border-2 border-black rounded-lg px-2.5 py-1 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[11px] font-black text-black flex items-center gap-1.5 whitespace-nowrap">
+            <span className="bg-amber-400 border border-black rounded px-1.5 text-[9px]">E</span>
+            <span>🗝️ Take Imperial Key</span>
+          </div>
+
+          {/* Glowing Animated Key Graphic */}
+          <div className="relative animate-bounce" style={{ animationDuration: "2s" }}>
+            <div className="absolute inset-0 rounded-full bg-amber-400/50 blur-lg scale-150 animate-pulse"></div>
+            <img
+              src="/mughal_royal_key.png"
+              alt="Mughal Imperial Key"
+              className="w-16 h-16 md:w-20 md:h-20 object-contain drop-shadow-[0_4px_16px_rgba(251,191,36,1)] transition-transform group-hover:scale-125 relative z-10"
+              style={{ imageRendering: "pixelated" }}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Rang Mahal Exit Prompt */}
       {scene === "red_fort_rang_mahal" && isNearRangMahalExit && !showCampaignComplete && (
         <div 
@@ -3278,6 +3521,31 @@ export default function MughalGameScreen() {
         >
           <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
           Exit Palace
+        </div>
+      )}
+
+      {/* Dungeon Door Unlock Prompt (Red Fort Corridor) */}
+      {scene === "red_fort_corridor" && isNearDungeonDoor && !showCompanionFreedScreen && (
+        <div 
+          className="absolute top-[48%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[12px] font-black text-black flex items-center gap-2 cursor-pointer z-20 animate-bounce transition-all hover:scale-105 active:translate-y-0.5"
+          onClick={() => {
+            if (hasFoundDungeonKey) {
+              unlockDungeonDoor();
+            } else {
+              triggerJollyDungeonLockedReaction();
+            }
+          }}
+        >
+          <span className="bg-amber-400 border border-black rounded px-1.5 py-0.5 text-[10px]">E</span>
+          {hasFoundDungeonKey ? (
+            <span className="flex items-center gap-1.5 text-amber-950 font-black">
+              <span className="text-base">🗝️</span> Press E to Unlock Dungeon Door
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-red-800 font-bold">
+              <span className="text-base">🔒</span> Door Locked (Search Rang Mahal for Key)
+            </span>
+          )}
         </div>
       )}
 
@@ -3641,14 +3909,78 @@ export default function MughalGameScreen() {
             <button
               onClick={() => {
                 stopNarration();
+                const targetScene = punishmentState.returnScene || "gate";
+                const targetPos = punishmentState.returnPos || { x: 50.0, y: 88.0 };
                 setPunishmentState(prev => ({ ...prev, isOpen: false }));
-                setScene("gate");
-                setPlayerPos({ x: 50.0, y: 88.0 });
+                setScene(targetScene);
+                setPlayerPos(targetPos);
               }}
               className="bg-[#f59e0b] hover:bg-[#d97706] text-black font-extrabold text-sm px-8 py-3.5 rounded-lg shadow-[4px_4px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 transition-all cursor-pointer"
             >
-              Return to Gates
+              {punishmentState.buttonText || "Return to Gates"}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* --- CINEMATIC COMPANION FREED / CAMPAIGN CLEARED SCREEN (Dark Theme Matching Punishment - Positioned at Bottom) --- */}
+      {showCompanionFreedScreen && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-end items-center pointer-events-auto bg-black select-none animate-in fade-in duration-700 pb-4 sm:pb-6 px-4">
+          {/* Background Artwork - 2nd image in full screen */}
+          <img 
+            src="/companion_freed_cinematic.jpg" 
+            alt="Companion Rescued from Mughal Dungeon"
+            className="absolute inset-0 w-full h-full object-cover object-center animate-in fade-in duration-700"
+          />
+
+          {/* Bottom vignette only: leaves upper area and characters 100% visible with natural lighting */}
+          <div className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black via-black/75 to-transparent pointer-events-none"></div>
+
+          {/* Bottom Positioned Content Card - leaves companion, hero, and genie fully visible */}
+          <div className="relative z-10 max-w-2xl w-full mx-auto text-center flex flex-col items-center animate-in slide-in-from-bottom-6 duration-300">
+            {/* Small Orange Subtitle */}
+            <span className="text-[#f97316] font-black text-[11px] sm:text-xs tracking-[0.35em] uppercase mb-1 drop-shadow-[0_2px_4px_rgba(0,0,0,1)] flex items-center gap-2">
+              <span>🗝️</span> CAMPAIGN VICTORY • 1653 AD <span>👑</span>
+            </span>
+
+            {/* Bold White Title */}
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-white tracking-tight mb-2 drop-shadow-[0_4px_16px_rgba(0,0,0,1)]">
+              Companion Rescued!
+            </h1>
+
+            {/* Narrative Description with subtle dark backdrop for maximum legibility */}
+            <p className="text-[13px] sm:text-[14px] text-gray-100 font-sans leading-snug mb-3 max-w-xl drop-shadow-[0_2px_8px_rgba(0,0,0,1)] font-medium bg-black/60 backdrop-blur-[6px] px-4 py-2.5 rounded-xl border border-white/10">
+              You free your companion, congratulations for clearing the Mughal campaign! If you didn&apos;t free your companion, your companion would spill your secret that you are a historian and you would be killed in the 16th century.
+            </p>
+
+            {/* Clues and stats summary strip & CTA button aligned neatly */}
+            <div className="flex flex-wrap items-center justify-center gap-2.5">
+              <div className="flex items-center gap-2.5 bg-black/70 backdrop-blur-[4px] px-3.5 py-2 rounded-lg border border-amber-500/30 text-[11px] sm:text-xs text-gray-200 font-bold">
+                <div className="flex items-center gap-1 text-amber-300">
+                  <span>🎯</span> Clues: <span className="text-white font-extrabold">{discoveredClueIds.length}/7</span>
+                </div>
+                <div className="w-1 h-1 rounded-full bg-gray-500"></div>
+                <div className="flex items-center gap-1 text-amber-300">
+                  <span>⏱️</span> Time: <span className="text-white font-extrabold">{Math.floor(elapsedSeconds / 60)}m {elapsedSeconds % 60}s</span>
+                </div>
+                <div className="w-1 h-1 rounded-full bg-gray-500"></div>
+                <div className="flex items-center gap-1 text-emerald-400">
+                  <span>⭐</span> Status: <span className="font-extrabold text-white">History Restored</span>
+                </div>
+              </div>
+
+              {/* Yellow / Gold Rounded CTA Button */}
+              <button
+                onClick={() => {
+                  stopNarration();
+                  router.push('/dashboard');
+                }}
+                className="bg-[#f59e0b] hover:bg-[#d97706] text-black font-extrabold text-xs sm:text-sm px-6 py-2.5 rounded-lg shadow-[4px_4px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 transition-all cursor-pointer flex items-center gap-2"
+              >
+                <span>Return to Timeline Portal</span>
+                <span>🚀</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -3789,8 +4121,45 @@ export default function MughalGameScreen() {
         </div>
       )}
 
-      {/* --- CINEMATIC NARRATOR SUBTITLES & AUDIO CONTROLS (Hidden during punishment screen) --- */}
-      {!punishmentState.isOpen && <NarratorSubtitle />}
+      {/* --- KEY FOUND CARD / MODAL --- */}
+      {showKeyFoundCard && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 select-none animate-in fade-in zoom-in-95 duration-200 pointer-events-auto">
+          <div className="bg-[#fff9ea] border-4 border-black rounded-2xl p-6 sm:p-8 max-w-lg w-full shadow-[8px_8px_0_0_rgba(0,0,0,1)] text-center flex flex-col items-center gap-4 relative">
+            <div className="w-20 h-20 bg-amber-100 border-3 border-black rounded-2xl flex items-center justify-center shadow-[4px_4px_0_0_rgba(0,0,0,1)] -mt-2 animate-bounce">
+              <img src="/mughal_royal_key.png" alt="Royal Key" className="w-14 h-14 object-contain" style={{ imageRendering: "pixelated" }} />
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <span className="text-[11px] font-black text-amber-800 uppercase tracking-widest">
+                🗝️ Royal Treasure Secured
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-black text-black tracking-tight">
+                Imperial Dungeon Key Found!
+              </h2>
+            </div>
+
+            <p className="text-sm font-serif text-gray-800 leading-relaxed max-w-md bg-amber-50/80 border-2 border-amber-300 p-4 rounded-xl">
+              You found Emperor Shah Jahan&apos;s royal key hidden in the Rang Mahal before the queens returned from their hunt! Now hurry to the dungeon door in the next chamber to unlock the jail and rescue your companion!
+            </p>
+
+            <button
+              onClick={() => {
+                soundFx.playButtonClick();
+                setShowKeyFoundCard(false);
+                setScene("red_fort_corridor");
+                setPlayerPos({ x: 50.0, y: 80.0 });
+              }}
+              className="w-full bg-[#f59e0b] hover:bg-[#d97706] text-black font-extrabold text-sm sm:text-base py-3.5 px-6 rounded-xl border-3 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 transition-all cursor-pointer flex items-center justify-center gap-2"
+            >
+              <span>🚪</span>
+              <span>Go to Jail Door & Unlock Cell</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* --- CINEMATIC NARRATOR SUBTITLES & AUDIO CONTROLS (Hidden during punishment & victory screen) --- */}
+      {!punishmentState.isOpen && !showCompanionFreedScreen && <NarratorSubtitle />}
     </div>
   );
 }
