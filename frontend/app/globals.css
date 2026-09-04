@@ -59,3 +59,18 @@ body {
   animation: celestialGlow 1.8s infinite ease-in-out;
 }
 
+@keyframes puzzledDoubt {
+  0%, 100% {
+    transform: rotate(-6deg) translateY(-2px) scale(1.05);
+    filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.8)) drop-shadow(0 0 20px rgba(99, 102, 241, 0.6)) brightness(1.1);
+  }
+  50% {
+    transform: rotate(7deg) translateY(-8px) scale(1.10);
+    filter: drop-shadow(0 0 18px rgba(192, 132, 252, 0.95)) drop-shadow(0 0 32px rgba(147, 51, 234, 0.75)) brightness(1.25);
+  }
+}
+
+.animate-puzzled-doubt {
+  animation: puzzledDoubt 2.2s infinite ease-in-out !important;
+}
+

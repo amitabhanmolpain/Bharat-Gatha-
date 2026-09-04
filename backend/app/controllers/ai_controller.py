@@ -8,8 +8,9 @@ Exposes REST API endpoints for in-game historical inquiries using:
 
 from flask import Blueprint, jsonify, request
 from app.services.groq_service import ask_historical_question
-from app.services.genie_agent_service import ask_genie_agent
+from app.services.genie_agent_service import ask_genie_agent, CAMPAIGN_REGISTRY
 from app.services.guard_agent_service import ask_guard_agent
+from app.services.parler_tts_service import generate_character_speech
 
 ai_bp = Blueprint('ai', __name__)
 
@@ -25,7 +26,7 @@ def ask_question():
         model (str, optional): Groq model ID (default: 'openai/gpt-oss-120b').
 
     Returns:
-        JSON response with the historical answer and context.
+        JSON response with the historical answer, context, and character audio.
     """
     data = request.get_json(silent=True) or {}
     question = data.get("question", "")
@@ -72,6 +73,17 @@ def genie_chat():
 
     status_code = result.pop("status_code", 200)
     return jsonify(result), status_code
+
+
+@ai_bp.route('/genie/campaigns', methods=['GET'])
+def get_genie_campaigns():
+    """Return all supported Bharat Gatha campaigns and historical metadata for Jolly Bhai."""
+    return jsonify({
+        "status": "success",
+        "character": "jolly",
+        "character_name": "Jolly Bhai",
+        "campaigns": CAMPAIGN_REGISTRY
+    }), 200
 
 
 @ai_bp.route('/guard/chat', methods=['POST'])

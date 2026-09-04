@@ -69,6 +69,11 @@ class CharacterVoiceManager {
     return this.state.isPlaying;
   }
 
+  public cacheAudio(character: string, text: string, b64Audio: string): void {
+    const key = `${character.toLowerCase()}:${text.toLowerCase().trim()}`;
+    this.audioCache.set(key, b64Audio);
+  }
+
   /**
    * Stop any active character dialogue audio immediately.
    */
@@ -126,6 +131,34 @@ class CharacterVoiceManager {
 
     // 2. Jolly Local Canonical Pre-recorded Files
     if (char === "jolly" || char.includes("genie")) {
+      if (lower.includes("kuldhara wasn't alone") || lower.includes("83 nearby villages") || lower.includes("abandoned together") || lower.includes("biggest mystery")) {
+        return "/kuldhara_84_villages_genie.wav";
+      }
+      if (
+        lower.includes("severe drought") ||
+        lower.includes("salim singh") ||
+        lower.includes("why did 84 villages") ||
+        lower.includes("departed together in a single night") ||
+        lower.includes("something doesn't add up") ||
+        lower.includes("popular folklore") ||
+        lower.includes("weigh the evidence")
+      ) {
+        return "/jolly_kuldhara_why_abandoned.wav";
+      }
+      if (
+        lower.includes("search the chief's haveli") ||
+        lower.includes("grain merchant") ||
+        lower.includes("torn tax ledger") ||
+        lower.includes("where should i search") ||
+        lower.includes("clue is hidden") ||
+        lower.includes("vital historical clue") ||
+        lower.includes("look sharp") ||
+        lower.includes("vital clue is waiting") ||
+        lower.includes("water pots were abandoned") ||
+        lower.includes("clue alert")
+      ) {
+        return "/jolly_kuldhara_clues_hint.wav";
+      }
       if (lower.includes("trapped in the dungeon") || lower.includes("stucked in the jail") || lower.includes("in the other chamber") || lower.includes("rescue him") || lower.includes("stuck in the jail")) {
         return "/jolly_companion_jail_clue.wav";
       }
@@ -141,7 +174,12 @@ class CharacterVoiceManager {
       if (lower.includes("jolly bhai") && (lower.includes("born many centuries") || lower.includes("witnessed great wars") || lower.includes("madman"))) {
         return "/jolly_intro.wav";
       }
-      if (lower.includes("mighty fort of chittorgarh") || (lower.includes("rajputana") && lower.includes("buzurg chacha"))) {
+      if (
+        lower.includes("mighty fort of chittorgarh") ||
+        (lower.includes("rajputana") && lower.includes("buzurg chacha")) ||
+        lower.includes("what wisdom do you seek") ||
+        lower.includes("legendary realm of rajputana")
+      ) {
         return "/jolly_rajasthan_intro.wav";
       }
     }
@@ -255,8 +293,33 @@ class CharacterVoiceManager {
         }
       }
 
-      // If not available, do not play unwanted browser speech synthesis
+      // If not available as audio file, fallback seamlessly to browser speech synthesis
       if (!audioSrc) {
+        if (typeof window !== "undefined" && "speechSynthesis" in window) {
+          try {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(trimmed);
+            utterance.rate = character.toLowerCase().includes("guard") ? 1.05 : 0.95;
+            utterance.pitch = character.toLowerCase().includes("guard") ? 0.8 : 1.1;
+            utterance.volume = 1.0;
+            utterance.onstart = () => {
+              this.updateState({ isPlaying: true, isLoading: false });
+              onStart?.();
+            };
+            utterance.onend = () => {
+              this.updateState({ isPlaying: false, isLoading: false, activeCharacter: null, currentText: null });
+              onEnd?.();
+            };
+            utterance.onerror = (e) => {
+              this.updateState({ isPlaying: false, isLoading: false });
+              onError?.(e);
+            };
+            window.speechSynthesis.speak(utterance);
+            return null;
+          } catch (speechErr) {
+            console.warn("Speech synthesis fallback warning:", speechErr);
+          }
+        }
         this.updateState({ isLoading: false, isPlaying: false });
         return null;
       }
@@ -386,3 +449,12 @@ export const playCharacterDialogue = (options: CharacterDialogueOptions) =>
 
 export const stopCharacterDialogue = () =>
   characterVoice.stopCharacterDialogue();
+
+export const getCharacterVoiceState = () =>
+  characterVoice.getState();
+
+export const subscribeCharacterVoice = (listener: CharacterVoiceListener) =>
+  characterVoice.subscribe(listener);
+
+export const cacheCharacterAudio = (character: string, text: string, b64Audio: string) =>
+  characterVoice.cacheAudio(character, text, b64Audio);

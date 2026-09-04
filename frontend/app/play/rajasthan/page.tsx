@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { Timer, AlertTriangle, RotateCcw } from "lucide-react";
 import DialoguePanel from "../../components/DialoguePanel";
 import { playCharacterDialogue, stopCharacterDialogue } from "../../../services/characterVoiceService";
 import { playNarration, stopNarration } from "../../../services/narratorService";
@@ -83,6 +84,11 @@ export default function RajasthanGameScreen() {
   const [showJollyDialogue, setShowJollyDialogue] = useState(false);
   const [jollySpeechText, setJollySpeechText] = useState("");
   const [jollyOptions, setJollyOptions] = useState<Array<{ id: number | string; text: string }>>([]);
+  const [jollyStatusBadge, setJollyStatusBadge] = useState<"normal" | "glowing" | "shaking" | "doubt">("normal");
+  const [hasHeardKuldharaSecretLore, setHasHeardKuldharaSecretLore] = useState(false);
+
+  // --- RESTART CONFIRMATION STATE ---
+  const [showRestartConfirmModal, setShowRestartConfirmModal] = useState(false);
 
   // --- BUZURG CHACHA DIALOGUE TRACKING (PLAYS INTRO EXACTLY ONCE) ---
   const [hasPlayedChachaIntro, setHasPlayedChachaIntro] = useState(false);
@@ -124,33 +130,91 @@ export default function RajasthanGameScreen() {
     }
   };
 
-  const triggerJollyDialogue = () => {
+  const triggerJollyDialogue = (overrideMode?: string) => {
     let speech = "Mere aaka! I am Jolly Bhai, your time-traveling genie companion. We are in the legendary realm of Rajputana! What wisdom do you seek?";
     let options: Array<{ id: number | string; text: string }> = [
       { id: 1, text: "Tell me about this historic fort." },
       { id: 2, text: "What should our next move be?" }
     ];
+    let customAudioUrl: string | undefined = undefined;
+    let badge: "normal" | "glowing" | "shaking" | "doubt" = "normal";
 
-    if (stage === 1) {
+    if (overrideMode === "shaking") {
+      badge = "shaking";
+      if (scene === "chiefs_house") {
+        speech = "💥 Quick, mere aaka! A vital historical clue is hidden inside this Chief's Haveli! Inspect the alcove to discover the bridal ornament before time runs out!";
+        options = [
+          { id: 31, text: "Where should I search for clues?" },
+          { id: 32, text: "I am investigating now!" }
+        ];
+        customAudioUrl = "/jolly_kuldhara_clues_hint.wav";
+      } else if (scene === "treasury") {
+        speech = "💥 Mere aaka, look sharp! The merchant's iron vault holds the torn tax ledger of Diwan Salim Singh! Press [E] to investigate!";
+        options = [
+          { id: 31, text: "Where should I search for clues?" },
+          { id: 32, text: "I will find the ledger!" }
+        ];
+        customAudioUrl = "/jolly_kuldhara_clues_hint.wav";
+      } else if (scene === "well") {
+        speech = "💥 Look down the dry stone steps! Intact desert water pots were abandoned right here! Press [E] to inspect them before time runs out!";
+        options = [
+          { id: 31, text: "Why were the water pots left behind?" },
+          { id: 32, text: "Searching the stepwell now!" }
+        ];
+        customAudioUrl = "/jolly_kuldhara_clues_hint.wav";
+      } else {
+        speech = "💥 Quick, mere aaka! A vital clue is waiting right here! Search this chamber before time runs out!";
+        options = [
+          { id: 31, text: "Where should I search?" },
+          { id: 32, text: "Understood!" }
+        ];
+        customAudioUrl = "/jolly_kuldhara_clues_hint.wav";
+      }
+    } else if (overrideMode === "doubt") {
+      badge = "doubt";
+      speech = "🤔 Mere aaka... something doesn't add up! Popular folklore blames an overnight curse, but what truly drove 84 prosperous villages away? We must assemble the clues to uncover the historical reality!";
+      options = [
+        { id: 30, text: "Why did the villagers go away from here?" },
+        { id: 32, text: "Let us assemble the evidence!" }
+      ];
+      customAudioUrl = "/jolly_kuldhara_why_abandoned.wav";
+    } else if (overrideMode === "glowing" || (stage === 3 && scene === "kuldhara_gate" && !hasHeardKuldharaSecretLore)) {
+      badge = "glowing";
+      setHasHeardKuldharaSecretLore(true);
+      speech = "The biggest mystery is that Kuldhara wasn't alone. Rajasthan Tourism's popular legend says Kuldhara and 83 nearby villages were abandoned together, making the story much bigger than one supposedly haunted village";
+      options = [
+        { id: 30, text: "Why did the villagers go away from here?" },
+        { id: 31, text: "Where should I search for the 3 clues?" },
+        { id: 32, text: "Understood! Let's explore Kuldhara." }
+      ];
+      customAudioUrl = "/kuldhara_84_villages_genie.wav";
+    } else if (stage === 1) {
+      badge = "normal";
       speech = "Mere aaka! We have arrived at the mighty fort of Chittorgarh in Rajputana! Look ahead, Buzurg Chacha is waiting by the ancient Chaupar board. Go speak with him and play Chaupar to prove your mettle!";
       options = [
         { id: 10, text: "How do I beat Buzurg Chacha at Chaupar?" },
         { id: 11, text: "Tell me about the victory tower Vijay Stambh." },
         { id: 12, text: "What is the solemn history of Jauhar Kund?" }
       ];
+      customAudioUrl = "/jolly_rajasthan_intro.wav";
     } else if (stage === 2) {
+      badge = "normal";
       speech = "Mere aaka! This is Kumbhalgarh Fort, possessing the second-longest continuous wall in the world after the Great Wall of China! Explore the ramparts and find the passage up to Badal Mahal.";
       options = [
         { id: 20, text: "Tell me about the Great Wall of Kumbhalgarh." },
         { id: 21, text: "Who was Maharana Kumbha?" }
       ];
     } else if (stage === 3) {
-      speech = "Mere aaka! Shhh... this is Kuldhara, the abandoned village of the Paliwal Brahmins who vanished overnight in 1825. Find the 3 clues before time runs out!";
+      badge = "normal";
+      speech = "Mere aaka! We are inside the abandoned havelis of Kuldhara. Search the Chief's Haveli, the Treasury, and the Stepwell to uncover the 3 historical artifacts before the desert sand covers them!";
       options = [
-        { id: 30, text: "Why did the villagers leave overnight?" },
-        { id: 31, text: "Where should I search for clues?" }
+        { id: 30, text: "Why did the villagers go away from here?" },
+        { id: 31, text: "Where should I search for the 3 clues?" },
+        { id: 32, text: "Understood! Let's explore Kuldhara." }
       ];
+      customAudioUrl = "/jolly_kuldhara_clues_hint.wav";
     } else if (stage === 4) {
+      badge = "normal";
       speech = "Mere aaka! Be on your guard! We have stepped inside Bhangarh Fort, known across India as the most haunted stronghold! Retrieve the royal relics swiftly!";
       options = [
         { id: 40, text: "What is the legend of Bhangarh Fort?" },
@@ -158,13 +222,14 @@ export default function RajasthanGameScreen() {
       ];
     }
 
+    setJollyStatusBadge(badge);
     setJollySpeechText(speech);
     setJollyOptions(options);
     setShowJollyDialogue(true);
     playCharacterDialogue({
       character: "jolly",
       text: speech,
-      audioUrl: stage === 1 ? "/jolly_rajasthan_intro.wav" : undefined
+      audioUrl: customAudioUrl
     });
   };
 
@@ -234,6 +299,7 @@ export default function RajasthanGameScreen() {
     setShowKuldharaTimeOutModal(false);
     stopNarration();
     setShowKuldharaNarratorBanner(false);
+    setHasKuldharaNarrationFinished(false);
     hasPlayedKuldharaNarrationRef.current = false;
     setScene("kuldhara_gate");
     setPlayerPos({ x: 50.0, y: 88.0 });
@@ -344,6 +410,7 @@ export default function RajasthanGameScreen() {
     stopCharacterDialogue();
     stopNarration();
     setShowKuldharaNarratorBanner(false);
+    setHasKuldharaNarrationFinished(false);
     hasPlayedKuldharaNarrationRef.current = false;
     setTimeout(() => {
       hasPlayedChachaIntroRef.current = false;
@@ -487,15 +554,52 @@ export default function RajasthanGameScreen() {
     return () => clearTimeout(timer);
   }, []);
 
+  // --- KULDHARA HISTORICAL NARRATOR (SARVAM AI BULBUL) ---
+  const [showKuldharaNarratorBanner, setShowKuldharaNarratorBanner] = useState(false);
+  const [hasKuldharaNarrationFinished, setHasKuldharaNarrationFinished] = useState(false);
+  const kuldharaNarratorSentence = "You have arrived at Kuldhara, the abandoned desert village where the villagers vanished overnight and no one knows the true mystery of that. Explore the silent ruins and find the clues that leads to the finding of that in stipulated time!";
+  const hasPlayedKuldharaNarrationRef = useRef(false);
+
+  useEffect(() => {
+    if (!isLoading && stage === 3 && scene === "kuldhara_gate" && !hasPlayedKuldharaNarrationRef.current) {
+      hasPlayedKuldharaNarrationRef.current = true;
+      setShowKuldharaNarratorBanner(true);
+      setHasKuldharaNarrationFinished(false);
+      stopCharacterDialogue();
+      playNarration(kuldharaNarratorSentence, {
+        audioUrl: "/kuldhara_narration.wav",
+        speaker: "ratan",
+        pace: 0.88,
+        language_code: "en-IN",
+        onEnd: () => {
+          setTimeout(() => {
+            setShowKuldharaNarratorBanner(false);
+            setHasKuldharaNarrationFinished(true);
+          }, 1500);
+        }
+      });
+
+      // Fallback safety in case audio playback is blocked by browser or ends early
+      const fallbackTimer = setTimeout(() => {
+        setShowKuldharaNarratorBanner(false);
+        setHasKuldharaNarrationFinished(true);
+      }, 10000);
+
+      return () => {
+        clearTimeout(fallbackTimer);
+      };
+    }
+  }, [isLoading, stage, scene]);
+
   // --- KULDHARA 2-MINUTE CHALLENGE TIMER (Stage 3) ---
   useEffect(() => {
     const allCluesFound = hasWeddingOrnament && hasTaxLedger && hasWaterPotsSupplies;
-    // When clues are found or mystery modal is shown, immediately freeze and stop timer
-    if (stage !== 3 || showStage3CompleteModal || allCluesFound) return;
+    // When clues are found, mystery modal is shown, timeout occurred, narrator banner is active, or Jolly dialogue is open, freeze timer
+    if (stage !== 3 || showStage3CompleteModal || allCluesFound || showKuldharaNarratorBanner || showKuldharaTimeOutModal || showJollyDialogue) return;
 
     const interval = setInterval(() => {
       setKuldharaTimer((prev) => {
-        if (showStage3CompleteModal || allCluesFound) return prev;
+        if (showStage3CompleteModal || allCluesFound || showKuldharaTimeOutModal || showJollyDialogue) return prev;
         if (prev <= 1) {
           setShowKuldharaTimeOutModal(true);
           return 0;
@@ -505,7 +609,7 @@ export default function RajasthanGameScreen() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [stage, showStage3CompleteModal, hasWeddingOrnament, hasTaxLedger, hasWaterPotsSupplies]);
+  }, [stage, showStage3CompleteModal, hasWeddingOrnament, hasTaxLedger, hasWaterPotsSupplies, showKuldharaNarratorBanner, showKuldharaTimeOutModal, showJollyDialogue]);
 
   // Play Sarvam AI narrator when Kuldhara mystery is solved & Stage 3 Complete Card opens
   useEffect(() => {
@@ -522,34 +626,22 @@ export default function RajasthanGameScreen() {
     }
   }, [showStage3CompleteModal]);
 
-  // --- KULDHARA HISTORICAL NARRATOR (SARVAM AI BULBUL) ---
-  const [showKuldharaNarratorBanner, setShowKuldharaNarratorBanner] = useState(false);
-  const kuldharaNarratorSentence = "You have arrived at Kuldhara, the abandoned desert village where the villagers vanished overnight and no one knows the true mystery of that. Explore the silent ruins and find the clues that leads to the finding of that in stipulated time!";
-  const hasPlayedKuldharaNarrationRef = useRef(false);
-
+  // Play Sarvam AI narrator when Kuldhara 2-minute challenge timeout occurs
   useEffect(() => {
-    if (!isLoading && stage === 3 && scene === "kuldhara_gate" && !hasPlayedKuldharaNarrationRef.current) {
-      hasPlayedKuldharaNarrationRef.current = true;
-      const timer = setTimeout(() => {
-        setShowKuldharaNarratorBanner(true);
-        stopCharacterDialogue();
-        playNarration(kuldharaNarratorSentence, {
-          audioUrl: "/kuldhara_narration.wav",
-          speaker: "ratan",
-          pace: 0.88,
-          language_code: "en-IN",
-          onEnd: () => {
-            setTimeout(() => {
-              setShowKuldharaNarratorBanner(false);
-            }, 3500);
-          }
-        });
-      }, 600);
-      return () => clearTimeout(timer);
+    if (showKuldharaTimeOutModal) {
+      stopCharacterDialogue();
+      stopNarration();
+      const timeoutNarration = "Time has expired! You failed to uncover all the evidence clues before the desert patrol caught you trespassing. You are cast out into the sands! You must start from the entrance of Kuldhara and search again.";
+      playNarration(timeoutNarration, {
+        audioUrl: "/kuldhara_timeout_narration.wav",
+        speaker: "ratan",
+        pace: 0.88,
+        language_code: "en-IN",
+      });
     }
-  }, [isLoading, stage, scene]);
+  }, [showKuldharaTimeOutModal]);
 
-  // --- BHANGARH 2-MINUTE CHALLENGE TIMER (Stage 4) ---
+  // --- BHANGARH ARTIFACT RECOVERY (Stage 4 - Free Exploration) ---
   useEffect(() => {
     if (stage !== 4 || isCampaignComplete) return;
 
@@ -559,20 +651,7 @@ export default function RajasthanGameScreen() {
         setHasShield(true);
         setShowShieldModal(true);
       }
-      return; // Freeze countdown when all 3 artifacts collected
     }
-
-    const interval = setInterval(() => {
-      setBhangarhTimer((prev) => {
-        if (prev <= 1) {
-          setShowBhangarhTimeOutModal(true);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
   }, [stage, isCampaignComplete, hasKathputliFragment, hasPaliwalSeal, hasWanderersVerse, hasShield]);
 
   // --- ELEPHANT JOURNEY SEQUENCE (Stage 2 -> Stage 3) ---
@@ -662,17 +741,17 @@ export default function RajasthanGameScreen() {
   // Stage 3 Triggers (Kuldhara)
   const isNearPillar83 = scene === "kuldhara_gate" && playerPos.x >= 55.0;
   const isNearGateVillagePath = scene === "kuldhara_gate" && playerPos.y <= 62.0;
-  const isNearHaveliOrnament = scene === "chiefs_house" && playerPos.x >= 52.0;
+  const isNearHaveliOrnament = scene === "chiefs_house" && playerPos.x >= 54.0 && playerPos.y <= 78.0;
   const isNearHaveliTreasuryDoor = scene === "chiefs_house" && playerPos.y <= 62.0;
-  const isNearHaveliGateExit = scene === "chiefs_house" && playerPos.y >= 88.0;
-  const isNearTaxLedger = scene === "treasury" && playerPos.x >= 28.0 && playerPos.x <= 75.0 && playerPos.y <= 85.0;
-  const isNearTreasuryWellDoor = scene === "treasury" && playerPos.x >= 70.0;
-  const isNearTreasuryHaveliExit = scene === "treasury" && playerPos.y >= 88.0;
-  const isNearStepwellPots = scene === "well" && playerPos.x <= 55.0 && playerPos.y >= 65.0;
-  const isNearStepwellSquareDoor = scene === "well" && playerPos.x >= 70.0;
-  const isNearStepwellTreasuryExit = scene === "well" && playerPos.y >= 88.0 && playerPos.x <= 60.0;
+  const isNearHaveliGateExit = scene === "chiefs_house" && playerPos.y >= 80.0;
+  const isNearTaxLedger = scene === "treasury" && playerPos.x >= 34.0 && playerPos.x <= 74.0 && playerPos.y <= 76.0;
+  const isNearTreasuryWellDoor = scene === "treasury" && playerPos.x >= 68.0;
+  const isNearTreasuryHaveliExit = scene === "treasury" && (playerPos.y >= 78.0 || playerPos.x <= 28.0);
+  const isNearStepwellPots = scene === "well" && playerPos.x <= 55.0 && playerPos.y >= 65.0 && playerPos.y <= 84.0;
+  const isNearStepwellSquareDoor = scene === "well" && playerPos.x >= 68.0;
+  const isNearStepwellTreasuryExit = scene === "well" && (playerPos.x <= 32.0 || playerPos.y >= 82.0);
   const isNearChhatriDeduction = scene === "village_square" && playerPos.x >= 28.0 && playerPos.x <= 72.0 && playerPos.y >= 55.0 && playerPos.y <= 88.0;
-  const isNearSquareWellExit = scene === "village_square" && playerPos.x <= 20.0 && playerPos.y >= 70.0;
+  const isNearSquareWellExit = scene === "village_square" && playerPos.x <= 30.0;
 
   // --- STAGE 4 (BHANGARH FORT 1-MIN CHALLENGE) PROXIMITY TRIGGERS ---
   // Scene 1: Bhangarh Gate
@@ -945,6 +1024,7 @@ export default function RajasthanGameScreen() {
             state.setIsTransitioning(false);
           }, 400);
         } else if (state.isNearHaveliOrnament) {
+          soundFx.playClueFound();
           state.setHasWeddingOrnament(true);
           state.setShowHaveliOrnamentModal(true);
         } else if (state.isNearHaveliTreasuryDoor) {
@@ -955,6 +1035,7 @@ export default function RajasthanGameScreen() {
             state.setIsTransitioning(false);
           }, 400);
         } else if (state.isNearTaxLedger) {
+          soundFx.playClueFound();
           state.setHasTaxLedger(true);
           state.setShowTaxLedgerModal(true);
         } else if (state.isNearTreasuryWellDoor) {
@@ -965,6 +1046,7 @@ export default function RajasthanGameScreen() {
             state.setIsTransitioning(false);
           }, 400);
         } else if (state.isNearStepwellPots) {
+          soundFx.playClueFound();
           state.setHasWaterPotsSupplies(true);
           state.setShowStepwellModal(true);
         } else if (state.isNearStepwellSquareDoor) {
@@ -976,6 +1058,34 @@ export default function RajasthanGameScreen() {
           }, 400);
         } else if (state.isNearChhatriDeduction) {
           state.setShowStage3CompleteModal(true);
+        } else if (state.isNearHaveliGateExit) {
+          state.setIsTransitioning(true);
+          setTimeout(() => {
+            state.setScene("kuldhara_gate");
+            state.setPlayerPos({ x: 50.0, y: 64.0 });
+            state.setIsTransitioning(false);
+          }, 400);
+        } else if (state.isNearTreasuryHaveliExit) {
+          state.setIsTransitioning(true);
+          setTimeout(() => {
+            state.setScene("chiefs_house");
+            state.setPlayerPos({ x: 50.0, y: 62.0 });
+            state.setIsTransitioning(false);
+          }, 400);
+        } else if (state.isNearStepwellTreasuryExit) {
+          state.setIsTransitioning(true);
+          setTimeout(() => {
+            state.setScene("treasury");
+            state.setPlayerPos({ x: 68.0, y: 72.0 });
+            state.setIsTransitioning(false);
+          }, 400);
+        } else if (state.isNearSquareWellExit) {
+          state.setIsTransitioning(true);
+          setTimeout(() => {
+            state.setScene("well");
+            state.setPlayerPos({ x: 74.0, y: 78.0 });
+            state.setIsTransitioning(false);
+          }, 400);
         }
         // Stage 4 (Bhangarh Fort 1-Min Relic Challenge)
         else if (state.isNearKathputliFragment) {
@@ -1107,28 +1217,28 @@ export default function RajasthanGameScreen() {
           state.setIsTransitioning(true);
           setTimeout(() => {
             state.setScene("kuldhara_gate");
-            state.setPlayerPos({ x: 45.0, y: 60.0 });
+            state.setPlayerPos({ x: 50.0, y: 64.0 });
             state.setIsTransitioning(false);
           }, 400);
         } else if (state.isNearTreasuryHaveliExit) {
           state.setIsTransitioning(true);
           setTimeout(() => {
             state.setScene("chiefs_house");
-            state.setPlayerPos({ x: 50.0, y: 60.0 });
+            state.setPlayerPos({ x: 50.0, y: 62.0 });
             state.setIsTransitioning(false);
           }, 400);
         } else if (state.isNearStepwellTreasuryExit) {
           state.setIsTransitioning(true);
           setTimeout(() => {
             state.setScene("treasury");
-            state.setPlayerPos({ x: 74.0, y: 70.0 });
+            state.setPlayerPos({ x: 68.0, y: 72.0 });
             state.setIsTransitioning(false);
           }, 400);
         } else if (state.isNearSquareWellExit) {
           state.setIsTransitioning(true);
           setTimeout(() => {
             state.setScene("well");
-            state.setPlayerPos({ x: 76.0, y: 78.0 });
+            state.setPlayerPos({ x: 74.0, y: 78.0 });
             state.setIsTransitioning(false);
           }, 400);
         }
@@ -1809,69 +1919,44 @@ export default function RajasthanGameScreen() {
             <span className="text-amber-800 font-extrabold">open</span>
           </div>
         </div>
-
-        {/* Stage 3 & Stage 4 2-MIN TIMER CARD */}
-        {(stage === 3 || stage === 4) && (
-          <div className="bg-[#fff9ea] border-2 border-black rounded-xl px-3.5 py-2 w-64 shadow-[3px_3px_0_0_rgba(0,0,0,1)] flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-950">
-              <span className="animate-pulse text-sm">⏱️</span>
-              <span className="text-[11px] font-black uppercase tracking-wider text-amber-950">
-                TIMER
-              </span>
-            </div>
-            <span className={`text-[13px] font-mono font-black px-2.5 py-0.5 rounded border ${
-              (stage === 3 ? kuldharaTimer : bhangarhTimer) <= 20
-                ? "bg-red-600 text-white border-black animate-pulse shadow-[0_0_8px_rgba(220,38,38,0.8)]"
-                : "bg-red-100 text-red-600 border-red-300"
-            }`}>
-              {Math.floor((stage === 3 ? kuldharaTimer : bhangarhTimer) / 60)}:{((stage === 3 ? kuldharaTimer : bhangarhTimer) % 60).toString().padStart(2, "0")}
-            </span>
-          </div>
-        )}
-
-
       </div>
 
       {/* --- TOP RIGHT ACTION BUTTONS (EXACT MUGHAL ENGINE FORMAT: IMAGE 2) --- */}
       <div className="absolute top-6 right-6 z-20 flex flex-col items-end gap-3">
         {/* Action Buttons Row */}
         <div className="flex items-center gap-2">
-          {/* Silent Switchable Timer Button */}
-          <button 
-            onClick={() => {
-              soundFx.playButtonClick();
-              setIsTimerVisible(!isTimerVisible);
-            }}
-            title={isTimerVisible ? "Timer Active (Click to hide)" : "Click to view session timer"}
-            className={`h-10 px-3.5 border-2 border-black rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all flex items-center justify-center gap-1.5 font-black text-xs cursor-pointer ${
-              isTimerVisible ? "bg-[#fcd34d] text-black" : "bg-white/90 hover:bg-white text-gray-800"
-            }`}
-          >
-            <span>⏱️</span>
-            {isTimerVisible ? (
-              <span>
-                {stage === 3
-                  ? `${Math.floor(kuldharaTimer / 60)}:${(kuldharaTimer % 60).toString().padStart(2, "0")}`
-                  : stage === 4
-                  ? `${Math.floor(bhangarhTimer / 60)}:${(bhangarhTimer % 60).toString().padStart(2, "0")}`
-                  : `${String(Math.floor(elapsedSeconds / 60)).padStart(2, '0')}:${String(elapsedSeconds % 60).padStart(2, '0')}`}
+          {/* Active Live Timer Pill (ONLY in Stage 3: Kuldhara Ghost Village as requested) */}
+          {stage === 3 && (
+            <div 
+              className={`h-10 px-3.5 border-2 border-black rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] flex items-center justify-center gap-2 font-black text-xs select-none transition-all ${
+                kuldharaTimer <= 20
+                  ? "bg-red-600 text-white animate-pulse shadow-[0_0_10px_rgba(220,38,38,0.8)]"
+                  : "bg-[#fff9ea] text-black"
+              }`}
+            >
+              <Timer className={`w-4 h-4 ${kuldharaTimer <= 20 ? "text-white animate-spin" : "text-amber-950"}`} />
+              <span className={`text-[11px] font-black uppercase tracking-wider ${kuldharaTimer <= 20 ? "text-white" : "text-amber-950"}`}>
+                TIMER
               </span>
-            ) : (
-              <span className="text-[11px] font-bold uppercase tracking-wider text-black">TIMER</span>
-            )}
-          </button>
+              <span className={`font-mono font-black text-[13px] px-2 py-0.5 rounded border ${
+                kuldharaTimer <= 20
+                  ? "bg-red-800 text-white border-white/40"
+                  : "bg-red-100 text-red-600 border-red-300"
+              }`}>
+                {`${Math.floor(kuldharaTimer / 60)}:${(kuldharaTimer % 60).toString().padStart(2, "0")}`}
+              </span>
+            </div>
+          )}
 
           <button
             onClick={() => {
               soundFx.playButtonClick();
-              handleResetGame();
+              setShowRestartConfirmModal(true);
             }}
-            title="Restart to Beginning"
+            title="Restart Campaign"
             className="h-10 bg-red-600 text-white border-2 border-black rounded-lg px-3.5 text-[13px] font-extrabold shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:bg-red-700 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-1.5 cursor-pointer group"
           >
-            <svg className="w-4 h-4 text-white group-hover:-rotate-180 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-            </svg>
+            <RotateCcw className="w-4 h-4 text-white group-hover:-rotate-180 transition-transform duration-500" />
             <span>Restart</span>
           </button>
 
@@ -2061,37 +2146,96 @@ export default function RajasthanGameScreen() {
         </div>
       )}
 
-      {/* --- JOLLY BHAI (GENIE) COMPANION FOLLOWER --- */}
-      {!isElephantTravelling && !isBhangarhTravelling && (
-        <div
-          className="absolute z-20 pointer-events-auto cursor-pointer group transition-all duration-700 ease-out"
-          style={{
-            left: `${facingLeft ? playerPos.x + 8.5 : playerPos.x - 8.5}%`,
-            top: `${playerPos.y - 12.0}%`,
-            transform: 'translate(-50%, -50%)',
-          }}
-          onClick={() => {
-            triggerJollyDialogue();
-          }}
-          title="🧞 Jolly Bhai (Your Time-Traveling Genie Companion - Click to Talk)"
-        >
-          <div className="relative animate-bounce" style={{ animationDuration: '3.5s' }}>
-            <img
-              src="/genie_rajasthani_transparent.png"
-              alt="Jolly Bhai Genie"
-              className="w-24 h-24 md:w-28 md:h-28 object-contain transition-all group-hover:scale-110 drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]"
-              style={{
-                imageRendering: "pixelated",
-                transform: facingLeft ? "scaleX(1)" : "scaleX(-1)",
-              }}
-            />
-            {/* Subtle Mode Badge on Hover */}
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 border-2 border-black rounded-full px-2.5 py-0.5 shadow-[2px_2px_0_0_rgba(0,0,0,1)] text-[9.5px] font-black whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity bg-[#fff9ea] text-black flex items-center gap-1 pointer-events-none">
-              <span>Ask Jolly Bhai 🧞</span>
+      {/* --- JOLLY BHAI (GENIE) COMPANION FOLLOWER WITH DYNAMIC BEHAVIORS --- */}
+      {(() => {
+        // Mode 1: 💥 Crazy Shake - ONLY when player is in actual close proximity to an uncollected clue!
+        const isClueNearby =
+          (isNearHaveliOrnament && !hasWeddingOrnament) ||
+          (isNearTaxLedger && !hasTaxLedger) ||
+          (isNearStepwellPots && !hasWaterPotsSupplies) ||
+          (stage === 4 && (
+            (isNearKathputliFragment && !hasKathputliFragment) ||
+            (isNearPaliwalSeal && !hasPaliwalSeal) ||
+            (isNearWanderersVerse && !hasWanderersVerse)
+          ));
+
+        // Mode 2: 🤔 Doubt - In mystery deduction or conflicting evidence!
+        const isDoubt =
+          (stage === 3 && scene === "village_square" && !showStage3CompleteModal) ||
+          (stage === 4 && showFolkloreClassifierModal);
+
+        // Mode 3: ✨ Glowing - At the historical threshold or secret lore!
+        const isGlowing = stage === 3 && scene === "kuldhara_gate" && !hasHeardKuldharaSecretLore;
+
+        // Resolved Mode
+        const mode = isClueNearby ? "shaking" : isDoubt ? "doubt" : isGlowing ? "glowing" : "normal";
+
+        return !isElephantTravelling && !isBhangarhTravelling && (
+          <div
+            className="absolute z-20 pointer-events-auto cursor-pointer group transition-all duration-700 ease-out"
+            style={{
+              left: `${facingLeft ? playerPos.x + 8.5 : playerPos.x - 8.5}%`,
+              top: `${(mode === "glowing" || mode === "doubt") ? playerPos.y - 18.0 : playerPos.y - 12.0}%`,
+              transform: 'translate(-50%, -50%)',
+            }}
+            onClick={() => {
+              triggerJollyDialogue(mode);
+            }}
+            title={
+              mode === "shaking"
+                ? "💥 Jolly Bhai (Crazy Shake: Clue is right here!)"
+                : mode === "doubt"
+                ? "🤔 Jolly Bhai (Doubt: Weighing the mystery!)"
+                : mode === "glowing"
+                ? "✨ Jolly Bhai (Secret Lore: Untold History!)"
+                : "🧞 Jolly Bhai (Your Time-Traveling Genie Companion)"
+            }
+          >
+            <div
+              className={`relative ${
+                mode === "shaking"
+                  ? "animate-crazy-shake"
+                  : mode === "doubt"
+                  ? "animate-puzzled-doubt"
+                  : "animate-bounce"
+              }`}
+              style={mode === "normal" || mode === "glowing" ? { animationDuration: '3.5s' } : undefined}
+            >
+              <img
+                src="/genie_rajasthani_transparent.png"
+                alt="Jolly Bhai Genie"
+                className="w-24 h-24 md:w-28 md:h-28 object-contain transition-all group-hover:scale-110"
+                style={{
+                  imageRendering: "pixelated",
+                  transform: facingLeft ? "scaleX(1)" : "scaleX(-1)",
+                  filter:
+                    mode === "glowing"
+                      ? "drop-shadow(2px 0 0 #ffffff) drop-shadow(-2px 0 0 #ffffff) drop-shadow(0 2px 0 #ffffff) drop-shadow(0 -2px 0 #ffffff) drop-shadow(1.5px 1.5px 0 #ffffff) drop-shadow(-1.5px -1.5px 0 #ffffff) drop-shadow(1.5px -1.5px 0 #ffffff) drop-shadow(-1.5px 1.5px 0 #ffffff) drop-shadow(0 0 8px rgba(255, 255, 255, 0.95)) drop-shadow(0 0 18px rgba(254, 240, 138, 0.75)) brightness(1.15)"
+                      : mode === "shaking"
+                      ? "drop-shadow(0 0 16px rgba(239, 68, 68, 0.95)) drop-shadow(0 0 30px rgba(249, 115, 22, 0.85)) brightness(1.25)"
+                      : mode === "doubt"
+                      ? "drop-shadow(0 0 12px rgba(168, 85, 247, 0.85)) drop-shadow(0 0 24px rgba(99, 102, 241, 0.65)) brightness(1.15)"
+                      : "drop-shadow(0 4px 10px rgba(0,0,0,0.5))",
+                }}
+              />
+
+              {/* Mode Badge - Matching exact design */}
+              <div
+                className={`absolute -top-3.5 left-1/2 -translate-x-1/2 border-[2.5px] border-black rounded-full px-3 py-0.5 shadow-[2px_2px_0_0_rgba(0,0,0,1)] text-[11px] font-black whitespace-nowrap transition-all flex items-center gap-1.5 pointer-events-none z-30 ${
+                  mode !== "normal"
+                    ? "opacity-100 bg-white text-black"
+                    : "opacity-0 group-hover:opacity-100 bg-white text-black"
+                }`}
+              >
+                {mode === "shaking" && <span>💥 Clue Alert!</span>}
+                {mode === "doubt" && <span>🤔 Pondering Doubt</span>}
+                {mode === "glowing" && <span>✨ Secret Lore</span>}
+                {mode === "normal" && <span>Ask Jolly Bhai 🧞</span>}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* --- INTERACTION PROMPT BANNERS --- */}
       {/* Stage 1 */}
@@ -2140,21 +2284,21 @@ export default function RajasthanGameScreen() {
       )}
 
       {isNearHaveliOrnament && (
-        <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce cursor-pointer pointer-events-auto" onClick={() => { setHasWeddingOrnament(true); setShowHaveliOrnamentModal(true); }}>
+        <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce cursor-pointer pointer-events-auto" onClick={() => { soundFx.playClueFound(); setHasWeddingOrnament(true); setShowHaveliOrnamentModal(true); }}>
           <span className="bg-amber-400 border border-black rounded px-1.5 text-[11px]">E</span>
           Inspect Bridal Wedding Ornament in Alcove
         </div>
       )}
 
       {isNearTaxLedger && (
-        <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce cursor-pointer pointer-events-auto" onClick={() => { setHasTaxLedger(true); setShowTaxLedgerModal(true); }}>
+        <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce cursor-pointer pointer-events-auto" onClick={() => { soundFx.playClueFound(); setHasTaxLedger(true); setShowTaxLedgerModal(true); }}>
           <span className="bg-amber-400 border border-black rounded px-1.5 text-[11px]">E</span>
           Examine Torn Tax Ledger &amp; Grain Storage
         </div>
       )}
 
       {isNearStepwellPots && (
-        <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce cursor-pointer pointer-events-auto" onClick={() => { setHasWaterPotsSupplies(true); setShowStepwellModal(true); }}>
+        <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce cursor-pointer pointer-events-auto" onClick={() => { soundFx.playClueFound(); setHasWaterPotsSupplies(true); setShowStepwellModal(true); }}>
           <span className="bg-amber-400 border border-black rounded px-1.5 text-[11px]">E</span>
           Inspect Intact Water Pots &amp; Supply Caches
         </div>
@@ -2244,28 +2388,133 @@ export default function RajasthanGameScreen() {
         </div>
       )}
 
-      {/* --- NAVIGATION DIRECTION PROMPTS --- */}
+      {/* --- KULDHARA FORWARD NAVIGATION PROMPTS --- */}
       {isNearGateVillagePath && (
-        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 pointer-events-none flex items-center gap-2 whitespace-nowrap">
-          <span>▲</span> Walk north into the Chief&apos;s Haveli (Press E)
+        <div
+          className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 cursor-pointer pointer-events-auto flex items-center gap-2 whitespace-nowrap"
+          onClick={() => {
+            setIsTransitioning(true);
+            setTimeout(() => {
+              setScene("chiefs_house");
+              setPlayerPos({ x: 50.0, y: 86.0 });
+              setIsTransitioning(false);
+            }, 400);
+          }}
+        >
+          <span>▲</span> Walk north into the Chief&apos;s Haveli (Press E or click)
         </div>
       )}
 
       {isNearHaveliTreasuryDoor && (
-        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 pointer-events-none flex items-center gap-2 whitespace-nowrap">
-          <span>▲</span> Walk north into the Grain Merchant Treasury (Press E)
+        <div
+          className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 cursor-pointer pointer-events-auto flex items-center gap-2 whitespace-nowrap"
+          onClick={() => {
+            setIsTransitioning(true);
+            setTimeout(() => {
+              setScene("treasury");
+              setPlayerPos({ x: 50.0, y: 86.0 });
+              setIsTransitioning(false);
+            }, 400);
+          }}
+        >
+          <span>▲</span> Walk north into the Grain Merchant Treasury (Press E or click)
         </div>
       )}
 
       {isNearTreasuryWellDoor && (
-        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 pointer-events-none flex items-center gap-2 whitespace-nowrap">
-          <span>►</span> Walk east to the Village Stepwell (Press E)
+        <div
+          className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 cursor-pointer pointer-events-auto flex items-center gap-2 whitespace-nowrap"
+          onClick={() => {
+            setIsTransitioning(true);
+            setTimeout(() => {
+              setScene("well");
+              setPlayerPos({ x: 22.0, y: 82.0 });
+              setIsTransitioning(false);
+            }, 400);
+          }}
+        >
+          <span>►</span> Walk east to the Village Stepwell (Press E or click)
         </div>
       )}
 
       {isNearStepwellSquareDoor && (
-        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 pointer-events-none flex items-center gap-2 whitespace-nowrap">
-          <span>►</span> Walk east into the Central Village Square (Press E)
+        <div
+          className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 cursor-pointer pointer-events-auto flex items-center gap-2 whitespace-nowrap"
+          onClick={() => {
+            setIsTransitioning(true);
+            setTimeout(() => {
+              setScene("village_square");
+              setPlayerPos({ x: 25.0, y: 80.0 });
+              setIsTransitioning(false);
+            }, 400);
+          }}
+        >
+          <span>►</span> Walk east into the Central Village Square (Press E or click)
+        </div>
+      )}
+
+      {/* --- KULDHARA BACKWARD NAVIGATION PROMPTS (ALLOW GOING BACK) --- */}
+      {isNearHaveliGateExit && (
+        <div
+          className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 cursor-pointer pointer-events-auto flex items-center gap-2 whitespace-nowrap"
+          onClick={() => {
+            setIsTransitioning(true);
+            setTimeout(() => {
+              setScene("kuldhara_gate");
+              setPlayerPos({ x: 50.0, y: 64.0 });
+              setIsTransitioning(false);
+            }, 400);
+          }}
+        >
+          <span>▼</span> Walk south to return to Kuldhara Village Gate (Press F or click)
+        </div>
+      )}
+
+      {isNearTreasuryHaveliExit && (
+        <div
+          className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 cursor-pointer pointer-events-auto flex items-center gap-2 whitespace-nowrap"
+          onClick={() => {
+            setIsTransitioning(true);
+            setTimeout(() => {
+              setScene("chiefs_house");
+              setPlayerPos({ x: 50.0, y: 62.0 });
+              setIsTransitioning(false);
+            }, 400);
+          }}
+        >
+          <span>▼</span> Walk south to return to Chief&apos;s Haveli (Press F or click)
+        </div>
+      )}
+
+      {isNearStepwellTreasuryExit && (
+        <div
+          className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 cursor-pointer pointer-events-auto flex items-center gap-2 whitespace-nowrap"
+          onClick={() => {
+            setIsTransitioning(true);
+            setTimeout(() => {
+              setScene("treasury");
+              setPlayerPos({ x: 68.0, y: 72.0 });
+              setIsTransitioning(false);
+            }, 400);
+          }}
+        >
+          <span>◄</span> Walk west to return to Grain Treasury (Press F or click)
+        </div>
+      )}
+
+      {isNearSquareWellExit && (
+        <div
+          className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 cursor-pointer pointer-events-auto flex items-center gap-2 whitespace-nowrap"
+          onClick={() => {
+            setIsTransitioning(true);
+            setTimeout(() => {
+              setScene("well");
+              setPlayerPos({ x: 74.0, y: 78.0 });
+              setIsTransitioning(false);
+            }, 400);
+          }}
+        >
+          <span>◄</span> Walk west to return to Village Stepwell (Press F or click)
         </div>
       )}
 
@@ -2351,6 +2600,7 @@ export default function RajasthanGameScreen() {
                   onClick={() => {
                     stopNarration();
                     setShowKuldharaNarratorBanner(false);
+                    setHasKuldharaNarrationFinished(true);
                   }}
                   className="bg-white hover:bg-gray-100 text-black border-2 border-black rounded-md px-2 py-0.5 text-xs font-black shadow-[1px_1px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 cursor-pointer"
                   title="Dismiss Narration"
@@ -2359,7 +2609,7 @@ export default function RajasthanGameScreen() {
                 </button>
               </div>
               <p className="text-[13.5px] font-extrabold text-black leading-snug">
-                "{kuldharaNarratorSentence}"
+                &ldquo;{kuldharaNarratorSentence}&rdquo;
               </p>
             </div>
           </div>
@@ -2417,6 +2667,7 @@ export default function RajasthanGameScreen() {
           characterName="Jolly Bhai"
           characterTitle="Ancient Time-Traveling Genie Companion"
           dialogueText={jollySpeechText}
+          statusBadge={jollyStatusBadge}
           characterId="jolly"
           preventAiOnOptionSelect={true}
           historicalContext={{
@@ -2429,23 +2680,68 @@ export default function RajasthanGameScreen() {
           options={jollyOptions}
           onOptionSelect={(option) => {
             if (option.id === 10) {
+              setJollyStatusBadge("normal");
               const text = "Roll the wooden pasa dice with patience, mere aaka! Score higher than Chacha across the rounds to advance your Golden Goti to victory!";
               setJollySpeechText(text);
               playCharacterDialogue({ character: "jolly", text });
             } else if (option.id === 11) {
+              setJollyStatusBadge("glowing");
               const text = "Vijay Stambh was erected by Maharana Kumbha in 1448 AD to celebrate his victory over the combined armies of Malwa and Gujarat. It stands nine storeys high and is adorned with intricate Hindu deities!";
               setJollySpeechText(text);
               playCharacterDialogue({ character: "jolly", text });
             } else if (option.id === 12) {
+              setJollyStatusBadge("glowing");
               const text = "Jauhar Kund is the sacred historical site of mass self-immolation led by Rani Padmini and Rajput women to preserve their royal honour and dignity during the imperial sieges.";
               setJollySpeechText(text);
               playCharacterDialogue({ character: "jolly", text });
+            } else if (option.id === 20) {
+              setJollyStatusBadge("glowing");
+              const text = "The Great Wall of Kumbhalgarh spans an astounding 36 kilometers across the Aravali range, making it the second longest continuous wall on Earth!";
+              setJollySpeechText(text);
+              playCharacterDialogue({ character: "jolly", text });
+            } else if (option.id === 21) {
+              setJollyStatusBadge("glowing");
+              const text = "Maharana Kumbha was a legendary Mewar monarch, scholar, and architect who commissioned 32 of Mewar's 84 principal fortresses!";
+              setJollySpeechText(text);
+              playCharacterDialogue({ character: "jolly", text });
+            } else if (option.id === 30) {
+              setJollyStatusBadge("normal");
+              const text = "That you have to find out, my aaka! Search the silent ruins, inspect the three clues, and uncover the mystery yourself.";
+              setJollySpeechText(text);
+              setJollyOptions([
+                { id: 31, text: "Where should I search for the 3 clues?" },
+                { id: 32, text: "Understood! Let's explore Kuldhara." }
+              ]);
+              playCharacterDialogue({
+                character: "jolly",
+                text
+              });
+            } else if (option.id === 31) {
+              setJollyStatusBadge("shaking");
+              const text = "Look carefully, mere aaka! Search the Chief's Haveli for the bridal ornament, the Treasury for the torn tax ledger, and the Stepwell for intact water pots before the timer runs out!";
+              setJollySpeechText(text);
+              setJollyOptions([
+                { id: 30, text: "Why did the villagers go away from here?" },
+                { id: 32, text: "Understood! Let's explore Kuldhara." }
+              ]);
+              playCharacterDialogue({
+                character: "jolly",
+                text,
+                audioUrl: "/jolly_kuldhara_clues_hint.wav"
+              });
+            } else if (option.id === 40) {
+              setJollyStatusBadge("glowing");
+              const text = "Legends state that Bhangarh was cursed by Tantrik Singhia when Princess Ratnavati thwarted his dark sorcery, leaving the magnificent township deserted!";
+              setJollySpeechText(text);
+              playCharacterDialogue({ character: "jolly", text });
             } else {
+              setJollyStatusBadge("normal");
               stopCharacterDialogue();
               setShowJollyDialogue(false);
             }
           }}
           onClose={() => {
+            setJollyStatusBadge("normal");
             stopCharacterDialogue();
             setShowJollyDialogue(false);
           }}
@@ -2729,22 +3025,22 @@ export default function RajasthanGameScreen() {
           <div className="bg-[#fff9ea] border-4 border-amber-900 rounded-2xl p-5 shadow-[12px_12px_0_0_rgba(0,0,0,1)] max-w-md w-full flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b-2 border-amber-800/30 pb-2">
               <span className="text-sm font-black text-amber-950 uppercase tracking-wider flex items-center gap-2">
-                💍 Clue 1: Bridal Wedding Ornament
+                💍 Clue 1: Royal Bridal Kundan Ring
               </span>
-              <button onClick={() => setShowHaveliOrnamentModal(false)} className="text-amber-900 font-bold text-xs bg-amber-200/80 hover:bg-amber-300 px-2 py-0.5 rounded cursor-pointer">✕ Close</button>
+              <button onClick={() => { soundFx.playClose(); setShowHaveliOrnamentModal(false); }} className="text-amber-900 font-bold text-xs bg-amber-200/80 hover:bg-amber-300 px-2 py-0.5 rounded cursor-pointer">✕ Close</button>
             </div>
-            <div className="relative w-full h-48 rounded-xl overflow-hidden border-2 border-amber-900 shadow-md">
+            <div className="relative w-full h-52 rounded-xl overflow-hidden border-2 border-amber-900 shadow-md bg-[#120c18] flex items-center justify-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/clue-bridal-ornament.jpg" alt="Bridal Ornament" className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-2.5">
-                <span className="text-amber-200 font-serif font-bold text-xs">💍 Village Chief&apos;s Haveli Evidence</span>
-                <span className="text-amber-400 text-[10px] uppercase font-mono">Forced Marriage Ultimatum</span>
+              <img src="/clue-bridal-ornament.jpg" alt="Royal Bridal Kundan Ring" className="w-full h-full object-contain pixelated" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent flex flex-col justify-end p-2.5 pointer-events-none">
+                <span className="text-amber-200 font-serif font-bold text-xs flex items-center gap-1">💍 Village Chief&apos;s Haveli · Royal Evidence</span>
+                <span className="text-amber-400 text-[10px] uppercase font-mono tracking-wide">Forced Marriage Ultimatum · Kundan Ruby Ring</span>
               </div>
             </div>
             <p className="text-xs text-amber-950 leading-relaxed font-serif bg-amber-100/90 border-l-4 border-amber-600 p-2.5 rounded italic">
-              &quot;Left behind in the village chief&apos;s haveli. Proves the forced marriage ultimatum by Prime Minister Salim Singh against the Paliwal daughter.&quot;
+              &quot;Left behind in the village chief&apos;s haveli. An ancient royal Kundan bridal ring with ruby and pearl filigree, proving the forced marriage ultimatum delivered by Prime Minister Salim Singh against the Paliwal daughter.&quot;
             </p>
-            <button onClick={() => setShowHaveliOrnamentModal(false)} className="bg-amber-600 hover:bg-amber-700 text-white font-black py-2.5 px-5 rounded-xl border-2 border-black text-xs uppercase tracking-wider cursor-pointer self-end">
+            <button onClick={() => { soundFx.playButtonClick(); setShowHaveliOrnamentModal(false); }} className="bg-amber-600 hover:bg-amber-700 text-white font-black py-2.5 px-5 rounded-xl border-2 border-black text-xs uppercase tracking-wider cursor-pointer self-end">
               Add to Journal
             </button>
           </div>
@@ -2758,20 +3054,20 @@ export default function RajasthanGameScreen() {
               <span className="text-sm font-black text-amber-950 uppercase tracking-wider flex items-center gap-2">
                 📖 Clue 2: Torn Tax Ledger (Extortion Record)
               </span>
-              <button onClick={() => setShowTaxLedgerModal(false)} className="text-amber-900 font-bold text-xs bg-amber-200/80 hover:bg-amber-300 px-2 py-0.5 rounded cursor-pointer">✕ Close</button>
+              <button onClick={() => { soundFx.playClose(); setShowTaxLedgerModal(false); }} className="text-amber-900 font-bold text-xs bg-amber-200/80 hover:bg-amber-300 px-2 py-0.5 rounded cursor-pointer">✕ Close</button>
             </div>
-            <div className="relative w-full h-48 rounded-xl overflow-hidden border-2 border-amber-900 shadow-md">
+            <div className="relative w-full h-52 rounded-xl overflow-hidden border-2 border-amber-900 shadow-md bg-[#120c18] flex items-center justify-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/clue-torn-tax-ledger.jpg" alt="Torn Tax Ledger" className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-2.5">
-                <span className="text-amber-200 font-serif font-bold text-xs">📜 Merchant Treasury Tax Ledger</span>
-                <span className="text-amber-400 text-[10px] uppercase font-mono">Quadrupled Taxes &amp; Economic Extortion</span>
+              <img src="/clue-torn-tax-ledger.jpg" alt="Torn Tax Ledger" className="w-full h-full object-contain pixelated" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent flex flex-col justify-end p-2.5 pointer-events-none">
+                <span className="text-amber-200 font-serif font-bold text-xs flex items-center gap-1">📜 Merchant Treasury · Tax Ledger (Bahi-Khata)</span>
+                <span className="text-amber-400 text-[10px] uppercase font-mono tracking-wide">Quadrupled Taxes &amp; Salim Singh Wax Seal</span>
               </div>
             </div>
             <p className="text-xs text-amber-950 leading-relaxed font-serif bg-amber-100/90 border-l-4 border-amber-600 p-2.5 rounded italic">
-              &quot;Found in the merchant treasury. Records quadrupled taxes and ruthless economic extortion imposed by Salim Singh upon Kuldhara&apos;s merchants.&quot;
+              &quot;Found hidden in the merchant treasury. An ancient Bahi-Khata ledger stamped with Salim Singh&apos;s royal wax seal, recording crushing quadrupled tax quotas imposed on Kuldhara&apos;s Paliwal merchants.&quot;
             </p>
-            <button onClick={() => setShowTaxLedgerModal(false)} className="bg-amber-600 hover:bg-amber-700 text-white font-black py-2.5 px-5 rounded-xl border-2 border-black text-xs uppercase tracking-wider cursor-pointer self-end">
+            <button onClick={() => { soundFx.playButtonClick(); setShowTaxLedgerModal(false); }} className="bg-amber-600 hover:bg-amber-700 text-white font-black py-2.5 px-5 rounded-xl border-2 border-black text-xs uppercase tracking-wider cursor-pointer self-end">
               Add to Journal
             </button>
           </div>
@@ -2785,20 +3081,20 @@ export default function RajasthanGameScreen() {
               <span className="text-sm font-black text-amber-950 uppercase tracking-wider flex items-center gap-2">
                 🏺 Clue 3: Intact Water Pots &amp; Supplies
               </span>
-              <button onClick={() => setShowStepwellModal(false)} className="text-amber-900 font-bold text-xs bg-amber-200/80 hover:bg-amber-300 px-2 py-0.5 rounded cursor-pointer">✕ Close</button>
+              <button onClick={() => { soundFx.playClose(); setShowStepwellModal(false); }} className="text-amber-900 font-bold text-xs bg-amber-200/80 hover:bg-amber-300 px-2 py-0.5 rounded cursor-pointer">✕ Close</button>
             </div>
-            <div className="relative w-full h-48 rounded-xl overflow-hidden border-2 border-amber-900 shadow-md">
+            <div className="relative w-full h-52 rounded-xl overflow-hidden border-2 border-amber-900 shadow-md bg-[#120c18] flex items-center justify-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/clue-intact-water-pots.jpg" alt="Stepwell Supplies" className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-2.5">
-                <span className="text-amber-200 font-serif font-bold text-xs">🏺 Kuldhara Stepwell Supplies</span>
-                <span className="text-amber-400 text-[10px] uppercase font-mono">Coordinated Overnight Evacuation</span>
+              <img src="/clue-intact-water-pots.jpg" alt="Stepwell Supplies" className="w-full h-full object-contain pixelated" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent flex flex-col justify-end p-2.5 pointer-events-none">
+                <span className="text-amber-200 font-serif font-bold text-xs flex items-center gap-1">🏺 Kuldhara Stepwell · Desert Water Cache</span>
+                <span className="text-amber-400 text-[10px] uppercase font-mono tracking-wide">Painted Clay Matkas &amp; Evacuation Ropes</span>
               </div>
             </div>
             <p className="text-xs text-amber-950 leading-relaxed font-serif bg-amber-100/90 border-l-4 border-amber-600 p-2.5 rounded italic">
-              &quot;Stacked neatly at the stepwell. Proves a secret, coordinated overnight evacuation in total unison across all 84 Paliwal Brahmin villages.&quot;
+              &quot;Stacked neatly at the stepwell. Traditional painted terracotta matkas tied with travel ropes, proving a calm, coordinated overnight evacuation across all 84 Paliwal Brahmin settlements.&quot;
             </p>
-            <button onClick={() => setShowStepwellModal(false)} className="bg-amber-600 hover:bg-amber-700 text-white font-black py-2.5 px-5 rounded-xl border-2 border-black text-xs uppercase tracking-wider cursor-pointer self-end">
+            <button onClick={() => { soundFx.playButtonClick(); setShowStepwellModal(false); }} className="bg-amber-600 hover:bg-amber-700 text-white font-black py-2.5 px-5 rounded-xl border-2 border-black text-xs uppercase tracking-wider cursor-pointer self-end">
               Add to Journal
             </button>
           </div>
@@ -2951,73 +3247,57 @@ export default function RajasthanGameScreen() {
         </div>
       )}
 
-      {/* Stage 3 Complete Modal (Offers journey into Stage 4 Bhangarh) */}
+      {/* Stage 3 Complete Full-Screen Cinematic (The Fall / Image 2 Style) */}
       {showStage3CompleteModal && (
-        <div className="absolute inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 z-50 pointer-events-auto">
-          <div className="bg-[#fff9ea] border-4 border-amber-950 rounded-2xl p-6 sm:p-8 max-w-2xl w-full shadow-[20px_20px_0_0_rgba(0,0,0,1)] flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-200 max-h-[92vh] overflow-y-auto">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-amber-500 text-white border-3 border-black rounded-full flex items-center justify-center text-3xl shadow-md mb-3">
-              🏛️
-            </div>
-            <span className="text-[11px] font-mono font-bold text-amber-800 uppercase tracking-widest mb-1">
-              STAGE 3 COMPLETED • ALL CLUES SOLVED
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-auto bg-black select-none animate-in fade-in duration-500 overflow-hidden">
+          {/* Background Artwork - True Full Screen Edge-to-Edge with no black bars */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/kuldhara_solved_cinematic.jpg"
+            alt="The Disappearance of Kuldhara"
+            className="absolute inset-0 w-full h-full object-cover object-center"
+          />
+
+          {/* Balanced cinematic shading: soft vignette that keeps artwork vibrant and text 100% readable */}
+          <div className="absolute inset-0 bg-black/40"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/75"></div>
+
+          {/* Centered Content Card exactly matching user 2nd image style */}
+          <div className="relative z-10 max-w-xl mx-auto px-6 py-10 text-center flex flex-col items-center animate-in zoom-in-95 duration-200">
+            {/* Small Orange Subtitle (like THE FALL in Image 2) */}
+            <span className="text-[#f97316] font-black text-xs sm:text-sm tracking-[0.35em] uppercase mb-2 drop-shadow-[0_2px_4px_rgba(0,0,0,1)]">
+              THE EXODUS
             </span>
-            <h2 className="text-xl sm:text-2xl font-serif text-amber-950 font-black tracking-wide uppercase mb-2.5">
-              The True Story of Kuldhara's Disappearance
-            </h2>
 
-            {/* Narrator Voice Badge */}
-            <div className="w-full bg-amber-900/10 border-2 border-amber-800/30 rounded-xl p-3.5 mb-3 flex items-start gap-3 text-left">
-              <span className="text-xl shrink-0 mt-0.5 animate-pulse">🎙️</span>
-              <div>
-                <span className="text-[10px] font-mono font-bold text-amber-900 uppercase tracking-wider block mb-0.5">
-                  Historical Storyteller (Sarvam AI)
-                </span>
-                <p className="text-amber-950 font-bold text-xs sm:text-sm italic leading-relaxed">
-                  "Good job beta! You have found all the clues. The real story of Kuldhara is that the villagers did not vanish by magic. A cruel minister, Salim Singh, imposed crushing taxes, while their desert water dried up. To protect their honor, all eighty-four villages packed their wealth and evacuated overnight, cursing the barren land so no one would ever return!"
-                </p>
-              </div>
-            </div>
+            {/* Bold White Title (like Rusticated in the Rain in Image 2) */}
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight mb-5 drop-shadow-[0_4px_16px_rgba(0,0,0,1)]">
+              A Village That Chose Honor
+            </h1>
 
-            {/* Historical Summary Cards */}
-            <div className="text-amber-950 font-serif text-xs sm:text-[13px] leading-relaxed text-left bg-amber-100/60 p-4 rounded-xl border border-amber-400/80 mb-4 w-full flex flex-col gap-2.5">
-              <div className="flex items-start gap-2">
-                <span className="text-amber-800 font-bold text-sm shrink-0">1.</span>
-                <p>
-                  <strong className="text-amber-900">Tyranny &amp; Extreme Taxation:</strong> Salim Singh, the cruel prime minister of Jaisalmer, levied unsustainable taxes on the wealthy Paliwal Brahmins and threatened the village chief's family.
-                </p>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="text-amber-800 font-bold text-sm shrink-0">2.</span>
-                <p>
-                  <strong className="text-amber-900">Drying Desert Water:</strong> Despite their advanced water harvesting, groundwater levels depleted drastically, making life and agriculture impossible in the arid Thar desert.
-                </p>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="text-amber-800 font-bold text-sm shrink-0">3.</span>
-                <p>
-                  <strong className="text-amber-900">Overnight Migration &amp; The Curse:</strong> All 84 Paliwal settlements chose their dignity, secretly packing their wealth and migrating overnight. They cursed the land so none could ever settle here again, leaving the haunting ruins seen today.
-                </p>
-              </div>
-            </div>
+            {/* Narrative Description matching Image 2 paragraph layout */}
+            <p className="text-[14px] sm:text-[15.5px] text-gray-100 font-sans leading-relaxed mb-8 max-w-lg drop-shadow-[0_2px_8px_rgba(0,0,0,1)] font-medium bg-black/30 backdrop-blur-[2px] p-4 rounded-xl border border-white/10">
+              High taxes... a dying land... but their spirit could not be broken. When the tyrant minister Salim Singh levied crushing extortion upon Kuldhara, all eighty-four Paliwal villages packed their wealth and vanished overnight into the Thar desert, cursing the land so no soul could ever settle here again.
+            </p>
 
-            <div className="flex gap-3 w-full">
-              <button 
-                onClick={() => {
-                  stopNarration();
-                  setShowStage3CompleteModal(false);
-                }} 
-                className="bg-amber-100 hover:bg-amber-200 text-amber-950 font-bold py-3 px-4 rounded-xl border-2 border-black text-xs uppercase cursor-pointer"
-              >
-                Explore Kuldhara
-              </button>
-              <button 
+            {/* Yellow / Gold Rounded CTA Buttons (matching Image 2 button design) */}
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <button
                 onClick={() => {
                   stopNarration();
                   startBhangarhJourney();
-                }} 
-                className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-extrabold py-3 px-4 rounded-xl border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-xs uppercase tracking-wider animate-bounce cursor-pointer"
+                }}
+                className="bg-[#f59e0b] hover:bg-[#d97706] text-black font-extrabold text-sm px-8 py-3.5 rounded-lg shadow-[4px_4px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 transition-all cursor-pointer"
               >
                 Continue to Bhangarh Fort (Stage 4 - Final) →
+              </button>
+              <button
+                onClick={() => {
+                  stopNarration();
+                  setShowStage3CompleteModal(false);
+                }}
+                className="bg-black/50 hover:bg-black/70 text-white font-bold text-sm px-6 py-3.5 rounded-lg border border-white/30 backdrop-blur-sm active:translate-y-0.5 transition-all cursor-pointer"
+              >
+                Explore Ruins
               </button>
             </div>
           </div>
@@ -3298,25 +3578,44 @@ export default function RajasthanGameScreen() {
         </div>
       )}
 
-      {/* --- KULDHARA 2-MIN CHALLENGE TIMEOUT MODAL --- */}
+      {/* --- KULDHARA 2-MIN CHALLENGE TIMEOUT MODAL (CINEMATIC RETRIBUTION SCREEN) --- */}
       {showKuldharaTimeOutModal && (
-        <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-6 z-50 pointer-events-auto">
-          <div className="bg-[#fff9ea] border-4 border-red-900 rounded-2xl p-6 shadow-[14px_14px_0_0_rgba(0,0,0,1)] max-w-md w-full flex flex-col gap-4 text-center animate-in fade-in zoom-in-95 duration-200">
-            <div className="w-16 h-16 bg-red-100 border-2 border-red-600 rounded-full flex items-center justify-center mx-auto text-3xl animate-bounce">
-              ⏳
-            </div>
-            <div className="flex flex-col gap-1">
-              <h2 className="text-xl font-black text-red-950 uppercase tracking-wide">2-Minute Time Expired!</h2>
-              <p className="text-xs font-semibold text-red-800 uppercase tracking-widest">Kuldhara Challenge Failed</p>
-            </div>
-            <div className="bg-red-50 border-2 border-red-200 rounded-xl p-3.5 text-xs text-red-950 leading-relaxed text-left font-serif">
-              You failed to discover all 3 evidence clues and solve the Kuldhara mystery within 2 minutes! You have been returned to the entrance gate of Kuldhara.
-            </div>
+        <div className="fixed inset-0 z-50 flex flex-col justify-end items-center pointer-events-auto bg-black select-none animate-in fade-in duration-500 pb-6 sm:pb-8 px-4">
+          {/* Background Artwork - Guard kicking player out into sand */}
+          <img 
+            src="/kuldhara_timeout.jpg" 
+            alt="Expelled from Kuldhara"
+            className="absolute inset-0 w-full h-full object-cover object-center"
+          />
+
+          {/* Cinematic Shading: vignette ensuring artwork is visible while maintaining high text contrast */}
+          <div className="absolute inset-0 bg-black/40"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-black/60 pointer-events-none"></div>
+
+          {/* Bottom Content Card matching Mughal punishment dark theme */}
+          <div className="relative z-10 max-w-xl w-full mx-auto px-4 py-4 text-center flex flex-col items-center animate-in zoom-in-95 duration-200">
+            {/* Small Orange Subtitle */}
+            <span className="text-[#f97316] font-black text-xs sm:text-sm tracking-[0.35em] uppercase mb-1.5 drop-shadow-[0_2px_4px_rgba(0,0,0,1)]">
+              TIME EXPIRED • EXPELLED FROM RUINS
+            </span>
+
+            {/* Bold Dramatic Title */}
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-white tracking-tight mb-3 drop-shadow-[0_4px_16px_rgba(0,0,0,1)] uppercase">
+              Caught by the Patrol Guard
+            </h1>
+
+            {/* Narrative Description with dark translucent glass backdrop */}
+            <p className="text-[13px] sm:text-[14.5px] text-gray-100 font-sans leading-relaxed mb-5 max-w-lg drop-shadow-[0_2px_8px_rgba(0,0,0,1)] font-medium bg-black/55 backdrop-blur-md p-3.5 rounded-xl border border-white/15">
+              "Time has expired! You failed to uncover all the evidence clues before the desert patrol caught you trespassing. You are cast out into the sands! You must start from the entrance of Kuldhara and search again."
+            </p>
+
+            {/* Golden Action Button */}
             <button
               onClick={handleRestartKuldhara}
-              className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-3 px-4 rounded-xl border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-xs uppercase tracking-widest cursor-pointer transition-all active:translate-y-0.5"
+              className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-extrabold text-xs sm:text-sm px-8 py-3.5 rounded-xl border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 transition-all cursor-pointer flex items-center gap-2"
             >
-              🔄 Try Again (Restart Kuldhara)
+              <span className="text-base">🔄</span>
+              <span>Restart from Kuldhara Gate</span>
             </button>
           </div>
         </div>
@@ -3342,6 +3641,50 @@ export default function RajasthanGameScreen() {
             >
               🔄 Try Again (Restart Bhangarh Fort)
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* --- RESTART CONFIRMATION MODAL --- */}
+      {showRestartConfirmModal && (
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 pointer-events-auto animate-in fade-in duration-150">
+          <div className="bg-[#fff9ea] border-4 border-black rounded-3xl p-6 shadow-[12px_12px_0_0_rgba(0,0,0,1)] max-w-md w-full flex flex-col gap-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-red-100 border-2 border-black flex items-center justify-center shrink-0 shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
+                <AlertTriangle className="w-6 h-6 text-red-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-black text-amber-950 leading-tight tracking-wide">
+                  Restart Campaign?
+                </h3>
+                <p className="text-xs font-semibold text-neutral-700 mt-1.5 leading-relaxed">
+                  Are you sure you want to restart? You may lose your current progress, discovered clues, and stage checkpoints in this campaign.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t-2 border-amber-950/15">
+              <button
+                onClick={() => {
+                  soundFx.playButtonClick();
+                  setShowRestartConfirmModal(false);
+                }}
+                className="px-4 py-2 border-2 border-black rounded-xl text-xs font-bold text-neutral-800 bg-white hover:bg-neutral-100 shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  soundFx.playButtonClick();
+                  setShowRestartConfirmModal(false);
+                  handleResetGame();
+                }}
+                className="px-4 py-2 border-2 border-black rounded-xl text-xs font-black text-white bg-red-600 hover:bg-red-700 shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Yes, Restart</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -125,6 +125,53 @@ class SoundEffectsService {
   }
 
   /**
+   * Rewarding Clue Found Fanfare (Sparkling 5-note ascending arpeggio with high shimmer glissando)
+   */
+  public playClueFound() {
+    if (this.isMuted) return;
+    try {
+      const ctx = this.getContext();
+      if (!ctx) return;
+
+      // Ascending celebratory major chord: C5, E5, G5, C6, E6
+      const freqs = [523.25, 659.25, 783.99, 1046.5, 1318.51];
+      freqs.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const startTime = ctx.currentTime + idx * 0.07;
+
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, startTime);
+
+        gain.gain.setValueAtTime(0.001, startTime);
+        gain.gain.exponentialRampToValueAtTime(0.22, startTime + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.65);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(startTime);
+        osc.stop(startTime + 0.7);
+      });
+
+      // High sparkling shimmer overtone
+      const sparkleOsc = ctx.createOscillator();
+      const sparkleGain = ctx.createGain();
+      const sparkleTime = ctx.currentTime + 0.35;
+      sparkleOsc.type = "triangle";
+      sparkleOsc.frequency.setValueAtTime(2093.0, sparkleTime); // C7
+      sparkleOsc.frequency.exponentialRampToValueAtTime(2637.02, sparkleTime + 0.15); // E7
+      sparkleGain.gain.setValueAtTime(0.001, sparkleTime);
+      sparkleGain.gain.exponentialRampToValueAtTime(0.14, sparkleTime + 0.02);
+      sparkleGain.gain.exponentialRampToValueAtTime(0.001, sparkleTime + 0.45);
+      sparkleOsc.connect(sparkleGain);
+      sparkleGain.connect(ctx.destination);
+      sparkleOsc.start(sparkleTime);
+      sparkleOsc.stop(sparkleTime + 0.5);
+    } catch (e) {}
+  }
+
+  /**
    * Close / Back / Dismiss Sound
    */
   public playClose() {

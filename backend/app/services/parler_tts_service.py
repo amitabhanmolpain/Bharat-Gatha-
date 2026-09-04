@@ -14,6 +14,7 @@ import os
 import re
 import json
 import base64
+import hashlib
 import requests
 from pathlib import Path
 from dotenv import load_dotenv
@@ -26,6 +27,10 @@ else:
     load_dotenv()
 
 PARLER_SPACE_BASE = "https://ai4bharat-indic-parler-tts.hf.space"
+
+# Local directory to cache every synthesized character audio permanently
+AUDIO_CACHE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../frontend/public/audio_cache"))
+os.makedirs(AUDIO_CACHE_DIR, exist_ok=True)
 
 CHARACTER_VOICE_PROFILES = {
     "jolly": {
@@ -194,6 +199,26 @@ def generate_character_speech(character: str, text: str) -> dict:
             "status_code": 400
         }
 
+    # 0. Check persistent disk cache for exact accent consistency
+    cache_key = hashlib.md5(f"parler_{character}_{clean_text}".encode('utf-8')).hexdigest()
+    cached_file = os.path.join(AUDIO_CACHE_DIR, f"jolly_{cache_key}.wav")
+    if os.path.exists(cached_file) and os.path.getsize(cached_file) > 1000:
+        try:
+            with open(cached_file, "rb") as f:
+                cached_bytes = f.read()
+            return {
+                "status": "success",
+                "character": profile["id"],
+                "character_name": profile["name"],
+                "audio_base64": base64.b64encode(cached_bytes).decode("utf-8"),
+                "audio_url": f"/audio_cache/jolly_{cache_key}.wav",
+                "format": "wav",
+                "engine": "indic_parler_tts_cached",
+                "status_code": 200
+            }
+        except Exception:
+            pass
+
     # 1. Attempt AI4Bharat Indic Parler-TTS Space (if available)
     call_url = f"{PARLER_SPACE_BASE}/gradio_api/call/generate_base"
     payload = {
@@ -225,12 +250,18 @@ def generate_character_speech(character: str, text: str) -> dict:
                     audio_download_url = f"{PARLER_SPACE_BASE}/gradio_api/file={file_path}"
                     audio_res = requests.get(audio_download_url, timeout=8)
                     if audio_res.status_code == 200 and len(audio_res.content) > 0:
+                        try:
+                            with open(cached_file, "wb") as f:
+                                f.write(audio_res.content)
+                        except Exception:
+                            pass
                         audio_b64 = base64.b64encode(audio_res.content).decode("utf-8")
                         return {
                             "status": "success",
                             "character": profile["id"],
                             "character_name": profile["name"],
                             "audio_base64": audio_b64,
+                            "audio_url": f"/audio_cache/jolly_{cache_key}.wav",
                             "format": "wav",
                             "engine": "indic_parler_tts",
                             "status_code": 200
@@ -239,4 +270,12 @@ def generate_character_speech(character: str, text: str) -> dict:
         pass
 
     # 2. Resilient Neural Fallback (Instant Indian English synthesis for any text)
-    return _synthesize_neural_fallback(profile, clean_text)
+    result = _synthesize_neural_fallback(profile, clean_text)
+    if result.get("status") == "success" and result.get("audio_base64"):
+        try:
+            with open(cached_file, "wb") as f:
+                f.write(base64.b64decode(result["audio_base64"]))
+            result["audio_url"] = f"/audio_cache/jolly_{cache_key}.wav"
+        except Exception:
+            pass
+    return result
