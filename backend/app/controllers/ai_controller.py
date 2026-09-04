@@ -8,8 +8,7 @@ Exposes REST API endpoints for in-game historical inquiries using:
 
 from flask import Blueprint, jsonify, request
 from app.services.groq_service import ask_historical_question
-from app.services.genie_agent_service import ask_genie_agent, CAMPAIGN_REGISTRY
-from app.services.guard_agent_service import ask_guard_agent
+from app.agents import ask_genie_agent, ask_guard_agent, CAMPAIGN_REGISTRY
 from app.services.parler_tts_service import generate_character_speech
 
 ai_bp = Blueprint('ai', __name__)

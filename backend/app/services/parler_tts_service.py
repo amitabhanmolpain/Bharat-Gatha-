@@ -58,6 +58,15 @@ CHARACTER_VOICE_PROFILES = {
         "fallback_pace": 1.12,
         "language_code": "en-IN"
     },
+    "chacha": {
+        "id": "chacha",
+        "name": "Buzurg Chacha",
+        "role": "Elderly Rajput Courtyard Storyteller & Chaupar Master",
+        "description": "An affectionate, elderly, and wise Indian male elder voice speaking warmly in Indian English to a younger traveler.",
+        "fallback_speaker": "ratan",
+        "fallback_pace": 0.85,
+        "language_code": "en-IN"
+    },
     "elder": {
         "id": "elder",
         "name": "Village Elder",

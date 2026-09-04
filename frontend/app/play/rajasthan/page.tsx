@@ -63,6 +63,8 @@ export default function RajasthanGameScreen() {
   const [isTimerVisible, setIsTimerVisible] = useState(false);
   const [isMusicMuted, setIsMusicMuted] = useState(false);
   const [isSoundMuted, setIsSoundMuted] = useState(false);
+  // --- CHITTORGARH FORT THEME MUSIC REF ---
+  const chittorgarhAudioRef = useRef<HTMLAudioElement | null>(null);
   // --- BHANGARH KILA THEME MUSIC REF ---
   const bhangarhAudioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -73,7 +75,7 @@ export default function RajasthanGameScreen() {
   const getStageSongTitle = useCallback((stg: RajasthanStage) => {
     switch (stg) {
       case 1:
-        return "Wanderer's Heart";
+        return "Rajasthani Folk (Kamaicha & Sarangi)";
       case 2:
         return "Echoes of Kumbhalgarh";
       case 3:
@@ -81,7 +83,7 @@ export default function RajasthanGameScreen() {
       case 4:
         return "Fear Files Theme Song";
       default:
-        return "Wanderer's Heart";
+        return "Rajasthani Folk (Kamaicha & Sarangi)";
     }
   }, []);
 
@@ -325,6 +327,7 @@ export default function RajasthanGameScreen() {
   }, [scene]);
 
   const [showChauparGame, setShowChauparGame] = useState(false);
+  const [chauparRound, setChauparRound] = useState(1);
   const [chauparScore, setChauparScore] = useState({ player: 0, chacha: 0 });
   const [chauparMessage, setChauparMessage] = useState("Roll the long wooden pasa dice to challenge Buzurg Chacha in ancient Chaupar!");
   const [isDiceRolling, setIsDiceRolling] = useState(false);
@@ -515,6 +518,67 @@ export default function RajasthanGameScreen() {
     }
   }, [stage, isBhangarhTravelling, isCampaignComplete, isMusicMuted]);
 
+  // --- CHITTORGARH FORT THEME MUSIC (KAMAICHA & SARANGI RAJASTHANI INSTRUMENTAL) ---
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    if (stage === 1 && !isTransitioning && !isCampaignComplete) {
+      if (!chittorgarhAudioRef.current) {
+        const audio = new Audio("/chittorgarh_theme.mp3");
+        audio.loop = true;
+        audio.volume = 0.18; // Low ambient background volume
+        audio.onended = () => {
+          audio.currentTime = 0;
+          audio.play().catch(() => { });
+        };
+        chittorgarhAudioRef.current = audio;
+      }
+
+      const audio = chittorgarhAudioRef.current;
+      audio.volume = 0.18; // Ensure low volume
+      if (isMusicMuted) {
+        audio.pause();
+      } else {
+        audio.play().catch((err) => {
+          console.log("Chittorgarh theme autoplay pending player gesture:", err?.message || err);
+        });
+      }
+
+      const triggerOnGesture = () => {
+        if (stage === 1 && !isMusicMuted && chittorgarhAudioRef.current && chittorgarhAudioRef.current.paused) {
+          chittorgarhAudioRef.current.play().catch(() => { });
+        }
+      };
+
+      window.addEventListener("click", triggerOnGesture, { once: true });
+      window.addEventListener("keydown", triggerOnGesture, { once: true });
+
+      return () => {
+        window.removeEventListener("click", triggerOnGesture);
+        window.removeEventListener("keydown", triggerOnGesture);
+      };
+    } else {
+      if (chittorgarhAudioRef.current) {
+        chittorgarhAudioRef.current.pause();
+        chittorgarhAudioRef.current.currentTime = 0;
+      }
+    }
+  }, [stage, isTransitioning, isCampaignComplete, isMusicMuted]);
+
+  // Pause all background music on unmount
+  useEffect(() => {
+    return () => {
+      if (chittorgarhAudioRef.current) {
+        chittorgarhAudioRef.current.pause();
+        chittorgarhAudioRef.current.currentTime = 0;
+      }
+      if (bhangarhAudioRef.current) {
+        bhangarhAudioRef.current.pause();
+        bhangarhAudioRef.current.currentTime = 0;
+      }
+    };
+  }, []);
+
   const router = useRouter();
 
   // Dynamic Clue Count Calculation per Stage
@@ -538,6 +602,10 @@ export default function RajasthanGameScreen() {
     setIsTransitioning(true);
     stopCharacterDialogue();
     stopNarration();
+    if (chittorgarhAudioRef.current) {
+      chittorgarhAudioRef.current.pause();
+      chittorgarhAudioRef.current.currentTime = 0;
+    }
     if (bhangarhAudioRef.current) {
       bhangarhAudioRef.current.pause();
       bhangarhAudioRef.current.currentTime = 0;
@@ -1942,6 +2010,7 @@ export default function RajasthanGameScreen() {
     if (isDiceRolling || isPawnMoving) return;
     setIsDiceRolling(true);
     soundFx.playButtonClick();
+    stopNarration();
 
     setTimeout(() => {
       // Long wooden dice (Pasa) face values: 1, 2, 3, 4, 6
@@ -1960,16 +2029,49 @@ export default function RajasthanGameScreen() {
       setIsDiceRolling(false);
       setIsPawnMoving(true);
 
+      const currentRound = chauparRound;
+      setChauparRound((prev) => prev + 1);
+
+      let spokenNarration = "";
+
       if (pTotal > cTotal) {
+        const diff = pTotal - cTotal;
+        const nextPos = Math.min(12, playerPawnPos + Math.ceil(pTotal / 2));
         setChauparScore((prev) => ({ ...prev, player: prev.player + 1 }));
-        setPlayerPawnPos((prev) => Math.min(12, prev + Math.ceil(pTotal / 2)));
-        setChauparMessage(`🎲 You rolled ${d1} & ${d2} (${pTotal} pips)! Chacha rolled ${c1} & ${c2} (${cTotal}). Your Golden Goti advances on the Chaupar board!`);
+        setPlayerPawnPos(nextPos);
+
+        if (nextPos >= 12) {
+          setChauparMessage(`🏆 Victory! Round ${currentRound}: You rolled ${d1} & ${d2} (${pTotal} pips) vs Chacha's ${c1} & ${c2} (${cTotal})! You won Round ${currentRound} by ${diff} points! Your Golden Goti reached Home!`);
+          spokenNarration = `Round ${currentRound}! You rolled ${pTotal} and Chacha rolled ${cTotal}. You won this round by ${diff} points! Shabash! Your Golden Goti has reached the Home square! You won the Chaupar match!`;
+        } else {
+          setChauparMessage(`🎲 Round ${currentRound}: You rolled ${d1} & ${d2} (${pTotal} pips)! Chacha rolled ${c1} & ${c2} (${cTotal}). You won this round by ${diff} points! Your Golden Goti advances!`);
+          spokenNarration = `Round ${currentRound}! You rolled ${pTotal} and Chacha rolled ${cTotal}. You won this round by ${diff} points! Your Golden Goti advances on the Chaupar board!`;
+        }
       } else if (cTotal > pTotal) {
+        const diff = cTotal - pTotal;
+        const nextChachaPos = Math.min(12, chachaPawnPos + Math.ceil(cTotal / 2));
         setChauparScore((prev) => ({ ...prev, chacha: prev.chacha + 1 }));
-        setChachaPawnPos((prev) => Math.min(12, prev + Math.ceil(cTotal / 2)));
-        setChauparMessage(`🎲 You rolled ${d1} & ${d2} (${pTotal} pips). Chacha rolled ${c1} & ${c2} (${cTotal}). Chacha's Ruby Goti takes the point!`);
+        setChachaPawnPos(nextChachaPos);
+
+        if (nextChachaPos >= 12) {
+          setChauparMessage(`🎲 Round ${currentRound}: You rolled ${d1} & ${d2} (${pTotal} pips). Chacha rolled ${c1} & ${c2} (${cTotal}) and won this round by ${diff} points! Chacha's Ruby Goti reached Home!`);
+          spokenNarration = `Round ${currentRound}! Chacha rolled ${cTotal} and you rolled ${pTotal}. Chacha won this round by ${diff} points! Buzurg Chacha's Ruby Goti has reached the Home square and won the match!`;
+        } else {
+          setChauparMessage(`🎲 Round ${currentRound}: You rolled ${d1} & ${d2} (${pTotal} pips). Chacha rolled ${c1} & ${c2} (${cTotal}). Chacha won this round by ${diff} points!`);
+          spokenNarration = `Round ${currentRound}! Chacha rolled ${cTotal} and you rolled ${pTotal}. Chacha won this round by ${diff} points!`;
+        }
       } else {
-        setChauparMessage(`🎲 Both rolled ${pTotal} pips! It's a tie round — pawns hold position.`);
+        setChauparMessage(`🎲 Round ${currentRound}: Both rolled ${pTotal} pips! It's a tied round — pawns hold position.`);
+        spokenNarration = `Round ${currentRound}! Both rolled ${pTotal} points. It is a tied round!`;
+      }
+
+      // Voice narration announcing who won this round and by how much
+      if (spokenNarration) {
+        playNarration(spokenNarration, {
+          speaker: "ratan",
+          pace: 0.95,
+          language_code: "en-IN",
+        });
       }
 
       setTimeout(() => {
@@ -1978,12 +2080,38 @@ export default function RajasthanGameScreen() {
     }, 750);
   };
 
+  // Exit Chaupar Match Handler — Buzurg Chacha tells player to go towards staircase
+  const handleExitChauparGame = () => {
+    setShowChauparGame(false);
+    stopNarration();
+    stopCharacterDialogue();
+
+    const chachaStairsText = "Beta, go towards the staircase! Ascend the steps to the upper passage and reach the glorious Vijay Stambh!";
+    setChachaSpeechText(chachaStairsText);
+    setChachaAudioUrl(undefined);
+    setChachaOptions([
+      { id: 10, text: "Ji Chacha-ji! Heading towards the staircase now." },
+      { id: 11, text: "Thank you for the wonderful Chaupar match, Chacha-ji!" }
+    ]);
+    setShowChachaDialogue(true);
+
+    playCharacterDialogue({
+      character: "chacha",
+      text: chachaStairsText,
+      onError: () => {
+        playNarration(chachaStairsText, { speaker: "ratan", pace: 0.85, language_code: "en-IN" });
+      }
+    });
+  };
+
   const handleResetChauparMatch = () => {
+    stopNarration();
     setChauparScore({ player: 0, chacha: 0 });
     setPlayerPawnPos(0);
     setChachaPawnPos(0);
     setDiceRoll1(3);
     setDiceRoll2(4);
+    setChauparRound(1);
     setChauparMessage("Match reset! Roll the pasa dice to challenge Buzurg Chacha.");
     soundFx.playButtonClick();
   };
@@ -2421,6 +2549,14 @@ export default function RajasthanGameScreen() {
             onMouseEnter={() => soundFx.playButtonHover()}
             onClick={() => {
               soundFx.playKeyboardClick();
+              if (chittorgarhAudioRef.current) {
+                chittorgarhAudioRef.current.pause();
+                chittorgarhAudioRef.current.currentTime = 0;
+              }
+              if (bhangarhAudioRef.current) {
+                bhangarhAudioRef.current.pause();
+                bhangarhAudioRef.current.currentTime = 0;
+              }
               router.push("/dashboard");
             }}
             className="h-10 bg-red-600 text-white border-2 border-black rounded-lg px-4 text-[13px] font-extrabold shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:bg-red-700 hover:-translate-y-0.5 transition-all cursor-pointer"
@@ -3163,7 +3299,7 @@ export default function RajasthanGameScreen() {
                 { id: 1, text: "I understand, Chacha-ji! Let us roll the pasa dice now!" },
                 { id: 4, text: "I will look around the courtyard first." }
               ]);
-            } else if (option.id === 4) {
+            } else if (option.id === 4 || option.id === 10 || option.id === 11) {
               stopCharacterDialogue();
               setShowChachaDialogue(false);
             }
@@ -3317,7 +3453,7 @@ export default function RajasthanGameScreen() {
                   🔄 Reset
                 </button>
                 <button
-                  onClick={() => setShowChauparGame(false)}
+                  onClick={handleExitChauparGame}
                   className="text-amber-950 hover:bg-amber-200 font-bold text-xs px-3 py-1 rounded-lg border-2 border-amber-900 bg-amber-100 cursor-pointer shadow-sm"
                 >
                   ✕ Exit Game
