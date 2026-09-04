@@ -2392,7 +2392,7 @@ export default function RajasthanGameScreen() {
             </div>
             <div className="relative w-full h-48 rounded-xl overflow-hidden border-2 border-amber-900 shadow-md">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/bg-kuldhara-chiefs-house.jpg" alt="Bridal Ornament" className="w-full h-full object-cover" />
+              <img src="/clue-bridal-ornament.jpg" alt="Bridal Ornament" className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-2.5">
                 <span className="text-amber-200 font-serif font-bold text-xs">💍 Village Chief&apos;s Haveli Evidence</span>
                 <span className="text-amber-400 text-[10px] uppercase font-mono">Forced Marriage Ultimatum</span>
@@ -2513,7 +2513,7 @@ export default function RajasthanGameScreen() {
                 </div>
                 <div className="relative w-full h-24 rounded-lg overflow-hidden border border-amber-900/50 bg-amber-200">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/bg-kuldhara-chiefs-house.jpg" alt="Bridal Ornament" className="w-full h-full object-cover" />
+                  <img src="/clue-bridal-ornament.jpg" alt="Bridal Ornament" className="w-full h-full object-cover" />
                 </div>
                 <label className="text-[10px] font-bold text-amber-900 uppercase mt-1">Select Explanation:</label>
                 <select
