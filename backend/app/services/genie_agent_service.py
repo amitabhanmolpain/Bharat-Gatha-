@@ -154,8 +154,9 @@ def get_genie_agent(model_name: str = "openai/gpt-oss-120b"):
         "3. DOMAIN: You ONLY answer questions about Indian history, monuments, rulers, battles, architectural marvels, and game secrets of Bharat Gatha.\n"
         "4. OFF-TOPIC REFUSAL: If the player asks anything unrelated to history, refuse politely in character in exactly 2 short sentences:\n"
         "   'My magical scrolls only hold the glorious history of Bharat Gatha! Ask me of ancient kings, grand forts, or lost treasures instead.'\n"
-        "5. PUZZLE MYSTERY & SPOILER BLOCKADE: You must NEVER spoil or give away the solution to active game mysteries! If the player asks why the villagers left/abandoned Kuldhara, who cursed the village, or how to win the stage deduction, you must strictly refuse to spoil it and respond:\n"
-        "   'That you have to find out, my aaka! Search the silent ruins, inspect the three clues, and uncover the mystery yourself.'\n\n"
+        "5. PUZZLE MYSTERY & SPOILER BLOCKADE: You must NEVER spoil or give away the solution to active game mysteries!\n"
+        "   - If the player asks why the villagers left/abandoned Kuldhara: Strictly refuse to spoil it and respond: 'That you have to find out, my aaka! Search the silent ruins, inspect the three clues, and uncover the mystery yourself.'\n"
+        "   - If the player asks why Bhangarh Fort or the palace is haunted, who cursed it, or what the spirits want: STRICTLY REFUSE TO GIVE THE ANSWER and respond: 'Mere aaka! The secret of why Bhangarh Palace is haunted cannot be revealed by me! You must search the rugged ruins and uncover the hidden clues before the evil spirits attack you!'\n\n"
         "ACTIVE CAMPAIGN & SCENARIO CONTEXT:\n"
         "- Campaign: {campaign_title}\n"
         "- Historical Era: {era}\n"
@@ -236,9 +237,59 @@ def ask_genie_agent(
     resolved_ctx = resolve_campaign_context(context, clean_q)
 
     # --- PUZZLE MYSTERY SPOILER BLOCKADE ---
-    # When the player asks the core mystery question that must be deduced to win the stage,
+    # When the player asks core mystery questions that must be deduced to win the stage,
     # the agent must not spoil the answer and instead instruct the player to find out.
     clean_lower = clean_q.lower()
+
+    # 1. Bhangarh Fort Haunted Mystery Blockade
+    BHANGARH_SPOILER_PHRASES = [
+        "why is the palace haunted",
+        "why is the given palace haunted",
+        "why is the given palace is haunted",
+        "why is bhangarh haunted",
+        "why is bhangarh fort haunted",
+        "why is it haunted",
+        "who cursed bhangarh",
+        "who is tantrik singhia",
+        "what is the curse of bhangarh",
+        "why are there evil spirits",
+        "how to escape the curse",
+        "tell me why it is haunted",
+        "why are spirits attacking",
+        "is bhangarh haunted",
+        "why haunted"
+    ]
+    is_bhangarh_spoiler = any(phrase in clean_lower for phrase in BHANGARH_SPOILER_PHRASES) or (
+        ("why" in clean_lower or "how" in clean_lower or "who" in clean_lower) and
+        ("haunt" in clean_lower or "curse" in clean_lower or "evil spirit" in clean_lower or "spirit" in clean_lower) and
+        ("palace" in clean_lower or "bhangarh" in clean_lower or "fort" in clean_lower or "this" in clean_lower)
+    )
+
+    if is_bhangarh_spoiler:
+        bhangarh_refusal = "Mere aaka! The secret of why Bhangarh Palace is haunted cannot be revealed by me! You must search the rugged ruins and uncover the hidden clues before the evil spirits attack you!"
+        result = {
+            "status": "success",
+            "character": "jolly",
+            "character_name": "Jolly Bhai",
+            "campaign": resolved_ctx["campaign_id"],
+            "answer": bhangarh_refusal,
+            "behavior": "normal",
+            "context": resolved_ctx,
+            "framework": "spoiler_guardrail",
+            "model": model_name,
+            "status_code": 200
+        }
+        try:
+            from app.services.parler_tts_service import generate_character_speech
+            tts_res = generate_character_speech("jolly", bhangarh_refusal)
+            if tts_res.get("status") == "success":
+                result["audio_base64"] = tts_res.get("audio_base64")
+                result["audio_url"] = tts_res.get("audio_url")
+        except Exception:
+            pass
+        return result
+
+    # 2. Kuldhara Abandoned Village Mystery Blockade
     SPOILER_PHRASES = [
         "why did the villagers go away",
         "why did the villagers leave",

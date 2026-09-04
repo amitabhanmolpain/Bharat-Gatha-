@@ -58,6 +58,8 @@ export default function MughalGameScreen() {
   const [clueNotification, setClueNotification] = useState<string | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [isTimerVisible, setIsTimerVisible] = useState(false);
+  const [isMusicMuted, setIsMusicMuted] = useState(false);
+  const [isSoundMuted, setIsSoundMuted] = useState(false);
 
   // Dynamic Guard Punishment / Retribution Screen state
   const [punishmentState, setPunishmentState] = useState<{
@@ -92,6 +94,8 @@ export default function MughalGameScreen() {
       }
       return next;
     });
+    // Stop clue shaking once clue is discovered so it does not repeat
+    setHeardClueScenes((prev) => (prev.includes(scene) ? prev : [...prev, scene]));
   };
 
   // Silent Background Exploration Timer
@@ -178,6 +182,16 @@ export default function MughalGameScreen() {
       } catch (e) {}
     }
   }, [heardClueScenes]);
+
+  // Auto-stop Genie shaking after 3 seconds of alert in Mughal so it does not repeat
+  useEffect(() => {
+    if (!heardClueScenes.includes(scene)) {
+      const timer = setTimeout(() => {
+        setHeardClueScenes((prev) => (prev.includes(scene) ? prev : [...prev, scene]));
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [scene, heardClueScenes]);
 
   const [showJewelTraderDialogue, setShowJewelTraderDialogue] = useState(false);
   const [jewelTraderDialogueText, setJewelTraderDialogueText] = useState("");
@@ -2952,8 +2966,9 @@ export default function MughalGameScreen() {
           )}
 
           <button 
+            onMouseEnter={() => soundFx.playButtonHover()}
             onClick={() => {
-              soundFx.playButtonClick();
+              soundFx.playKeyboardClick();
               setShowRestartConfirmModal(true);
             }}
             title="Restart to Beginning"
@@ -2962,13 +2977,41 @@ export default function MughalGameScreen() {
             <svg className="w-5 h-5 text-white group-hover:-rotate-180 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
             <span className="text-[13px] font-bold text-white">Restart</span>
           </button>
-          <button className="w-10 h-10 bg-amber-400 border-2 border-black rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all flex items-center justify-center cursor-pointer">
-            <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
+          <button 
+            onMouseEnter={() => soundFx.playButtonHover()}
+            onClick={() => {
+              soundFx.playKeyboardClick();
+              setIsMusicMuted((prev) => !prev);
+            }}
+            title={isMusicMuted ? "Unmute Music" : "Mute Music"}
+            className={`w-10 h-10 border-2 border-black rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all flex items-center justify-center cursor-pointer ${
+              isMusicMuted ? "bg-gray-200 text-gray-500" : "bg-amber-400 text-black"
+            }`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
           </button>
-          <button className="w-10 h-10 bg-amber-400 border-2 border-black rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all flex items-center justify-center cursor-pointer">
-            <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.898a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>
+          <button 
+            onMouseEnter={() => soundFx.playButtonHover()}
+            onClick={() => {
+              soundFx.playKeyboardClick();
+              const muted = soundFx.toggleMute();
+              setIsSoundMuted(muted);
+            }}
+            title={isSoundMuted ? "Unmute Sound" : "Mute Sound"}
+            className={`w-10 h-10 border-2 border-black rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all flex items-center justify-center cursor-pointer ${
+              isSoundMuted ? "bg-gray-200 text-gray-500" : "bg-amber-400 text-black"
+            }`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.898a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 5.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>
           </button>
-          <button onClick={() => router.push('/dashboard')} className="h-10 bg-red-600 border-2 border-black rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all flex items-center justify-center px-4 cursor-pointer">
+          <button 
+            onMouseEnter={() => soundFx.playButtonHover()}
+            onClick={() => {
+              soundFx.playKeyboardClick();
+              router.push('/dashboard');
+            }} 
+            className="h-10 bg-red-600 border-2 border-black rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all flex items-center justify-center px-4 cursor-pointer"
+          >
             <span className="text-[13px] font-bold text-white">Leave world</span>
           </button>
         </div>
@@ -4099,7 +4142,7 @@ export default function MughalGameScreen() {
             <div className="flex gap-3">
               <button
                 onClick={() => {
-                  soundFx.playButtonClick();
+                  soundFx.playKeyboardClick();
                   setShowRestartConfirmModal(false);
                   handleResetGame();
                 }}
@@ -4109,7 +4152,7 @@ export default function MughalGameScreen() {
               </button>
               <button
                 onClick={() => {
-                  soundFx.playClose();
+                  soundFx.playKeyboardClick();
                   setShowRestartConfirmModal(false);
                 }}
                 className="flex-1 bg-white hover:bg-gray-100 text-black font-bold text-xs py-3.5 rounded-xl border-2 border-black shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 cursor-pointer transition-all"

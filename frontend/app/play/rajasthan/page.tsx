@@ -63,6 +63,43 @@ export default function RajasthanGameScreen() {
   const [isTimerVisible, setIsTimerVisible] = useState(false);
   const [isMusicMuted, setIsMusicMuted] = useState(false);
   const [isSoundMuted, setIsSoundMuted] = useState(false);
+  // --- BHANGARH KILA THEME MUSIC REF ---
+  const bhangarhAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // --- NOW PLAYING SONG BANNER STATE (Image 1: 3s Display & Click-to-Mute) ---
+  const [showSongBanner, setShowSongBanner] = useState<boolean>(true);
+  const songBannerTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const getStageSongTitle = useCallback((stg: RajasthanStage) => {
+    switch (stg) {
+      case 1:
+        return "Wanderer's Heart";
+      case 2:
+        return "Echoes of Kumbhalgarh";
+      case 3:
+        return "Sands of Kuldhara";
+      case 4:
+        return "Fear Files Theme Song";
+      default:
+        return "Wanderer's Heart";
+    }
+  }, []);
+
+  const triggerSongBanner = useCallback(() => {
+    setShowSongBanner(true);
+    if (songBannerTimerRef.current) clearTimeout(songBannerTimerRef.current);
+    songBannerTimerRef.current = setTimeout(() => {
+      setShowSongBanner(false);
+    }, 3000);
+  }, []);
+
+  // Display song pill for first 3 seconds on mount and whenever stage changes
+  useEffect(() => {
+    triggerSongBanner();
+    return () => {
+      if (songBannerTimerRef.current) clearTimeout(songBannerTimerRef.current);
+    };
+  }, [stage, triggerSongBanner]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -71,20 +108,29 @@ export default function RajasthanGameScreen() {
     return () => clearInterval(timer);
   }, []);
 
+  // --- CLUE ALERTS TRACKING (GENIE STOPS SHAKING ONCE CLUE IS GIVEN & NEVER REPEATS) ---
+  const [givenClueAlerts, setGivenClueAlerts] = useState<{ [clueKey: string]: boolean }>({});
+
+  const markClueGiven = useCallback((clueKey: string) => {
+    setGivenClueAlerts((prev) => {
+      if (prev[clueKey]) return prev;
+      return { ...prev, [clueKey]: true };
+    });
+  }, []);
+
   // --- STAGE 1 STATE (Chittorgarh - Chaupar Game & Dialogue) ---
+  // --- BUZURG CHACHA & JOLLY DIALOGUE VOICE URL STATE ---
   const [showChachaDialogue, setShowChachaDialogue] = useState(false);
-  const [chachaSpeechText, setChachaSpeechText] = useState("Khamma Ghani, young traveller! Welcome to the royal courtyard of Chittorgarh. I am Buzurg Chacha, keeper of ancient Rajput tales. Before you proceed on your quest through Rajasthan, you must play the royal game of Chaupar with me! Roll the pasa dice, test your strategy, and prove your patience!");
-  const [chachaOptions, setChachaOptions] = useState<Array<{ id: number | string; text: string }>>([
-    { id: 1, text: "Khamma Ghani, Chacha-ji! Teach me the rules of Chaupar and let's play!" },
-    { id: 2, text: "Tell me about the history of Chaupar and Chittorgarh Fort." },
-    { id: 3, text: "I am ready to roll the pasa dice!" }
-  ]);
+  const [chachaSpeechText, setChachaSpeechText] = useState("");
+  const [chachaOptions, setChachaOptions] = useState<Array<{ id: number | string; text: string }>>([]);
+  const [chachaAudioUrl, setChachaAudioUrl] = useState<string | undefined>(undefined);
 
   // --- JOLLY BHAI GENIE COMPANION STATE ---
   const [showJollyDialogue, setShowJollyDialogue] = useState(false);
   const [jollySpeechText, setJollySpeechText] = useState("");
   const [jollyOptions, setJollyOptions] = useState<Array<{ id: number | string; text: string }>>([]);
   const [jollyStatusBadge, setJollyStatusBadge] = useState<"normal" | "glowing" | "shaking" | "doubt">("normal");
+  const [jollyAudioUrl, setJollyAudioUrl] = useState<string | undefined>(undefined);
   const [hasHeardKuldharaSecretLore, setHasHeardKuldharaSecretLore] = useState(false);
 
   // --- RESTART CONFIRMATION STATE ---
@@ -95,38 +141,33 @@ export default function RajasthanGameScreen() {
   const hasPlayedChachaIntroRef = useRef(false);
 
   const triggerBuzurgChachaDialogue = (isAutoIntro: boolean = false) => {
-    setShowChachaDialogue(true);
-
     if (!hasPlayedChachaIntroRef.current) {
       hasPlayedChachaIntroRef.current = true;
       setHasPlayedChachaIntro(true);
       try {
         localStorage.setItem("rajasthan_chacha_intro_played", "true");
-      } catch (e) {}
+      } catch (e) { }
 
       const speechText = "Khamma Ghani, young traveller! Welcome to the royal courtyard of Chittorgarh. I am Buzurg Chacha, keeper of ancient Rajput tales. Before you proceed on your quest through Rajasthan, you must play the royal game of Chaupar with me! Roll the pasa dice, test your strategy, and prove your patience!";
+      setChachaAudioUrl("/buzurg_chacha_intro.wav");
       setChachaSpeechText(speechText);
       setChachaOptions([
         { id: 1, text: "Khamma Ghani, Chacha-ji! Teach me the rules of Chaupar and let's play!" },
         { id: 2, text: "Tell me about the history of Chaupar and Chittorgarh Fort." },
         { id: 3, text: "I am ready to roll the pasa dice!" }
       ]);
-      stopCharacterDialogue();
-      playCharacterDialogue({
-        character: "chacha",
-        text: speechText,
-        audioUrl: "/buzurg_chacha_intro.wav"
-      });
+      setShowChachaDialogue(true);
     } else {
       if (isAutoIntro) return; // Never repeat intro automatically
-      stopCharacterDialogue();
       const returnSpeech = "Khamma Ghani, young traveller! Are you ready to roll the wooden pasa dice and challenge me in royal Chaupar?";
+      setChachaAudioUrl(undefined);
       setChachaSpeechText(returnSpeech);
       setChachaOptions([
         { id: 1, text: "I am ready! Let us roll the pasa dice!" },
         { id: 2, text: "Tell me about the history of Chaupar and Chittorgarh Fort." },
         { id: 4, text: "I will explore the courtyard first." }
       ]);
+      setShowChachaDialogue(true);
     }
   };
 
@@ -142,6 +183,7 @@ export default function RajasthanGameScreen() {
     if (overrideMode === "shaking") {
       badge = "shaking";
       if (scene === "chiefs_house") {
+        markClueGiven("kuldhara_ornament");
         speech = "💥 Quick, mere aaka! A vital historical clue is hidden inside this Chief's Haveli! Inspect the alcove to discover the bridal ornament before time runs out!";
         options = [
           { id: 31, text: "Where should I search for clues?" },
@@ -149,6 +191,7 @@ export default function RajasthanGameScreen() {
         ];
         customAudioUrl = "/jolly_kuldhara_clues_hint.wav";
       } else if (scene === "treasury") {
+        markClueGiven("kuldhara_ledger");
         speech = "💥 Mere aaka, look sharp! The merchant's iron vault holds the torn tax ledger of Diwan Salim Singh! Press [E] to investigate!";
         options = [
           { id: 31, text: "Where should I search for clues?" },
@@ -156,12 +199,34 @@ export default function RajasthanGameScreen() {
         ];
         customAudioUrl = "/jolly_kuldhara_clues_hint.wav";
       } else if (scene === "well") {
+        markClueGiven("kuldhara_well");
         speech = "💥 Look down the dry stone steps! Intact desert water pots were abandoned right here! Press [E] to inspect them before time runs out!";
         options = [
           { id: 31, text: "Why were the water pots left behind?" },
           { id: 32, text: "Searching the stepwell now!" }
         ];
         customAudioUrl = "/jolly_kuldhara_clues_hint.wav";
+      } else if (scene === "bhangarh_gate") {
+        markClueGiven("bhangarh_kathputli");
+        speech = "💥 Mere aaka! A vital relic lies right here: the Kathputli Sandstone Fragment! Collect it before time runs out!";
+        options = [
+          { id: 31, text: "What is this sandstone fragment?" },
+          { id: 32, text: "Collecting it now!" }
+        ];
+      } else if (scene === "gopinath_temple") {
+        markClueGiven("bhangarh_seal");
+        speech = "💥 Look inside the ancient temple shadows! The Paliwal Ledger Seal is resting right here! Collect it before the moon rises!";
+        options = [
+          { id: 31, text: "What is this ledger seal?" },
+          { id: 32, text: "Collecting it now!" }
+        ];
+      } else if (scene === "palace_ruins") {
+        markClueGiven("bhangarh_verse");
+        speech = "💥 Beneath the broken palace arches! The Wanderer's Verse Medallion awaits you! Collect it swiftly!";
+        options = [
+          { id: 31, text: "What verse is etched here?" },
+          { id: 32, text: "Retrieving the medallion!" }
+        ];
       } else {
         speech = "💥 Quick, mere aaka! A vital clue is waiting right here! Search this chamber before time runs out!";
         options = [
@@ -214,23 +279,26 @@ export default function RajasthanGameScreen() {
       ];
       customAudioUrl = "/jolly_kuldhara_clues_hint.wav";
     } else if (stage === 4) {
-      badge = "normal";
-      speech = "Mere aaka! Be on your guard! We have stepped inside Bhangarh Fort, known across India as the most haunted stronghold! Retrieve the royal relics swiftly!";
+      badge = "glowing";
+      speech = "Mere aaka! Welcome to Bhangarh Fort, established in the 16th century at the foot of the Aravali hills. It was once a thriving township with over 10,000 residents and grand stone temples! What historical facts of Bhangarh Fort would you like to know?";
       options = [
-        { id: 40, text: "What is the legend of Bhangarh Fort?" },
-        { id: 41, text: "How do I escape the curse?" }
+        { id: 43, text: "Who built Bhangarh Fort and when?" },
+        { id: 44, text: "What temples and architecture exist in Bhangarh?" },
+        { id: 45, text: "Why does the ASI prohibit entry between sunset and sunrise?" },
+        { id: 40, text: "Why is Bhangarh Palace haunted?" }
       ];
     }
 
     setJollyStatusBadge(badge);
+    if (badge === "shaking") {
+      setTimeout(() => {
+        setJollyStatusBadge("normal");
+      }, 3000);
+    }
+    setJollyAudioUrl(customAudioUrl);
     setJollySpeechText(speech);
     setJollyOptions(options);
     setShowJollyDialogue(true);
-    playCharacterDialogue({
-      character: "jolly",
-      text: speech,
-      audioUrl: customAudioUrl
-    });
   };
 
   // Auto-play Buzurg Chacha dialogue when first entering inner_courtyard (exactly once)
@@ -241,7 +309,7 @@ export default function RajasthanGameScreen() {
       setHasPlayedChachaIntro(true);
       try {
         localStorage.setItem("rajasthan_chacha_intro_played", "true");
-      } catch (e) {}
+      } catch (e) { }
 
       if (chachaTimerRef.current) clearTimeout(chachaTimerRef.current);
       chachaTimerRef.current = setTimeout(() => {
@@ -314,13 +382,20 @@ export default function RajasthanGameScreen() {
   const [isBhangarhTravelling, setIsBhangarhTravelling] = useState(false);
   const [bhangarhTravelPhase, setBhangarhTravelPhase] = useState<1 | 2 | 3 | 4>(1);
 
-  // --- STAGE 4 STATE (Bhangarh Fort 2-Min Relic Challenge) ---
-  const [bhangarhTimer, setBhangarhTimer] = useState(120); // 2-minute countdown timer (120s)
+  // --- STAGE 4 STATE (Bhangarh Fort 1-Min Relic Challenge) ---
+  const [bhangarhTimer, setBhangarhTimer] = useState(60); // 1-minute countdown timer (60s)
   const [showBhangarhTimeOutModal, setShowBhangarhTimeOutModal] = useState(false);
   const [hasShield, setHasShield] = useState(false);
   const [showShieldModal, setShowShieldModal] = useState(false);
   const [moonriseTimer, setMoonriseTimer] = useState(180);
   const [isMoonriseActive, setIsMoonriseActive] = useState(false);
+
+  // Stage 4 Narrator Warning Banner & Clue Auto-Touch Trigger Flags
+  const [showBhangarhNarratorBanner, setShowBhangarhNarratorBanner] = useState(false);
+  const hasPlayedBhangarhNarrationRef = useRef(false);
+  const hasTriggeredClue1Ref = useRef(false);
+  const hasTriggeredClue2Ref = useRef(false);
+  const hasTriggeredClue3Ref = useRef(false);
 
   // Stage 4 Hidden Relic Artifacts
   const [hasKathputliFragment, setHasKathputliFragment] = useState(false); // Relic 1: Kathputli Sandstone Fragment
@@ -344,15 +419,21 @@ export default function RajasthanGameScreen() {
 
   // Restart Bhangarh Challenge Handler
   const handleRestartBhangarhFort = useCallback(() => {
+    stopNarration();
+    stopCharacterDialogue();
     setShowBhangarhTimeOutModal(false);
     setScene("bhangarh_gate");
     setPlayerPos({ x: 50.0, y: 86.0 });
-    setBhangarhTimer(120);
+    setBhangarhTimer(60);
     setHasKathputliFragment(false);
     setHasPaliwalSeal(false);
     setHasWanderersVerse(false);
     setHasShield(false);
     setShowShieldModal(false);
+    hasPlayedBhangarhNarrationRef.current = false;
+    hasTriggeredClue1Ref.current = false;
+    hasTriggeredClue2Ref.current = false;
+    hasTriggeredClue3Ref.current = false;
   }, []);
 
   // Puzzle 1 State: Gate Inscription Fragments Sequence
@@ -386,14 +467,62 @@ export default function RajasthanGameScreen() {
 
   const [isCampaignComplete, setIsCampaignComplete] = useState(false);
 
+  // --- BHANGARH KILA THEME MUSIC (FEAR FILES THEME SONG) ---
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    if (stage === 4 && !isBhangarhTravelling && !isCampaignComplete) {
+      if (!bhangarhAudioRef.current) {
+        const audio = new Audio("/bhangarh_theme.webm");
+        audio.loop = true;
+        audio.volume = 0.20; // Lowered comfortable ambient volume
+        audio.onended = () => {
+          audio.currentTime = 0;
+          audio.play().catch(() => { });
+        };
+        bhangarhAudioRef.current = audio;
+      }
+
+      const audio = bhangarhAudioRef.current;
+      audio.volume = 0.20; // Ensure lowered volume
+      if (isMusicMuted) {
+        audio.pause();
+      } else {
+        audio.play().catch((err) => {
+          // Autoplay policy: will trigger on player's first click or movement key
+          console.log("Bhangarh theme autoplay pending player gesture:", err?.message || err);
+        });
+      }
+
+      const triggerOnGesture = () => {
+        if (stage === 4 && !isMusicMuted && bhangarhAudioRef.current && bhangarhAudioRef.current.paused) {
+          bhangarhAudioRef.current.play().catch(() => { });
+        }
+      };
+
+      window.addEventListener("click", triggerOnGesture, { once: true });
+      window.addEventListener("keydown", triggerOnGesture, { once: true });
+
+      return () => {
+        window.removeEventListener("click", triggerOnGesture);
+        window.removeEventListener("keydown", triggerOnGesture);
+      };
+    } else {
+      if (bhangarhAudioRef.current) {
+        bhangarhAudioRef.current.pause();
+        bhangarhAudioRef.current.currentTime = 0;
+      }
+    }
+  }, [stage, isBhangarhTravelling, isCampaignComplete, isMusicMuted]);
+
   const router = useRouter();
 
   // Dynamic Clue Count Calculation per Stage
   const cluesFound =
     stage === 4
       ? (hasKathputliFragment ? 1 : 0) +
-        (hasPaliwalSeal ? 1 : 0) +
-        (hasWanderersVerse ? 1 : 0)
+      (hasPaliwalSeal ? 1 : 0) +
+      (hasWanderersVerse ? 1 : 0)
       : (hasWeddingOrnament ? 1 : 0) + (hasTaxLedger ? 1 : 0) + (hasWaterPotsSupplies ? 1 : 0);
 
   const maxClues = 3;
@@ -409,6 +538,10 @@ export default function RajasthanGameScreen() {
     setIsTransitioning(true);
     stopCharacterDialogue();
     stopNarration();
+    if (bhangarhAudioRef.current) {
+      bhangarhAudioRef.current.pause();
+      bhangarhAudioRef.current.currentTime = 0;
+    }
     setShowKuldharaNarratorBanner(false);
     setHasKuldharaNarrationFinished(false);
     hasPlayedKuldharaNarrationRef.current = false;
@@ -437,6 +570,18 @@ export default function RajasthanGameScreen() {
       setShowDeductionModal(false);
       setShowStage3CompleteModal(false);
       // Stage 4 Reset
+      setBhangarhTimer(60);
+      setShowBhangarhNarratorBanner(false);
+      hasPlayedBhangarhNarrationRef.current = false;
+      hasTriggeredClue1Ref.current = false;
+      hasTriggeredClue2Ref.current = false;
+      hasTriggeredClue3Ref.current = false;
+      setHasKathputliFragment(false);
+      setHasPaliwalSeal(false);
+      setHasWanderersVerse(false);
+      setHasShield(false);
+      setShowShieldModal(false);
+      setShowBhangarhTimeOutModal(false);
       setMoonriseTimer(180);
       setIsMoonriseActive(false);
       setHasBhangarhChronicleClue(false);
@@ -654,6 +799,196 @@ export default function RajasthanGameScreen() {
     }
   }, [stage, isCampaignComplete, hasKathputliFragment, hasPaliwalSeal, hasWanderersVerse, hasShield]);
 
+  // --- BHANGARH FORT NARRATOR INTRO (SARVAM AI RATAN) ---
+  const bhangarhNarratorSentence = "Find the given clue in the Bhangarh Fort: why is the given palace haunted, before the evil spirits attack you!";
+
+  useEffect(() => {
+    if (!isLoading && stage === 4 && scene === "bhangarh_gate" && !hasPlayedBhangarhNarrationRef.current) {
+      hasPlayedBhangarhNarrationRef.current = true;
+      setShowBhangarhNarratorBanner(true);
+      stopCharacterDialogue();
+      playNarration(bhangarhNarratorSentence, {
+        speaker: "ratan",
+        pace: 0.90,
+        language_code: "en-IN",
+        onEnd: () => {
+          setTimeout(() => {
+            setShowBhangarhNarratorBanner(false);
+          }, 1500);
+        }
+      });
+
+      const fallbackTimer = setTimeout(() => {
+        setShowBhangarhNarratorBanner(false);
+      }, 10000);
+
+      return () => {
+        clearTimeout(fallbackTimer);
+      };
+    }
+  }, [isLoading, stage, scene]);
+
+  // --- BHANGARH 1-MINUTE EVIL SPIRITS COUNTDOWN TIMER (Stage 4) ---
+  useEffect(() => {
+    const allRelicsFound = hasKathputliFragment && hasPaliwalSeal && hasWanderersVerse;
+    if (
+      stage !== 4 ||
+      isBhangarhTravelling ||
+      isCampaignComplete ||
+      allRelicsFound ||
+      showBhangarhTimeOutModal ||
+      showBhangarhNarratorBanner ||
+      showJollyDialogue
+    ) return;
+
+    const interval = setInterval(() => {
+      setBhangarhTimer((prev) => {
+        if (showBhangarhTimeOutModal || allRelicsFound) return prev;
+        if (prev <= 1) {
+          setShowBhangarhTimeOutModal(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [
+    stage,
+    isBhangarhTravelling,
+    isCampaignComplete,
+    hasKathputliFragment,
+    hasPaliwalSeal,
+    hasWanderersVerse,
+    showBhangarhTimeOutModal,
+    showBhangarhNarratorBanner,
+    showJollyDialogue,
+  ]);
+
+  // Voice narration when Bhangarh 1-minute challenge timeout occurs (Evil Spirits Attack)
+  useEffect(() => {
+    if (showBhangarhTimeOutModal) {
+      stopCharacterDialogue();
+      stopNarration();
+      const timeoutNarration = "Time has expired! The malevolent evil spirits of Bhangarh Fort have emerged from the darkness and attacked you! You must re-enter the ruins and uncover the hidden clues before the shadows consume you!";
+      playNarration(timeoutNarration, {
+        speaker: "ratan",
+        pace: 0.90,
+        language_code: "en-IN",
+      });
+    }
+  }, [showBhangarhTimeOutModal]);
+
+  // Voice narration when Bhangarh challenge is won (Curse Legend & Royal Shield Revealed)
+  useEffect(() => {
+    if (showShieldModal) {
+      stopCharacterDialogue();
+      stopNarration();
+      const victoryNarration = "You have uncovered the ancient legend of Bhangarh Fort! Princess Ratnavati saw through the dark witchcraft of Tantrik Singhia and threw his enchanted love potion onto a giant boulder. The rock rolled down and crushed the evil tantrik! With his dying breath, Singhia cursed Bhangarh that every roof would collapse and no soul would ever live in peace. Soon after, war and famine devastated the city, leaving its roofless ruins haunted by restless spirits!";
+      playNarration(victoryNarration, {
+        speaker: "ratan",
+        pace: 0.90,
+        language_code: "en-IN",
+      });
+    }
+  }, [showShieldModal]);
+
+  // Automatically trigger Royal Shield modal when all 3 clues are discovered
+  useEffect(() => {
+    if (
+      stage === 4 &&
+      hasKathputliFragment &&
+      hasPaliwalSeal &&
+      hasWanderersVerse &&
+      !showKathputliModal &&
+      !showPaliwalSealModal &&
+      !showWanderersVerseModal &&
+      !showShieldModal &&
+      !isCampaignComplete
+    ) {
+      setHasShield(true);
+      setShowShieldModal(true);
+    }
+  }, [
+    stage,
+    hasKathputliFragment,
+    hasPaliwalSeal,
+    hasWanderersVerse,
+    showKathputliModal,
+    showPaliwalSealModal,
+    showWanderersVerseModal,
+    showShieldModal,
+    isCampaignComplete,
+  ]);
+
+  // --- BHANGARH CLUES AUTOMATIC TOUCH TRIGGERS ---
+  useEffect(() => {
+    if (stage !== 4) return;
+
+    // Clue 1: Kathputli Fragment tiny fallen on far-left ground in bhangarh_gate
+    if (
+      scene === "bhangarh_gate" &&
+      !hasKathputliFragment &&
+      !hasTriggeredClue1Ref.current &&
+      playerPos.x >= 12.0 && playerPos.x <= 24.0 &&
+      playerPos.y >= 74.0 && playerPos.y <= 90.0
+    ) {
+      hasTriggeredClue1Ref.current = true;
+      markClueGiven("bhangarh_kathputli");
+      soundFx.playClueChime();
+      setHasKathputliFragment(true);
+      setShowKathputliModal(true);
+      stopNarration();
+      playNarration("You have unlocked the first clue! The Kathputli Sandstone Fragment reveals the secrets of the royal court!", {
+        speaker: "ratan",
+        pace: 0.90,
+        language_code: "en-IN",
+      });
+    }
+
+    // Clue 2: Paliwal Ledger Seal tiny fallen on the dark stone steps in gopinath_temple
+    if (
+      scene === "gopinath_temple" &&
+      !hasPaliwalSeal &&
+      !hasTriggeredClue2Ref.current &&
+      playerPos.x >= 75.0 && playerPos.x <= 90.0 &&
+      playerPos.y >= 66.0 && playerPos.y <= 82.0
+    ) {
+      hasTriggeredClue2Ref.current = true;
+      markClueGiven("bhangarh_seal");
+      soundFx.playClueChime();
+      setHasPaliwalSeal(true);
+      setShowPaliwalSealModal(true);
+      stopNarration();
+      playNarration("You have unlocked the second clue! The Paliwal Ledger Seal sheds light on the trade and wealth of Bhangarh!", {
+        speaker: "ratan",
+        pace: 0.90,
+        language_code: "en-IN",
+      });
+    }
+
+    // Clue 3: Wanderer's Verse Medallion tiny fallen in cracked rubble on upper-left in palace_ruins
+    if (
+      scene === "palace_ruins" &&
+      !hasWanderersVerse &&
+      !hasTriggeredClue3Ref.current &&
+      playerPos.x >= 13.0 && playerPos.x <= 25.0 &&
+      playerPos.y >= 54.0 && playerPos.y <= 70.0
+    ) {
+      hasTriggeredClue3Ref.current = true;
+      markClueGiven("bhangarh_verse");
+      soundFx.playClueChime();
+      setHasWanderersVerse(true);
+      setShowWanderersVerseModal(true);
+      stopNarration();
+      playNarration("You have unlocked the third clue! The Wanderer's Verse Medallion uncovers the fateful curse of the palace ruins!", {
+        speaker: "ratan",
+        pace: 0.90,
+        language_code: "en-IN",
+      });
+    }
+  }, [stage, scene, playerPos, hasKathputliFragment, hasPaliwalSeal, hasWanderersVerse, markClueGiven]);
+
   // --- ELEPHANT JOURNEY SEQUENCE (Stage 2 -> Stage 3) ---
   const startElephantJourney = useCallback(() => {
     setIsElephantTravelling(true);
@@ -695,6 +1030,11 @@ export default function RajasthanGameScreen() {
       setScene("bhangarh_gate");
       setPlayerPos({ x: 50.0, y: 88.0 });
       setIsBhangarhTravelling(false);
+      setBhangarhTimer(60);
+      hasPlayedBhangarhNarrationRef.current = false;
+      hasTriggeredClue1Ref.current = false;
+      hasTriggeredClue2Ref.current = false;
+      hasTriggeredClue3Ref.current = false;
       setIsMoonriseActive(true);
       setMoonriseTimer(180);
     }, 8800);
@@ -754,19 +1094,19 @@ export default function RajasthanGameScreen() {
   const isNearSquareWellExit = scene === "village_square" && playerPos.x <= 30.0;
 
   // --- STAGE 4 (BHANGARH FORT 1-MIN CHALLENGE) PROXIMITY TRIGGERS ---
-  // Scene 1: Bhangarh Gate
-  const isNearKathputliFragment = scene === "bhangarh_gate" && !hasKathputliFragment && playerPos.y >= 60.0;
+  // Scene 1: Bhangarh Gate (Clue 1 tiny fallen on far-left ground)
+  const isNearKathputliFragment = scene === "bhangarh_gate" && !hasKathputliFragment && playerPos.x >= 12.0 && playerPos.x <= 24.0 && playerPos.y >= 74.0 && playerPos.y <= 90.0;
   const isNearBhangarhGateMarker = scene === "bhangarh_gate" && playerPos.x >= 52.0 && playerPos.y >= 60.0;
   const isNearBhangarhGateArch = scene === "bhangarh_gate" && playerPos.y <= 78.0;
 
-  // Scene 2: Gopinath Temple / Royal Baoli
-  const isNearPaliwalSeal = scene === "gopinath_temple" && !hasPaliwalSeal && playerPos.y <= 85.0;
+  // Scene 2: Gopinath Temple / Royal Baoli (Clue 2 tiny fallen on dark stone steps)
+  const isNearPaliwalSeal = scene === "gopinath_temple" && !hasPaliwalSeal && playerPos.x >= 75.0 && playerPos.x <= 90.0 && playerPos.y >= 66.0 && playerPos.y <= 82.0;
   const isNearTempleSanctuary = scene === "gopinath_temple" && playerPos.x <= 54.0 && playerPos.y <= 75.0;
   const isNearTemplePalaceDoor = scene === "gopinath_temple" && playerPos.y <= 82.0;
   const isNearTempleGateExit = scene === "gopinath_temple" && playerPos.y >= 75.0;
 
-  // Scene 3: Bhangarh Palace Ruins
-  const isNearWanderersVerse = scene === "palace_ruins" && !hasWanderersVerse && playerPos.y <= 85.0;
+  // Scene 3: Bhangarh Palace Ruins (Clue 3 tiny fallen in upper-left rubble)
+  const isNearWanderersVerse = scene === "palace_ruins" && !hasWanderersVerse && playerPos.x >= 13.0 && playerPos.x <= 25.0 && playerPos.y >= 54.0 && playerPos.y <= 70.0;
   const isNearPalaceStratum = scene === "palace_ruins" && playerPos.x <= 40.0 && playerPos.y >= 65.0; // Point A: 1783 CE famine stratum
   const isNearFolkloreBoard = scene === "palace_ruins" && playerPos.x >= 65.0 && playerPos.y >= 65.0; // Point B: Folklore vs Evidence
   const isNearFinalEvidenceBoard = scene === "palace_ruins" && playerPos.y <= 88.0 && hasKathputliFragment && hasPaliwalSeal && hasWanderersVerse;
@@ -774,6 +1114,40 @@ export default function RajasthanGameScreen() {
 
   // Scene 4: Bhangarh Chase Escape
   const isNearChaseGateExit = scene === "bhangarh_chase" && playerPos.x >= 68.0 && playerPos.y <= 65.0;
+
+  // --- CLUE ALERTS AUTO-STOP EFFECT (GENIE STOPS SHAKING AFTER 3 SECONDS AND DOES NOT REPEAT) ---
+  useEffect(() => {
+    let clueKey: string | null = null;
+    if (isNearHaveliOrnament && !hasWeddingOrnament && !givenClueAlerts["kuldhara_ornament"]) {
+      clueKey = "kuldhara_ornament";
+    } else if (isNearTaxLedger && !hasTaxLedger && !givenClueAlerts["kuldhara_ledger"]) {
+      clueKey = "kuldhara_ledger";
+    } else if (isNearStepwellPots && !hasWaterPotsSupplies && !givenClueAlerts["kuldhara_well"]) {
+      clueKey = "kuldhara_well";
+    } else if (stage === 4 && isNearKathputliFragment && !hasKathputliFragment && !givenClueAlerts["bhangarh_kathputli"]) {
+      clueKey = "bhangarh_kathputli";
+    } else if (stage === 4 && isNearPaliwalSeal && !hasPaliwalSeal && !givenClueAlerts["bhangarh_seal"]) {
+      clueKey = "bhangarh_seal";
+    } else if (stage === 4 && isNearWanderersVerse && !hasWanderersVerse && !givenClueAlerts["bhangarh_verse"]) {
+      clueKey = "bhangarh_verse";
+    }
+
+    if (clueKey) {
+      const timer = setTimeout(() => {
+        markClueGiven(clueKey!);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [
+    isNearHaveliOrnament, hasWeddingOrnament,
+    isNearTaxLedger, hasTaxLedger,
+    isNearStepwellPots, hasWaterPotsSupplies,
+    stage,
+    isNearKathputliFragment, hasKathputliFragment,
+    isNearPaliwalSeal, hasPaliwalSeal,
+    isNearWanderersVerse, hasWanderersVerse,
+    givenClueAlerts, markClueGiven
+  ]);
 
   // --- ARCHITECTURE: CENTRALIZED REF & GAME LOOP ---
   const keysHeldRef = useRef(new Set<string>());
@@ -790,6 +1164,7 @@ export default function RajasthanGameScreen() {
       scene,
       playerPos,
       cluesFound,
+      markClueGiven,
       // Triggers
       isNearRamPolDoor,
       isNearChacha,
@@ -1024,6 +1399,7 @@ export default function RajasthanGameScreen() {
             state.setIsTransitioning(false);
           }, 400);
         } else if (state.isNearHaveliOrnament) {
+          state.markClueGiven?.("kuldhara_ornament");
           soundFx.playClueFound();
           state.setHasWeddingOrnament(true);
           state.setShowHaveliOrnamentModal(true);
@@ -1035,6 +1411,7 @@ export default function RajasthanGameScreen() {
             state.setIsTransitioning(false);
           }, 400);
         } else if (state.isNearTaxLedger) {
+          state.markClueGiven?.("kuldhara_ledger");
           soundFx.playClueFound();
           state.setHasTaxLedger(true);
           state.setShowTaxLedgerModal(true);
@@ -1046,6 +1423,7 @@ export default function RajasthanGameScreen() {
             state.setIsTransitioning(false);
           }, 400);
         } else if (state.isNearStepwellPots) {
+          state.markClueGiven?.("kuldhara_well");
           soundFx.playClueFound();
           state.setHasWaterPotsSupplies(true);
           state.setShowStepwellModal(true);
@@ -1089,17 +1467,41 @@ export default function RajasthanGameScreen() {
         }
         // Stage 4 (Bhangarh Fort 1-Min Relic Challenge)
         else if (state.isNearKathputliFragment) {
+          hasTriggeredClue1Ref.current = true;
+          state.markClueGiven?.("bhangarh_kathputli");
           state.setHasKathputliFragment?.(true);
           state.setShowKathputliModal?.(true);
           soundFx.playClueChime();
+          stopNarration();
+          playNarration("You have unlocked the first clue! The Kathputli Sandstone Fragment reveals the secrets of the royal court!", {
+            speaker: "ratan",
+            pace: 0.90,
+            language_code: "en-IN",
+          });
         } else if (state.isNearPaliwalSeal) {
+          hasTriggeredClue2Ref.current = true;
+          state.markClueGiven?.("bhangarh_seal");
           state.setHasPaliwalSeal?.(true);
           state.setShowPaliwalSealModal?.(true);
           soundFx.playClueChime();
+          stopNarration();
+          playNarration("You have unlocked the second clue! The Paliwal Ledger Seal sheds light on the trade and wealth of Bhangarh!", {
+            speaker: "ratan",
+            pace: 0.90,
+            language_code: "en-IN",
+          });
         } else if (state.isNearWanderersVerse) {
+          hasTriggeredClue3Ref.current = true;
+          state.markClueGiven?.("bhangarh_verse");
           state.setHasWanderersVerse?.(true);
           state.setShowWanderersVerseModal?.(true);
           soundFx.playClueChime();
+          stopNarration();
+          playNarration("You have unlocked the third clue! The Wanderer's Verse Medallion uncovers the fateful curse of the palace ruins!", {
+            speaker: "ratan",
+            pace: 0.90,
+            language_code: "en-IN",
+          });
         } else if (state.isNearBhangarhGateMarker) {
           state.setShowGateFragmentPuzzleModal?.(true);
         } else if (state.isNearBhangarhGateArch) {
@@ -1874,12 +2276,33 @@ export default function RajasthanGameScreen() {
 
       {/* Vignette Overlay & Atmospheric Night Lighting */}
       <div
-        className={`absolute inset-0 pointer-events-none transition-opacity duration-1000 ${
-          stage === 4
+        className={`absolute inset-0 pointer-events-none transition-opacity duration-1000 ${stage === 4
             ? "bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-transparent via-black/40 to-black/85"
             : "bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-transparent via-black/20 to-black/60"
-        }`}
+          }`}
       />
+
+      {/* --- NOW PLAYING SONG PILL (IMAGE 1: 3-Second Floating Capsule & Click-to-Mute) --- */}
+      {showSongBanner && (
+        <button
+          onMouseEnter={() => soundFx.playButtonHover()}
+          onClick={() => {
+            soundFx.playKeyboardClick();
+            setIsMusicMuted(!isMusicMuted);
+            triggerSongBanner();
+          }}
+          title={isMusicMuted ? "Song Muted - Click to Unmute" : "Now Playing - Click to Mute"}
+          className="fixed top-7 left-1/2 -translate-x-1/2 z-40 bg-black/85 hover:bg-black/95 backdrop-blur-md text-white border border-white/20 px-6 py-2.5 rounded-full font-bold text-sm shadow-[0_8px_24px_rgba(0,0,0,0.6)] flex items-center gap-2.5 transition-all animate-in fade-in duration-300 cursor-pointer group hover:scale-105 active:scale-95 select-none"
+        >
+          <span className="text-amber-400 group-hover:scale-110 transition-transform text-base">♪</span>
+          <span className="tracking-tight text-white">{getStageSongTitle(stage)}</span>
+          {isMusicMuted && (
+            <span className="text-[10px] bg-red-600 text-white font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider ml-1">
+              Muted
+            </span>
+          )}
+        </button>
+      )}
 
       {/* --- TOP LEFT HUD CARDS (EXACT MUGHAL ENGINE FORMAT) --- */}
       <div className="absolute top-6 left-6 z-20 flex flex-col gap-2.5">
@@ -1889,10 +2312,10 @@ export default function RajasthanGameScreen() {
             {stage === 1
               ? "RAJASTHAN - CHITTORGARH FORT"
               : stage === 2
-              ? "RAJASTHAN - KUMBHALGARH FORT"
-              : stage === 3
-              ? "RAJASTHAN - KULDHARA GHOST VILLAGE"
-              : "RAJASTHAN - BHANGARH FORT (STAGE 4)"}
+                ? "RAJASTHAN - KUMBHALGARH FORT"
+                : stage === 3
+                  ? "RAJASTHAN - KULDHARA GHOST VILLAGE"
+                  : "RAJASTHAN - BHANGARH FORT (STAGE 4)"}
           </div>
           <div className="text-[13px] font-black text-black leading-snug">
             {getSceneInstruction()}
@@ -1925,32 +2348,34 @@ export default function RajasthanGameScreen() {
       <div className="absolute top-6 right-6 z-20 flex flex-col items-end gap-3">
         {/* Action Buttons Row */}
         <div className="flex items-center gap-2">
-          {/* Active Live Timer Pill (ONLY in Stage 3: Kuldhara Ghost Village as requested) */}
-          {stage === 3 && (
-            <div 
-              className={`h-10 px-3.5 border-2 border-black rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] flex items-center justify-center gap-2 font-black text-xs select-none transition-all ${
-                kuldharaTimer <= 20
+          {/* Active Live Timer Pill (Stage 3: Kuldhara, Stage 4: Bhangarh 1-Min Challenge) */}
+          {(stage === 3 || stage === 4) && (
+            <div
+              className={`h-10 px-3.5 border-2 border-black rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] flex items-center justify-center gap-2 font-black text-xs select-none transition-all ${(stage === 4 ? bhangarhTimer <= 15 : kuldharaTimer <= 20)
                   ? "bg-red-600 text-white animate-pulse shadow-[0_0_10px_rgba(220,38,38,0.8)]"
                   : "bg-[#fff9ea] text-black"
-              }`}
+                }`}
             >
-              <Timer className={`w-4 h-4 ${kuldharaTimer <= 20 ? "text-white animate-spin" : "text-amber-950"}`} />
-              <span className={`text-[11px] font-black uppercase tracking-wider ${kuldharaTimer <= 20 ? "text-white" : "text-amber-950"}`}>
-                TIMER
+              <Timer className={`w-4 h-4 ${(stage === 4 ? bhangarhTimer <= 15 : kuldharaTimer <= 20) ? "text-white animate-spin" : "text-amber-950"}`} />
+              <span className={`text-[11px] font-black uppercase tracking-wider ${(stage === 4 ? bhangarhTimer <= 15 : kuldharaTimer <= 20) ? "text-white" : "text-amber-950"}`}>
+                {stage === 4 ? "EVIL SPIRITS:" : "TIMER"}
               </span>
-              <span className={`font-mono font-black text-[13px] px-2 py-0.5 rounded border ${
-                kuldharaTimer <= 20
+              <span className={`font-mono font-black text-[13px] px-2 py-0.5 rounded border ${(stage === 4 ? bhangarhTimer <= 15 : kuldharaTimer <= 20)
                   ? "bg-red-800 text-white border-white/40"
                   : "bg-red-100 text-red-600 border-red-300"
-              }`}>
-                {`${Math.floor(kuldharaTimer / 60)}:${(kuldharaTimer % 60).toString().padStart(2, "0")}`}
+                }`}>
+                {stage === 4
+                  ? `${Math.floor(bhangarhTimer / 60)}:${(bhangarhTimer % 60).toString().padStart(2, "0")}`
+                  : `${Math.floor(kuldharaTimer / 60)}:${(kuldharaTimer % 60).toString().padStart(2, "0")}`
+                }
               </span>
             </div>
           )}
 
           <button
+            onMouseEnter={() => soundFx.playButtonHover()}
             onClick={() => {
-              soundFx.playButtonClick();
+              soundFx.playKeyboardClick();
               setShowRestartConfirmModal(true);
             }}
             title="Restart Campaign"
@@ -1961,14 +2386,15 @@ export default function RajasthanGameScreen() {
           </button>
 
           <button
+            onMouseEnter={() => soundFx.playButtonHover()}
             onClick={() => {
-              soundFx.playButtonClick();
+              soundFx.playKeyboardClick();
               setIsMusicMuted(!isMusicMuted);
+              triggerSongBanner();
             }}
             title={isMusicMuted ? "Unmute Background Music" : "Mute Background Music"}
-            className={`w-10 h-10 border-2 border-black rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all flex items-center justify-center cursor-pointer ${
-              isMusicMuted ? "bg-gray-200 text-gray-500" : "bg-amber-400 text-black"
-            }`}
+            className={`w-10 h-10 border-2 border-black rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all flex items-center justify-center cursor-pointer ${isMusicMuted ? "bg-gray-200 text-gray-500" : "bg-amber-400 text-black"
+              }`}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path>
@@ -1976,23 +2402,25 @@ export default function RajasthanGameScreen() {
           </button>
 
           <button
+            onMouseEnter={() => soundFx.playButtonHover()}
             onClick={() => {
+              soundFx.playKeyboardClick();
               const muted = soundFx.toggleMute();
               setIsSoundMuted(muted);
             }}
             title={isSoundMuted ? "Unmute Sound Effects" : "Mute Sound Effects"}
-            className={`w-10 h-10 border-2 border-black rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all flex items-center justify-center cursor-pointer ${
-              isSoundMuted ? "bg-gray-200 text-gray-500" : "bg-amber-400 text-black"
-            }`}
+            className={`w-10 h-10 border-2 border-black rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all flex items-center justify-center cursor-pointer ${isSoundMuted ? "bg-gray-200 text-gray-500" : "bg-amber-400 text-black"
+              }`}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.898a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.898a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 5.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>
             </svg>
           </button>
 
           <button
+            onMouseEnter={() => soundFx.playButtonHover()}
             onClick={() => {
-              soundFx.playButtonClick();
+              soundFx.playKeyboardClick();
               router.push("/dashboard");
             }}
             className="h-10 bg-red-600 text-white border-2 border-black rounded-lg px-4 text-[13px] font-extrabold shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:bg-red-700 hover:-translate-y-0.5 transition-all cursor-pointer"
@@ -2108,29 +2536,28 @@ export default function RajasthanGameScreen() {
             left: `${playerPos.x}%`,
             top: `${playerPos.y}%`,
             transformOrigin: "bottom center",
-            transform: `translate(-50%, -96%) scale(${
-              scene === "vijay_stambh" ? 1.035
-              : scene === "vijay_stambh_interior" ? 1.05
-              : scene === "jauhar_passage" ? 0.75 + (playerPos.y - 56) * 0.011
-              : scene === "jauhar_kund" ? 0.90 + (playerPos.y - 57) * 0.009
-              : scene === "kumbhalgarh_gate" ? 0.85 + (playerPos.y - 65) * 0.012
-              : scene === "kumbhalgarh_interior_stairs" ? 0.80 + (playerPos.y - 52) * 0.009
-              : scene === "kumbhalgarh_great_wall" ? 0.46 + (playerPos.y - 36) * 0.013
-              : scene === "kumbhalgarh_zigzag_gates" ? 0.75 + (playerPos.y - 52) * 0.011
-              : scene === "badal_mahal_courtyard" ? 1.00 + (playerPos.y - 70) * 0.010
-              : scene === "badal_mahal_interior" ? 1.45 + (playerPos.y - 80) * 0.008
-              : scene === "badal_mahal_terrace" ? 1.10 + (playerPos.y - 60) * 0.010
-              : scene === "kuldhara_gate" ? 0.80 + (playerPos.y - 48) * 0.009
-              : scene === "chiefs_house" ? 0.95 + (playerPos.y - 50) * 0.008
-              : scene === "treasury" ? 0.90 + (playerPos.y - 52) * 0.009
-              : scene === "well" ? 0.85 + (playerPos.y - 54) * 0.010
-              : scene === "village_square" ? 0.90 + (playerPos.y - 55) * 0.008
-              : scene === "bhangarh_gate" ? 0.80 + (playerPos.y - 50) * 0.009
-              : scene === "gopinath_temple" ? 0.95 + (playerPos.y - 52) * 0.008
-              : scene === "palace_ruins" ? 0.85 + (playerPos.y - 48) * 0.009
-              : scene === "bhangarh_chase" ? 0.80 + (playerPos.y - 52) * 0.010
-              : 1.15
-            }) scaleX(${facingLeft ? -1 : 1})`,
+            transform: `translate(-50%, -96%) scale(${scene === "vijay_stambh" ? 1.035
+                : scene === "vijay_stambh_interior" ? 1.05
+                  : scene === "jauhar_passage" ? 0.75 + (playerPos.y - 56) * 0.011
+                    : scene === "jauhar_kund" ? 0.90 + (playerPos.y - 57) * 0.009
+                      : scene === "kumbhalgarh_gate" ? 0.85 + (playerPos.y - 65) * 0.012
+                        : scene === "kumbhalgarh_interior_stairs" ? 0.80 + (playerPos.y - 52) * 0.009
+                          : scene === "kumbhalgarh_great_wall" ? 0.46 + (playerPos.y - 36) * 0.013
+                            : scene === "kumbhalgarh_zigzag_gates" ? 0.75 + (playerPos.y - 52) * 0.011
+                              : scene === "badal_mahal_courtyard" ? 1.00 + (playerPos.y - 70) * 0.010
+                                : scene === "badal_mahal_interior" ? 1.45 + (playerPos.y - 80) * 0.008
+                                  : scene === "badal_mahal_terrace" ? 1.10 + (playerPos.y - 60) * 0.010
+                                    : scene === "kuldhara_gate" ? 0.80 + (playerPos.y - 48) * 0.009
+                                      : scene === "chiefs_house" ? 0.95 + (playerPos.y - 50) * 0.008
+                                        : scene === "treasury" ? 0.90 + (playerPos.y - 52) * 0.009
+                                          : scene === "well" ? 0.85 + (playerPos.y - 54) * 0.010
+                                            : scene === "village_square" ? 0.90 + (playerPos.y - 55) * 0.008
+                                              : scene === "bhangarh_gate" ? 0.80 + (playerPos.y - 50) * 0.009
+                                                : scene === "gopinath_temple" ? 0.95 + (playerPos.y - 52) * 0.008
+                                                  : scene === "palace_ruins" ? 0.85 + (playerPos.y - 48) * 0.009
+                                                    : scene === "bhangarh_chase" ? 0.80 + (playerPos.y - 52) * 0.010
+                                                      : 1.15
+              }) scaleX(${facingLeft ? -1 : 1})`,
           }}
         >
           <img
@@ -2148,16 +2575,17 @@ export default function RajasthanGameScreen() {
 
       {/* --- JOLLY BHAI (GENIE) COMPANION FOLLOWER WITH DYNAMIC BEHAVIORS --- */}
       {(() => {
-        // Mode 1: 💥 Crazy Shake - ONLY when player is in actual close proximity to an uncollected clue!
-        const isClueNearby =
-          (isNearHaveliOrnament && !hasWeddingOrnament) ||
-          (isNearTaxLedger && !hasTaxLedger) ||
-          (isNearStepwellPots && !hasWaterPotsSupplies) ||
-          (stage === 4 && (
-            (isNearKathputliFragment && !hasKathputliFragment) ||
-            (isNearPaliwalSeal && !hasPaliwalSeal) ||
-            (isNearWanderersVerse && !hasWanderersVerse)
-          ));
+        // Mode 1: 💥 Crazy Shake - ONLY when player is in actual close proximity to an uncollected clue that hasn't been given/alerted yet!
+        const activeClueKey =
+          (isNearHaveliOrnament && !hasWeddingOrnament && !givenClueAlerts["kuldhara_ornament"]) ? "kuldhara_ornament"
+            : (isNearTaxLedger && !hasTaxLedger && !givenClueAlerts["kuldhara_ledger"]) ? "kuldhara_ledger"
+              : (isNearStepwellPots && !hasWaterPotsSupplies && !givenClueAlerts["kuldhara_well"]) ? "kuldhara_well"
+                : (stage === 4 && isNearKathputliFragment && !hasKathputliFragment && !givenClueAlerts["bhangarh_kathputli"]) ? "bhangarh_kathputli"
+                  : (stage === 4 && isNearPaliwalSeal && !hasPaliwalSeal && !givenClueAlerts["bhangarh_seal"]) ? "bhangarh_seal"
+                    : (stage === 4 && isNearWanderersVerse && !hasWanderersVerse && !givenClueAlerts["bhangarh_verse"]) ? "bhangarh_verse"
+                      : null;
+
+        const isClueNearby = !!activeClueKey;
 
         // Mode 2: 🤔 Doubt - In mystery deduction or conflicting evidence!
         const isDoubt =
@@ -2165,7 +2593,7 @@ export default function RajasthanGameScreen() {
           (stage === 4 && showFolkloreClassifierModal);
 
         // Mode 3: ✨ Glowing - At the historical threshold or secret lore!
-        const isGlowing = stage === 3 && scene === "kuldhara_gate" && !hasHeardKuldharaSecretLore;
+        const isGlowing = (stage === 3 && scene === "kuldhara_gate" && !hasHeardKuldharaSecretLore) || (stage === 4);
 
         // Resolved Mode
         const mode = isClueNearby ? "shaking" : isDoubt ? "doubt" : isGlowing ? "glowing" : "normal";
@@ -2179,26 +2607,28 @@ export default function RajasthanGameScreen() {
               transform: 'translate(-50%, -50%)',
             }}
             onClick={() => {
+              if (activeClueKey) {
+                markClueGiven(activeClueKey);
+              }
               triggerJollyDialogue(mode);
             }}
             title={
               mode === "shaking"
                 ? "💥 Jolly Bhai (Crazy Shake: Clue is right here!)"
                 : mode === "doubt"
-                ? "🤔 Jolly Bhai (Doubt: Weighing the mystery!)"
-                : mode === "glowing"
-                ? "✨ Jolly Bhai (Secret Lore: Untold History!)"
-                : "🧞 Jolly Bhai (Your Time-Traveling Genie Companion)"
+                  ? "🤔 Jolly Bhai (Doubt: Weighing the mystery!)"
+                  : mode === "glowing"
+                    ? (stage === 4 ? "✨ Jolly Bhai (Bhangarh Fort Lore & History)" : "✨ Jolly Bhai (Secret Lore: Untold History!)")
+                    : "🧞 Jolly Bhai (Your Time-Traveling Genie Companion)"
             }
           >
             <div
-              className={`relative ${
-                mode === "shaking"
+              className={`relative ${mode === "shaking"
                   ? "animate-crazy-shake"
                   : mode === "doubt"
-                  ? "animate-puzzled-doubt"
-                  : "animate-bounce"
-              }`}
+                    ? "animate-puzzled-doubt"
+                    : "animate-bounce"
+                }`}
               style={mode === "normal" || mode === "glowing" ? { animationDuration: '3.5s' } : undefined}
             >
               <img
@@ -2212,30 +2642,126 @@ export default function RajasthanGameScreen() {
                     mode === "glowing"
                       ? "drop-shadow(2px 0 0 #ffffff) drop-shadow(-2px 0 0 #ffffff) drop-shadow(0 2px 0 #ffffff) drop-shadow(0 -2px 0 #ffffff) drop-shadow(1.5px 1.5px 0 #ffffff) drop-shadow(-1.5px -1.5px 0 #ffffff) drop-shadow(1.5px -1.5px 0 #ffffff) drop-shadow(-1.5px 1.5px 0 #ffffff) drop-shadow(0 0 8px rgba(255, 255, 255, 0.95)) drop-shadow(0 0 18px rgba(254, 240, 138, 0.75)) brightness(1.15)"
                       : mode === "shaking"
-                      ? "drop-shadow(0 0 16px rgba(239, 68, 68, 0.95)) drop-shadow(0 0 30px rgba(249, 115, 22, 0.85)) brightness(1.25)"
-                      : mode === "doubt"
-                      ? "drop-shadow(0 0 12px rgba(168, 85, 247, 0.85)) drop-shadow(0 0 24px rgba(99, 102, 241, 0.65)) brightness(1.15)"
-                      : "drop-shadow(0 4px 10px rgba(0,0,0,0.5))",
+                        ? "drop-shadow(0 0 16px rgba(239, 68, 68, 0.95)) drop-shadow(0 0 30px rgba(249, 115, 22, 0.85)) brightness(1.25)"
+                        : mode === "doubt"
+                          ? "drop-shadow(0 0 12px rgba(168, 85, 247, 0.85)) drop-shadow(0 0 24px rgba(99, 102, 241, 0.65)) brightness(1.15)"
+                          : "drop-shadow(0 4px 10px rgba(0,0,0,0.5))",
                 }}
               />
 
               {/* Mode Badge - Matching exact design */}
               <div
-                className={`absolute -top-3.5 left-1/2 -translate-x-1/2 border-[2.5px] border-black rounded-full px-3 py-0.5 shadow-[2px_2px_0_0_rgba(0,0,0,1)] text-[11px] font-black whitespace-nowrap transition-all flex items-center gap-1.5 pointer-events-none z-30 ${
-                  mode !== "normal"
+                className={`absolute -top-3.5 left-1/2 -translate-x-1/2 border-[2.5px] border-black rounded-full px-3 py-0.5 shadow-[2px_2px_0_0_rgba(0,0,0,1)] text-[11px] font-black whitespace-nowrap transition-all flex items-center gap-1.5 pointer-events-none z-30 ${mode !== "normal"
                     ? "opacity-100 bg-white text-black"
                     : "opacity-0 group-hover:opacity-100 bg-white text-black"
-                }`}
+                  }`}
               >
                 {mode === "shaking" && <span>💥 Clue Alert!</span>}
                 {mode === "doubt" && <span>🤔 Pondering Doubt</span>}
-                {mode === "glowing" && <span>✨ Secret Lore</span>}
+                {mode === "glowing" && <span>{stage === 4 ? "✨ Bhangarh Fort Lore" : "✨ Secret Lore"}</span>}
                 {mode === "normal" && <span>Ask Jolly Bhai 🧞</span>}
               </div>
             </div>
           </div>
         );
       })()}
+
+      {/* --- STAGE 4: TINY FALLEN CLUE FRAGMENTS ON THE GROUND (HARD TO FIND, NO TEXT, NO EMOJIS) --- */}
+      {/* Clue 1: Kathputli Fragment (bhangarh_gate - tiny fragment fallen on far-left ground shadow) */}
+      {stage === 4 && scene === "bhangarh_gate" && !hasKathputliFragment && (
+        <div
+          className="absolute z-10 pointer-events-auto cursor-pointer select-none transition-all duration-300"
+          style={{ left: "16.5%", top: "82%", transform: "translate(-50%, -50%)" }}
+          onClick={() => {
+            hasTriggeredClue1Ref.current = true;
+            markClueGiven("bhangarh_kathputli");
+            soundFx.playClueChime();
+            setHasKathputliFragment(true);
+            setShowKathputliModal(true);
+            stopNarration();
+            playNarration("You have unlocked the first clue! The Kathputli Sandstone Fragment reveals the secrets of the royal court!", {
+              speaker: "ratan",
+              pace: 0.90,
+              language_code: "en-IN",
+            });
+          }}
+        >
+          <div
+            className="w-5 h-5 sm:w-6 sm:h-6 rounded-xs overflow-hidden shadow-[0_3px_6px_rgba(0,0,0,0.95)] opacity-70 hover:opacity-100 transition-opacity border border-stone-800/60"
+            style={{
+              transform: "perspective(400px) rotateX(55deg) rotateZ(22deg)",
+              filter: "brightness(0.65) contrast(1.15)",
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/artifact-kathputli-fragment.jpg" alt="" className="w-full h-full object-cover" />
+          </div>
+        </div>
+      )}
+
+      {/* Clue 2: Paliwal Ledger Seal (gopinath_temple - tiny seal fallen on the dark stone steps) */}
+      {stage === 4 && scene === "gopinath_temple" && !hasPaliwalSeal && (
+        <div
+          className="absolute z-10 pointer-events-auto cursor-pointer select-none transition-all duration-300"
+          style={{ left: "82.5%", top: "74%", transform: "translate(-50%, -50%)" }}
+          onClick={() => {
+            hasTriggeredClue2Ref.current = true;
+            markClueGiven("bhangarh_seal");
+            soundFx.playClueChime();
+            setHasPaliwalSeal(true);
+            setShowPaliwalSealModal(true);
+            stopNarration();
+            playNarration("You have unlocked the second clue! The Paliwal Ledger Seal sheds light on the trade and wealth of Bhangarh!", {
+              speaker: "ratan",
+              pace: 0.90,
+              language_code: "en-IN",
+            });
+          }}
+        >
+          <div
+            className="w-5 h-5 sm:w-6 sm:h-6 rounded-full overflow-hidden shadow-[0_3px_6px_rgba(0,0,0,0.95)] opacity-70 hover:opacity-100 transition-opacity border border-stone-800/60"
+            style={{
+              transform: "perspective(400px) rotateX(50deg) rotateZ(-15deg)",
+              filter: "brightness(0.62) contrast(1.15)",
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/artifact-paliwal-ledger-seal.jpg" alt="" className="w-full h-full object-cover" />
+          </div>
+        </div>
+      )}
+
+      {/* Clue 3: Wanderer's Verse (palace_ruins - tiny medallion fallen in the cracked rubble terrace) */}
+      {stage === 4 && scene === "palace_ruins" && !hasWanderersVerse && (
+        <div
+          className="absolute z-10 pointer-events-auto cursor-pointer select-none transition-all duration-300"
+          style={{ left: "18%", top: "62%", transform: "translate(-50%, -50%)" }}
+          onClick={() => {
+            hasTriggeredClue3Ref.current = true;
+            markClueGiven("bhangarh_verse");
+            soundFx.playClueChime();
+            setHasWanderersVerse(true);
+            setShowWanderersVerseModal(true);
+            stopNarration();
+            playNarration("You have unlocked the third clue! The Wanderer's Verse Medallion uncovers the fateful curse of the palace ruins!", {
+              speaker: "ratan",
+              pace: 0.90,
+              language_code: "en-IN",
+            });
+          }}
+        >
+          <div
+            className="w-5 h-5 sm:w-6 sm:h-6 rounded-full overflow-hidden shadow-[0_3px_6px_rgba(0,0,0,0.95)] opacity-70 hover:opacity-100 transition-opacity border border-stone-800/60"
+            style={{
+              transform: "perspective(400px) rotateX(48deg) rotateZ(30deg)",
+              filter: "brightness(0.62) contrast(1.15)",
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/artifact-wanderers-verse.jpg" alt="" className="w-full h-full object-cover" />
+          </div>
+        </div>
+      )}
 
       {/* --- INTERACTION PROMPT BANNERS --- */}
       {/* Stage 1 */}
@@ -2311,48 +2837,7 @@ export default function RajasthanGameScreen() {
         </div>
       )}
 
-      {/* --- STAGE 4 PROMPTS (BHANGARH FORT 1-MIN CHALLENGE) --- */}
-      {isNearKathputliFragment && (
-        <div
-          className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black rounded-xl px-5 py-2.5 shadow-[5px_5px_0_0_rgba(0,0,0,1)] text-[13px] font-black tracking-wide flex items-center gap-2.5 z-30 animate-bounce cursor-pointer pointer-events-auto"
-          onClick={() => {
-            soundFx.playClueChime();
-            setHasKathputliFragment(true);
-            setShowKathputliModal(true);
-          }}
-        >
-          <span className="bg-black text-amber-400 rounded px-2 py-0.5 text-[11px] font-mono">E</span>
-          ✨ Collect Kathputli Fragment (Stories Carved in Sand)
-        </div>
-      )}
 
-      {isNearPaliwalSeal && (
-        <div
-          className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black rounded-xl px-5 py-2.5 shadow-[5px_5px_0_0_rgba(0,0,0,1)] text-[13px] font-black tracking-wide flex items-center gap-2.5 z-30 animate-bounce cursor-pointer pointer-events-auto"
-          onClick={() => {
-            soundFx.playClueChime();
-            setHasPaliwalSeal(true);
-            setShowPaliwalSealModal(true);
-          }}
-        >
-          <span className="bg-black text-amber-400 rounded px-2 py-0.5 text-[11px] font-mono">E</span>
-          ✨ Collect Paliwal Ledger Seal (Horse Emblem Medallion)
-        </div>
-      )}
-
-      {isNearWanderersVerse && (
-        <div
-          className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black rounded-xl px-5 py-2.5 shadow-[5px_5px_0_0_rgba(0,0,0,1)] text-[13px] font-black tracking-wide flex items-center gap-2.5 z-30 animate-bounce cursor-pointer pointer-events-auto"
-          onClick={() => {
-            soundFx.playClueChime();
-            setHasWanderersVerse(true);
-            setShowWanderersVerseModal(true);
-          }}
-        >
-          <span className="bg-black text-amber-400 rounded px-2 py-0.5 text-[11px] font-mono">E</span>
-          ✨ Collect Wanderer&apos;s Verse (Antelope Medallion)
-        </div>
-      )}
       {isNearBhangarhGateMarker && (
         <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2.5 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce cursor-pointer pointer-events-auto" onClick={() => setShowGateFragmentPuzzleModal(true)}>
           <span className="bg-amber-400 border border-black rounded px-1.5 text-[11px]">E</span>
@@ -2616,6 +3101,38 @@ export default function RajasthanGameScreen() {
         </div>
       )}
 
+      {/* --- BHANGARH HISTORICAL NARRATOR BANNER (SARVAM AI) --- */}
+      {showBhangarhNarratorBanner && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-40 w-[94%] max-w-2xl pointer-events-auto select-none animate-in slide-in-from-top-4 duration-300">
+          <div className="bg-[#fff9e6] border-4 border-red-950 rounded-xl p-4 shadow-[6px_6px_0_0_rgba(0,0,0,1)] flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-lg bg-red-600 border-2 border-black flex items-center justify-center text-xl shrink-0 shadow-[2px_2px_0_0_rgba(0,0,0,1)] text-white">
+              🎙️
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <span className="text-[11px] font-black text-red-900 tracking-wider uppercase flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-red-600 animate-ping"></span>
+                  Bhangarh Fort · Haunting Warning (Sarvam AI Narrator)
+                </span>
+                <button
+                  onClick={() => {
+                    stopNarration();
+                    setShowBhangarhNarratorBanner(false);
+                  }}
+                  className="bg-white hover:bg-gray-100 text-black border-2 border-black rounded-md px-2 py-0.5 text-xs font-black shadow-[1px_1px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 cursor-pointer"
+                  title="Dismiss Narration"
+                >
+                  ✕
+                </button>
+              </div>
+              <p className="text-[13.5px] font-extrabold text-black leading-snug">
+                &ldquo;Find the given clue in the Bhangarh Fort: why is the given palace haunted, before the evil spirits attack you!&rdquo;
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* --- BUZURG CHACHA HISTORICAL DIALOGUE PANEL (STAGE 1) --- */}
       {showChachaDialogue && (
         <DialoguePanel
@@ -2623,6 +3140,7 @@ export default function RajasthanGameScreen() {
           characterTitle="Chaupar Master & Royal Elder of Chittorgarh"
           dialogueText={chachaSpeechText}
           characterId="chacha"
+          audioUrl={chachaAudioUrl}
           preventAiOnOptionSelect={true}
           historicalContext={{
             era: "rajasthan",
@@ -2639,16 +3157,12 @@ export default function RajasthanGameScreen() {
               setShowChauparGame(true);
             } else if (option.id === 2) {
               const loreText = "Ah! Chaupar is no ordinary board game. It was played by Rajput Maharajas and ancient kings since the Mahabharata era! It tests your destiny, your foresight, and your patience. Win three rounds with your Golden Goti, and the passage deeper into Chittorgarh Fort will open for you!";
+              setChachaAudioUrl("/buzurg_chacha_chaupar_lore.wav");
               setChachaSpeechText(loreText);
               setChachaOptions([
                 { id: 1, text: "I understand, Chacha-ji! Let us roll the pasa dice now!" },
                 { id: 4, text: "I will look around the courtyard first." }
               ]);
-              playCharacterDialogue({
-                character: "chacha",
-                text: loreText,
-                audioUrl: "/buzurg_chacha_chaupar_lore.wav"
-              });
             } else if (option.id === 4) {
               stopCharacterDialogue();
               setShowChachaDialogue(false);
@@ -2669,6 +3183,7 @@ export default function RajasthanGameScreen() {
           dialogueText={jollySpeechText}
           statusBadge={jollyStatusBadge}
           characterId="jolly"
+          audioUrl={jollyAudioUrl}
           preventAiOnOptionSelect={true}
           historicalContext={{
             era: "rajasthan",
@@ -2682,58 +3197,86 @@ export default function RajasthanGameScreen() {
             if (option.id === 10) {
               setJollyStatusBadge("normal");
               const text = "Roll the wooden pasa dice with patience, mere aaka! Score higher than Chacha across the rounds to advance your Golden Goti to victory!";
+              setJollyAudioUrl(undefined);
               setJollySpeechText(text);
-              playCharacterDialogue({ character: "jolly", text });
             } else if (option.id === 11) {
               setJollyStatusBadge("glowing");
               const text = "Vijay Stambh was erected by Maharana Kumbha in 1448 AD to celebrate his victory over the combined armies of Malwa and Gujarat. It stands nine storeys high and is adorned with intricate Hindu deities!";
+              setJollyAudioUrl(undefined);
               setJollySpeechText(text);
-              playCharacterDialogue({ character: "jolly", text });
             } else if (option.id === 12) {
               setJollyStatusBadge("glowing");
               const text = "Jauhar Kund is the sacred historical site of mass self-immolation led by Rani Padmini and Rajput women to preserve their royal honour and dignity during the imperial sieges.";
+              setJollyAudioUrl(undefined);
               setJollySpeechText(text);
-              playCharacterDialogue({ character: "jolly", text });
             } else if (option.id === 20) {
               setJollyStatusBadge("glowing");
               const text = "The Great Wall of Kumbhalgarh spans an astounding 36 kilometers across the Aravali range, making it the second longest continuous wall on Earth!";
+              setJollyAudioUrl(undefined);
               setJollySpeechText(text);
-              playCharacterDialogue({ character: "jolly", text });
             } else if (option.id === 21) {
               setJollyStatusBadge("glowing");
               const text = "Maharana Kumbha was a legendary Mewar monarch, scholar, and architect who commissioned 32 of Mewar's 84 principal fortresses!";
+              setJollyAudioUrl(undefined);
               setJollySpeechText(text);
-              playCharacterDialogue({ character: "jolly", text });
             } else if (option.id === 30) {
               setJollyStatusBadge("normal");
               const text = "That you have to find out, my aaka! Search the silent ruins, inspect the three clues, and uncover the mystery yourself.";
+              setJollyAudioUrl(undefined);
               setJollySpeechText(text);
               setJollyOptions([
                 { id: 31, text: "Where should I search for the 3 clues?" },
                 { id: 32, text: "Understood! Let's explore Kuldhara." }
               ]);
-              playCharacterDialogue({
-                character: "jolly",
-                text
-              });
             } else if (option.id === 31) {
               setJollyStatusBadge("shaking");
               const text = "Look carefully, mere aaka! Search the Chief's Haveli for the bridal ornament, the Treasury for the torn tax ledger, and the Stepwell for intact water pots before the timer runs out!";
+              setJollyAudioUrl("/jolly_kuldhara_clues_hint.wav");
               setJollySpeechText(text);
               setJollyOptions([
                 { id: 30, text: "Why did the villagers go away from here?" },
                 { id: 32, text: "Understood! Let's explore Kuldhara." }
               ]);
-              playCharacterDialogue({
-                character: "jolly",
-                text,
-                audioUrl: "/jolly_kuldhara_clues_hint.wav"
-              });
-            } else if (option.id === 40) {
+            } else if (option.id === 43) {
               setJollyStatusBadge("glowing");
-              const text = "Legends state that Bhangarh was cursed by Tantrik Singhia when Princess Ratnavati thwarted his dark sorcery, leaving the magnificent township deserted!";
+              const text = "Bhangarh Fort was established in 1573 CE by Raja Bhagwant Das of Amber for his younger son Madho Singh. Madho Singh was the brother of celebrated Amber ruler and Mughal general, Man Singh I. The stronghold guarded strategic trade routes across the Aravali range!";
+              setJollyAudioUrl(undefined);
               setJollySpeechText(text);
-              playCharacterDialogue({ character: "jolly", text });
+              setJollyOptions([
+                { id: 44, text: "What temples and architecture exist in Bhangarh?" },
+                { id: 45, text: "Why does the ASI prohibit entry between sunset and sunrise?" },
+                { id: 40, text: "Why is Bhangarh Palace haunted?" }
+              ]);
+            } else if (option.id === 44) {
+              setJollyStatusBadge("glowing");
+              const text = "Bhangarh was fortified with five massive gates—Lahori, Ajmeri, Phulbari, Delhi, and Hanuman Pol. It houses magnificent Nagara-style stone temples including Gopinath Temple, Someshwar, Keshav Rai, and Mangla Devi, along with a multi-tiered palace complex and royal stepwell baoli!";
+              setJollyAudioUrl(undefined);
+              setJollySpeechText(text);
+              setJollyOptions([
+                { id: 43, text: "Who built Bhangarh Fort and when?" },
+                { id: 45, text: "Why does the ASI prohibit entry between sunset and sunrise?" },
+                { id: 40, text: "Why is Bhangarh Palace haunted?" }
+              ]);
+            } else if (option.id === 45) {
+              setJollyStatusBadge("glowing");
+              const text = "The Archaeological Survey of India (ASI) has placed warning boards prohibiting entry between sunset and sunrise! This is because Bhangarh borders the dense wilderness of the Sariska Tiger Reserve, where nocturnal predators like leopards roam among the dark ruins.";
+              setJollyAudioUrl(undefined);
+              setJollySpeechText(text);
+              setJollyOptions([
+                { id: 43, text: "Who built Bhangarh Fort and when?" },
+                { id: 44, text: "What temples and architecture exist in Bhangarh?" },
+                { id: 40, text: "Why is Bhangarh Palace haunted?" }
+              ]);
+            } else if (option.id === 40 || option.id === 41) {
+              setJollyStatusBadge("glowing");
+              const text = "Mere aaka! The secret of why Bhangarh Palace is haunted cannot be revealed by me! The ancient curse strictly forbids it! You must search the rugged grounds with your own eyes and discover the tiny fallen clues before the evil spirits attack you!";
+              setJollyAudioUrl(undefined);
+              setJollySpeechText(text);
+              setJollyOptions([
+                { id: 43, text: "Who built Bhangarh Fort and when?" },
+                { id: 44, text: "What temples and architecture exist in Bhangarh?" },
+                { id: 42, text: "Understood! I will search the grounds myself." }
+              ]);
             } else {
               setJollyStatusBadge("normal");
               stopCharacterDialogue();
@@ -2830,35 +3373,34 @@ export default function RajasthanGameScreen() {
 
               {/* Player's Animated Golden Goti (Pawn) sitting precisely inside grid squares */}
               <div
-                className={`absolute w-9 h-9 z-30 transition-all duration-700 ease-out transform -translate-x-1/2 -translate-y-1/2 ${
-                  isPawnMoving ? "scale-125 -translate-y-3 shadow-[0_12px_24px_rgba(245,158,11,0.9)] animate-pulse" : "scale-100 shadow-md"
-                }`}
+                className={`absolute w-9 h-9 z-30 transition-all duration-700 ease-out transform -translate-x-1/2 -translate-y-1/2 ${isPawnMoving ? "scale-125 -translate-y-3 shadow-[0_12px_24px_rgba(245,158,11,0.9)] animate-pulse" : "scale-100 shadow-md"
+                  }`}
                 style={
                   playerPawnPos === 0
                     ? { left: "50%", top: "86%" }
                     : playerPawnPos === 1
-                    ? { left: "50%", top: "78%" }
-                    : playerPawnPos === 2
-                    ? { left: "50%", top: "70%" }
-                    : playerPawnPos === 3
-                    ? { left: "50%", top: "62%" }
-                    : playerPawnPos === 4
-                    ? { left: "50%", top: "55%" }
-                    : playerPawnPos === 5
-                    ? { left: "50%", top: "48%" }
-                    : playerPawnPos === 6
-                    ? { left: "58%", top: "50%" }
-                    : playerPawnPos === 7
-                    ? { left: "66%", top: "50%" }
-                    : playerPawnPos === 8
-                    ? { left: "74%", top: "50%" }
-                    : playerPawnPos === 9
-                    ? { left: "82%", top: "50%" }
-                    : playerPawnPos === 10
-                    ? { left: "88%", top: "50%" }
-                    : playerPawnPos === 11
-                    ? { left: "94%", top: "50%" }
-                    : { left: "50%", top: "50%" }
+                      ? { left: "50%", top: "78%" }
+                      : playerPawnPos === 2
+                        ? { left: "50%", top: "70%" }
+                        : playerPawnPos === 3
+                          ? { left: "50%", top: "62%" }
+                          : playerPawnPos === 4
+                            ? { left: "50%", top: "55%" }
+                            : playerPawnPos === 5
+                              ? { left: "50%", top: "48%" }
+                              : playerPawnPos === 6
+                                ? { left: "58%", top: "50%" }
+                                : playerPawnPos === 7
+                                  ? { left: "66%", top: "50%" }
+                                  : playerPawnPos === 8
+                                    ? { left: "74%", top: "50%" }
+                                    : playerPawnPos === 9
+                                      ? { left: "82%", top: "50%" }
+                                      : playerPawnPos === 10
+                                        ? { left: "88%", top: "50%" }
+                                        : playerPawnPos === 11
+                                          ? { left: "94%", top: "50%" }
+                                          : { left: "50%", top: "50%" }
                 }
               >
                 <div className="relative w-full h-full rounded-t-full rounded-b-md bg-gradient-to-tr from-amber-600 via-yellow-400 to-amber-100 border-2 border-amber-950 shadow-[0_4px_10px_rgba(0,0,0,0.8)] flex items-center justify-center">
@@ -2868,35 +3410,34 @@ export default function RajasthanGameScreen() {
 
               {/* Chacha's Animated Ruby Goti (Pawn) sitting precisely inside grid squares */}
               <div
-                className={`absolute w-9 h-9 z-30 transition-all duration-700 ease-out transform -translate-x-1/2 -translate-y-1/2 ${
-                  isPawnMoving ? "scale-125 -translate-y-3 shadow-[0_12px_24px_rgba(239,68,68,0.9)] animate-pulse" : "scale-100 shadow-md"
-                }`}
+                className={`absolute w-9 h-9 z-30 transition-all duration-700 ease-out transform -translate-x-1/2 -translate-y-1/2 ${isPawnMoving ? "scale-125 -translate-y-3 shadow-[0_12px_24px_rgba(239,68,68,0.9)] animate-pulse" : "scale-100 shadow-md"
+                  }`}
                 style={
                   chachaPawnPos === 0
                     ? { left: "50%", top: "14%" }
                     : chachaPawnPos === 1
-                    ? { left: "50%", top: "22%" }
-                    : chachaPawnPos === 2
-                    ? { left: "50%", top: "30%" }
-                    : chachaPawnPos === 3
-                    ? { left: "50%", top: "38%" }
-                    : chachaPawnPos === 4
-                    ? { left: "50%", top: "45%" }
-                    : chachaPawnPos === 5
-                    ? { left: "50%", top: "52%" }
-                    : chachaPawnPos === 6
-                    ? { left: "42%", top: "50%" }
-                    : chachaPawnPos === 7
-                    ? { left: "34%", top: "50%" }
-                    : chachaPawnPos === 8
-                    ? { left: "26%", top: "50%" }
-                    : chachaPawnPos === 9
-                    ? { left: "18%", top: "50%" }
-                    : chachaPawnPos === 10
-                    ? { left: "12%", top: "50%" }
-                    : chachaPawnPos === 11
-                    ? { left: "6%", top: "50%" }
-                    : { left: "50%", top: "50%" }
+                      ? { left: "50%", top: "22%" }
+                      : chachaPawnPos === 2
+                        ? { left: "50%", top: "30%" }
+                        : chachaPawnPos === 3
+                          ? { left: "50%", top: "38%" }
+                          : chachaPawnPos === 4
+                            ? { left: "50%", top: "45%" }
+                            : chachaPawnPos === 5
+                              ? { left: "50%", top: "52%" }
+                              : chachaPawnPos === 6
+                                ? { left: "42%", top: "50%" }
+                                : chachaPawnPos === 7
+                                  ? { left: "34%", top: "50%" }
+                                  : chachaPawnPos === 8
+                                    ? { left: "26%", top: "50%" }
+                                    : chachaPawnPos === 9
+                                      ? { left: "18%", top: "50%" }
+                                      : chachaPawnPos === 10
+                                        ? { left: "12%", top: "50%" }
+                                        : chachaPawnPos === 11
+                                          ? { left: "6%", top: "50%" }
+                                          : { left: "50%", top: "50%" }
                 }
               >
                 <div className="relative w-full h-full rounded-t-full rounded-b-md bg-gradient-to-tr from-red-950 via-red-600 to-red-400 border-2 border-amber-950 shadow-[0_4px_10px_rgba(0,0,0,0.8)] flex items-center justify-center">
@@ -2913,9 +3454,8 @@ export default function RajasthanGameScreen() {
 
               <div className="flex items-center justify-center gap-6">
                 {/* Die 1 */}
-                <div className={`relative w-28 h-10 bg-gradient-to-r from-[#d89e5a] via-[#f5d09b] to-[#c68c47] border-2 border-[#4a2e12] rounded-md shadow-md flex items-center justify-around px-3 transition-all duration-500 transform ${
-                  isDiceRolling ? "rotate-45 scale-110 shadow-xl animate-bounce" : "rotate-0"
-                }`}>
+                <div className={`relative w-28 h-10 bg-gradient-to-r from-[#d89e5a] via-[#f5d09b] to-[#c68c47] border-2 border-[#4a2e12] rounded-md shadow-md flex items-center justify-around px-3 transition-all duration-500 transform ${isDiceRolling ? "rotate-45 scale-110 shadow-xl animate-bounce" : "rotate-0"
+                  }`}>
                   <div className="absolute -left-1.5 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-[#6e431a] rounded-l border-r border-[#4a2e12]"></div>
                   <div className="absolute -right-1.5 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-[#6e431a] rounded-r border-l border-[#4a2e12]"></div>
                   {Array.from({ length: diceRoll1 }).map((_, i) => (
@@ -2924,9 +3464,8 @@ export default function RajasthanGameScreen() {
                 </div>
 
                 {/* Die 2 */}
-                <div className={`relative w-28 h-10 bg-gradient-to-r from-[#d89e5a] via-[#f5d09b] to-[#c68c47] border-2 border-[#4a2e12] rounded-md shadow-md flex items-center justify-around px-3 transition-all duration-500 transform ${
-                  isDiceRolling ? "-rotate-45 scale-110 shadow-xl animate-bounce" : "rotate-0"
-                }`}>
+                <div className={`relative w-28 h-10 bg-gradient-to-r from-[#d89e5a] via-[#f5d09b] to-[#c68c47] border-2 border-[#4a2e12] rounded-md shadow-md flex items-center justify-around px-3 transition-all duration-500 transform ${isDiceRolling ? "-rotate-45 scale-110 shadow-xl animate-bounce" : "rotate-0"
+                  }`}>
                   <div className="absolute -left-1.5 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-[#6e431a] rounded-l border-r border-[#4a2e12]"></div>
                   <div className="absolute -right-1.5 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-[#6e431a] rounded-r border-l border-[#4a2e12]"></div>
                   {Array.from({ length: diceRoll2 }).map((_, i) => (
@@ -3139,9 +3678,8 @@ export default function RajasthanGameScreen() {
             {/* Interactive Evidence Matching Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {/* Clue 1: Bridal Ornament */}
-              <div className={`border-2 rounded-xl p-3 flex flex-col gap-2 transition-all ${
-                hasWeddingOrnament ? "bg-amber-50/90 border-amber-800" : "bg-gray-100/60 border-gray-300 opacity-60"
-              }`}>
+              <div className={`border-2 rounded-xl p-3 flex flex-col gap-2 transition-all ${hasWeddingOrnament ? "bg-amber-50/90 border-amber-800" : "bg-gray-100/60 border-gray-300 opacity-60"
+                }`}>
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-black text-amber-950 uppercase">💍 Bridal Ornament</span>
                   {hasWeddingOrnament ? (
@@ -3169,9 +3707,8 @@ export default function RajasthanGameScreen() {
               </div>
 
               {/* Clue 2: Torn Tax Ledger */}
-              <div className={`border-2 rounded-xl p-3 flex flex-col gap-2 transition-all ${
-                hasTaxLedger ? "bg-amber-50/90 border-amber-800" : "bg-gray-100/60 border-gray-300 opacity-60"
-              }`}>
+              <div className={`border-2 rounded-xl p-3 flex flex-col gap-2 transition-all ${hasTaxLedger ? "bg-amber-50/90 border-amber-800" : "bg-gray-100/60 border-gray-300 opacity-60"
+                }`}>
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-black text-amber-950 uppercase">📖 Torn Tax Ledger</span>
                   {hasTaxLedger ? (
@@ -3199,9 +3736,8 @@ export default function RajasthanGameScreen() {
               </div>
 
               {/* Clue 3: Intact Water Pots */}
-              <div className={`border-2 rounded-xl p-3 flex flex-col gap-2 transition-all ${
-                hasWaterPotsSupplies ? "bg-amber-50/90 border-amber-800" : "bg-gray-100/60 border-gray-300 opacity-60"
-              }`}>
+              <div className={`border-2 rounded-xl p-3 flex flex-col gap-2 transition-all ${hasWaterPotsSupplies ? "bg-amber-50/90 border-amber-800" : "bg-gray-100/60 border-gray-300 opacity-60"
+                }`}>
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-black text-amber-950 uppercase">🏺 Intact Water Pots</span>
                   {hasWaterPotsSupplies ? (
@@ -3348,11 +3884,10 @@ export default function RajasthanGameScreen() {
                   <div
                     key={frag.id}
                     onClick={() => handleToggleGateFragment(frag.id)}
-                    className={`p-3 rounded-xl border-2 cursor-pointer transition-all ${
-                      isSelected
+                    className={`p-3 rounded-xl border-2 cursor-pointer transition-all ${isSelected
                         ? "bg-amber-200 border-amber-800 text-amber-950 shadow-inner"
                         : "bg-white hover:bg-amber-50 border-black text-black shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-[10px] font-mono font-bold uppercase text-amber-800">{frag.label}</span>
@@ -3540,29 +4075,47 @@ export default function RajasthanGameScreen() {
         </div>
       )}
 
-      {/* --- STAGE 4 SHIELD UNLOCK & GAME COMPLETE MODAL --- */}
+      {/* --- STAGE 4 VICTORY SCREEN: BHANGARH CURSE LEGEND (PRINCESS RATNAVATI & TANTRIK SINGHIA) --- */}
       {showShieldModal && (
-        <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-50 pointer-events-auto">
-          <div className="bg-[#fff9ea] border-4 border-amber-900 rounded-2xl p-6 shadow-[14px_14px_0_0_rgba(0,0,0,1)] max-w-md w-full flex flex-col gap-4 text-center animate-in fade-in zoom-in-95 duration-200">
-            <div className="w-20 h-20 bg-gradient-to-br from-amber-300 via-yellow-400 to-amber-600 border-4 border-amber-950 rounded-full flex items-center justify-center mx-auto text-4xl shadow-[0_0_20px_rgba(245,158,11,0.6)] animate-bounce">
-              🛡️
+        <div className="fixed inset-0 z-50 flex flex-col justify-end items-center pointer-events-auto bg-black select-none animate-in fade-in duration-500 pb-8 sm:pb-12 px-4">
+          {/* Background Artwork - Princess Ratnavati watching crushed Tantrik Singhia in the rain */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/bhangarh_curse_legend_victory.jpg"
+            alt="The Curse of Princess Ratnavati and Tantrik Singhia"
+            className="absolute inset-0 w-full h-full object-cover object-center"
+          />
+
+          {/* Cinematic Shading: Vignette ensuring artwork is visible while maintaining high text contrast */}
+          <div className="absolute inset-0 bg-black/40" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/60 to-black/30 pointer-events-none" />
+
+          {/* Content Card formatted exactly like Image 2 */}
+          <div className="relative z-10 max-w-3xl w-full mx-auto px-4 text-center flex flex-col items-center animate-in zoom-in-95 duration-200">
+            {/* Small Orange/Gold Subtitle Kicker */}
+            <span className="text-[#f59e0b] font-black text-xs sm:text-sm tracking-[0.35em] uppercase mb-2 drop-shadow-[0_2px_4px_rgba(0,0,0,1)]">
+              THE ANCIENT LEGEND REVEALED · BHANGARH FORT
+            </span>
+
+            {/* Bold Dramatic Title */}
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight mb-3 sm:mb-4 drop-shadow-[0_4px_16px_rgba(0,0,0,1)] uppercase">
+              The Curse of Princess Ratnavati
+            </h1>
+
+            {/* Proper text explaining the authentic reason for the belief of Bhangarh Fort being haunted */}
+            <div className="text-[12.5px] sm:text-[14px] text-gray-200 font-sans leading-relaxed mb-6 max-w-2xl drop-shadow-[0_2px_8px_rgba(0,0,0,1)] font-medium bg-black/60 backdrop-blur-md p-4 sm:p-5 rounded-xl border border-white/15 text-left flex flex-col gap-2.5">
+              <p>
+                Having uncovered all hidden relics, the fateful mystery of why Bhangarh is believed to be haunted is revealed! According to historic folklore, <strong>Tantrik Singhia</strong>, a master of black magic, was desperately obsessed with the peerless beauty of <strong>Princess Ratnavati of Bhangarh</strong>. In secret, he enchanted a vial of scented oil with a dark love spell so she would surrender herself to him.
+              </p>
+              <p>
+                Discerning the sinister sorcery, the astute princess cast the vial away onto a massive boulder. The bewitched rock was drawn to the tantrik, rolling down the hill and crushing Singhia beneath its immense weight! With his dying breath, the vengeful sorcerer cursed Bhangarh that every palace roof would crumble, destruction would follow, and no soul would ever live in peace.
+              </p>
+              <p>
+                A year later, a catastrophic battle and the devastating <strong>Chalisa Famine of 1783</strong> ruined the township, causing it to be deserted forever. To this day, the legend holds that the roofless palace and desolate walls are haunted by the trapped, restless spirits of the tantrik and fallen townsfolk!
+              </p>
             </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-[11px] font-black text-amber-800 uppercase tracking-widest bg-amber-200/70 py-0.5 px-3 rounded-full border border-amber-400 self-center">
-                ★ LEGENDARY ITEM UNLOCKED ★
-              </span>
-              <h2 className="text-xl sm:text-2xl font-serif text-amber-950 font-black tracking-wide uppercase">
-                Royal Shield of Rajputana
-              </h2>
-            </div>
-            <div className="relative w-full h-48 rounded-xl overflow-hidden border-2 border-amber-900 shadow-md bg-gradient-to-b from-amber-950 via-amber-900 to-black flex flex-col items-center justify-center p-4">
-              <div className="text-6xl drop-shadow-[0_4px_12px_rgba(255,215,0,0.8)] animate-pulse">🛡️</div>
-              <div className="mt-2 text-amber-200 font-serif text-sm font-bold tracking-wider uppercase">ROYAL KAVACH OF BHANGARH</div>
-              <div className="text-amber-400 text-[10px] uppercase tracking-widest font-sans mt-0.5 font-bold">Forged in Rajput Honor • Curse Lifted</div>
-            </div>
-            <div className="bg-amber-100/90 border-l-4 border-amber-600 p-3 rounded text-xs text-amber-950 leading-relaxed italic text-left font-serif">
-              &quot;By gathering all 3 ancient artifact fragments within 2 minutes inside Bhangarh Fort, you have unlocked the legendary Royal Shield of Rajputana! You have broken the darkness and completed the entire game!&quot;
-            </div>
+
+            {/* Golden Action Button */}
             <button
               onClick={() => {
                 setShowShieldModal(false);
@@ -3570,9 +4123,10 @@ export default function RajasthanGameScreen() {
                 setShowGrandCampaignCompleteModal(true);
                 soundFx.playClueChime();
               }}
-              className="w-full bg-amber-600 hover:bg-amber-700 text-white font-black py-3.5 px-4 rounded-xl border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-xs uppercase tracking-widest cursor-pointer transition-all active:translate-y-0.5"
+              className="bg-[#f59e0b] hover:bg-[#d97706] text-black font-extrabold text-xs sm:text-sm px-8 py-3.5 rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,1)] border-2 border-black hover:scale-105 active:translate-y-0.5 transition-all cursor-pointer uppercase tracking-wider flex items-center gap-2"
             >
-              🏆 Claim Shield & Complete Game
+              <span className="text-base">🛡️</span>
+              <span>Claim Royal Shield & Complete Campaign</span>
             </button>
           </div>
         </div>
@@ -3582,8 +4136,8 @@ export default function RajasthanGameScreen() {
       {showKuldharaTimeOutModal && (
         <div className="fixed inset-0 z-50 flex flex-col justify-end items-center pointer-events-auto bg-black select-none animate-in fade-in duration-500 pb-6 sm:pb-8 px-4">
           {/* Background Artwork - Guard kicking player out into sand */}
-          <img 
-            src="/kuldhara_timeout.jpg" 
+          <img
+            src="/kuldhara_timeout.jpg"
             alt="Expelled from Kuldhara"
             className="absolute inset-0 w-full h-full object-cover object-center"
           />
@@ -3621,25 +4175,45 @@ export default function RajasthanGameScreen() {
         </div>
       )}
 
-      {/* --- BHANGARH 2-MIN CHALLENGE TIMEOUT MODAL --- */}
+      {/* --- BHANGARH 1-MIN CHALLENGE TIMEOUT MODAL (EVIL SPIRITS ATTACK - FULLSCREEN CINEMATIC) --- */}
       {showBhangarhTimeOutModal && (
-        <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-6 z-50 pointer-events-auto">
-          <div className="bg-[#fff9ea] border-4 border-red-900 rounded-2xl p-6 shadow-[14px_14px_0_0_rgba(0,0,0,1)] max-w-md w-full flex flex-col gap-4 text-center animate-in fade-in zoom-in-95 duration-200">
-            <div className="w-16 h-16 bg-red-100 border-2 border-red-600 rounded-full flex items-center justify-center mx-auto text-3xl animate-bounce">
-              ⏳
-            </div>
-            <div className="flex flex-col gap-1">
-              <h2 className="text-xl font-black text-red-950 uppercase tracking-wide">2-Minute Time Expired!</h2>
-              <p className="text-xs font-semibold text-red-800 uppercase tracking-widest">Bhangarh Challenge Failed</p>
-            </div>
-            <div className="bg-red-50 border-2 border-red-200 rounded-xl p-3.5 text-xs text-red-950 leading-relaxed text-left font-serif">
-              You failed to discover all 3 ancient artifact fragments within 2 minutes! The eerie night shadows overtake you. You have been returned to the entrance gate of Bhangarh Fort.
-            </div>
+        <div className="fixed inset-0 z-50 flex flex-col justify-end items-center pointer-events-auto bg-black select-none animate-in fade-in duration-500 pb-8 sm:pb-12 px-4">
+          {/* Background Artwork - Evil spirits attack */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/bhangarh_evil_spirits_attack.jpg"
+            alt="Evil Spirits Attack at Bhangarh Fort"
+            className="absolute inset-0 w-full h-full object-cover object-center"
+          />
+
+          {/* Cinematic Shading: Vignette ensuring artwork is visible while maintaining high text contrast */}
+          <div className="absolute inset-0 bg-black/40" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/55 to-black/30 pointer-events-none" />
+
+          {/* Bottom Content Card matching Image 2 reference */}
+          <div className="relative z-10 max-w-2xl w-full mx-auto px-4 text-center flex flex-col items-center animate-in zoom-in-95 duration-200">
+            {/* Small Orange Subtitle Kicker */}
+            <span className="text-[#f97316] font-black text-xs sm:text-sm tracking-[0.35em] uppercase mb-2 drop-shadow-[0_2px_4px_rgba(0,0,0,1)]">
+              THE OVERTAKING · TIME EXPIRED
+            </span>
+
+            {/* Bold Dramatic Title */}
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight mb-3 sm:mb-4 drop-shadow-[0_4px_16px_rgba(0,0,0,1)] uppercase">
+              Attacked by the Evil Spirits
+            </h1>
+
+            {/* Narrative Description with dark translucent glass backdrop */}
+            <p className="text-[13px] sm:text-[14.5px] text-gray-200 font-sans leading-relaxed mb-6 max-w-xl drop-shadow-[0_2px_8px_rgba(0,0,0,1)] font-medium bg-black/55 backdrop-blur-md p-4 rounded-xl border border-white/15 text-center">
+              Your sixty seconds elapsed in the ominous silence of the ruins. As pitch-black darkness envelops Bhangarh Fort, the restless evil spirits materialize from the shadows with vengeful shrieks, driving you violently out of the cursed complex! Your quest has ended in defeat, and the ancient curse remains unbroken.
+            </p>
+
+            {/* Golden Action Button */}
             <button
               onClick={handleRestartBhangarhFort}
-              className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-3 px-4 rounded-xl border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-xs uppercase tracking-widest cursor-pointer transition-all active:translate-y-0.5"
+              className="bg-[#f59e0b] hover:bg-[#d97706] text-black font-extrabold text-xs sm:text-sm px-8 py-3.5 rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,1)] border-2 border-black hover:scale-105 active:translate-y-0.5 transition-all cursor-pointer uppercase tracking-wider flex items-center gap-2"
             >
-              🔄 Try Again (Restart Bhangarh Fort)
+              <span className="text-base">🔄</span>
+              <span>Try Again (Restart Bhangarh Fort)</span>
             </button>
           </div>
         </div>
@@ -3665,8 +4239,9 @@ export default function RajasthanGameScreen() {
 
             <div className="flex items-center justify-end gap-3 pt-3 border-t-2 border-amber-950/15">
               <button
+                onMouseEnter={() => soundFx.playButtonHover()}
                 onClick={() => {
-                  soundFx.playButtonClick();
+                  soundFx.playKeyboardClick();
                   setShowRestartConfirmModal(false);
                 }}
                 className="px-4 py-2 border-2 border-black rounded-xl text-xs font-bold text-neutral-800 bg-white hover:bg-neutral-100 shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 transition-all cursor-pointer"
@@ -3674,8 +4249,9 @@ export default function RajasthanGameScreen() {
                 Cancel
               </button>
               <button
+                onMouseEnter={() => soundFx.playButtonHover()}
                 onClick={() => {
-                  soundFx.playButtonClick();
+                  soundFx.playKeyboardClick();
                   setShowRestartConfirmModal(false);
                   handleResetGame();
                 }}

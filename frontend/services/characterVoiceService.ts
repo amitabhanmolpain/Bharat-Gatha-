@@ -28,6 +28,10 @@ class CharacterVoiceManager {
   private activeAudio: HTMLAudioElement | null = null;
   private audioCache: Map<string, string> = new Map();
   private listeners: Set<CharacterVoiceListener> = new Set();
+  private currentSessionId: number = 0;
+  private abortController: AbortController | null = null;
+  private lastPlayKey: string | null = null;
+  private lastPlayTime: number = 0;
 
   private state: CharacterVoiceState = {
     isPlaying: false,
@@ -78,6 +82,16 @@ class CharacterVoiceManager {
    * Stop any active character dialogue audio immediately.
    */
   public stopCharacterDialogue(): void {
+    this.currentSessionId++;
+    this.lastPlayKey = null;
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
+    this.stopCharacterDialogueInternal(true);
+  }
+
+  private stopCharacterDialogueInternal(resetState: boolean): void {
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       try {
         window.speechSynthesis.cancel();
@@ -92,12 +106,14 @@ class CharacterVoiceManager {
         audioToStop.src = "";
       } catch (e) {}
     }
-    this.updateState({
-      isPlaying: false,
-      isLoading: false,
-      activeCharacter: null,
-      currentText: null,
-    });
+    if (resetState) {
+      this.updateState({
+        isPlaying: false,
+        isLoading: false,
+        activeCharacter: null,
+        currentText: null,
+      });
+    }
   }
 
   /**
@@ -227,16 +243,44 @@ class CharacterVoiceManager {
 
   /**
    * Play character dialogue with 100% reliability.
+   * Guaranteed single playback: debounces rapid duplicate calls, cancels stale in-flight fetches,
+   * and prevents voice overlapping.
    */
   public async playCharacterDialogue(
     options: CharacterDialogueOptions
   ): Promise<HTMLAudioElement | null> {
     const { character, text, audioUrl, onStart, onEnd, onError } = options;
-    const trimmed = text.trim();
+    const trimmed = (text || "").trim();
     if (!trimmed) return null;
 
-    // 1. Stop previous character audio safely
-    this.stopCharacterDialogue();
+    const charKey = (character || "").toLowerCase().trim();
+    const lookupKey = `${charKey}:${trimmed.toLowerCase()}`;
+    const now = Date.now();
+
+    // 1. Deduplication guard:
+    // If the exact same character and speech was requested within the last 1800ms,
+    // or if the service is currently actively playing or loading this exact sentence,
+    // ignore the duplicate call.
+    if (
+      this.lastPlayKey === lookupKey &&
+      (now - this.lastPlayTime < 1800 || this.state.isPlaying || this.state.isLoading)
+    ) {
+      return this.activeAudio;
+    }
+
+    this.lastPlayKey = lookupKey;
+    this.lastPlayTime = now;
+
+    // 2. Invalidate any in-flight asynchronous operations
+    const sessionId = ++this.currentSessionId;
+    if (this.abortController) {
+      this.abortController.abort();
+    }
+    this.abortController = new AbortController();
+    const currentSignal = this.abortController.signal;
+
+    // 3. Stop currently playing audio or speech synthesis immediately
+    this.stopCharacterDialogueInternal(false);
 
     this.updateState({
       isLoading: true,
@@ -248,7 +292,6 @@ class CharacterVoiceManager {
 
     try {
       let audioSrc: string | null = null;
-      const lookupKey = `${character.toLowerCase()}:${trimmed.toLowerCase()}`;
 
       // Check explicit audioUrl or exact canonical local mappings
       if (audioUrl) {
@@ -273,7 +316,12 @@ class CharacterVoiceManager {
                 character,
                 text: trimmed,
               }),
+              signal: currentSignal,
             });
+
+            if (this.currentSessionId !== sessionId) {
+              return null;
+            }
 
             if (response.ok) {
               const data = await response.json();
@@ -283,9 +331,16 @@ class CharacterVoiceManager {
                 this.audioCache.set(lookupKey, cachedB64!);
               }
             }
-          } catch (fetchErr) {
+          } catch (fetchErr: any) {
+            if (fetchErr?.name === "AbortError") {
+              return null;
+            }
             console.warn("Character dynamic TTS fetch error:", fetchErr);
           }
+        }
+
+        if (this.currentSessionId !== sessionId) {
+          return null;
         }
 
         if (cachedB64) {
@@ -293,26 +348,38 @@ class CharacterVoiceManager {
         }
       }
 
+      if (this.currentSessionId !== sessionId) {
+        return null;
+      }
+
       // If not available as audio file, fallback seamlessly to browser speech synthesis
       if (!audioSrc) {
         if (typeof window !== "undefined" && "speechSynthesis" in window) {
           try {
             window.speechSynthesis.cancel();
+            if (this.currentSessionId !== sessionId) return null;
+
             const utterance = new SpeechSynthesisUtterance(trimmed);
             utterance.rate = character.toLowerCase().includes("guard") ? 1.05 : 0.95;
             utterance.pitch = character.toLowerCase().includes("guard") ? 0.8 : 1.1;
-            utterance.volume = 1.0;
+            utterance.volume = 0.85;
             utterance.onstart = () => {
-              this.updateState({ isPlaying: true, isLoading: false });
-              onStart?.();
+              if (this.currentSessionId === sessionId) {
+                this.updateState({ isPlaying: true, isLoading: false });
+                onStart?.();
+              }
             };
             utterance.onend = () => {
-              this.updateState({ isPlaying: false, isLoading: false, activeCharacter: null, currentText: null });
-              onEnd?.();
+              if (this.currentSessionId === sessionId) {
+                this.updateState({ isPlaying: false, isLoading: false, activeCharacter: null, currentText: null });
+                onEnd?.();
+              }
             };
             utterance.onerror = (e) => {
-              this.updateState({ isPlaying: false, isLoading: false });
-              onError?.(e);
+              if (this.currentSessionId === sessionId) {
+                this.updateState({ isPlaying: false, isLoading: false });
+                onError?.(e);
+              }
             };
             window.speechSynthesis.speak(utterance);
             return null;
@@ -324,16 +391,20 @@ class CharacterVoiceManager {
         return null;
       }
 
+      if (this.currentSessionId !== sessionId) {
+        return null;
+      }
+
       // Create and prepare Audio
       const audio = new Audio(audioSrc);
-      audio.volume = 1.0;
+      audio.volume = 0.85;
       this.activeAudio = audio;
 
       audio.onplay = () => {
-        if (this.activeAudio === audio) {
+        if (this.activeAudio === audio && this.currentSessionId === sessionId) {
           this.updateState({ isPlaying: true, isLoading: false });
+          onStart?.();
         }
-        onStart?.();
       };
 
       audio.onended = () => {
@@ -345,8 +416,8 @@ class CharacterVoiceManager {
             activeCharacter: null,
             currentText: null,
           });
+          onEnd?.();
         }
-        onEnd?.();
       };
 
       audio.onerror = (e) => {
@@ -357,13 +428,22 @@ class CharacterVoiceManager {
             isLoading: false,
             error: null,
           });
+          onError?.(e);
         }
-        onError?.(e);
       };
 
       try {
         await audio.play();
+        if (this.currentSessionId !== sessionId) {
+          audio.pause();
+          audio.src = "";
+          return null;
+        }
       } catch (playErr: any) {
+        if (this.currentSessionId !== sessionId) {
+          return null;
+        }
+
         if (
           playErr?.name === "AbortError" ||
           playErr?.message?.includes("interrupted") ||
@@ -379,7 +459,7 @@ class CharacterVoiceManager {
           this.updateState({ isLoading: false, isPlaying: false });
 
           const unlockAndPlay = () => {
-            if (this.activeAudio === audio) {
+            if (this.activeAudio === audio && this.currentSessionId === sessionId) {
               audio.play().catch(() => {});
             }
             window.removeEventListener("click", unlockAndPlay);
@@ -400,16 +480,23 @@ class CharacterVoiceManager {
           if (typeof window !== "undefined" && "speechSynthesis" in window) {
             try {
               window.speechSynthesis.cancel();
+              if (this.currentSessionId !== sessionId) return null;
+
               const utterance = new SpeechSynthesisUtterance(trimmed);
               utterance.rate = character.toLowerCase() === "guard" ? 1.05 : 0.95;
               utterance.pitch = character.toLowerCase() === "guard" ? 0.8 : 1.1;
+              utterance.volume = 0.85;
               utterance.onstart = () => {
-                this.updateState({ isPlaying: true, isLoading: false });
-                onStart?.();
+                if (this.currentSessionId === sessionId) {
+                  this.updateState({ isPlaying: true, isLoading: false });
+                  onStart?.();
+                }
               };
               utterance.onend = () => {
-                this.updateState({ isPlaying: false, isLoading: false, activeCharacter: null, currentText: null });
-                onEnd?.();
+                if (this.currentSessionId === sessionId) {
+                  this.updateState({ isPlaying: false, isLoading: false, activeCharacter: null, currentText: null });
+                  onEnd?.();
+                }
               };
               window.speechSynthesis.speak(utterance);
             } catch (speechErr) {}
@@ -422,6 +509,9 @@ class CharacterVoiceManager {
 
       return audio;
     } catch (err: any) {
+      if (this.currentSessionId !== sessionId) {
+        return null;
+      }
       if (
         err?.name !== "NotAllowedError" &&
         err?.name !== "AbortError" &&

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { askHistoricalQuestionDetailed, GameHistoricalContext } from '../../services/groqAiService';
 import { playCharacterDialogue, stopCharacterDialogue, subscribeCharacterVoice } from '../../services/characterVoiceService';
+import { soundFx } from '../../services/soundService';
 
 export interface DialogueOption {
   id: number | string;
@@ -23,6 +24,8 @@ export interface DialoguePanelProps {
   preventAiOnOptionSelect?: boolean;
   onPunish?: (punishment: { title: string; subtitle: string; description: string }) => void;
   onClose: () => void;
+  audioUrl?: string;
+  autoPlayVoice?: boolean;
 }
 
 export default function DialoguePanel({
@@ -38,7 +41,9 @@ export default function DialoguePanel({
   onOptionSelect,
   preventAiOnOptionSelect = false,
   onPunish,
-  onClose
+  onClose,
+  audioUrl,
+  autoPlayVoice = true,
 }: DialoguePanelProps) {
   const [inputText, setInputText] = useState("");
   const [displayedText, setDisplayedText] = useState(dialogueText);
@@ -46,9 +51,24 @@ export default function DialoguePanel({
   const [isAskingAI, setIsAskingAI] = useState(false);
   const [isVoiceActive, setIsVoiceActive] = useState(false);
   const [questionCount, setQuestionCount] = useState(0);
+  const lastSpokenTextRef = useRef<string | null>(null);
+
+  // Clean up voice immediately when panel unmounts
+  useEffect(() => {
+    return () => {
+      stopCharacterDialogue();
+    };
+  }, []);
 
   useEffect(() => {
     setActiveBadge(statusBadge || "normal");
+    // Stop shaking after clue is given and return to normal
+    if (statusBadge === "shaking") {
+      const timer = setTimeout(() => {
+        setActiveBadge("normal");
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
   }, [statusBadge]);
 
   // Subscribe to character voice playback state
@@ -61,16 +81,23 @@ export default function DialoguePanel({
 
   useEffect(() => {
     setDisplayedText(dialogueText);
-    if (characterId && dialogueText) {
-      playCharacterDialogue({
-        character: characterId,
-        text: dialogueText,
-        onStart: () => setIsVoiceActive(true),
-        onEnd: () => setIsVoiceActive(false),
-        onError: () => setIsVoiceActive(false),
-      });
+    if (!autoPlayVoice || !characterId || !dialogueText) return;
+
+    const speechKey = `${characterId}:${dialogueText.trim()}`;
+    if (lastSpokenTextRef.current === speechKey) {
+      return;
     }
-  }, [dialogueText, characterId]);
+    lastSpokenTextRef.current = speechKey;
+
+    playCharacterDialogue({
+      character: characterId,
+      text: dialogueText,
+      audioUrl: audioUrl,
+      onStart: () => setIsVoiceActive(true),
+      onEnd: () => setIsVoiceActive(false),
+      onError: () => setIsVoiceActive(false),
+    });
+  }, [dialogueText, characterId, audioUrl, autoPlayVoice]);
 
 const VULGAR_WORDS = [
   "fuck", "shit", "bitch", "bastard", "asshole", "idiot", "stupid", "dumb", 
@@ -159,6 +186,7 @@ function isVulgar(text: string): boolean {
 
       // Play character voice for the generated answer
       if (characterId) {
+        lastSpokenTextRef.current = `${characterId}:${res.answer.trim()}`;
         setIsVoiceActive(true);
         playCharacterDialogue({
           character: characterId,
@@ -194,9 +222,11 @@ function isVulgar(text: string): boolean {
     } else {
       setIsVoiceActive(true);
       if (characterId) {
+        lastSpokenTextRef.current = `${characterId}:${displayedText.trim()}`;
         playCharacterDialogue({
           character: characterId,
           text: displayedText,
+          audioUrl: audioUrl,
           onStart: () => setIsVoiceActive(true),
           onEnd: () => setIsVoiceActive(false),
           onError: () => setIsVoiceActive(false),
@@ -267,7 +297,11 @@ function isVulgar(text: string): boolean {
             {/* Volume / Replay Character Speech Button */}
             <button 
               type="button"
-              onClick={handleToggleVoice}
+              onMouseEnter={() => soundFx.playButtonHover()}
+              onClick={() => {
+                soundFx.playKeyboardClick();
+                handleToggleVoice();
+              }}
               className={`border-2 border-black rounded-lg px-3 py-1.5 font-black text-xs shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[0px_0px_0_0_rgba(0,0,0,1)] transition-all flex items-center gap-1.5 cursor-pointer ${
                 isVoiceActive 
                   ? "bg-amber-400 text-black ring-2 ring-amber-500 animate-pulse" 
@@ -280,7 +314,11 @@ function isVulgar(text: string): boolean {
             </button>
 
             <button 
-              onClick={handleClosePanel}
+              onMouseEnter={() => soundFx.playButtonHover()}
+              onClick={() => {
+                soundFx.playKeyboardClick();
+                handleClosePanel();
+              }}
               className="bg-white hover:bg-gray-100 border-2 border-black rounded-lg px-3.5 py-1.5 font-black text-xs text-black shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[0px_0px_0_0_rgba(0,0,0,1)] transition-all cursor-pointer"
             >
               Esc · leave
@@ -313,7 +351,9 @@ function isVulgar(text: string): boolean {
             {options.map((opt, index) => (
               <button
                 key={opt.id}
+                onMouseEnter={() => soundFx.playButtonHover()}
                 onClick={() => {
+                  soundFx.playKeyboardClick();
                   if (onOptionSelect) onOptionSelect(opt);
                   if (!preventAiOnOptionSelect) {
                     executeAskQuery(opt.text);
