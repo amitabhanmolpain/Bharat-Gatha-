@@ -165,6 +165,8 @@ class NarratorManager {
           audioSrc = "/taj_mausoleum_narration.wav";
         } else if (lowerText.includes("free your companion") || lowerText.includes("clearing the mughal campaign") || lowerText.includes("spill your secret")) {
           audioSrc = "/companion_freed_narration.wav";
+        } else if (lowerText.includes("kuldhara") && (lowerText.includes("vanished") || lowerText.includes("stipulated time") || lowerText.includes("desert village"))) {
+          audioSrc = "/kuldhara_narration.wav";
         }
       }
 

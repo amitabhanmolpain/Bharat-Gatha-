@@ -2,6 +2,9 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import DialoguePanel from "../../components/DialoguePanel";
+import { playCharacterDialogue, stopCharacterDialogue } from "../../../services/characterVoiceService";
+import { playNarration, stopNarration } from "../../../services/narratorService";
 import { soundFx } from "../../../services/soundService";
 
 export type RajasthanStage = 1 | 2 | 3 | 4;
@@ -67,8 +70,127 @@ export default function RajasthanGameScreen() {
     return () => clearInterval(timer);
   }, []);
 
-  // --- STAGE 1 STATE (Chittorgarh - Chaupar Game) ---
+  // --- STAGE 1 STATE (Chittorgarh - Chaupar Game & Dialogue) ---
   const [showChachaDialogue, setShowChachaDialogue] = useState(false);
+  const [chachaSpeechText, setChachaSpeechText] = useState("Khamma Ghani, young traveller! Welcome to the royal courtyard of Chittorgarh. I am Buzurg Chacha, keeper of ancient Rajput tales. Before you proceed on your quest through Rajasthan, you must play the royal game of Chaupar with me! Roll the pasa dice, test your strategy, and prove your patience!");
+  const [chachaOptions, setChachaOptions] = useState<Array<{ id: number | string; text: string }>>([
+    { id: 1, text: "Khamma Ghani, Chacha-ji! Teach me the rules of Chaupar and let's play!" },
+    { id: 2, text: "Tell me about the history of Chaupar and Chittorgarh Fort." },
+    { id: 3, text: "I am ready to roll the pasa dice!" }
+  ]);
+
+  // --- JOLLY BHAI GENIE COMPANION STATE ---
+  const [showJollyDialogue, setShowJollyDialogue] = useState(false);
+  const [jollySpeechText, setJollySpeechText] = useState("");
+  const [jollyOptions, setJollyOptions] = useState<Array<{ id: number | string; text: string }>>([]);
+
+  // --- BUZURG CHACHA DIALOGUE TRACKING (PLAYS INTRO EXACTLY ONCE) ---
+  const [hasPlayedChachaIntro, setHasPlayedChachaIntro] = useState(false);
+  const hasPlayedChachaIntroRef = useRef(false);
+
+  const triggerBuzurgChachaDialogue = (isAutoIntro: boolean = false) => {
+    setShowChachaDialogue(true);
+
+    if (!hasPlayedChachaIntroRef.current) {
+      hasPlayedChachaIntroRef.current = true;
+      setHasPlayedChachaIntro(true);
+      try {
+        localStorage.setItem("rajasthan_chacha_intro_played", "true");
+      } catch (e) {}
+
+      const speechText = "Khamma Ghani, young traveller! Welcome to the royal courtyard of Chittorgarh. I am Buzurg Chacha, keeper of ancient Rajput tales. Before you proceed on your quest through Rajasthan, you must play the royal game of Chaupar with me! Roll the pasa dice, test your strategy, and prove your patience!";
+      setChachaSpeechText(speechText);
+      setChachaOptions([
+        { id: 1, text: "Khamma Ghani, Chacha-ji! Teach me the rules of Chaupar and let's play!" },
+        { id: 2, text: "Tell me about the history of Chaupar and Chittorgarh Fort." },
+        { id: 3, text: "I am ready to roll the pasa dice!" }
+      ]);
+      stopCharacterDialogue();
+      playCharacterDialogue({
+        character: "chacha",
+        text: speechText,
+        audioUrl: "/buzurg_chacha_intro.wav"
+      });
+    } else {
+      if (isAutoIntro) return; // Never repeat intro automatically
+      stopCharacterDialogue();
+      const returnSpeech = "Khamma Ghani, young traveller! Are you ready to roll the wooden pasa dice and challenge me in royal Chaupar?";
+      setChachaSpeechText(returnSpeech);
+      setChachaOptions([
+        { id: 1, text: "I am ready! Let us roll the pasa dice!" },
+        { id: 2, text: "Tell me about the history of Chaupar and Chittorgarh Fort." },
+        { id: 4, text: "I will explore the courtyard first." }
+      ]);
+    }
+  };
+
+  const triggerJollyDialogue = () => {
+    let speech = "Mere aaka! I am Jolly Bhai, your time-traveling genie companion. We are in the legendary realm of Rajputana! What wisdom do you seek?";
+    let options: Array<{ id: number | string; text: string }> = [
+      { id: 1, text: "Tell me about this historic fort." },
+      { id: 2, text: "What should our next move be?" }
+    ];
+
+    if (stage === 1) {
+      speech = "Mere aaka! We have arrived at the mighty fort of Chittorgarh in Rajputana! Look ahead, Buzurg Chacha is waiting by the ancient Chaupar board. Go speak with him and play Chaupar to prove your mettle!";
+      options = [
+        { id: 10, text: "How do I beat Buzurg Chacha at Chaupar?" },
+        { id: 11, text: "Tell me about the victory tower Vijay Stambh." },
+        { id: 12, text: "What is the solemn history of Jauhar Kund?" }
+      ];
+    } else if (stage === 2) {
+      speech = "Mere aaka! This is Kumbhalgarh Fort, possessing the second-longest continuous wall in the world after the Great Wall of China! Explore the ramparts and find the passage up to Badal Mahal.";
+      options = [
+        { id: 20, text: "Tell me about the Great Wall of Kumbhalgarh." },
+        { id: 21, text: "Who was Maharana Kumbha?" }
+      ];
+    } else if (stage === 3) {
+      speech = "Mere aaka! Shhh... this is Kuldhara, the abandoned village of the Paliwal Brahmins who vanished overnight in 1825. Find the 3 clues before time runs out!";
+      options = [
+        { id: 30, text: "Why did the villagers leave overnight?" },
+        { id: 31, text: "Where should I search for clues?" }
+      ];
+    } else if (stage === 4) {
+      speech = "Mere aaka! Be on your guard! We have stepped inside Bhangarh Fort, known across India as the most haunted stronghold! Retrieve the royal relics swiftly!";
+      options = [
+        { id: 40, text: "What is the legend of Bhangarh Fort?" },
+        { id: 41, text: "How do I escape the curse?" }
+      ];
+    }
+
+    setJollySpeechText(speech);
+    setJollyOptions(options);
+    setShowJollyDialogue(true);
+    playCharacterDialogue({
+      character: "jolly",
+      text: speech,
+      audioUrl: stage === 1 ? "/jolly_rajasthan_intro.wav" : undefined
+    });
+  };
+
+  // Auto-play Buzurg Chacha dialogue when first entering inner_courtyard (exactly once)
+  const chachaTimerRef = useRef<NodeJS.Timeout | null>(null);
+  useEffect(() => {
+    if (scene === "inner_courtyard" && !hasPlayedChachaIntroRef.current) {
+      hasPlayedChachaIntroRef.current = true;
+      setHasPlayedChachaIntro(true);
+      try {
+        localStorage.setItem("rajasthan_chacha_intro_played", "true");
+      } catch (e) {}
+
+      if (chachaTimerRef.current) clearTimeout(chachaTimerRef.current);
+      chachaTimerRef.current = setTimeout(() => {
+        triggerBuzurgChachaDialogue(true);
+      }, 500);
+    }
+    return () => {
+      if (chachaTimerRef.current) {
+        clearTimeout(chachaTimerRef.current);
+        chachaTimerRef.current = null;
+      }
+    };
+  }, [scene]);
+
   const [showChauparGame, setShowChauparGame] = useState(false);
   const [chauparScore, setChauparScore] = useState({ player: 0, chacha: 0 });
   const [chauparMessage, setChauparMessage] = useState("Roll the long wooden pasa dice to challenge Buzurg Chacha in ancient Chaupar!");
@@ -110,6 +232,9 @@ export default function RajasthanGameScreen() {
   // Restart Kuldhara Challenge Handler
   const handleRestartKuldhara = useCallback(() => {
     setShowKuldharaTimeOutModal(false);
+    stopNarration();
+    setShowKuldharaNarratorBanner(false);
+    hasPlayedKuldharaNarrationRef.current = false;
     setScene("kuldhara_gate");
     setPlayerPos({ x: 50.0, y: 88.0 });
     setKuldharaTimer(120);
@@ -211,16 +336,24 @@ export default function RajasthanGameScreen() {
   const handleResetGame = () => {
     if (typeof window !== "undefined") {
       localStorage.removeItem("rajasthan_game_state");
+      localStorage.removeItem("rajasthan_chacha_intro_played");
       const newUrl = window.location.pathname;
       window.history.replaceState({ path: newUrl }, "", newUrl);
     }
     setIsTransitioning(true);
+    stopCharacterDialogue();
+    stopNarration();
+    setShowKuldharaNarratorBanner(false);
+    hasPlayedKuldharaNarrationRef.current = false;
     setTimeout(() => {
+      hasPlayedChachaIntroRef.current = false;
+      setHasPlayedChachaIntro(false);
       setStage(1);
       setScene("ram_pol");
       setPlayerPos({ x: 50.0, y: 88.0 });
       setFacingLeft(false);
       setShowChachaDialogue(false);
+      setShowJollyDialogue(false);
       setShowChauparGame(false);
       setShowVijayStambhModal(false);
       setShowJauharModal(false);
@@ -289,6 +422,12 @@ export default function RajasthanGameScreen() {
           } catch (e) {
             console.error("Failed to load saved state", e);
           }
+        }
+
+        const chachaIntroSaved = localStorage.getItem("rajasthan_chacha_intro_played");
+        if (chachaIntroSaved === "true") {
+          hasPlayedChachaIntroRef.current = true;
+          setHasPlayedChachaIntro(true);
         }
       }, 0);
       return () => clearTimeout(timer);
@@ -368,6 +507,33 @@ export default function RajasthanGameScreen() {
     return () => clearInterval(interval);
   }, [stage, showStage3CompleteModal, hasWeddingOrnament, hasTaxLedger, hasWaterPotsSupplies]);
 
+  // --- KULDHARA HISTORICAL NARRATOR (SARVAM AI BULBUL) ---
+  const [showKuldharaNarratorBanner, setShowKuldharaNarratorBanner] = useState(false);
+  const kuldharaNarratorSentence = "You have arrived at Kuldhara, the abandoned desert village where the villagers vanished overnight and no one knows the true mystery of that. Explore the silent ruins and find the clues that leads to the finding of that in stipulated time!";
+  const hasPlayedKuldharaNarrationRef = useRef(false);
+
+  useEffect(() => {
+    if (!isLoading && stage === 3 && scene === "kuldhara_gate" && !hasPlayedKuldharaNarrationRef.current) {
+      hasPlayedKuldharaNarrationRef.current = true;
+      const timer = setTimeout(() => {
+        setShowKuldharaNarratorBanner(true);
+        stopCharacterDialogue();
+        playNarration(kuldharaNarratorSentence, {
+          audioUrl: "/kuldhara_narration.wav",
+          speaker: "ratan",
+          pace: 0.88,
+          language_code: "en-IN",
+          onEnd: () => {
+            setTimeout(() => {
+              setShowKuldharaNarratorBanner(false);
+            }, 3500);
+          }
+        });
+      }, 600);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, stage, scene]);
+
   // --- BHANGARH 2-MINUTE CHALLENGE TIMER (Stage 4) ---
   useEffect(() => {
     if (stage !== 4 || isCampaignComplete) return;
@@ -420,6 +586,8 @@ export default function RajasthanGameScreen() {
 
   // --- BHANGARH NIGHTFALL CARAVAN JOURNEY (Stage 3 -> Stage 4) ---
   const startBhangarhJourney = useCallback(() => {
+    stopNarration();
+    setShowKuldharaNarratorBanner(false);
     setShowStage3CompleteModal(false);
     setIsBhangarhTravelling(true);
     setBhangarhTravelPhase(1);
@@ -591,6 +759,9 @@ export default function RajasthanGameScreen() {
       setPlayerPos,
       setIsTransitioning,
       setShowChachaDialogue,
+      setShowJollyDialogue,
+      triggerBuzurgChachaDialogue,
+      triggerJollyDialogue,
       setShowChauparGame,
       setShowVijayStambhModal,
       setShowJauharModal,
@@ -656,7 +827,7 @@ export default function RajasthanGameScreen() {
             state.setIsTransitioning(false);
           }, 400);
         } else if (state.isNearChacha) {
-          state.setShowChachaDialogue(true);
+          state.triggerBuzurgChachaDialogue(false);
         } else if (state.isNearVijayStambhDoor) {
           state.setIsTransitioning(true);
           setTimeout(() => {
@@ -965,7 +1136,9 @@ export default function RajasthanGameScreen() {
       }
 
       if (key === "escape") {
+        stopCharacterDialogue();
         state.setShowChachaDialogue(false);
+        state.setShowJollyDialogue(false);
         state.setShowChauparGame(false);
         state.setShowVijayStambhModal(false);
         state.setShowJauharModal(false);
@@ -1641,15 +1814,7 @@ export default function RajasthanGameScreen() {
           </div>
         )}
 
-        {/* Stage 4 Ambient BGM YouTube Audio Player (Plays unless muted) */}
-        {stage === 4 && !isMusicMuted && (
-          <iframe
-            className="w-1 h-1 opacity-0 absolute pointer-events-none"
-            src="https://www.youtube.com/embed/-ldS2caI16I?autoplay=1&loop=1&playlist=-ldS2caI16I&enablejsapi=1"
-            title="Bhangarh Fort Ambient BGM"
-            allow="autoplay; encrypted-media"
-          />
-        )}
+
       </div>
 
       {/* --- TOP RIGHT ACTION BUTTONS (EXACT MUGHAL ENGINE FORMAT: IMAGE 2) --- */}
@@ -1881,6 +2046,38 @@ export default function RajasthanGameScreen() {
         </div>
       )}
 
+      {/* --- JOLLY BHAI (GENIE) COMPANION FOLLOWER --- */}
+      {!isElephantTravelling && !isBhangarhTravelling && (
+        <div
+          className="absolute z-20 pointer-events-auto cursor-pointer group transition-all duration-700 ease-out"
+          style={{
+            left: `${facingLeft ? playerPos.x + 8.5 : playerPos.x - 8.5}%`,
+            top: `${playerPos.y - 12.0}%`,
+            transform: 'translate(-50%, -50%)',
+          }}
+          onClick={() => {
+            triggerJollyDialogue();
+          }}
+          title="🧞 Jolly Bhai (Your Time-Traveling Genie Companion - Click to Talk)"
+        >
+          <div className="relative animate-bounce" style={{ animationDuration: '3.5s' }}>
+            <img
+              src="/genie_rajasthani_transparent.png"
+              alt="Jolly Bhai Genie"
+              className="w-24 h-24 md:w-28 md:h-28 object-contain transition-all group-hover:scale-110 drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]"
+              style={{
+                imageRendering: "pixelated",
+                transform: facingLeft ? "scaleX(1)" : "scaleX(-1)",
+              }}
+            />
+            {/* Subtle Mode Badge on Hover */}
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 border-2 border-black rounded-full px-2.5 py-0.5 shadow-[2px_2px_0_0_rgba(0,0,0,1)] text-[9.5px] font-black whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity bg-[#fff9ea] text-black flex items-center gap-1 pointer-events-none">
+              <span>Ask Jolly Bhai 🧞</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* --- INTERACTION PROMPT BANNERS --- */}
       {/* Stage 1 */}
       {isNearRamPolDoor && (
@@ -1891,7 +2088,7 @@ export default function RajasthanGameScreen() {
       )}
 
       {isNearChacha && !showChachaDialogue && !showChauparGame && (
-        <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce cursor-pointer pointer-events-auto" onClick={() => setShowChachaDialogue(true)}>
+        <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce cursor-pointer pointer-events-auto" onClick={() => triggerBuzurgChachaDialogue(false)}>
           <span className="bg-amber-400 border border-black rounded px-1.5 text-[11px]">E</span>
           Play Chaupar with Buzurg Chacha
         </div>
@@ -2122,28 +2319,122 @@ export default function RajasthanGameScreen() {
         </div>
       )}
 
-      {/* --- BUZURG CHACHA DIALOGUE & CHAUPAR MODALS (STAGE 1) --- */}
-      {showChachaDialogue && (
-        <div className="absolute inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-6 z-40 pointer-events-auto">
-          <div className="bg-[#fff9ea] border-4 border-amber-900 rounded-2xl p-6 shadow-[10px_10px_0_0_rgba(0,0,0,1)] max-w-md w-full flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b-2 border-amber-800/30 pb-3">
-              <span className="text-sm font-extrabold text-amber-950 uppercase tracking-widest flex items-center gap-2">
-                <span>👳</span> Buzurg Chacha
-              </span>
-              <button onClick={() => setShowChachaDialogue(false)} className="text-amber-900 hover:text-black font-bold text-sm bg-amber-200/60 hover:bg-amber-300 px-2 py-0.5 rounded cursor-pointer">
-                ✕ Close
-              </button>
+      {/* --- KULDHARA HISTORICAL NARRATOR BANNER (SARVAM AI) --- */}
+      {showKuldharaNarratorBanner && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-40 w-[94%] max-w-2xl pointer-events-auto select-none animate-in slide-in-from-top-4 duration-300">
+          <div className="bg-[#fff9e6] border-4 border-black rounded-xl p-4 shadow-[6px_6px_0_0_rgba(0,0,0,1)] flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-lg bg-amber-400 border-2 border-black flex items-center justify-center text-xl shrink-0 shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
+              🎙️
             </div>
-            <div className="text-amber-950 font-serif text-sm leading-relaxed">
-              <p className="mb-3 font-semibold">&quot;Khamma Ghani, young traveller! Welcome to Chittorgarh. Challenge me to Chaupar!&quot;</p>
-            </div>
-            <div className="flex gap-3 mt-2">
-              <button onClick={() => { setShowChachaDialogue(false); setShowChauparGame(true); }} className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 px-4 rounded-xl border-2 border-black shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-xs uppercase tracking-wider cursor-pointer">
-                🎲 Play Chaupar Game
-              </button>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <span className="text-[11px] font-black text-amber-900 tracking-wider uppercase flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+                  Chronicles of Rajasthan · Historical Narrator (Sarvam AI)
+                </span>
+                <button
+                  onClick={() => {
+                    stopNarration();
+                    setShowKuldharaNarratorBanner(false);
+                  }}
+                  className="bg-white hover:bg-gray-100 text-black border-2 border-black rounded-md px-2 py-0.5 text-xs font-black shadow-[1px_1px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 cursor-pointer"
+                  title="Dismiss Narration"
+                >
+                  ✕
+                </button>
+              </div>
+              <p className="text-[13.5px] font-extrabold text-black leading-snug">
+                "{kuldharaNarratorSentence}"
+              </p>
             </div>
           </div>
         </div>
+      )}
+
+      {/* --- BUZURG CHACHA HISTORICAL DIALOGUE PANEL (STAGE 1) --- */}
+      {showChachaDialogue && (
+        <DialoguePanel
+          characterName="Buzurg Chacha"
+          characterTitle="Chaupar Master & Royal Elder of Chittorgarh"
+          dialogueText={chachaSpeechText}
+          characterId="chacha"
+          preventAiOnOptionSelect={true}
+          historicalContext={{
+            era: "rajasthan",
+            location: "Chittorgarh Fort - Royal Courtyard",
+            ruler: "Maharana Kumbha & Rajput Rulers",
+            nearby_monuments: "Vijay Stambh, Kirti Stambh, Jauhar Kund, Kumbhalgarh Fort, Kuldhara",
+            historical_events: "Siege of Chittorgarh, construction of Vijay Stambh by Rana Kumbha, ancient game of Chaupar"
+          }}
+          options={chachaOptions}
+          onOptionSelect={(option) => {
+            if (option.id === 1 || option.id === 3) {
+              stopCharacterDialogue();
+              setShowChachaDialogue(false);
+              setShowChauparGame(true);
+            } else if (option.id === 2) {
+              const loreText = "Ah! Chaupar is no ordinary board game. It was played by Rajput Maharajas and ancient kings since the Mahabharata era! It tests your destiny, your foresight, and your patience. Win three rounds with your Golden Goti, and the passage deeper into Chittorgarh Fort will open for you!";
+              setChachaSpeechText(loreText);
+              setChachaOptions([
+                { id: 1, text: "I understand, Chacha-ji! Let us roll the pasa dice now!" },
+                { id: 4, text: "I will look around the courtyard first." }
+              ]);
+              playCharacterDialogue({
+                character: "chacha",
+                text: loreText,
+                audioUrl: "/buzurg_chacha_chaupar_lore.wav"
+              });
+            } else if (option.id === 4) {
+              stopCharacterDialogue();
+              setShowChachaDialogue(false);
+            }
+          }}
+          onClose={() => {
+            stopCharacterDialogue();
+            setShowChachaDialogue(false);
+          }}
+        />
+      )}
+
+      {/* --- JOLLY BHAI COMPANION HISTORICAL DIALOGUE PANEL --- */}
+      {showJollyDialogue && (
+        <DialoguePanel
+          characterName="Jolly Bhai"
+          characterTitle="Ancient Time-Traveling Genie Companion"
+          dialogueText={jollySpeechText}
+          characterId="jolly"
+          preventAiOnOptionSelect={true}
+          historicalContext={{
+            era: "rajasthan",
+            location: stage === 1 ? "Chittorgarh Fort" : stage === 2 ? "Kumbhalgarh Fort" : stage === 3 ? "Kuldhara Village" : "Bhangarh Fort",
+            ruler: "Rajput Dynasties & Mewar Maharanas",
+            nearby_monuments: "Vijay Stambh, Kumbhalgarh Great Wall, Badal Mahal, Kuldhara, Bhangarh",
+            historical_events: "Chaupar matches, Chittorgarh sieges, Rajput chivalry and architectural mastery"
+          }}
+          options={jollyOptions}
+          onOptionSelect={(option) => {
+            if (option.id === 10) {
+              const text = "Roll the wooden pasa dice with patience, mere aaka! Score higher than Chacha across the rounds to advance your Golden Goti to victory!";
+              setJollySpeechText(text);
+              playCharacterDialogue({ character: "jolly", text });
+            } else if (option.id === 11) {
+              const text = "Vijay Stambh was erected by Maharana Kumbha in 1448 AD to celebrate his victory over the combined armies of Malwa and Gujarat. It stands nine storeys high and is adorned with intricate Hindu deities!";
+              setJollySpeechText(text);
+              playCharacterDialogue({ character: "jolly", text });
+            } else if (option.id === 12) {
+              const text = "Jauhar Kund is the sacred historical site of mass self-immolation led by Rani Padmini and Rajput women to preserve their royal honour and dignity during the imperial sieges.";
+              setJollySpeechText(text);
+              playCharacterDialogue({ character: "jolly", text });
+            } else {
+              stopCharacterDialogue();
+              setShowJollyDialogue(false);
+            }
+          }}
+          onClose={() => {
+            stopCharacterDialogue();
+            setShowJollyDialogue(false);
+          }}
+        />
       )}
 
       {/* --- AUTHENTIC VISUAL CHAUPAR (PACHISI) GAME MODAL --- */}

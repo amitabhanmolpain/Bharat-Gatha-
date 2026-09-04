@@ -19,6 +19,7 @@ export interface DialoguePanelProps {
   historicalContext?: GameHistoricalContext;
   options?: DialogueOption[];
   onOptionSelect?: (option: DialogueOption) => void;
+  preventAiOnOptionSelect?: boolean;
   onPunish?: (punishment: { title: string; subtitle: string; description: string }) => void;
   onClose: () => void;
 }
@@ -33,6 +34,7 @@ export default function DialoguePanel({
   historicalContext,
   options = [],
   onOptionSelect,
+  preventAiOnOptionSelect = false,
   onPunish,
   onClose
 }: DialoguePanelProps) {
@@ -206,7 +208,9 @@ function isVulgar(text: string): boolean {
                 key={opt.id}
                 onClick={() => {
                   if (onOptionSelect) onOptionSelect(opt);
-                  executeAskQuery(opt.text);
+                  if (!preventAiOnOptionSelect) {
+                    executeAskQuery(opt.text);
+                  }
                 }}
                 className="bg-white hover:bg-amber-50 text-black border-2 border-black rounded-lg px-3.5 py-2 font-black text-xs shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[0px_0px_0_0_rgba(0,0,0,1)] transition-all text-left cursor-pointer flex items-center"
               >

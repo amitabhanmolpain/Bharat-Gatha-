@@ -141,6 +141,23 @@ class CharacterVoiceManager {
       if (lower.includes("jolly bhai") && (lower.includes("born many centuries") || lower.includes("witnessed great wars") || lower.includes("madman"))) {
         return "/jolly_intro.wav";
       }
+      if (lower.includes("mighty fort of chittorgarh") || (lower.includes("rajputana") && lower.includes("buzurg chacha"))) {
+        return "/jolly_rajasthan_intro.wav";
+      }
+    }
+
+    // Buzurg Chacha (Rajasthan elder mentor)
+    if (char.includes("chacha") || char.includes("buzurg")) {
+      if (lower.includes("mahabharata") || lower.includes("no ordinary board game") || lower.includes("golden goti") || lower.includes("history of chaupar")) {
+        return "/buzurg_chacha_chaupar_lore.wav";
+      }
+      if (
+        (lower.includes("khamma ghani") && lower.includes("buzurg chacha")) ||
+        lower.includes("keeper of ancient rajput tales") ||
+        (lower.includes("khamma ghani") && lower.includes("royal courtyard of chittorgarh"))
+      ) {
+        return "/buzurg_chacha_intro.wav";
+      }
     }
 
     // 3. Bazaar Traders Pre-recorded Files
