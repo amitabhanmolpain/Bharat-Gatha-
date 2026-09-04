@@ -412,18 +412,18 @@ export default function RajasthanGameScreen() {
   // --- STAGE 4 (BHANGARH FORT) PROXIMITY TRIGGERS ---
   // Scene 1: Bhangarh Gate
   const isNearBhangarhGateMarker = scene === "bhangarh_gate" && playerPos.x >= 52.0 && playerPos.y >= 60.0;
-  const isNearBhangarhGateArch = scene === "bhangarh_gate" && playerPos.y <= 58.0 && playerPos.x >= 35.0 && playerPos.x <= 68.0;
+  const isNearBhangarhGateArch = scene === "bhangarh_gate" && playerPos.y <= 78.0;
 
   // Scene 2: Gopinath Temple Sanctuary
   const isNearTempleSanctuary = scene === "gopinath_temple" && playerPos.x <= 54.0 && playerPos.y <= 75.0;
-  const isNearTemplePalaceDoor = scene === "gopinath_temple" && playerPos.x >= 72.0 && playerPos.y <= 70.0;
-  const isNearTempleGateExit = scene === "gopinath_temple" && playerPos.y >= 88.0;
+  const isNearTemplePalaceDoor = scene === "gopinath_temple" && playerPos.y <= 82.0;
+  const isNearTempleGateExit = scene === "gopinath_temple" && playerPos.y >= 75.0;
 
   // Scene 3: Bhangarh Palace Ruins (Multi-point investigation)
   const isNearPalaceStratum = scene === "palace_ruins" && playerPos.x <= 40.0 && playerPos.y >= 65.0; // Point A: 1783 CE famine stratum
   const isNearFolkloreBoard = scene === "palace_ruins" && playerPos.x >= 65.0 && playerPos.y >= 65.0; // Point B: Folklore vs Evidence
-  const isNearFinalEvidenceBoard = scene === "palace_ruins" && playerPos.y <= 58.0; // Point C: Final synthesis chhatri
-  const isNearPalaceTempleExit = scene === "palace_ruins" && playerPos.y >= 90.0;
+  const isNearFinalEvidenceBoard = scene === "palace_ruins" && playerPos.y <= 88.0; // Point C: Final synthesis chhatri
+  const isNearPalaceTempleExit = scene === "palace_ruins" && playerPos.y >= 75.0;
 
   // Scene 4: Bhangarh Chase Escape
   const isNearChaseGateExit = scene === "bhangarh_chase" && playerPos.x >= 68.0 && playerPos.y <= 65.0;
@@ -508,10 +508,15 @@ export default function RajasthanGameScreen() {
       setShowTaxLedgerModal,
       setShowStepwellModal,
       setShowDeductionModal,
+      setShowStage3CompleteModal,
+      setShowGrandCampaignCompleteModal,
       setHasPillar83Inspected,
       setHasWeddingOrnament,
       setHasTaxLedger,
       setHasWaterPotsSupplies,
+      setHasTempleArchitectureClue,
+      setHasFamineRecordClue,
+      setHasFolkloreDistinctionClue,
       startElephantJourney,
       startBhangarhJourney,
       // Stage 4 Modals
@@ -693,7 +698,7 @@ export default function RajasthanGameScreen() {
         }
         // Stage 4 (Bhangarh Fort)
         else if (state.isNearBhangarhGateMarker) {
-          state.setShowGateFragmentPuzzleModal(true);
+          state.setShowGateFragmentPuzzleModal?.(true);
         } else if (state.isNearBhangarhGateArch) {
           state.setIsTransitioning(true);
           setTimeout(() => {
@@ -702,8 +707,7 @@ export default function RajasthanGameScreen() {
             state.setIsTransitioning(false);
           }, 400);
         } else if (state.isNearTempleSanctuary) {
-          state.setHasTempleArchitectureClue(true);
-          state.setCluesFound((prev: number) => Math.min(4, Math.max(prev, 2)));
+          state.setHasTempleArchitectureClue?.(true);
         } else if (state.isNearTemplePalaceDoor) {
           state.setIsTransitioning(true);
           setTimeout(() => {
@@ -712,13 +716,15 @@ export default function RajasthanGameScreen() {
             state.setIsTransitioning(false);
           }, 400);
         } else if (state.isNearPalaceStratum) {
-          state.setHasFamineRecordClue(true);
-          state.setCluesFound((prev: number) => Math.min(4, Math.max(prev, 3)));
+          state.setHasFamineRecordClue?.(true);
         } else if (state.isNearFolkloreBoard) {
-          state.setHasFolkloreDistinctionClue(true);
-          state.setCluesFound((prev: number) => Math.min(4, Math.max(prev, 4)));
-        } else if (state.isNearFinalEvidenceBoard) {
-          state.setShowGrandCampaignCompleteModal(true);
+          state.setHasFolkloreDistinctionClue?.(true);
+        } else if (state.isNearFinalEvidenceBoard || state.scene === "palace_ruins") {
+          if (typeof state.setShowGrandCampaignCompleteModal === "function") {
+            state.setShowGrandCampaignCompleteModal(true);
+          } else if (typeof state.setShowFinalEvidenceBoardModal === "function") {
+            state.setShowFinalEvidenceBoardModal(true);
+          }
         } else if (state.isNearChaseGateExit) {
           state.setIsTransitioning(true);
           setTimeout(() => {
@@ -1486,17 +1492,38 @@ export default function RajasthanGameScreen() {
 
         {/* Stage 4 Moonrise Progress Card (Clean Mughal Timer Style) */}
         {stage === 4 && (
-          <div className="bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 w-64 shadow-[3px_3px_0_0_rgba(0,0,0,1)] flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
-              <span>{moonriseTimer > 135 ? "🌒" : moonriseTimer > 90 ? "🌓" : moonriseTimer > 45 ? "🌔" : "🌕"}</span>
-              <span className="text-[11px] font-extrabold uppercase text-amber-900 tracking-wider">
-                {moonriseTimer > 135 ? "Dusk Horizon" : moonriseTimer > 90 ? "Crescent Ascent" : moonriseTimer > 45 ? "Waxing Gibbous" : "Full Moon"}
+          <>
+            <div className="bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 w-64 shadow-[3px_3px_0_0_rgba(0,0,0,1)] flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
+                <span>{moonriseTimer > 135 ? "🌒" : moonriseTimer > 90 ? "🌓" : moonriseTimer > 45 ? "🌔" : "🌕"}</span>
+                <span className="text-[11px] font-extrabold uppercase text-amber-900 tracking-wider">
+                  {moonriseTimer > 135 ? "Dusk Horizon" : moonriseTimer > 90 ? "Crescent Ascent" : moonriseTimer > 45 ? "Waxing Gibbous" : "Full Moon"}
+                </span>
+              </div>
+              <span className="text-[12px] font-mono font-black text-red-600 bg-red-100 px-2 py-0.5 rounded border border-red-300">
+                {Math.floor(moonriseTimer / 60)}:{(moonriseTimer % 60).toString().padStart(2, "0")}
               </span>
             </div>
-            <span className="text-[12px] font-mono font-black text-red-600 bg-red-100 px-2 py-0.5 rounded border border-red-300">
-              {Math.floor(moonriseTimer / 60)}:{(moonriseTimer % 60).toString().padStart(2, "0")}
-            </span>
-          </div>
+
+            {/* Stage 4 Ambient BGM YouTube Audio Player */}
+            <div className="bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 w-64 shadow-[3px_3px_0_0_rgba(0,0,0,1)] flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
+                <span className="animate-pulse">🎵</span>
+                <span className="text-[11px] font-extrabold uppercase text-amber-900 tracking-wider">
+                  Bhangarh Horror BGM
+                </span>
+              </div>
+              <span className="text-[10px] font-mono font-bold bg-amber-200 text-amber-950 px-1.5 py-0.5 rounded border border-amber-400">
+                YouTube BGM
+              </span>
+              <iframe
+                className="w-1 h-1 opacity-0 absolute pointer-events-none"
+                src="https://www.youtube.com/embed/-ldS2caI16I?autoplay=1&loop=1&playlist=-ldS2caI16I&enablejsapi=1"
+                title="Bhangarh Fort Ambient BGM"
+                allow="autoplay; encrypted-media"
+              />
+            </div>
+          </>
         )}
       </div>
 
@@ -1803,26 +1830,66 @@ export default function RajasthanGameScreen() {
       )}
 
       {isNearBhangarhGateArch && (
-        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 pointer-events-none flex items-center gap-2 whitespace-nowrap">
+        <div
+          className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 cursor-pointer pointer-events-auto flex items-center gap-2 whitespace-nowrap"
+          onClick={() => {
+            setIsTransitioning(true);
+            setTimeout(() => {
+              setScene("gopinath_temple");
+              setPlayerPos({ x: 50.0, y: 86.0 });
+              setIsTransitioning(false);
+            }, 400);
+          }}
+        >
           <span>▲</span> Enter Gopinath Temple Sanctuary (Press E)
         </div>
       )}
 
       {isNearTemplePalaceDoor && (
-        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 pointer-events-none flex items-center gap-2 whitespace-nowrap">
+        <div
+          className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 cursor-pointer pointer-events-auto flex items-center gap-2 whitespace-nowrap"
+          onClick={() => {
+            setIsTransitioning(true);
+            setTimeout(() => {
+              setScene("palace_ruins");
+              setPlayerPos({ x: 50.0, y: 86.0 });
+              setIsTransitioning(false);
+            }, 400);
+          }}
+        >
           <span>►</span> Ascend to Royal Palace Ruins (Press E)
         </div>
       )}
 
       {/* Backward Exit Prompts */}
       {isNearTempleGateExit && (
-        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 pointer-events-none flex items-center gap-2 whitespace-nowrap">
+        <div
+          className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 cursor-pointer pointer-events-auto flex items-center gap-2 whitespace-nowrap"
+          onClick={() => {
+            setIsTransitioning(true);
+            setTimeout(() => {
+              setScene("bhangarh_gate");
+              setPlayerPos({ x: 50.0, y: 65.0 });
+              setIsTransitioning(false);
+            }, 400);
+          }}
+        >
           <span>▼</span> Walk down to return to Bhangarh Gate (Press F)
         </div>
       )}
 
       {isNearPalaceTempleExit && (
-        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 pointer-events-none flex items-center gap-2 whitespace-nowrap">
+        <div
+          className="absolute bottom-[14%] left-1/2 -translate-x-1/2 bg-amber-400 text-black border-2 border-black px-4 py-1.5 rounded-full text-[12px] font-extrabold tracking-wider shadow-[3px_3px_0_0_rgba(0,0,0,1)] animate-pulse z-30 cursor-pointer pointer-events-auto flex items-center gap-2 whitespace-nowrap"
+          onClick={() => {
+            setIsTransitioning(true);
+            setTimeout(() => {
+              setScene("gopinath_temple");
+              setPlayerPos({ x: 68.0, y: 70.0 });
+              setIsTransitioning(false);
+            }, 400);
+          }}
+        >
           <span>▼</span> Walk down to return to Gopinath Temple (Press F)
         </div>
       )}
