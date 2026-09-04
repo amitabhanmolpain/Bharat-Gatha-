@@ -702,7 +702,8 @@ export default function RajasthanGameScreen() {
             state.setIsTransitioning(false);
           }, 400);
         } else if (state.isNearTempleSanctuary) {
-          state.setShowTorchlightRestorationModal(true);
+          state.setHasTempleArchitectureClue(true);
+          state.setCluesFound((prev: number) => Math.min(4, Math.max(prev, 2)));
         } else if (state.isNearTemplePalaceDoor) {
           state.setIsTransitioning(true);
           setTimeout(() => {
@@ -711,11 +712,13 @@ export default function RajasthanGameScreen() {
             state.setIsTransitioning(false);
           }, 400);
         } else if (state.isNearPalaceStratum) {
-          state.setShowRuinsClueTrailModal(true);
+          state.setHasFamineRecordClue(true);
+          state.setCluesFound((prev: number) => Math.min(4, Math.max(prev, 3)));
         } else if (state.isNearFolkloreBoard) {
-          state.setShowFolkloreClassifierModal(true);
+          state.setHasFolkloreDistinctionClue(true);
+          state.setCluesFound((prev: number) => Math.min(4, Math.max(prev, 4)));
         } else if (state.isNearFinalEvidenceBoard) {
-          state.setShowFinalEvidenceBoardModal(true);
+          state.setShowGrandCampaignCompleteModal(true);
         } else if (state.isNearChaseGateExit) {
           state.setIsTransitioning(true);
           setTimeout(() => {
@@ -2068,202 +2071,7 @@ export default function RajasthanGameScreen() {
         </div>
       )}
 
-      {/* --- STAGE 4 PUZZLE 2: TORCHLIGHT RELIEF RESTORATION (GOPINATH TEMPLE) --- */}
-      {showTorchlightRestorationModal && (
-        <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-6 z-40 pointer-events-auto">
-          <div className="bg-[#fff9ea] border-4 border-amber-950 rounded-2xl p-6 shadow-[16px_16px_0_0_rgba(0,0,0,1)] max-w-2xl w-full flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b-2 border-amber-800/40 pb-3">
-              <div>
-                <h3 className="font-extrabold text-amber-950 uppercase tracking-widest text-sm">🪔 Puzzle 2: Torchlight Reveal &amp; Nagara Symbol Decoding</h3>
-                <span className="text-[11px] text-amber-800 font-semibold">Illuminate the carved temple sanctuary and match each motif to its civic significance</span>
-              </div>
-              <button onClick={() => setShowTorchlightRestorationModal(false)} className="text-amber-950 font-bold text-xs px-2.5 py-1 rounded-lg border border-amber-800 cursor-pointer">✕ Close</button>
-            </div>
 
-            <div className="flex flex-col gap-3 my-1">
-              <div className="bg-white border-2 border-amber-900/40 p-3 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                <div>
-                  <span className="text-xs font-bold text-black uppercase">🐘 1. Gaja-Lakshmi Bas-Relief</span>
-                  <p className="text-[11px] text-gray-600">Carved over the central lintel with flanking royal elephants.</p>
-                </div>
-                <select value={templeSymbolMatches.gajalakshmi || ""} onChange={(e) => setTempleSymbolMatches((prev) => ({ ...prev, gajalakshmi: e.target.value }))} className="bg-amber-50 border-2 border-black rounded-lg text-xs font-bold p-2 text-amber-950 w-full sm:w-64 cursor-pointer">
-                  <option value="">Select Architectural Meaning...</option>
-                  <option value="sovereignty">Royal Sovereignty &amp; Auspicious Governance</option>
-                  <option value="curse">Warning of an Ascetic&apos;s Curse</option>
-                </select>
-              </div>
-
-              <div className="bg-white border-2 border-amber-900/40 p-3 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                <div>
-                  <span className="text-xs font-bold text-black uppercase">🏺 2. Kalasa &amp; Shikhara Spire</span>
-                  <p className="text-[11px] text-gray-600">Golden pot finial crowning the stone mandapa roof.</p>
-                </div>
-                <select value={templeSymbolMatches.kalasa || ""} onChange={(e) => setTempleSymbolMatches((prev) => ({ ...prev, kalasa: e.target.value }))} className="bg-amber-50 border-2 border-black rounded-lg text-xs font-bold p-2 text-amber-950 w-full sm:w-64 cursor-pointer">
-                  <option value="">Select Architectural Meaning...</option>
-                  <option value="consecration">Sacred Consecration &amp; Civic Flourishing</option>
-                  <option value="ruin">Mark of an Incomplete Building</option>
-                </select>
-              </div>
-
-              <div className="bg-white border-2 border-amber-900/40 p-3 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                <div>
-                  <span className="text-xs font-bold text-black uppercase">🦁 3. Kirthimukha Face of Glory</span>
-                  <p className="text-[11px] text-gray-600">Fierce lion-face sculpted at the sanctum threshold.</p>
-                </div>
-                <select value={templeSymbolMatches.kirthimukha || ""} onChange={(e) => setTempleSymbolMatches((prev) => ({ ...prev, kirthimukha: e.target.value }))} className="bg-amber-50 border-2 border-black rounded-lg text-xs font-bold p-2 text-amber-950 w-full sm:w-64 cursor-pointer">
-                  <option value="">Select Architectural Meaning...</option>
-                  <option value="guardian">Spiritual Guardian of the Temple Threshold</option>
-                  <option value="monster">Demon Summoned to Haunt the Fort</option>
-                </select>
-              </div>
-            </div>
-
-            {templePuzzleFeedback && <div className="bg-amber-900/10 border-2 border-amber-600 p-2 rounded-xl text-center text-xs font-bold text-amber-950">{templePuzzleFeedback}</div>}
-
-            <button onClick={handleVerifyTemplePuzzle} className="bg-amber-600 hover:bg-amber-700 text-white font-extrabold py-2.5 px-6 rounded-xl border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-xs uppercase tracking-wider cursor-pointer self-end">
-              Submit Sacred Temple Decoding
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* --- STAGE 4 PUZZLE 3: PALACE STRATUM (1783 CE FAMINE LAYER) MODAL --- */}
-      {showRuinsClueTrailModal && (
-        <div className="absolute inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center p-6 z-40 pointer-events-auto">
-          <div className="bg-[#fff9ea] border-4 border-amber-900 rounded-2xl p-6 shadow-[12px_12px_0_0_rgba(0,0,0,1)] max-w-lg w-full flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b-2 border-amber-800/30 pb-3">
-              <span className="text-sm font-extrabold text-amber-950 uppercase tracking-widest flex items-center gap-2">
-                <span>🔍</span> Clue 3: Archaeological Stratum (1783 CE)
-              </span>
-              <button onClick={() => setShowRuinsClueTrailModal(false)} className="text-amber-900 font-bold text-sm bg-amber-200/60 px-2 py-0.5 rounded cursor-pointer">✕ Close</button>
-            </div>
-            <div className="text-amber-950 font-serif text-xs leading-relaxed space-y-3">
-              <p>You examine the fallen stone archive and subterranean granaries of the 7-story Royal Palace:</p>
-              <div className="bg-amber-100 border-l-4 border-amber-700 p-3 italic text-xs leading-relaxed">
-                &quot;Excavation records reveal scorched granary strata and dried reservoir silt dating to the catastrophic <strong>1783 CE Chalisa Famine</strong>. Consecutive monsoon failures and regional wars with Jaipur rulers caused complete depopulation.&quot;
-              </div>
-              <p className="font-bold text-emerald-800">✓ Recorded Evidence: The True Cause of Abandonment (Famines &amp; Economic Ruin)</p>
-            </div>
-            <button onClick={() => { setHasFamineRecordClue(true); setShowRuinsClueTrailModal(false); }} className="bg-amber-600 text-white font-bold py-2.5 px-4 rounded-xl border-2 border-black text-xs uppercase cursor-pointer self-end">
-              Add to Archaeological Journal
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* --- STAGE 4 PUZZLE 4: FOLKLORE VS HISTORICAL EVIDENCE CLASSIFIER --- */}
-      {showFolkloreClassifierModal && (
-        <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-6 z-40 pointer-events-auto">
-          <div className="bg-[#fff9ea] border-4 border-amber-950 rounded-2xl p-6 shadow-[16px_16px_0_0_rgba(0,0,0,1)] max-w-2xl w-full flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b-2 border-amber-800/40 pb-3">
-              <div>
-                <h3 className="font-extrabold text-amber-950 uppercase tracking-widest text-sm">⚖️ Puzzle 4: Distinguish Evidence from Folklore</h3>
-                <span className="text-[11px] text-amber-800 font-semibold">Categorize each historical account into Documented Fact vs. Oral Legend</span>
-              </div>
-              <button onClick={() => setShowFolkloreClassifierModal(false)} className="text-amber-950 font-bold text-xs px-2.5 py-1 rounded-lg border border-amber-800 cursor-pointer">✕ Close</button>
-            </div>
-
-            <div className="flex flex-col gap-2.5 my-1">
-              {[
-                { id: "statement1", text: "Founded in 1573 CE by Amber Kachwaha Rajput rulers as a thriving trade hub." },
-                { id: "statement2", text: "A tantrik wizard's dying curse darkened the sky and crushed all roofs forever." },
-                { id: "statement3", text: "Depopulated during the 1783 CE Chalisa drought and regional conflicts." },
-                { id: "statement4", text: "An ascetic's hermitage shadow was breached by palace towers, bringing destruction." },
-              ].map((item) => (
-                <div key={item.id} className="bg-white border-2 border-amber-900/40 p-3 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                  <p className="text-xs font-serif text-amber-950 font-semibold flex-1 pr-2">{item.text}</p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setFolkloreClassification((prev) => ({ ...prev, [item.id]: "evidence" }))}
-                      className={`px-3 py-1.5 rounded-lg border-2 text-[11px] font-bold cursor-pointer transition-all ${
-                        folkloreClassification[item.id] === "evidence"
-                          ? "bg-emerald-600 text-white border-black shadow-sm"
-                          : "bg-gray-100 hover:bg-emerald-50 text-gray-800 border-gray-400"
-                      }`}
-                    >
-                      📜 Historical Evidence
-                    </button>
-                    <button
-                      onClick={() => setFolkloreClassification((prev) => ({ ...prev, [item.id]: "folklore" }))}
-                      className={`px-3 py-1.5 rounded-lg border-2 text-[11px] font-bold cursor-pointer transition-all ${
-                        folkloreClassification[item.id] === "folklore"
-                          ? "bg-purple-600 text-white border-black shadow-sm"
-                          : "bg-gray-100 hover:bg-purple-50 text-gray-800 border-gray-400"
-                      }`}
-                    >
-                      🔮 Oral Folklore
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {folkloreFeedback && <div className="bg-amber-900/10 border-2 border-amber-600 p-2 rounded-xl text-center text-xs font-bold text-amber-950">{folkloreFeedback}</div>}
-
-            <button onClick={handleVerifyFolkloreClassifier} className="bg-amber-600 hover:bg-amber-700 text-white font-extrabold py-2.5 px-6 rounded-xl border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-xs uppercase tracking-wider cursor-pointer self-end">
-              Verify Evidence Classification
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* --- STAGE 4 PUZZLE 5: FINAL EVIDENCE BOARD SYNTHESIS (GRAND CLIMAX) --- */}
-      {showFinalEvidenceBoardModal && (
-        <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-6 z-50 pointer-events-auto">
-          <div className="bg-[#fff9ea] border-4 border-amber-950 rounded-2xl p-6 shadow-[16px_16px_0_0_rgba(0,0,0,1)] max-w-2xl w-full flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b-2 border-amber-800/40 pb-3">
-              <div>
-                <h3 className="font-extrabold text-amber-950 uppercase tracking-widest text-sm">👑 Final Evidence Board: The Historical Truth of Bhangarh</h3>
-                <span className="text-[11px] text-amber-800 font-semibold">Synthesize your investigative discoveries to unlock the complete chronicle</span>
-              </div>
-              <button onClick={() => setShowFinalEvidenceBoardModal(false)} className="text-amber-950 font-bold text-xs px-2.5 py-1 rounded-lg border border-amber-800 cursor-pointer">✕ Close</button>
-            </div>
-
-            {/* Checklist */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-amber-100 p-2.5 rounded-xl border border-amber-300 text-[11px] font-bold text-amber-950 text-center">
-              <div>1. Foundation: {hasBhangarhChronicleClue ? "✓ Decoded" : "✗ Missing"}</div>
-              <div>2. Temple Art: {hasTempleArchitectureClue ? "✓ Decoded" : "✗ Missing"}</div>
-              <div>3. Famine Stratum: {hasFamineRecordClue ? "✓ Found" : "✗ Missing"}</div>
-              <div>4. Folklore: {hasFolkloreDistinctionClue ? "✓ Classified" : "✗ Missing"}</div>
-            </div>
-
-            <div className="flex flex-col gap-3 my-1">
-              <div className="bg-white border-2 border-amber-900/40 p-3 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                <span className="text-xs font-bold text-black uppercase">🏛️ 1. Origin &amp; Architecture:</span>
-                <select value={finalBoardMatches.origin || ""} onChange={(e) => setFinalBoardMatches((prev) => ({ ...prev, origin: e.target.value }))} className="bg-amber-50 border-2 border-black rounded-lg text-xs font-bold p-2 text-amber-950 w-full sm:w-72 cursor-pointer">
-                  <option value="">Select Historical Synthesis...</option>
-                  <option value="amber_capital">Thriving 16th-century Amber Rajput provincial capital</option>
-                  <option value="cursed_dungeon">A haunted citadel built specifically as a dungeon</option>
-                </select>
-              </div>
-
-              <div className="bg-white border-2 border-amber-900/40 p-3 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                <span className="text-xs font-bold text-black uppercase">⚔️ 2. True Cause of Abandonment:</span>
-                <select value={finalBoardMatches.decline || ""} onChange={(e) => setFinalBoardMatches((prev) => ({ ...prev, decline: e.target.value }))} className="bg-amber-50 border-2 border-black rounded-lg text-xs font-bold p-2 text-amber-950 w-full sm:w-72 cursor-pointer">
-                  <option value="">Select Historical Synthesis...</option>
-                  <option value="famine_warfare">1783 CE Chalisa Famine, economic collapse &amp; territorial warfare</option>
-                  <option value="supernatural_spell">Supernatural spell cast during a solar eclipse</option>
-                </select>
-              </div>
-
-              <div className="bg-white border-2 border-amber-900/40 p-3 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                <span className="text-xs font-bold text-black uppercase">📜 3. The Role of Ghost Stories:</span>
-                <select value={finalBoardMatches.legends || ""} onChange={(e) => setFinalBoardMatches((prev) => ({ ...prev, legends: e.target.value }))} className="bg-amber-50 border-2 border-black rounded-lg text-xs font-bold p-2 text-amber-950 w-full sm:w-72 cursor-pointer">
-                  <option value="">Select Historical Synthesis...</option>
-                  <option value="cultural_memory">Folklore created culturally to explain the sudden silence of a great city</option>
-                  <option value="scientific_fact">Scientific proof of supernatural hauntings</option>
-                </select>
-              </div>
-            </div>
-
-            {finalBoardFeedback && <div className="bg-amber-900/10 border-2 border-amber-600 p-2 rounded-xl text-center text-xs font-bold text-amber-950">{finalBoardFeedback}</div>}
-
-            <button onClick={handleVerifyFinalBoard} className="bg-amber-600 hover:bg-amber-700 text-white font-extrabold py-3 px-6 rounded-xl border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-xs uppercase tracking-wider cursor-pointer self-end">
-              Unlock the Final Rajasthan Chronicle
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* --- GRAND RAJASTHAN CAMPAIGN COMPLETE MODAL (THE FINAL VICTORY) --- */}
       {showGrandCampaignCompleteModal && (
