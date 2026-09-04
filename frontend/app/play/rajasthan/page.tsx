@@ -1447,74 +1447,75 @@ export default function RajasthanGameScreen() {
       />
 
       {/* --- TOP LEFT HUD CARDS --- */}
-      <div className="absolute top-6 left-6 z-20 flex flex-col gap-3">
-        {/* Goal / Instruction Box Card */}
-        <div className="bg-[#fff9ea] border-2 border-black rounded-xl p-4 max-w-sm shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex flex-col gap-1">
-          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+      {/* --- TOP LEFT HUD CARDS (EXACT MUGHAL ENGINE FORMAT: IMAGE 2) --- */}
+      <div className="absolute top-6 left-6 z-20 flex flex-col gap-2.5">
+        {/* Objective / Location Card */}
+        <div className="bg-[#fff9ea] border-2 border-black rounded-lg p-3 w-80 shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
+          <div className="text-[10px] font-extrabold text-amber-800 uppercase tracking-widest mb-0.5">
             {stage === 1
-              ? "RAJASTHAN - CHITTORGARH FORT (STAGE 1)"
+              ? "RAJASTHAN - CHITTORGARH FORT"
               : stage === 2
-              ? "RAJASTHAN - KUMBHALGARH FORT (STAGE 2)"
+              ? "RAJASTHAN - KUMBHALGARH FORT"
               : stage === 3
-              ? "RAJASTHAN - KULDHARA GHOST VILLAGE (STAGE 3)"
+              ? "RAJASTHAN - KULDHARA GHOST VILLAGE"
               : "RAJASTHAN - BHANGARH FORT (STAGE 4 - FINAL)"}
-          </span>
-          <div className="text-[14px] font-bold text-black leading-snug">
+          </div>
+          <div className="text-[13px] font-black text-black leading-snug">
             {getSceneInstruction()}
           </div>
         </div>
 
-        {/* Clues Box Card */}
-        <div className="bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 w-max shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex items-center gap-3">
-          <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-          </svg>
-          <div className="flex gap-1">
-            <div className={`w-3 h-1.5 rounded-sm ${cluesFound >= 1 ? "bg-amber-500" : "bg-amber-200"}`}></div>
-            <div className={`w-3 h-1.5 rounded-sm ${cluesFound >= 2 ? "bg-amber-500" : "bg-amber-200"}`}></div>
-            <div className={`w-3 h-1.5 rounded-sm ${cluesFound >= 3 ? "bg-amber-500" : "bg-amber-200"}`}></div>
-            {stage === 4 && <div className={`w-3 h-1.5 rounded-sm ${cluesFound >= 4 ? "bg-amber-500" : "bg-amber-200"}`}></div>}
+        {/* Clues Counter Card */}
+        <div className="bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 w-64 shadow-[3px_3px_0_0_rgba(0,0,0,1)] flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <svg className="w-4 h-4 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+            <div className="flex gap-1">
+              <div className={`w-3 h-1.5 rounded-sm ${cluesFound >= 1 ? "bg-amber-500" : "bg-amber-200"}`}></div>
+              <div className={`w-3 h-1.5 rounded-sm ${cluesFound >= 2 ? "bg-amber-500" : "bg-amber-200"}`}></div>
+              <div className={`w-3 h-1.5 rounded-sm ${cluesFound >= 3 ? "bg-amber-500" : "bg-amber-200"}`}></div>
+              {stage === 4 && <div className={`w-3 h-1.5 rounded-sm ${cluesFound >= 4 ? "bg-amber-500" : "bg-amber-200"}`}></div>}
+            </div>
           </div>
-          <span className="text-[12px] font-bold text-black">{cluesFound}/{maxClues} Evidence Clues</span>
+          <span className="text-[12px] font-extrabold text-black">{cluesFound}/{maxClues} Evidence Clues</span>
         </div>
 
-        {/* Stage 4 Moonrise Progress Card */}
+        {/* Stage 4 Moonrise Progress Card (Clean Mughal Timer Style) */}
         {stage === 4 && (
-          <div className="bg-[#0f172a]/90 text-amber-200 border-2 border-amber-500 rounded-lg px-4 py-2 w-max shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex items-center gap-3 animate-pulse">
-            <span className="text-base">
-              {moonriseTimer > 135 ? "🌒" : moonriseTimer > 90 ? "🌓" : moonriseTimer > 45 ? "🌔" : "🌕"}
-            </span>
-            <div className="flex flex-col">
-              <span className="text-[10px] font-mono uppercase font-extrabold text-amber-400">
-                Moonrise Phase: {moonriseTimer > 135 ? "Dusk Horizon" : moonriseTimer > 90 ? "Crescent Ascent" : moonriseTimer > 45 ? "Waxing Gibbous" : "Peak Full Moon"}
-              </span>
-              <span className="text-[11px] font-mono text-white font-bold">
-                Time Remaining: {Math.floor(moonriseTimer / 60)}:{(moonriseTimer % 60).toString().padStart(2, "0")}
+          <div className="bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 w-64 shadow-[3px_3px_0_0_rgba(0,0,0,1)] flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
+              <span>{moonriseTimer > 135 ? "🌒" : moonriseTimer > 90 ? "🌓" : moonriseTimer > 45 ? "🌔" : "🌕"}</span>
+              <span className="text-[11px] font-extrabold uppercase text-amber-900 tracking-wider">
+                {moonriseTimer > 135 ? "Dusk Horizon" : moonriseTimer > 90 ? "Crescent Ascent" : moonriseTimer > 45 ? "Waxing Gibbous" : "Full Moon"}
               </span>
             </div>
+            <span className="text-[12px] font-mono font-black text-red-600 bg-red-100 px-2 py-0.5 rounded border border-red-300">
+              {Math.floor(moonriseTimer / 60)}:{(moonriseTimer % 60).toString().padStart(2, "0")}
+            </span>
           </div>
         )}
       </div>
 
-      {/* --- TOP RIGHT HUD CARDS --- */}
+      {/* --- TOP RIGHT ACTION BUTTONS (EXACT MUGHAL ENGINE FORMAT: IMAGE 2) --- */}
       <div className="absolute top-6 right-6 z-20 flex flex-col items-end gap-3">
         {/* Action Buttons Row */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <button
             onClick={handleResetGame}
             title="Restart to Beginning"
-            className="h-10 bg-red-600 border-2 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all flex items-center justify-center px-3 gap-1.5 group cursor-pointer"
+            className="bg-[#e63946] text-white border-2 border-black rounded-lg px-3 py-1.5 text-[12px] font-extrabold shadow-[2px_2px_0_0_rgba(0,0,0,1)] hover:bg-[#d62839] active:translate-y-0.5 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
           >
-            <svg className="w-5 h-5 text-white group-hover:-rotate-180 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
             </svg>
-            <span className="text-[13px] font-bold text-white">Restart</span>
+            <span>Restart</span>
           </button>
           <button
             onClick={() => router.push("/dashboard")}
-            className="h-10 bg-red-600 border-2 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all flex items-center justify-center px-4 cursor-pointer"
+            className="bg-[#d62839] text-white border-2 border-black rounded-lg px-3 py-1.5 text-[12px] font-extrabold shadow-[2px_2px_0_0_rgba(0,0,0,1)] hover:bg-[#b81d2c] active:translate-y-0.5 transition-all cursor-pointer"
           >
-            <span className="text-[13px] font-bold text-white">Leave world</span>
+            Leave world
           </button>
         </div>
 
