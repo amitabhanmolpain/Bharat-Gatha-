@@ -5,7 +5,7 @@
     "scene": "taj_gate",
     "playerPos": {
       "x": 50,
-      "y": 88
+      "y": 85
     },
     "hasGuardPermission": true,
     "hasKhasPermission": false,

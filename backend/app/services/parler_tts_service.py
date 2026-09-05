@@ -38,9 +38,9 @@ CHARACTER_VOICE_PROFILES = {
         "name": "Jolly Bhai",
         "role": "Ancient Time-Traveling Genie Companion",
         "description": (
-            "A calm, soothing, and serene Indian male voice speaking in clear Indian English "
-            "with a gentle, relaxed, and warm storytelling cadence. Clear pronunciation, steady pace, "
-            "and peaceful tone throughout."
+            "A friendly Indian male speaking natural Indian English, conversational and warm, "
+            "with clear pronunciation, moderate pace, slightly playful personality, "
+            "like a knowledgeable Indian friend guiding someone through a historical adventure game."
         ),
         "fallback_speaker": "rahul",
         "fallback_pace": 0.88,
