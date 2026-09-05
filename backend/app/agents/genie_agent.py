@@ -151,8 +151,12 @@ def get_genie_agent(model_name: str = "openai/gpt-oss-120b"):
         "STRICT LENGTH & STYLE RULES:\n"
         "1. LENGTH: Respond in exactly 2 concise, clear sentences (around 20 to 30 words total). Not too long, not too short.\n"
         "2. LANGUAGE: Use simple, vivid, and easily understood words.\n"
-        "3. DOMAIN: You ONLY answer questions about Indian history, monuments, rulers, battles, architectural marvels, and game secrets of Bharat Gatha.\n"
-        "4. OFF-TOPIC REFUSAL: If the player asks anything unrelated to history, refuse politely in character in exactly 2 short sentences:\n"
+        "3. DOMAIN & LLM KNOWLEDGE EMPOWERMENT:\n"
+        "   - You possess profound, authentic mastery over all of Indian history, emperors, battles, folklore, architecture, and monuments.\n"
+        "   - Use the verified reference chronicles below to enrich your response with specific historical facts, dates, and details whenever relevant.\n"
+        "   - If the player's question extends beyond the reference excerpts, FREELY AND INTELLIGENTLY USE YOUR VAST LLM KNOWLEDGE OF INDIAN HISTORY to give a factual, warm, and engaging answer.\n"
+        "   - NEVER refuse to answer or claim records are lost simply because a detail is not in the reference excerpts.\n"
+        "4. OFF-TOPIC REFUSAL: If the player asks anything completely unrelated to history or the game (e.g. modern technology, pop culture, sports, coding), refuse politely in character in exactly 2 short sentences:\n"
         "   'My magical scrolls only hold the glorious history of Bharat Gatha! Ask me of ancient kings, grand forts, or lost treasures instead.'\n"
         "5. PUZZLE MYSTERY & SPOILER BLOCKADE: You must NEVER spoil or give away the solution to active game mysteries!\n"
         "   - If the player asks why the villagers left/abandoned Kuldhara: Strictly refuse to spoil it and respond: 'That you have to find out, my aaka! Search the silent ruins, inspect the three clues, and uncover the mystery yourself.'\n"
@@ -164,7 +168,8 @@ def get_genie_agent(model_name: str = "openai/gpt-oss-120b"):
         "- Current Location: {location}\n"
         "- Active Ruler: {ruler}\n"
         "- Key Monuments & Clues: {monuments}\n"
-        "- Historical Lore: {key_lore}"
+        "- Historical Lore: {key_lore}\n"
+        "- Verified Reference Chronicles:\n{retrieved_chronicles}"
     )
 
     prompt = ChatPromptTemplate.from_messages([
@@ -337,6 +342,26 @@ def ask_genie_agent(
             pass
         return result
 
+    # Retrieve relevant RAG chronicle chunks to augment Jolly Bhai's knowledge
+    retrieved_chunks = []
+    chronicles_text = "Imperial reference chronicles: General lore of this historic era."
+    try:
+        from app.services.vector_store_service import query_index
+        campaign_to_region = {
+            "vijayanagara": "vijayanagara",
+            "rajasthan": "rajputana",
+            "mughal": "mughal"
+        }
+        region_key = campaign_to_region.get(resolved_ctx.get("campaign_id"), "mughal")
+        retrieved_chunks = query_index(region=region_key, query_text=clean_q, top_k=2)
+        if retrieved_chunks:
+            chronicles_text = "\n\n".join([
+                f"[{c.get('metadata', {}).get('location', 'Chronicle')}]: {c.get('text', '')}"
+                for c in retrieved_chunks
+            ])
+    except Exception:
+        pass
+
     inputs = {
         "question": clean_q,
         "campaign_title": resolved_ctx["campaign_title"],
@@ -345,13 +370,26 @@ def ask_genie_agent(
         "location": resolved_ctx["location"],
         "ruler": resolved_ctx["ruler"],
         "monuments": resolved_ctx["monuments"],
-        "key_lore": resolved_ctx["key_lore"]
+        "key_lore": resolved_ctx["key_lore"],
+        "retrieved_chronicles": chronicles_text
     }
 
     try:
         agent_chain = get_genie_agent(model_name)
         response_text = agent_chain.invoke(inputs).strip()
         behavior = classify_genie_behavior(clean_q, response_text)
+
+        # Telemetry verification: calculate grounding metrics without overriding the LLM answer
+        grounding_info = {"is_grounded": True, "confidence": 1.0, "ungrounded_entities": []}
+        try:
+            from app.agents.guard_agent import verify_fact_grounding
+            grounding_info = verify_fact_grounding(
+                answer=response_text,
+                source_chunks=retrieved_chunks,
+                strict_mode=False
+            )
+        except Exception:
+            pass
 
         result = {
             "status": "success",
@@ -363,6 +401,10 @@ def ask_genie_agent(
             "context": resolved_ctx,
             "framework": "langchain",
             "model": model_name,
+            "source_chunks": retrieved_chunks,
+            "is_grounded": grounding_info.get("is_grounded", True),
+            "grounding_confidence": grounding_info.get("confidence", 1.0),
+            "flagged_entities": grounding_info.get("ungrounded_entities", []),
             "status_code": 200
         }
 
