@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { playNarration, stopNarration } from "../../../services/narratorService";
+import { playCharacterDialogue, stopCharacterDialogue } from "../../../services/characterVoiceService";
 import Link from "next/link";
 import {
   VijayanagaraStage,
@@ -23,6 +25,8 @@ import FestivalReconstructionPuzzle from "./components/FestivalReconstructionPuz
 import LedgerAssemblyModal from "./components/LedgerAssemblyModal";
 import TalikotaNarrationModal from "./components/TalikotaNarrationModal";
 import CampaignCompletionModal from "./components/CampaignCompletionModal";
+import DialoguePanel from "../../components/DialoguePanel";
+import NarratorSubtitle from "../../../components/NarratorSubtitle";
 
 export default function VijayanagaraGameScreen() {
   const [isLoading, setIsLoading] = useState(true);
@@ -80,6 +84,13 @@ export default function VijayanagaraGameScreen() {
     "anegundi_origin",
     "vidyaranya_sage",
   ]);
+
+  // Jolly Bhai Companion State
+  const [showJollyDialogue, setShowJollyDialogue] = useState(false);
+  const [jollySpeechText, setJollySpeechText] = useState<string>("");
+  const [jollyOptions, setJollyOptions] = useState<Array<{ id: number; text: string }>>([]);
+  const [hasTalkedToJolly, setHasTalkedToJolly] = useState<boolean>(false);
+  const [heardClueScenes, setHeardClueScenes] = useState<string[]>([]);
 
   // Modal UI States
   const [isJournalOpen, setIsJournalOpen] = useState(false);
@@ -169,6 +180,55 @@ export default function VijayanagaraGameScreen() {
       }, 0);
       return () => clearTimeout(timer);
     }
+  }, []);
+
+  // Intro narration for Vijayanagara Empire
+  const hasPlayedIntroNarrationRef = useRef(false);
+  useEffect(() => {
+    if (!isLoading && scene === "anegundi_river_crossing" && !hasPlayedIntroNarrationRef.current) {
+      hasPlayedIntroNarrationRef.current = true;
+      const introText = "You have entered the year 1565, the golden age of the Vijayanagara Empire. The bustling markets, grand temples, and heroic tales await you. Travel wisely and uncover the lost secrets of this mighty kingdom.";
+      const timer = setTimeout(() => {
+        playNarration(introText, { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, scene]);
+
+  // Stage entry narrations
+  const hasPlayedStage2NarrationRef = useRef(false);
+  useEffect(() => {
+    if (!isLoading && stage === 2 && !hasPlayedStage2NarrationRef.current) {
+      hasPlayedStage2NarrationRef.current = true;
+      const text = "Stage Two: The vibrant Hampi Bazaar beckons. merchants trade exotic wares, and whispers of hidden ledgers drift through the air.";
+      playNarration(text, { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
+    }
+  }, [isLoading, stage]);
+
+  const hasPlayedStage3NarrationRef = useRef(false);
+  useEffect(() => {
+    if (!isLoading && stage === 3 && !hasPlayedStage3NarrationRef.current) {
+      hasPlayedStage3NarrationRef.current = true;
+      const text = "Stage Three: The Stone Chariot stands tall, its carvings echoing ancient hymns. Resolve the musical pillars to proceed.";
+      playNarration(text, { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
+    }
+  }, [isLoading, stage]);
+
+  const hasPlayedStage4NarrationRef = useRef(false);
+  useEffect(() => {
+    if (!isLoading && stage === 4 && !hasPlayedStage4NarrationRef.current) {
+      hasPlayedStage4NarrationRef.current = true;
+      const text = "Stage Four: The Mahanavami celebration awaits. Assemble the ledger and claim the final seal of the empire.";
+      playNarration(text, { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
+    }
+  }, [isLoading, stage]);
+
+  // Cleanup narration on component unmount
+  useEffect(() => {
+    return () => {
+      stopNarration();
+      stopCharacterDialogue();
+    };
   }, []);
 
   // --- PERSISTENCE: SAVE ON CHANGE ---
@@ -1281,8 +1341,8 @@ export default function VijayanagaraGameScreen() {
                   <span>Speak with Overseas Traveler (Portuguese Visitor)</span>
                 </div>
               )}
-              <div className="w-10 h-10 bg-[#25201b]/80 border border-[#d4a359] rounded-xl flex items-center justify-center text-xl shadow">
-                📜
+              <div className="w-12 h-16 md:w-14 md:h-20 bg-[#3d3328]/90 border-2 border-[#d4a359] rounded-2xl flex items-center justify-center text-3xl shadow-lg animate-pulse">
+                🕵️‍♂️
               </div>
               <span className="text-[10px] font-serif font-bold text-[#d6c7b2] bg-[#1a1714]/80 px-2 py-0.5 rounded border border-[#5a4d3f] mt-1">
                 Overseas Traveler
@@ -1714,6 +1774,157 @@ export default function VijayanagaraGameScreen() {
             }}
           />
         </div>
+
+        {/* --- JOLLY BHAI (GENIE) COMPANION FOLLOWER --- */}
+        {(() => {
+          const genieX = facingLeft ? playerPos.x + 8.5 : playerPos.x - 8.5;
+          const genieY = playerPos.y - 12.0;
+
+          // Mode 1: ✨ Glowing (Only for major hidden secrets when nearby)
+          const isGlowing = (scene === "toymaker_stall" && !hasFirstLedgerFragment) ||
+                            (scene === "musical_pillars" && !isMusicalPillarsComplete);
+
+          // Mode 2: 💥 Clue Alert (Stops once clue is heard or solved)
+          const hasHeardThisClue = heardClueScenes.includes(scene);
+          const isShaking = !isGlowing && !hasHeardThisClue && (
+            (scene === "anegundi_river_crossing" && !hasMetVidyaranya) ||
+            (scene === "gem_traders_row" && !hasEncounteredFirstRumor && isNearGemAssessor) ||
+            (scene === "musicians_warning" && !hasMusicianWarning) ||
+            (scene === "mahanavami_celebration" && !isLedgerAssembled)
+          );
+
+          const mode = isGlowing ? "glowing" : isShaking ? "shaking" : "normal";
+
+          return (
+            <div
+              className="absolute z-20 pointer-events-auto cursor-pointer group transition-all duration-700 ease-out"
+              onClick={() => {
+                let speechText = "";
+                let customOptions: Array<{ id: number; text: string }> = [];
+
+                if (scene === "anegundi_river_crossing") {
+                  speechText = "Ah, welcome traveller! I am Jolly Bhai! Look around — before there was the grand empire of Hampi, there was Anegundi, nestled beside the mighty Tungabhadra River. Seek out Sage Vidyaranya at the Old Fort ruins to learn the true origin of this realm!";
+                  customOptions = [
+                    { id: 1, text: "Who was Sage Vidyaranya?" },
+                    { id: 2, text: "How was the Vijayanagara Empire founded?" },
+                    { id: 3, text: "How do we cross to Hampi Bazaar?" }
+                  ];
+                } else if (scene === "anegundi_old_fort") {
+                  speechText = "Sage Vidyaranya holds ancient wisdom. Ask him about the founding of Vijayanagara and the sacred Chowka Bara match!";
+                  customOptions = [
+                    { id: 1, text: "What is the secret of Chowka Bara?" },
+                    { id: 2, text: "Tell me about the brothers Harihara and Bukka." }
+                  ];
+                } else if (scene === "gem_traders_row") {
+                  speechText = "Ah, the gem traders of Hampi Bazaar! Listen closely to their gossip — they whisper of a missing merchant who carried secret royal ledgers!";
+                  customOptions = [
+                    { id: 1, text: "Why were gems sold on open streets in Hampi?" },
+                    { id: 2, text: "Where did the missing merchant go?" }
+                  ];
+                } else if (scene === "toymaker_stall") {
+                  speechText = hasFirstLedgerFragment
+                    ? "Aha! You found the first ledger fragment! The merchant was hiding crucial economic records beneath these innocent toys!"
+                    : "Inspect the wooden Channapatna toys closely! The missing merchant hid a crucial clue inside one of them!";
+                  customOptions = [
+                    { id: 1, text: "Tell me about traditional Channapatna toy making." },
+                    { id: 2, text: "What is recorded on the first ledger fragment?" }
+                  ];
+                } else if (scene === "stone_chariot_entry" || scene === "musical_pillars") {
+                  speechText = isMusicalPillarsComplete
+                    ? "Brilliant melody, mere aaka! The pillars sang the ancient raga and unlocked the second fragment! We are close to solving the mystery!"
+                    : "Magnificent! The Stone Chariot of Vittala Temple... built during the golden age under King Krishnadevaraya. The musical pillars nearby hold the next key!";
+                  customOptions = [
+                    { id: 1, text: "How do the musical pillars produce notes?" },
+                    { id: 2, text: "Who was Emperor Krishnadevaraya?" }
+                  ];
+                } else if (scene === "hazara_rama_walls") {
+                  speechText = "Look at the bas-relief carvings on these temple walls! They tell the legendary epics of the Ramayana in carved stone!";
+                  customOptions = [
+                    { id: 1, text: "Why was Hazara Rama the private temple of the kings?" },
+                    { id: 2, text: "Tell me about the royal processions depicted here." }
+                  ];
+                } else if (scene === "musicians_warning") {
+                  speechText = "The court musicians whisper warnings of gathering armies... Our journey leads to the Great Mahanavami Dibba where the fate of Vijayanagara hangs in the balance.";
+                  customOptions = [
+                    { id: 1, text: "Why are dark clouds gathering over Vijayanagara?" },
+                    { id: 2, text: "What happened at Mahanavami Dibba?" }
+                  ];
+                } else if (scene === "mahanavami_celebration") {
+                  speechText = isLedgerAssembled
+                    ? "The full truth is revealed! The royal merchant foresaw the coming conflict and hid the empire's heritage to preserve it forever!"
+                    : "The grand Mahanavami platform... here the King reviewed royal troops, dancers, and envoys at the zenith of the empire's power!";
+                  customOptions = [
+                    { id: 1, text: "What was the Mahanavami festival?" },
+                    { id: 2, text: "What was the royal merchant trying to save?" }
+                  ];
+                } else if (scene === "closing_reflection") {
+                  speechText = "Though time passes and kingdoms rise and fall, the story of Vijayanagara remains eternal in our hearts. Thank you for walking this path with me!";
+                  customOptions = [
+                    { id: 1, text: "What is the ultimate legacy of Vijayanagara?" },
+                    { id: 2, text: "Tell me about the ruins of Hampi today." }
+                  ];
+                } else {
+                  speechText = "Greetings, traveller! I am Jolly Bhai. Ask me anything about the Vijayanagara Empire, Hampi, or its rich heritage!";
+                  customOptions = [
+                    { id: 1, text: "Tell me about Vijayanagara architecture." },
+                    { id: 2, text: "Who were the great rulers of Vijayanagara?" }
+                  ];
+                }
+
+                setJollySpeechText(speechText);
+                setJollyOptions(customOptions);
+                setShowJollyDialogue(true);
+                if (isShaking) {
+                  setHeardClueScenes((prev) => [...prev, scene]);
+                }
+                playCharacterDialogue({
+                  character: "jolly",
+                  text: speechText,
+                  onEnd: () => {
+                    setHeardClueScenes((prev) => [...prev, scene]);
+                  }
+                });
+                if (!hasTalkedToJolly) {
+                  setHasTalkedToJolly(true);
+                }
+              }}
+              style={{
+                left: `${genieX}%`,
+                top: `${genieY}%`,
+                transform: 'translate(-50%, -50%)',
+              }}
+              title={
+                mode === "glowing"
+                  ? "✨ Jolly Bhai (Special Story Secret)"
+                  : mode === "shaking"
+                  ? "💥 Jolly Bhai (Clue Nearby!)"
+                  : "🧞 Jolly Bhai (Genie Guide - Click for Story)"
+              }
+            >
+              <div className={`relative ${mode === "shaking" ? "animate-crazy-shake" : mode === "glowing" ? "animate-celestial-glow" : "animate-bounce"}`} style={mode === "normal" && !showJollyDialogue ? { animationDuration: '3.5s' } : undefined}>
+                <img
+                  src="/genie_rajasthani_transparent.png"
+                  alt="Jolly Bhai Genie"
+                  className={`w-24 h-24 md:w-28 md:h-28 object-contain transition-all group-hover:scale-110 drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)] ${
+                    mode === "glowing" ? "filter drop-shadow-[0_0_25px_rgba(251,191,36,1)] brightness-125" : ""
+                  }`}
+                  style={{
+                    imageRendering: "pixelated",
+                    transform: facingLeft ? "scaleX(1)" : "scaleX(-1)",
+                  }}
+                />
+                
+                {!showJollyDialogue && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 border-2 border-black rounded-full px-2.5 py-0.5 shadow-[2px_2px_0_0_rgba(0,0,0,1)] text-[9.5px] font-black whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity bg-[#fff9ea] text-black flex items-center gap-1 pointer-events-none">
+                    {mode === "glowing" && <span>✨ Secret Lore</span>}
+                    {mode === "shaking" && <span>💥 Clue Alert!</span>}
+                    {mode === "normal" && <span>Ask Jolly Bhai 🧞</span>}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* --- OPENING ATMOSPHERE FLOATING BANNERS --- */}
         {showOpeningAtmosphere && scene === "anegundi_river_crossing" && (
@@ -2767,6 +2978,59 @@ export default function VijayanagaraGameScreen() {
             </div>
           </div>
         )}
+
+        {/* --- JOLLY BHAI DIALOGUE MODAL --- */}
+        {showJollyDialogue && (
+          <DialoguePanel 
+            characterName="Jolly Bhai"
+            characterTitle="Ancient Time-Traveling Genie Companion"
+            characterId="jolly"
+            historicalContext={{
+              current_year: 1565,
+              era: "Vijayanagara Empire",
+              location: scene === "anegundi_river_crossing" ? "Anegundi - Tungabhadra River Bank" :
+                        scene === "anegundi_old_fort" ? "Anegundi - Old Fort Ruins" :
+                        scene === "hampi_bazaar_entry" ? "Hampi Bazaar - Virupaksha Car Street" :
+                        scene === "gem_traders_row" ? "Hampi Bazaar - Gem Traders' Row" :
+                        scene === "toymaker_stall" ? "Hampi Bazaar - Toy-Maker's Stall" :
+                        scene === "stone_chariot_entry" ? "Vittala Temple - Stone Chariot Courtyard" :
+                        scene === "musical_pillars" ? "Vittala Temple - Musical Pillars Mandapa" :
+                        scene === "hazara_rama_walls" ? "Hazara Rama Temple Carvings" :
+                        scene === "mahanavami_celebration" ? "Mahanavami Dibba Platform" :
+                        "Vijayanagara Empire",
+              ruler: "Emperor Krishnadevaraya / Rama Raya",
+              nearby_monuments: "Vittala Temple, Virupaksha Temple, Stone Chariot, Hazara Rama, Mahanavami Dibba",
+              historical_events: "Founding of Vijayanagara (1336 AD), Golden Age under Krishnadevaraya, Battle of Talikota (1565 AD)"
+            }}
+            dialogueText={
+              jollySpeechText || "Ah, welcome traveller! I am Jolly Bhai. I will guide you through the ancient Vijayanagara Empire!"
+            }
+            isSpeaking={true}
+            showInput={true}
+            options={
+              jollyOptions.length > 0
+                ? jollyOptions
+                : [
+                    { id: 1, text: "Tell me about the founding of Vijayanagara." },
+                    { id: 2, text: "What was the significance of Hampi Bazaar?" },
+                    { id: 3, text: "How do the musical pillars of Vittala Temple work?" }
+                  ]
+            }
+            onOptionSelect={() => {
+              stopCharacterDialogue();
+              setShowJollyDialogue(false);
+              setHeardClueScenes((prev) => (prev.includes(scene) ? prev : [...prev, scene]));
+            }}
+            onClose={() => {
+              stopCharacterDialogue();
+              setShowJollyDialogue(false);
+              setHeardClueScenes((prev) => (prev.includes(scene) ? prev : [...prev, scene]));
+            }}
+          />
+        )}
+
+        {/* --- NARRATOR SUBTITLE OVERLAY --- */}
+        <NarratorSubtitle />
 
       </div>
     </div>

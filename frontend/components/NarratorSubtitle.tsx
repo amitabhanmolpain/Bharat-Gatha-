@@ -34,7 +34,7 @@ export default function NarratorSubtitle() {
         <div className="flex justify-between items-start mb-3">
           <div>
             <h3 className="text-xl font-black text-black tracking-tight leading-tight">Narrator</h3>
-            <p className="text-xs font-bold text-gray-700 uppercase tracking-wider mt-0.5">The Voice of History · Year 1653</p>
+            <p className="text-xs font-bold text-gray-700 uppercase tracking-wider mt-0.5">The Voice of History</p>
           </div>
           <div className="flex gap-2">
             <button 

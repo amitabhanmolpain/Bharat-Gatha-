@@ -4,16 +4,16 @@
     "era": "mughal",
     "scene": "gate",
     "playerPos": {
-      "x": 46.84999999999999,
-      "y": 78.15750000000001
+      "x": 50,
+      "y": 85
     },
     "hasGuardPermission": false,
     "hasKhasPermission": false,
-    "isPietraDuraSolved": false,
-    "isSheeshMirrorSolved": false,
+    "isPietraDuraSolved": true,
+    "isSheeshMirrorSolved": true,
     "isArchaeologistTalked": false,
     "isCarriageUnlocked": false,
     "cluesFound": 0,
-    "last_saved_at": "2026-09-04T08:20:19.068853"
+    "last_saved_at": "2026-09-04T14:10:15.949141"
   }
 }
