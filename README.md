@@ -8,7 +8,13 @@
 [![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-v4-38bdf8?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 
+---
 
+### 📚 Team Documentation & Codebase Guide
+> Looking to understand the architecture, game mechanics, AI agents, and code structure in simple words?  
+> 📖 **Read our [Team Codebase Guide (TEAM_CODEBASE_GUIDE.md)](TEAM_CODEBASE_GUIDE.md)**!
+
+---
 
 ## 🚀 Quick Start
 

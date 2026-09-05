@@ -169,6 +169,8 @@ class NarratorManager {
           audioSrc = "/kuldhara_narration.wav";
         } else if (lowerText.includes("good job beta") || (lowerText.includes("kuldhara") && (lowerText.includes("salim singh") || lowerText.includes("crushing taxes")))) {
           audioSrc = "/kuldhara_solved_narration.wav";
+        } else if (lowerText.includes("cast out into the sands") || lowerText.includes("desert patrol caught you") || (lowerText.includes("time has expired") && lowerText.includes("kuldhara"))) {
+          audioSrc = "/kuldhara_timeout_narration.wav";
         }
       }
 

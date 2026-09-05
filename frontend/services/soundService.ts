@@ -38,31 +38,106 @@ class SoundEffectsService {
   }
 
   /**
-   * Crisp UI Button Click (short tactile pop)
+   * Authentic Mechanical Keyboard Sound (Switch snap + bottom-out thock)
+   * Plays on clicking action buttons (Restart, Music, Sound, Leave world, Options).
+   * Tuned with enhanced gain for punchy, tactile mechanical clarity.
    */
-  public playButtonClick(pitch: number = 1.0) {
+  public playKeyboardClick(pitch: number = 1.0) {
     if (this.isMuted) return;
     try {
       const ctx = this.getContext();
       if (!ctx) return;
 
+      const now = ctx.currentTime;
+
+      // 1. High-frequency tactile switch click (actuation snap)
+      const snapOsc = ctx.createOscillator();
+      const snapGain = ctx.createGain();
+      snapOsc.type = "sine";
+      snapOsc.frequency.setValueAtTime(2400 * pitch, now);
+      snapOsc.frequency.exponentialRampToValueAtTime(800 * pitch, now + 0.015);
+      snapGain.gain.setValueAtTime(0.22, now);
+      snapGain.gain.exponentialRampToValueAtTime(0.001, now + 0.022);
+
+      snapOsc.connect(snapGain);
+      snapGain.connect(ctx.destination);
+      snapOsc.start(now);
+      snapOsc.stop(now + 0.025);
+
+      // 2. Solid mechanical bottom-out "thock"
+      const thockOsc = ctx.createOscillator();
+      const thockGain = ctx.createGain();
+      thockOsc.type = "triangle";
+      thockOsc.frequency.setValueAtTime(320 * pitch, now);
+      thockOsc.frequency.exponentialRampToValueAtTime(120 * pitch, now + 0.035);
+      thockGain.gain.setValueAtTime(0.26, now);
+      thockGain.gain.exponentialRampToValueAtTime(0.001, now + 0.055);
+
+      thockOsc.connect(thockGain);
+      thockGain.connect(ctx.destination);
+      thockOsc.start(now);
+      thockOsc.stop(now + 0.06);
+
+      // 3. Crisp mechanical texture transient
+      const bufferSize = Math.floor(ctx.sampleRate * 0.018);
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = "bandpass";
+      filter.frequency.value = 2800 * pitch;
+      filter.Q.value = 1.8;
+
+      const noiseGain = ctx.createGain();
+      noiseGain.gain.setValueAtTime(0.12, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
+
+      noise.connect(filter);
+      filter.connect(noiseGain);
+      noiseGain.connect(ctx.destination);
+
+      noise.start(now);
+    } catch (e) {}
+  }
+
+  /**
+   * Crisp UI Button Click (Tactile Mechanical Keyboard Click)
+   */
+  public playButtonClick(pitch: number = 1.0) {
+    this.playKeyboardClick(pitch);
+  }
+
+  /**
+   * Soft Tactile Hover Sound (Tick / subtle blip)
+   * Plays on hovering over top buttons and interactive UI controls.
+   */
+  public playButtonHover() {
+    if (this.isMuted) return;
+    try {
+      const ctx = this.getContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
 
       osc.type = "sine";
-      const baseFreq = 800 * pitch;
-      osc.frequency.setValueAtTime(baseFreq, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.5, ctx.currentTime + 0.04);
-      osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.5, ctx.currentTime + 0.08);
+      osc.frequency.setValueAtTime(1400, now);
+      osc.frequency.exponentialRampToValueAtTime(1800, now + 0.02);
 
-      gain.gain.setValueAtTime(0.12, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.035);
 
       osc.connect(gain);
       gain.connect(ctx.destination);
 
-      osc.start();
-      osc.stop(ctx.currentTime + 0.09);
+      osc.start(now);
+      osc.stop(now + 0.04);
     } catch (e) {}
   }
 
@@ -82,7 +157,7 @@ class SoundEffectsService {
       osc.frequency.setValueAtTime(520, ctx.currentTime);
       osc.frequency.exponentialRampToValueAtTime(780, ctx.currentTime + 0.06);
 
-      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.setValueAtTime(0.06, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
 
       osc.connect(gain);
@@ -112,7 +187,7 @@ class SoundEffectsService {
         osc.frequency.setValueAtTime(freq, startTime);
 
         gain.gain.setValueAtTime(0.001, startTime);
-        gain.gain.exponentialRampToValueAtTime(0.18, startTime + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.07, startTime + 0.02);
         gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.5);
 
         osc.connect(gain);
@@ -121,6 +196,53 @@ class SoundEffectsService {
         osc.start(startTime);
         osc.stop(startTime + 0.55);
       });
+    } catch (e) {}
+  }
+
+  /**
+   * Rewarding Clue Found Fanfare (Sparkling 5-note ascending arpeggio with high shimmer glissando)
+   */
+  public playClueFound() {
+    if (this.isMuted) return;
+    try {
+      const ctx = this.getContext();
+      if (!ctx) return;
+
+      // Ascending celebratory major chord: C5, E5, G5, C6, E6
+      const freqs = [523.25, 659.25, 783.99, 1046.5, 1318.51];
+      freqs.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const startTime = ctx.currentTime + idx * 0.07;
+
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, startTime);
+
+        gain.gain.setValueAtTime(0.001, startTime);
+        gain.gain.exponentialRampToValueAtTime(0.08, startTime + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.65);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(startTime);
+        osc.stop(startTime + 0.7);
+      });
+
+      // High sparkling shimmer overtone
+      const sparkleOsc = ctx.createOscillator();
+      const sparkleGain = ctx.createGain();
+      const sparkleTime = ctx.currentTime + 0.35;
+      sparkleOsc.type = "triangle";
+      sparkleOsc.frequency.setValueAtTime(2093.0, sparkleTime); // C7
+      sparkleOsc.frequency.exponentialRampToValueAtTime(2637.02, sparkleTime + 0.15); // E7
+      sparkleGain.gain.setValueAtTime(0.001, sparkleTime);
+      sparkleGain.gain.exponentialRampToValueAtTime(0.05, sparkleTime + 0.02);
+      sparkleGain.gain.exponentialRampToValueAtTime(0.001, sparkleTime + 0.45);
+      sparkleOsc.connect(sparkleGain);
+      sparkleGain.connect(ctx.destination);
+      sparkleOsc.start(sparkleTime);
+      sparkleOsc.stop(sparkleTime + 0.5);
     } catch (e) {}
   }
 
@@ -140,7 +262,7 @@ class SoundEffectsService {
       osc.frequency.setValueAtTime(600, ctx.currentTime);
       osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.08);
 
-      gain.gain.setValueAtTime(0.1, ctx.currentTime);
+      gain.gain.setValueAtTime(0.04, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.09);
 
       osc.connect(gain);
@@ -167,7 +289,7 @@ class SoundEffectsService {
       osc.frequency.setValueAtTime(350, ctx.currentTime);
       osc.frequency.exponentialRampToValueAtTime(550, ctx.currentTime + 0.05);
 
-      gain.gain.setValueAtTime(0.14, ctx.currentTime);
+      gain.gain.setValueAtTime(0.05, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.07);
 
       osc.connect(gain);

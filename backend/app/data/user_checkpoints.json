@@ -7,7 +7,7 @@
       "x": 50,
       "y": 85
     },
-    "hasGuardPermission": false,
+    "hasGuardPermission": true,
     "hasKhasPermission": false,
     "isPietraDuraSolved": true,
     "isSheeshMirrorSolved": true,

@@ -5,6 +5,8 @@
  * the LangChain Genie Agent (with strict historical guardrails) or Groq 'openai/gpt-oss-120b'.
  */
 
+import { cacheCharacterAudio } from "./characterVoiceService";
+
 export interface GameHistoricalContext {
   current_year?: number | string;
   era?: string;
@@ -14,13 +16,18 @@ export interface GameHistoricalContext {
   historical_events?: string;
 }
 
-export async function askHistoricalQuestion(
+export interface HistoricalAskResult {
+  answer: string;
+  behavior: "normal" | "glowing" | "shaking";
+}
+
+export async function askHistoricalQuestionDetailed(
   question: string,
   context?: GameHistoricalContext,
   character?: string
-): Promise<string> {
+): Promise<HistoricalAskResult> {
   const trimmed = question.trim();
-  if (!trimmed) return "";
+  if (!trimmed) return { answer: "", behavior: "normal" };
 
   const backendUrl =
     typeof window !== "undefined"
@@ -28,6 +35,7 @@ export async function askHistoricalQuestion(
       : "http://localhost:5001";
 
   try {
+    const char = character || "jolly";
     const response = await fetch(`${backendUrl}/api/ai/ask`, {
       method: "POST",
       headers: {
@@ -35,7 +43,7 @@ export async function askHistoricalQuestion(
       },
       body: JSON.stringify({
         question: trimmed,
-        character: character || "jolly",
+        character: char,
         context: context || {
           current_year: 1653,
           era: "Mughal Empire",
@@ -56,9 +64,32 @@ export async function askHistoricalQuestion(
       throw new Error(data.message || "No answer received from historical chronicles.");
     }
 
-    return data.answer;
+    if (data.audio_base64 && char) {
+      cacheCharacterAudio(char, data.answer, data.audio_base64);
+    }
+
+    const behavior: "normal" | "glowing" | "shaking" = 
+      data.behavior === "shaking" ? "shaking" : data.behavior === "glowing" ? "glowing" : "normal";
+
+    return {
+      answer: data.answer,
+      behavior,
+    };
   } catch (error: any) {
-    console.error("Groq/LangChain Ask Question error:", error);
-    throw error;
+    console.warn("Groq/LangChain Ask Question notice:", error?.message || error);
+    return {
+      answer: "Mere aaka! The magical astral scrolls are aligning with this historical era. Please ask me again in just a moment!",
+      behavior: "normal"
+    };
   }
 }
+
+export async function askHistoricalQuestion(
+  question: string,
+  context?: GameHistoricalContext,
+  character?: string
+): Promise<string> {
+  const res = await askHistoricalQuestionDetailed(question, context, character);
+  return res.answer;
+}
+

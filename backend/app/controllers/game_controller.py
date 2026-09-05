@@ -143,3 +143,109 @@ def reset_checkpoint():
             "success": False,
             "error": str(e)
         }), 500
+
+
+# Authoritative Clue Radar Specifications for Jolly Bhai Genie
+CLUE_HOTSPOTS = {
+    "chiefs_house": {
+        "clue_id": "wedding_ornament",
+        "name": "Bridal Wedding Ornament",
+        "description": "Gold bridal ornament tucked inside the carved wall alcove.",
+        "min_x": 54.0, "max_x": 100.0, "min_y": 0.0, "max_y": 78.0
+    },
+    "treasury": {
+        "clue_id": "tax_ledger",
+        "name": "Diwan Salim Singh's Torn Tax Ledger",
+        "description": "Crushed parchment ledger on the merchant's calculation table with balance scale.",
+        "min_x": 34.0, "max_x": 74.0, "min_y": 0.0, "max_y": 76.0
+    },
+    "well": {
+        "clue_id": "water_pots",
+        "name": "Intact Desert Water Pots",
+        "description": "Clay water vessels and supply caches left intact on the stepwell platform.",
+        "min_x": 0.0, "max_x": 55.0, "min_y": 65.0, "max_y": 84.0
+    },
+    "bhangarh_gate": {
+        "clue_id": "kathputli_fragment",
+        "name": "Kathputli Sandstone Fragment",
+        "description": "Carved puppet theater fragment resting near the broken gate ramparts.",
+        "min_x": 0.0, "max_x": 100.0, "min_y": 65.0, "max_y": 100.0
+    },
+    "gopinath_temple": {
+        "clue_id": "paliwal_seal",
+        "name": "Paliwal Ledger Seal",
+        "description": "Bronze horse medallion seal near the baoli sanctuary steps.",
+        "min_x": 0.0, "max_x": 100.0, "min_y": 0.0, "max_y": 80.0
+    },
+    "palace_ruins": {
+        "clue_id": "wanderers_verse",
+        "name": "Wanderer's Verse Antelope Medallion",
+        "description": "Ancient inscribed verse inside the 7-tiered royal palace ruins.",
+        "min_x": 0.0, "max_x": 100.0, "min_y": 0.0, "max_y": 80.0
+    }
+}
+
+
+@game_bp.route("/genie/clue-radar", methods=["POST", "GET"])
+def genie_clue_radar():
+    """Authoritative backend clue radar specifying when Jolly Bhai Genie should shake.
+
+    RULES:
+    1. Proximity: Player must physically enter the clue's coordinate bounding box.
+    2. Uncollected: Clue must not be collected yet.
+    3. Non-Intrusive: Exits, doorways, and unrelated room areas keep Genie calm (normal float).
+    """
+    if request.method == "POST":
+        data = request.get_json(silent=True) or {}
+    else:
+        data = request.args.to_dict()
+
+    scene = data.get("scene", "")
+    player_x = float(data.get("player_x") or data.get("x") or 0.0)
+    player_y = float(data.get("player_y") or data.get("y") or 0.0)
+    collected = data.get("collected_clues", [])
+    if isinstance(collected, str):
+        collected = [c.strip() for c in collected.split(",") if c.strip()]
+
+    hotspot = CLUE_HOTSPOTS.get(scene)
+    if not hotspot:
+        return jsonify({
+            "status": "success",
+            "should_shake": False,
+            "mode": "normal",
+            "reason": "No hidden clue in this location."
+        }), 200
+
+    clue_id = hotspot["clue_id"]
+    if clue_id in collected:
+        return jsonify({
+            "status": "success",
+            "should_shake": False,
+            "mode": "normal",
+            "reason": f"{hotspot['name']} already discovered by player."
+        }), 200
+
+    in_proximity = (
+        hotspot["min_x"] <= player_x <= hotspot["max_x"] and
+        hotspot["min_y"] <= player_y <= hotspot["max_y"]
+    )
+
+    if in_proximity:
+        return jsonify({
+            "status": "success",
+            "should_shake": True,
+            "mode": "shaking",
+            "clue_id": clue_id,
+            "clue_name": hotspot["name"],
+            "hint": f"💥 Quick, mere aaka! {hotspot['description']}",
+            "reason": f"Player is in close proximity to undiscovered {hotspot['name']}."
+        }), 200
+    else:
+        return jsonify({
+            "status": "success",
+            "should_shake": False,
+            "mode": "normal",
+            "clue_id": clue_id,
+            "clue_name": hotspot["name"],
+            "reason": "Player is in the chamber but not near the clue hotspot. Genie remains calm."
+        }), 200

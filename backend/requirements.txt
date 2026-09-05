@@ -9,3 +9,5 @@ cloudinary
 langchain
 langchain-core
 langchain-groq
+chromadb
+sentence-transformers

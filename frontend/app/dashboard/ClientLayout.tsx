@@ -3,6 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "./ThemeContext";
+import { 
+  Gamepad2, 
+  Compass, 
+  Trophy, 
+  User, 
+  Sun, 
+  Moon, 
+  LogOut 
+} from "lucide-react";
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const { isDark, toggleTheme } = useTheme();
@@ -20,10 +29,18 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           {/* Subtle top glow */}
           <div className={`absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent to-transparent ${isDark ? 'via-[#91714b]/50' : 'via-[#c9a776]/50'}`}></div>
           
-          <div className="flex flex-col items-center gap-4 text-center">
-            <div className={`w-14 h-14 border rounded-lg flex items-center justify-center relative overflow-hidden shadow-lg transition-colors duration-500 ${isDark ? 'bg-[#16202c] border-[#91714b]' : 'bg-[#fcf8f2] border-[#c9a776]'}`}>
-              <div className={`absolute inset-0.5 border rounded-md pointer-events-none ${isDark ? 'border-[#91714b]/30' : 'border-[#c9a776]/30'}`}></div>
-              <span className={`text-[8px] leading-tight font-extrabold uppercase tracking-widest font-serif transition-colors duration-500 ${isDark ? 'text-[#e2b975]' : 'text-[#b38848]'}`}>BHARAT<br/>GATHA</span>
+          <div className="flex flex-col items-center gap-3.5 text-center">
+            {/* Bharat Gatha Emblem */}
+            <div className="relative group">
+              <img 
+                src="/icon.png" 
+                alt="Bharat Gatha Seal" 
+                className={`w-14 h-14 rounded-full border-2 p-0.5 shadow-lg transition-all duration-300 object-cover ${
+                  isDark 
+                    ? 'border-[#91714b] shadow-[0_0_18px_rgba(218,165,32,0.35)] bg-black/60' 
+                    : 'border-[#c9a776] shadow-[0_0_18px_rgba(180,136,72,0.25)] bg-[#fcf8f2]'
+                }`}
+              />
             </div>
             <div>
               <h1 className={`text-xl font-serif tracking-wide drop-shadow-md transition-colors duration-500 ${isDark ? 'text-[#e4c794]' : 'text-[#8a6835]'}`}>
@@ -49,7 +66,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 ? 'text-[#a89985] hover:text-[#e4c794] hover:bg-[#91714b]/5'
                 : 'text-[#7a6f5e] hover:text-[#8a6835] hover:bg-[#c9a776]/10'
           }`}>
-            <svg className={`w-5 h-5 ${pathname === '/dashboard' ? (isDark ? 'text-[#b4986b]' : 'text-[#b38848]') : 'opacity-70'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <Gamepad2 className={`w-5 h-5 ${pathname === '/dashboard' ? (isDark ? 'text-[#b4986b]' : 'text-[#b38848]') : 'opacity-70'}`} />
             Games
           </Link>
 
@@ -63,7 +80,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 ? 'text-[#a89985] hover:text-[#e4c794] hover:bg-[#91714b]/5'
                 : 'text-[#7a6f5e] hover:text-[#8a6835] hover:bg-[#c9a776]/10'
           }`}>
-            <svg className={`w-5 h-5 ${pathname?.startsWith('/ai-expedition') ? (isDark ? 'text-[#b4986b]' : 'text-[#b38848]') : 'opacity-70'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L5.602 15.13a2 2 0 00-1.15.109l-1.03.44a1 1 0 00-.547.962V20a1 1 0 001.127.994l2.766-.346a6 6 0 012.26.068l2.062.516a6 6 0 002.578-.068l2.766-.346A1 1 0 0021 19.825v-3.435a1 1 0 00-.572-.91l-1.000-.452zM12 11V3m0 0L8.5 6.5M12 3l3.5 3.5"></path></svg>
+            <Compass className={`w-5 h-5 ${pathname?.startsWith('/ai-expedition') ? (isDark ? 'text-[#b4986b]' : 'text-[#b38848]') : 'opacity-70'}`} />
             AI Expedition
           </Link>
 
@@ -77,7 +94,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 ? 'text-[#a89985] hover:text-[#e4c794] hover:bg-[#91714b]/5'
                 : 'text-[#7a6f5e] hover:text-[#8a6835] hover:bg-[#c9a776]/10'
           }`}>
-            <svg className={`w-5 h-5 ${pathname === '/dashboard/leaderboard' ? (isDark ? 'text-[#b4986b]' : 'text-[#b38848]') : 'opacity-70'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+            <Trophy className={`w-5 h-5 ${pathname === '/dashboard/leaderboard' ? (isDark ? 'text-[#b4986b]' : 'text-[#b38848]') : 'opacity-70'}`} />
             Leaderboard
           </Link>
 
@@ -91,7 +108,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 ? 'text-[#a89985] hover:text-[#e4c794] hover:bg-[#91714b]/5'
                 : 'text-[#7a6f5e] hover:text-[#8a6835] hover:bg-[#c9a776]/10'
           }`}>
-            <svg className={`w-5 h-5 ${pathname === '/dashboard/profile' ? (isDark ? 'text-[#b4986b]' : 'text-[#b38848]') : 'opacity-70'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+            <User className={`w-5 h-5 ${pathname === '/dashboard/profile' ? (isDark ? 'text-[#b4986b]' : 'text-[#b38848]') : 'opacity-70'}`} />
             Profile
           </Link>
         </nav>
@@ -99,15 +116,15 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         <div className={`p-6 border-t-[1.5px] transition-colors duration-500 flex flex-col gap-3 ${isDark ? 'border-[#3a2d1d]' : 'border-[#e3d5c1]'}`}>
           <button onClick={toggleTheme} className={`flex items-center justify-center gap-3 px-4 py-3 border rounded-lg text-[13px] uppercase tracking-widest font-bold transition-all shadow-inner ${isDark ? 'border-[#3a2d1d] hover:border-[#5a4834] bg-[#0f0c09] hover:bg-[#16120e] text-[#a89985] hover:text-[#c5b59f]' : 'border-[#e3d5c1] hover:border-[#c9a776] bg-white hover:bg-[#fcf8f2] text-[#7a6f5e] hover:text-[#8a6835]'}`}>
             {isDark ? (
-               <svg className="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+              <Sun className="w-4 h-4 opacity-80 text-[#e4c794]" />
             ) : (
-               <svg className="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+              <Moon className="w-4 h-4 opacity-80 text-[#8a6835]" />
             )}
             {isDark ? 'Light Mode' : 'Dark Mode'}
           </button>
           
           <Link href="/" className={`flex items-center justify-center gap-3 px-4 py-3 border rounded-lg text-[13px] uppercase tracking-widest font-bold transition-all shadow-inner ${isDark ? 'border-[#3a2d1d] hover:border-[#5a4834] bg-[#0f0c09] hover:bg-[#16120e] text-[#a89985] hover:text-[#c5b59f]' : 'border-[#e3d5c1] hover:border-[#c9a776] bg-white hover:bg-[#fcf8f2] text-[#7a6f5e] hover:text-[#8a6835]'}`}>
-            <svg className="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+            <LogOut className="w-4 h-4 opacity-70" />
             Sign out
           </Link>
         </div>
