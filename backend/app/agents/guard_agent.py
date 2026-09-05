@@ -170,7 +170,8 @@ def ask_guard_agent(
 def verify_fact_grounding(
     answer: str,
     source_chunks: list = None,
-    confidence_threshold: float = 0.70
+    confidence_threshold: float = 0.70,
+    strict_mode: bool = False
 ) -> dict:
     """Verify whether key factual claims (years, names, locations) in generated answer exist in source chunks.
 
@@ -178,12 +179,13 @@ def verify_fact_grounding(
         answer (str): Generated LLM response.
         source_chunks (list, optional): Retrieved knowledge base chunks.
         confidence_threshold (float): Minimum confidence ratio required (default 0.70).
+        strict_mode (bool): If True, replaces ungrounded answer with SAFE_FALLBACK_ANSWER. Default False.
 
     Returns:
         dict:
             - is_grounded: bool
             - confidence: float
-            - verified_answer: str (original answer or fallback if ungrounded)
+            - verified_answer: str (original answer, or fallback only if strict_mode is True and ungrounded)
             - ungrounded_entities: list of flagged strings
             - fallback_needed: bool
     """
@@ -278,7 +280,10 @@ def verify_fact_grounding(
     confidence = round(max(0.0, grounded_count / total_facts), 2)
     is_grounded = confidence >= threshold
 
-    verified_answer = normalized_answer if is_grounded else SAFE_FALLBACK_ANSWER
+    if strict_mode and not is_grounded:
+        verified_answer = SAFE_FALLBACK_ANSWER
+    else:
+        verified_answer = normalized_answer
 
     return {
         "is_grounded": is_grounded,

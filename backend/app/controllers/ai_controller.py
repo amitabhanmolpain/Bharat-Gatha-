@@ -55,53 +55,24 @@ def ask_question():
             context=context,
             model_name=model
         )
-    elif character in ("jolly", "genie") and use_rag:
-        # Route through RAG pipeline: retrieval -> generation -> fact-verification -> TTS
-        region = data.get("region") or _derive_region_from_context(context)
-        scene = data.get("scene") or context.get("location") or "historical_site"
-        
-        rag_result = get_grounded_answer(region=region, scene=scene, player_question=question)
-        source_chunks = rag_result.get("retrieved_chunks", [])
-        raw_answer = rag_result.get("answer", "")
-
-        # Verification through guard agent service
-        verification = verify_fact_grounding(raw_answer, source_chunks)
-        final_answer = verification["verified_answer"]
-
-        # Speech generation for Jolly Bhai
-        audio_info = None
-        if data.get("generate_audio", False):
-            try:
-                audio_info = generate_character_speech(
-                    text=final_answer,
-                    character="jolly",
-                    scene=scene
-                )
-            except Exception:
-                audio_info = None
-
-        result = {
-            "status": "success",
-            "character": "jolly",
-            "character_name": "Jolly Bhai",
-            "answer": final_answer,
-            "is_grounded": verification["is_grounded"],
-            "grounding_confidence": verification["confidence"],
-            "flagged_entities": verification["ungrounded_entities"],
-            "fallback_triggered": verification["fallback_needed"],
-            "source_chunks": source_chunks,
-            "audio": audio_info,
-            "model": rag_result.get("model", model),
-            "region": region,
-            "scene": scene,
-            "status_code": 200
-        }
     elif character in ("jolly", "genie"):
+        # Jolly Bhai uses hybrid LLM intelligence augmented by RAG reference chronicles
         result = ask_genie_agent(
             question=question,
             context=context,
             model_name=model
         )
+        if data.get("generate_audio", False) and not result.get("audio"):
+            scene = data.get("scene") or context.get("location") or "historical_site"
+            try:
+                audio_info = generate_character_speech(
+                    text=result.get("answer", ""),
+                    character="jolly",
+                    scene=scene
+                )
+                result["audio"] = audio_info
+            except Exception:
+                pass
     else:
         result = ask_historical_question(
             question=question,
@@ -120,51 +91,24 @@ def genie_chat():
     question = data.get("question", "")
     context = data.get("context", {})
     model = data.get("model", "openai/gpt-oss-120b")
-    use_rag = data.get("use_rag", True)
-
-    if use_rag:
-        region = data.get("region") or _derive_region_from_context(context)
-        scene = data.get("scene") or context.get("location") or "historical_site"
-
-        rag_result = get_grounded_answer(region=region, scene=scene, player_question=question)
-        source_chunks = rag_result.get("retrieved_chunks", [])
-        raw_answer = rag_result.get("answer", "")
-
-        verification = verify_fact_grounding(raw_answer, source_chunks)
-        final_answer = verification["verified_answer"]
-
-        audio_info = None
-        if data.get("generate_audio", False):
-            try:
-                audio_info = generate_character_speech(
-                    text=final_answer,
-                    character="jolly",
-                    scene=scene
-                )
-            except Exception:
-                audio_info = None
-
-        return jsonify({
-            "status": "success",
-            "character": "jolly",
-            "character_name": "Jolly Bhai",
-            "answer": final_answer,
-            "is_grounded": verification["is_grounded"],
-            "grounding_confidence": verification["confidence"],
-            "flagged_entities": verification["ungrounded_entities"],
-            "fallback_triggered": verification["fallback_needed"],
-            "source_chunks": source_chunks,
-            "audio": audio_info,
-            "model": rag_result.get("model", model),
-            "region": region,
-            "scene": scene
-        }), 200
 
     result = ask_genie_agent(
         question=question,
         context=context,
         model_name=model
     )
+
+    if data.get("generate_audio", False) and not result.get("audio"):
+        scene = data.get("scene") or context.get("location") or "historical_site"
+        try:
+            audio_info = generate_character_speech(
+                text=result.get("answer", ""),
+                character="jolly",
+                scene=scene
+            )
+            result["audio"] = audio_info
+        except Exception:
+            pass
 
     status_code = result.pop("status_code", 200)
     return jsonify(result), status_code
@@ -183,8 +127,8 @@ def rag_ask():
     source_chunks = rag_result.get("retrieved_chunks", [])
     raw_answer = rag_result.get("answer", "")
 
-    # Fact-Verification through Guard Agent
-    verification = verify_fact_grounding(raw_answer, source_chunks)
+    # Fact-Verification telemetry (non-blocking for rich LLM answers)
+    verification = verify_fact_grounding(raw_answer, source_chunks, strict_mode=False)
     final_answer = verification["verified_answer"]
 
     audio_result = None

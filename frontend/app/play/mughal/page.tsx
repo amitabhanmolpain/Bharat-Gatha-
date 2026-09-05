@@ -3,9 +3,10 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import DialoguePanel from "../../components/DialoguePanel";
-import { playNarration, stopNarration } from "../../../services/narratorService";
-import { playCharacterDialogue, stopCharacterDialogue } from "../../../services/characterVoiceService";
+import { playNarration, stopNarration, narrator } from "../../../services/narratorService";
+import { playCharacterDialogue, stopCharacterDialogue, subscribeCharacterVoice } from "../../../services/characterVoiceService";
 import NarratorSubtitle from "../../../components/NarratorSubtitle";
+
 import CluesModal, { MUGHAL_HISTORICAL_CLUES } from "./components/CluesModal";
 import PietraDuraPuzzleModal from "./components/PietraDuraPuzzleModal";
 import SheeshMirrorReflectionModal from "./components/SheeshMirrorReflectionModal";
@@ -60,6 +61,10 @@ export default function MughalGameScreen() {
   const [isTimerVisible, setIsTimerVisible] = useState(false);
   const [isMusicMuted, setIsMusicMuted] = useState(false);
   const [isSoundMuted, setIsSoundMuted] = useState(false);
+
+  // --- INNER RAMP PASSAGE AMBIENT THEME AUDIO & SPEECH DUCKING ---
+  const rampAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [isAnySpeechActive, setIsAnySpeechActive] = useState(false);
 
   // Dynamic Guard Punishment / Retribution Screen state
   const [punishmentState, setPunishmentState] = useState<{
@@ -519,7 +524,98 @@ export default function MughalGameScreen() {
     }
   }, [isLoading, scene]);
 
+  // --- INNER RAMP PASSAGE THEME MUSIC & REAL-TIME AUDIO DUCKING ---
+  // Tracks narrator and character dialogue / TTS playing state.
+  // When speech is active, ducks ramp music to near-inaudible whisper (0.03).
+  // When speech ends, smoothly restores low ambient volume (0.16).
+  useEffect(() => {
+    let charPlaying = false;
+    let narratorPlaying = false;
+
+    const checkSpeech = () => {
+      const active = charPlaying || narratorPlaying;
+      setIsAnySpeechActive(active);
+      if (rampAudioRef.current && scene === "passage") {
+        rampAudioRef.current.volume = active ? 0.03 : 0.16;
+      }
+    };
+
+    const unsubChar = subscribeCharacterVoice((state) => {
+      charPlaying = state.isPlaying;
+      checkSpeech();
+    });
+
+    const unsubNarrator = narrator.subscribe((state) => {
+      narratorPlaying = state.isPlaying;
+      checkSpeech();
+    });
+
+    return () => {
+      unsubChar();
+      unsubNarrator();
+    };
+  }, [scene]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    if (scene === "passage" && !isTransitioning) {
+      if (!rampAudioRef.current) {
+        const audio = new Audio("/ramp_passage_theme.mp3");
+        audio.loop = true;
+        audio.volume = isAnySpeechActive ? 0.03 : 0.16;
+        audio.onended = () => {
+          audio.currentTime = 0;
+          audio.play().catch(() => {});
+        };
+        rampAudioRef.current = audio;
+      }
+
+      const audio = rampAudioRef.current;
+      audio.volume = isAnySpeechActive ? 0.03 : 0.16;
+
+      if (isMusicMuted) {
+        audio.pause();
+      } else {
+        audio.play().catch((err) => {
+          console.log("Ramp passage theme autoplay pending player gesture:", err?.message || err);
+        });
+      }
+
+      const triggerOnGesture = () => {
+        if (scene === "passage" && !isMusicMuted && rampAudioRef.current && rampAudioRef.current.paused) {
+          rampAudioRef.current.play().catch(() => {});
+        }
+      };
+
+      window.addEventListener("click", triggerOnGesture, { once: true });
+      window.addEventListener("keydown", triggerOnGesture, { once: true });
+
+      return () => {
+        window.removeEventListener("click", triggerOnGesture);
+        window.removeEventListener("keydown", triggerOnGesture);
+      };
+    } else {
+      // Pause immediately and rewind when exiting the ramp passage
+      if (rampAudioRef.current) {
+        rampAudioRef.current.pause();
+        rampAudioRef.current.currentTime = 0;
+      }
+    }
+  }, [scene, isTransitioning, isAnySpeechActive, isMusicMuted]);
+
+  // Clean up ramp passage audio on component unmount
+  useEffect(() => {
+    return () => {
+      if (rampAudioRef.current) {
+        rampAudioRef.current.pause();
+        rampAudioRef.current.currentTime = 0;
+      }
+    };
+  }, []);
+
   const triggerCourtyardGuardDialogue = (guardId: string, side: 'left' | 'right') => {
+
     setActiveCourtyardGuardId(guardId);
     if (hasKhasPermissionRef.current || hasKhasPermission) {
       const speech = "Good! You possess the Imperial Royal Firman. You are good to go! Step inside the Khas Mahal.";
