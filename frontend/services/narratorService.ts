@@ -11,6 +11,7 @@ export interface NarrationOptions {
   pace?: number;
   language_code?: string;
   model?: string;
+  hideSubtitle?: boolean;
   onStart?: () => void;
   onEnd?: () => void;
   onError?: (err: any) => void;
@@ -20,6 +21,7 @@ export interface NarratorState {
   isPlaying: boolean;
   isLoading: boolean;
   currentText: string | null;
+  options?: NarrationOptions;
   error: string | null;
 }
 
@@ -144,6 +146,7 @@ class NarratorManager {
       isLoading: true,
       isPlaying: false,
       currentText: trimmed,
+      options,
       error: null,
     });
 

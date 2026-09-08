@@ -22,7 +22,7 @@ export default function NarratorSubtitle() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [state.isPlaying, state.isLoading, state.currentText]);
 
-  if (!state.isPlaying && !state.isLoading && !state.currentText) {
+  if ((!state.isPlaying && !state.isLoading && !state.currentText) || state.options?.hideSubtitle) {
     return null;
   }
 

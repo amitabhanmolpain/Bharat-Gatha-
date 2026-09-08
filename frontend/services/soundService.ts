@@ -299,6 +299,85 @@ class SoundEffectsService {
       osc.stop(ctx.currentTime + 0.08);
     } catch (e) {}
   }
+
+  /**
+   * Authentic Cowrie Shells Clatter Sound
+   * Synthesizes the tactile, rapid cascading clatter of multiple porcelain/calcified
+   * cowrie shells bouncing, clicking, and settling on a stone or wooden board.
+   */
+  public playCowrieShellsSound() {
+    if (this.isMuted) return;
+    try {
+      const ctx = this.getContext();
+      if (!ctx) return;
+
+      const baseTime = ctx.currentTime;
+      // 6 staggered impacts representing four tumbling, bouncing cowrie shells
+      const bounces = [
+        { delay: 0.00, pitch: 1.15, vol: 0.28 },
+        { delay: 0.04, pitch: 0.95, vol: 0.24 },
+        { delay: 0.085, pitch: 1.30, vol: 0.22 },
+        { delay: 0.135, pitch: 0.88, vol: 0.18 },
+        { delay: 0.185, pitch: 1.05, vol: 0.14 },
+        { delay: 0.235, pitch: 1.25, vol: 0.10 },
+      ];
+
+      bounces.forEach(({ delay, pitch, vol }) => {
+        const t = baseTime + delay;
+
+        // 1. Calcified porcelain click (resonant sine decay)
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(2600 * pitch, t);
+        osc.frequency.exponentialRampToValueAtTime(1400 * pitch, t + 0.025);
+        gain.gain.setValueAtTime(vol * 0.7, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.035);
+
+        // 2. High-frequency shell edge click (filtered noise burst)
+        const bufferSize = Math.floor(ctx.sampleRate * 0.012);
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const channel = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          channel[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+        }
+        const noise = ctx.createBufferSource();
+        noise.buffer = buffer;
+
+        const filter = ctx.createBiquadFilter();
+        filter.type = "bandpass";
+        filter.frequency.setValueAtTime(3800 * pitch, t);
+        filter.Q.value = 3.5;
+
+        const noiseGain = ctx.createGain();
+        noiseGain.gain.setValueAtTime(vol * 0.9, t);
+        noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.015);
+
+        noise.connect(filter);
+        filter.connect(noiseGain);
+        noiseGain.connect(ctx.destination);
+        noise.start(t);
+        noise.stop(t + 0.02);
+
+        // 3. Subtle hollow board tap
+        const tapOsc = ctx.createOscillator();
+        const tapGain = ctx.createGain();
+        tapOsc.type = "triangle";
+        tapOsc.frequency.setValueAtTime(420 * pitch, t);
+        tapOsc.frequency.exponentialRampToValueAtTime(180, t + 0.02);
+        tapGain.gain.setValueAtTime(vol * 0.35, t);
+        tapGain.gain.exponentialRampToValueAtTime(0.001, t + 0.025);
+        tapOsc.connect(tapGain);
+        tapGain.connect(ctx.destination);
+        tapOsc.start(t);
+        tapOsc.stop(t + 0.03);
+      });
+    } catch (e) {}
+  }
 }
 
 export const soundFx = new SoundEffectsService();
