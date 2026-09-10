@@ -74,7 +74,9 @@ def get_solved_status():
             "era": era,
             "solved_puzzles": solved_list,
             "is_pietra_dura_solved": "pietra_dura_flower_art" in solved_list,
-            "is_sheesh_mirror_solved": "sheesh_mahal_reflection" in solved_list
+            "is_sheesh_mirror_solved": "sheesh_mahal_reflection" in solved_list,
+            "is_great_bath_drainage_solved": "great_bath_drainage" in solved_list,
+            "is_steatite_seal_solved": "steatite_seal_decryption" in solved_list
         }), 200
 
     except Exception as e:

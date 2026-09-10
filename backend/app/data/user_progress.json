@@ -15,5 +15,18 @@
       "Sheesh Mahal Corridor Clearance"
     ],
     "total_score": 3650
+  },
+  "default_traveller_indus": {
+    "user_id": "default_traveller",
+    "era": "indus",
+    "solved_puzzles": [
+      "great_bath_drainage",
+      "steatite_seal_decryption"
+    ],
+    "prizes_unlocked": [
+      "Corbelled Terracotta Sluice Fragment",
+      "Ekasringa Unicorn Steatite Seal"
+    ],
+    "total_score": 350
   }
 }

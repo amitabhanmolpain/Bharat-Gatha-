@@ -28,6 +28,8 @@ def generate_tts_narration(
     Automatically downloads and caches the resulting .wav audio locally in 
     frontend/public/audio_cache/ so it can be served instantly offline without repeated API calls.
     """
+    from dotenv import load_dotenv
+    load_dotenv(override=True)
     api_key = os.getenv("SARVAM_API_KEY")
     if not api_key:
         return {
@@ -71,8 +73,25 @@ def generate_tts_narration(
         "Content-Type": "application/json"
     }
 
+    inputs = []
+    if len(clean_text) <= 480:
+        inputs = [clean_text]
+    else:
+        import re
+        sentences = re.split(r'(?<=[.!?])\s+', clean_text)
+        curr = ""
+        for s in sentences:
+            if len(curr) + len(s) + 1 <= 480:
+                curr = f"{curr} {s}".strip()
+            else:
+                if curr:
+                    inputs.append(curr)
+                curr = s[:480]
+        if curr:
+            inputs.append(curr)
+
     payload = {
-        "inputs": [clean_text],
+        "inputs": inputs,
         "target_language_code": language_code,
         "speaker": speaker,
         "pace": float(pace),

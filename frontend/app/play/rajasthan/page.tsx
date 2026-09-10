@@ -854,19 +854,6 @@ export default function RajasthanGameScreen() {
     }
   }, [showKuldharaTimeOutModal]);
 
-  // --- BHANGARH ARTIFACT RECOVERY (Stage 4 - Free Exploration) ---
-  useEffect(() => {
-    if (stage !== 4 || isCampaignComplete) return;
-
-    const allRelicsFound = hasKathputliFragment && hasPaliwalSeal && hasWanderersVerse;
-    if (allRelicsFound) {
-      if (!hasShield) {
-        setHasShield(true);
-        setShowShieldModal(true);
-      }
-    }
-  }, [stage, isCampaignComplete, hasKathputliFragment, hasPaliwalSeal, hasWanderersVerse, hasShield]);
-
   // --- BHANGARH FORT NARRATOR INTRO (SARVAM AI RATAN) ---
   const bhangarhNarratorSentence = "Find the given clue in the Bhangarh Fort: why is the given palace haunted, before the evil spirits attack you!";
 
@@ -906,7 +893,9 @@ export default function RajasthanGameScreen() {
       allRelicsFound ||
       showBhangarhTimeOutModal ||
       showBhangarhNarratorBanner ||
-      showJollyDialogue
+      showJollyDialogue ||
+      showShieldModal ||
+      showGrandCampaignCompleteModal
     ) return;
 
     const interval = setInterval(() => {
@@ -931,6 +920,8 @@ export default function RajasthanGameScreen() {
     showBhangarhTimeOutModal,
     showBhangarhNarratorBanner,
     showJollyDialogue,
+    showShieldModal,
+    showGrandCampaignCompleteModal,
   ]);
 
   // Voice narration when Bhangarh 1-minute challenge timeout occurs (Evil Spirits Attack)
@@ -947,19 +938,39 @@ export default function RajasthanGameScreen() {
     }
   }, [showBhangarhTimeOutModal]);
 
-  // Voice narration when Bhangarh challenge is won (Curse Legend & Royal Shield Revealed)
+  // Voice narration when Bhangarh challenge is won (Curse Legend & Royal Shield Revealed - Screen 1)
   useEffect(() => {
     if (showShieldModal) {
       stopCharacterDialogue();
       stopNarration();
-      const victoryNarration = "You have uncovered the ancient legend of Bhangarh Fort! Princess Ratnavati saw through the dark witchcraft of Tantrik Singhia and threw his enchanted love potion onto a giant boulder. The rock rolled down and crushed the evil tantrik! With his dying breath, Singhia cursed Bhangarh that every roof would collapse and no soul would ever live in peace. Soon after, war and famine devastated the city, leaving its roofless ruins haunted by restless spirits!";
+      const victoryNarration = "Having uncovered all hidden relics, the fateful mystery of why Bhangarh is believed to be haunted is revealed! According to historic folklore, Tantrik Singhia, a master of black magic, was desperately obsessed with the peerless beauty of Princess Ratnavati of Bhangarh. In secret, he enchanted a vial of scented oil with a dark love spell so she would surrender herself to him. Discerning the sinister sorcery, the astute princess cast the vial away onto a massive boulder. The bewitched rock was drawn to the tantrik, rolling down the hill and crushing Singhia beneath its immense weight! With his dying breath, the vengeful sorcerer cursed Bhangarh that every palace roof would crumble, destruction would follow, and no soul would ever live in peace. A year later, a catastrophic battle and the devastating Chalisa Famine of 1783 ruined the township, causing it to be deserted forever. To this day, the legend holds that the roofless palace and desolate walls are haunted by the trapped, restless spirits of the tantrik and fallen townsfolk!";
       playNarration(victoryNarration, {
         speaker: "ratan",
         pace: 0.90,
         language_code: "en-IN",
       });
+      return () => {
+        stopNarration();
+      };
     }
   }, [showShieldModal]);
+
+  // Voice narration when Grand Rajasthan Campaign Complete modal opens (Screen 2)
+  useEffect(() => {
+    if (showGrandCampaignCompleteModal) {
+      stopCharacterDialogue();
+      stopNarration();
+      const campaignCompleteNarration = "Congratulations! You have completed the Rajasthan campaign.";
+      playNarration(campaignCompleteNarration, {
+        speaker: "ratan",
+        pace: 0.90,
+        language_code: "en-IN",
+      });
+      return () => {
+        stopNarration();
+      };
+    }
+  }, [showGrandCampaignCompleteModal]);
 
   // Automatically trigger Royal Shield modal when all 3 clues are discovered
   useEffect(() => {
@@ -991,7 +1002,7 @@ export default function RajasthanGameScreen() {
 
   // --- BHANGARH CLUES AUTOMATIC TOUCH TRIGGERS ---
   useEffect(() => {
-    if (stage !== 4) return;
+    if (stage !== 4 || showShieldModal || showGrandCampaignCompleteModal || isCampaignComplete) return;
 
     // Clue 1: Kathputli Fragment tiny fallen on far-left ground in bhangarh_gate
     if (
@@ -1586,7 +1597,7 @@ export default function RajasthanGameScreen() {
             state.setPlayerPos({ x: 50.0, y: 86.0 });
             state.setIsTransitioning(false);
           }, 400);
-        } else if (state.isNearFinalEvidenceBoard || (state.scene === "palace_ruins" && state.hasKathputliFragment && state.hasPaliwalSeal && state.hasWanderersVerse)) {
+        } else if (state.isNearFinalEvidenceBoard || (state.scene === "palace_ruins" && state.hasKathputliFragment && state.hasPaliwalSeal && state.hasWanderersVerse && state.isCampaignComplete && !state.showShieldModal)) {
           if (typeof state.setShowGrandCampaignCompleteModal === "function") {
             state.setShowGrandCampaignCompleteModal(true);
           } else if (typeof state.setShowFinalEvidenceBoardModal === "function") {
@@ -4092,10 +4103,18 @@ export default function RajasthanGameScreen() {
             </div>
 
             <div className="flex gap-4 w-full">
-              <button onClick={() => setShowGrandCampaignCompleteModal(false)} className="flex-1 bg-amber-100 hover:bg-amber-200 text-amber-950 font-bold py-3 px-4 rounded-xl border-2 border-black text-xs uppercase tracking-wider cursor-pointer">
+              <button onClick={() => {
+                stopNarration();
+                stopCharacterDialogue();
+                setShowGrandCampaignCompleteModal(false);
+              }} className="flex-1 bg-amber-100 hover:bg-amber-200 text-amber-950 font-bold py-3 px-4 rounded-xl border-2 border-black text-xs uppercase tracking-wider cursor-pointer">
                 Revisit Bhangarh Fort
               </button>
-              <button onClick={() => router.push("/dashboard")} className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-extrabold py-3 px-4 rounded-xl border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-xs uppercase tracking-wider cursor-pointer">
+              <button onClick={() => {
+                stopNarration();
+                stopCharacterDialogue();
+                router.push("/dashboard");
+              }} className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-extrabold py-3 px-4 rounded-xl border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-xs uppercase tracking-wider cursor-pointer">
                 Return to Dashboard
               </button>
             </div>
@@ -4254,6 +4273,8 @@ export default function RajasthanGameScreen() {
             {/* Golden Action Button */}
             <button
               onClick={() => {
+                stopNarration();
+                stopCharacterDialogue();
                 setShowShieldModal(false);
                 setIsCampaignComplete(true);
                 setShowGrandCampaignCompleteModal(true);

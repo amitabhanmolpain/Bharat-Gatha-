@@ -2,18 +2,18 @@
   "default_traveller_mughal": {
     "user_id": "default_traveller",
     "era": "mughal",
-    "scene": "red_fort_corridor",
+    "scene": "red_fort_plaza",
     "playerPos": {
       "x": 50,
-      "y": 80
+      "y": 88
     },
     "hasGuardPermission": true,
-    "hasKhasPermission": true,
+    "hasKhasPermission": false,
     "isPietraDuraSolved": true,
     "isSheeshMirrorSolved": true,
     "isArchaeologistTalked": true,
     "isCarriageUnlocked": false,
-    "cluesFound": 5,
-    "last_saved_at": "2026-09-05T05:42:38.996161"
+    "cluesFound": 4,
+    "last_saved_at": "2026-09-10T18:01:30.148073"
   }
 }
