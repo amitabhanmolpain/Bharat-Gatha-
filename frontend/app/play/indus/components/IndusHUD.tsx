@@ -51,6 +51,7 @@ export default function IndusHUD({
   const getLocationTitle = (sc: IndusSceneType) => {
     switch (sc) {
       case "lower_town_gate":
+        return "INDUS VALLEY - THE GHAT OF MOHENJO-DARO (c. 2500 BCE)";
       case "granary_avenue":
         return "INDUS VALLEY - LOWER TOWN & GRANARY (c. 2500 BCE)";
       case "great_bath_citadel":
@@ -70,6 +71,7 @@ export default function IndusHUD({
   const getSceneDisplayName = (sc: IndusSceneType) => {
     switch (sc) {
       case "lower_town_gate":
+        return "The Indus Ghat";
       case "granary_avenue":
         return "Lower Town Grid";
       case "great_bath_citadel":

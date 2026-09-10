@@ -5,7 +5,7 @@ export const INDUS_STORAGE_KEY = "indus_save_state";
 export const INITIAL_INDUS_STATE: IndusSaveState = {
   stage: 1,
   scene: "lower_town_gate",
-  playerPos: { x: 50.0, y: 82.0 },
+  playerPos: { x: 38.0, y: 80.0 },
   tutorialCompleted: false,
 
   hasMetCityOverseer: false,
@@ -29,14 +29,14 @@ export const INITIAL_INDUS_STATE: IndusSaveState = {
 
 export const INDUS_SCENE_CONFIGS: Record<IndusSceneType, IndusSceneMeta> = {
   lower_town_gate: {
-    title: "Lower Town Entrance & North-South Avenue",
+    title: "The Ghat of Mohenjo-daro & River Checkpoint",
     era: "Bronze Age • c. 2500 BCE",
-    subtitle: "The Planned Grid City",
-    backgroundImage: "/bg-indus.jpg",
-    defaultObjective: "Approach City Overseer Somnath near the brick pillars to learn the sacred 1:2:4 building ratio.",
-    minX: 18.0,
-    maxX: 82.0,
-    minY: 48.0,
+    subtitle: "Riverside Landing & Trade Regulation",
+    backgroundImage: "/bg-indus-ghat.jpg",
+    defaultObjective: "Arrive at the Indus river ghat and approach Trade Overseer Somnath at the raised checkpoint platform.",
+    minX: 24.0,
+    maxX: 88.0,
+    minY: 44.0,
     maxY: 88.0,
   },
   granary_avenue: {

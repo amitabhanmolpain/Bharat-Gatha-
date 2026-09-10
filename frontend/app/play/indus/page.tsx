@@ -195,7 +195,7 @@ export default function IndusValleyGameScreen() {
     }
     setStage(1);
     setScene("lower_town_gate");
-    setPlayerPos({ x: 50.0, y: 82.0 });
+    setPlayerPos({ x: 38.0, y: 80.0 });
     setHasMetCityOverseer(false);
     setHasInspectedBrickRatio(false);
     setHasFirstRelicChertWeight(false);
@@ -213,19 +213,21 @@ export default function IndusValleyGameScreen() {
   };
 
   // 4. Proximity Checks
-  // Stage 1: Overseer Somnath (near x: 48-62, y: 55-75)
+  // Stage 1: Overseer Somnath at the raised checkpoint platform (near x: 58-82, y: 46-70)
   const isNearOverseer =
     scene === "lower_town_gate" &&
-    playerPos.x >= 42.0 &&
-    playerPos.x <= 68.0 &&
-    playerPos.y >= 54.0 &&
-    playerPos.y <= 74.0;
+    playerPos.x >= 58.0 &&
+    playerPos.x <= 82.0 &&
+    playerPos.y >= 46.0 &&
+    playerPos.y <= 70.0;
 
-  // Stage 1 -> Stage 2 North Gateway
+  // Stage 1 -> Stage 2 City Gateway to Mohenjo-daro (at gate x: 32-52, y: 40-54)
   const isNearGranaryExit =
     scene === "lower_town_gate" &&
     hasFirstRelicChertWeight &&
-    playerPos.y <= 52.0;
+    playerPos.x >= 32.0 &&
+    playerPos.x <= 52.0 &&
+    playerPos.y <= 54.0;
 
   // Stage 2: Great Bath sunken basin
   const isNearGreatBathBasin =
@@ -471,16 +473,16 @@ export default function IndusValleyGameScreen() {
 
         {/* --- SCENE HOTSPOTS & NPCS --- */}
 
-        {/* Stage 1: City Overseer Somnath in Lower Town Gate */}
+        {/* Stage 1: Trade Overseer Somnath on the Raised Checkpoint Platform */}
         {scene === "lower_town_gate" && (
           <div
             className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
-            style={{ left: "55%", top: "62%" }}
+            style={{ left: "69%", top: "54%" }}
           >
             {isNearOverseer && (
               <div className="mb-2 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
                 <span className="text-[#d8a86a] font-bold">[E]</span>
-                <span>Speak with City Overseer Somnath 📐</span>
+                <span>Speak with Trade Overseer Somnath 📐</span>
               </div>
             )}
             <div className="w-12 h-16 bg-[#2d2218]/90 border-2 border-[#d8a86a] rounded-2xl flex items-center justify-center text-3xl shadow-lg">
@@ -492,14 +494,14 @@ export default function IndusValleyGameScreen() {
           </div>
         )}
 
-        {/* Stage 1: North Granary Gateway Trigger */}
+        {/* Stage 1: Mohenjo-daro City Gateway Trigger */}
         {scene === "lower_town_gate" && hasFirstRelicChertWeight && (
           <div
             className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
-            style={{ left: "50%", top: "50%" }}
+            style={{ left: "42%", top: "42%" }}
           >
             <div className="mb-1 bg-[#1b1510]/90 border-2 border-[#52a45a] text-[#baf1be] px-3 py-1 rounded-lg text-xs font-serif shadow-md animate-pulse whitespace-nowrap">
-              <span>▲ [E] Walk north toward The Great Bath (Stage 2)</span>
+              <span>▲ [E] Enter City Gate to The Great Bath (Stage 2)</span>
             </div>
             <span className="text-2xl">🏛️</span>
           </div>
@@ -705,13 +707,13 @@ export default function IndusValleyGameScreen() {
 
             <div className="p-4 rounded-xl bg-[#281f16] border border-[#4d3a28] text-sm font-serif leading-relaxed text-[#eedbbf] mb-5 space-y-2">
               <p className="font-bold text-[#d8a86a]">
-                &ldquo;Welcome, traveler, to the world&apos;s first planned grid city!&rdquo;
+                &ldquo;Welcome, traveler, to the riverside ghat of Mohenjo-daro on the great Indus river!&rdquo;
               </p>
               <p className="text-xs text-[#c9b7a1]">
-                &ldquo;Notice how our avenues cross at exact ninety-degree angles. Every baked brick in this citadel adheres to the sacred ratio: 1 thickness to 2 width to 4 length. Under this law of proportion, our foundations endure seasonal inundations without buckling.&rdquo;
+                &ldquo;All cargo arriving on these riverboats must be inspected here at our raised checkpoint platform. Notice how our city walls and avenues cross at exact ninety-degree angles. Every baked brick in this city adheres to the sacred ratio: 1 thickness to 2 width to 4 length. Under this law of proportion, our foundations endure seasonal inundations without buckling.&rdquo;
               </p>
               <p className="text-xs text-[#d8a86a] italic">
-                &ldquo;Take this polished chert cube. Our binary balance weights are recognized in every market from Gujarat to ancient Mesopotamia.&rdquo;
+                &ldquo;Take this polished chert cube. Our binary balance weights are recognized in every market from Gujarat to ancient Mesopotamia. The city gate behind me is now open to the Great Bath!&rdquo;
               </p>
             </div>
 
