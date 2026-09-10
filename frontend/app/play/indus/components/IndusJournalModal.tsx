@@ -26,8 +26,10 @@ export default function IndusJournalModal({
         {/* Top Header */}
         <div className="flex items-center justify-between pb-3 border-b-2 border-[#54412e] mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-[#2e2319] border-2 border-[#c29357] flex items-center justify-center text-2xl shadow-inner">
-              📜
+            <div className="w-12 h-12 rounded-xl bg-[#2e2319] border-2 border-[#c29357] flex items-center justify-center shadow-inner">
+              <svg className="w-6 h-6 text-[#c29357]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
             </div>
             <div>
               <div className="text-[10px] font-mono text-[#c29357] uppercase tracking-widest">
@@ -58,7 +60,7 @@ export default function IndusJournalModal({
                 : "bg-[#271e16] text-[#c9b7a1] hover:bg-[#382b1e]"
             }`}
           >
-            📖 Inscriptions ({unlockedEntryIds.length}/{INDUS_JOURNAL_ENTRIES.length})
+            Inscriptions ({unlockedEntryIds.length}/{INDUS_JOURNAL_ENTRIES.length})
           </button>
 
           <button
@@ -70,7 +72,7 @@ export default function IndusJournalModal({
                 : "bg-[#271e16] text-[#c9b7a1] hover:bg-[#382b1e]"
             }`}
           >
-            🏺 Excavated Relics ({relicsCount}/{INDUS_RELICS.length})
+            Excavated Relics ({relicsCount}/{INDUS_RELICS.length})
           </button>
         </div>
 
@@ -91,7 +93,15 @@ export default function IndusJournalModal({
                 >
                   <div className="flex items-start gap-3">
                     <div className="w-10 h-10 rounded-lg bg-[#2e2319] border border-[#c29357] flex items-center justify-center text-xl shrink-0">
-                      {isUnlocked ? entry.icon : "🔒"}
+                      {isUnlocked ? (
+                        <svg className="w-5 h-5 text-[#d8a86a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5 text-[#6b533a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                      )}
                     </div>
 
                     <div className="flex-1">
@@ -134,8 +144,16 @@ export default function IndusJournalModal({
                   }`}
                 >
                   <div className="flex items-start gap-3.5">
-                    <div className="w-12 h-12 rounded-xl bg-[#2e2319] border-2 border-[#c29357] flex items-center justify-center text-2xl shrink-0">
-                      {isUnlocked ? relic.icon : "🔒"}
+                    <div className="w-12 h-12 rounded-xl bg-[#2e2319] border-2 border-[#c29357] flex items-center justify-center shrink-0">
+                      {isUnlocked ? (
+                        <svg className="w-6 h-6 text-[#d8a86a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                        </svg>
+                      ) : (
+                        <svg className="w-6 h-6 text-[#6b533a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                      )}
                     </div>
 
                     <div className="flex-1">

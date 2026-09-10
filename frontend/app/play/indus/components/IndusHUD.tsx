@@ -164,7 +164,9 @@ export default function IndusHUD({
               isTimerVisible ? "bg-[#fcd34d] text-black" : "bg-white/90 hover:bg-white text-gray-800"
             }`}
           >
-            <span>⏱️</span>
+            <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
             {isTimerVisible ? (
               <span>
                 {String(Math.floor((elapsedSeconds || 0) / 60)).padStart(2, "0")}:

@@ -107,8 +107,10 @@ export default function GreatBathDrainagePuzzle({
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b-2 border-[#54412e] mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-[#2e2319] border-2 border-[#c29357] flex items-center justify-center text-2xl shadow-inner">
-              🌊
+            <div className="w-12 h-12 rounded-xl bg-[#2e2319] border-2 border-[#c29357] flex items-center justify-center shadow-inner">
+              <svg className="w-6 h-6 text-[#5dbcd2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
             </div>
             <div>
               <div className="text-[10px] font-mono text-[#c29357] uppercase tracking-widest">
@@ -201,7 +203,9 @@ export default function GreatBathDrainagePuzzle({
         {isSolved && (
           <div className="p-4 rounded-xl bg-[#2a382b] border border-[#528755] text-center mb-5 animate-fadeIn">
             <div className="text-sm font-serif font-bold text-[#b9f2bd] flex items-center justify-center gap-2">
-              <span>🌊</span>
+              <svg className="w-5 h-5 text-[#5dbcd2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
               <span>The Great Bath Fills with Sacred Water!</span>
             </div>
             <p className="text-xs text-[#d3eed5] mt-1">
@@ -227,7 +231,7 @@ export default function GreatBathDrainagePuzzle({
                 }}
                 className="bg-[#2e2319] hover:bg-[#423223] border border-[#c29357] text-[#f4ebd9] text-xs font-serif font-bold px-4 py-2 rounded-xl transition-all cursor-pointer"
               >
-                Reset & Replay Puzzle ⟳
+                Reset & Replay Puzzle
               </button>
             )}
             <button
@@ -246,7 +250,7 @@ export default function GreatBathDrainagePuzzle({
               }}
               className="bg-gradient-to-r from-[#9e733b] to-[#d8a86a] hover:from-[#b58545] hover:to-[#eec085] text-[#140f0b] font-serif font-bold px-6 py-2 rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md"
             >
-              {isSolved ? "Complete Drainage Challenge ✦" : "Restore Hydraulic Flow 🌊"}
+              {isSolved ? "Complete Drainage Challenge" : "Restore Hydraulic Flow"}
             </button>
           </div>
         </div>

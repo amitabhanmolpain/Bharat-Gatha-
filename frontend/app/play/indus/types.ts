@@ -3,6 +3,7 @@ export type IndusStage = 1 | 2 | 3 | 4;
 export type IndusSceneType =
   // Stage 1: Lower Town & Granary Avenue (c. 2500 BCE)
   | "lower_town_gate"
+  | "residential_grid"
   | "granary_avenue"
 
   // Stage 2: The Great Bath & Hydraulic Engineering (Mohenjo-daro)

@@ -39,6 +39,17 @@ export const INDUS_SCENE_CONFIGS: Record<IndusSceneType, IndusSceneMeta> = {
     minY: 42.0,
     maxY: 86.0,
   },
+  residential_grid: {
+    title: "Mohenjo-daro's Residential Grid & Planned Streets",
+    era: "Bronze Age • c. 2500 BCE",
+    subtitle: "Ruler-Straight Grid Planning & Covered Municipal Drains",
+    backgroundImage: "/bg-indus-residential-grid.jpg",
+    defaultObjective: "Explore the cardinal grid avenue, inspect standardized brick houses, and examine the covered street drainage network.",
+    minX: 20.0,
+    maxX: 88.0,
+    minY: 36.0,
+    maxY: 86.0,
+  },
   granary_avenue: {
     title: "The Great Granary Thoroughfare",
     era: "Bronze Age • c. 2500 BCE",
@@ -125,7 +136,7 @@ export const INDUS_RELICS: IndusRelic[] = [
     stageName: "Stage 1: Lower Town Granary",
     description: "A precision-cut, polished cube of grey chert stone used on balance scales across 1,000+ Harappan settlements.",
     significance: "Followed a universal binary ratio (1, 2, 4, 8, 16...) with zero regional variation from Gujarat to Punjab.",
-    icon: "⚖️",
+    icon: "",
   },
   {
     id: "terracotta_culvert",
@@ -133,7 +144,7 @@ export const INDUS_RELICS: IndusRelic[] = [
     stageName: "Stage 2: The Great Bath",
     description: "A waterproof baked brick pipe sealed with natural bitumen and gypsum mortar.",
     significance: "World's earliest hydraulic municipal engineering, ensuring wastewater never contaminated drinking wells.",
-    icon: "🧱",
+    icon: "",
   },
   {
     id: "unicorn_steatite_seal",
@@ -141,7 +152,7 @@ export const INDUS_RELICS: IndusRelic[] = [
     stageName: "Stage 3: Artisan Quarter",
     description: "A fired white steatite stamp seal depicting the mythical one-horned animal before a sacred ritual manger.",
     significance: "Used by Harappan trade guilds to brand merchant cargo shipped across the Arabian Sea to ancient Meluhha (Mesopotamia).",
-    icon: "🦄",
+    icon: "",
   },
   {
     id: "bronze_dancing_girl",
@@ -149,7 +160,7 @@ export const INDUS_RELICS: IndusRelic[] = [
     stageName: "Stage 4: Citadel Sanctuary",
     description: "A masterwork figurine cast in bronze via cire perdue (lost-wax technique) standing in confident tribhanga posture.",
     significance: "Demonstrated advanced metallurgy 4,500 years ago, adorned with 25 bangles along her left arm.",
-    icon: "💃",
+    icon: "",
   },
 ];
 
@@ -160,7 +171,7 @@ export const INDUS_JOURNAL_ENTRIES: IndusJournalEntry[] = [
     category: "URBAN_PLANNING",
     historicalNote: "Cities like Mohenjo-daro and Harappa were planned on a strict north-south and east-west grid with wide main avenues up to 9 meters wide.",
     gameplayContext: "Discovered upon walking through the Lower Town gate and observing how side streets protected homes from street dust.",
-    icon: "📐",
+    icon: "",
   },
   {
     id: "standard_brick_ratio",
@@ -168,7 +179,15 @@ export const INDUS_JOURNAL_ENTRIES: IndusJournalEntry[] = [
     category: "URBAN_PLANNING",
     historicalNote: "All kiln-fired bricks across the Indus civilisation adhered to the precise ratio of 1 thickness to 2 width to 4 length (7 × 14 × 28 cm), joined in alternating English Bond courses.",
     gameplayContext: "Learned from the City Overseer while verifying the foundation walls of the municipal grain repository.",
-    icon: "🧱",
+    icon: "",
+  },
+  {
+    id: "covered_drainage_system",
+    title: "Covered Municipal Drains & Sediment Catch-Pits",
+    category: "HYDRAULIC_ENGINEERING",
+    historicalNote: "Mohenjo-daro possessed the world's most advanced civic sanitation system. Burnt-brick drains ran beneath stone slab covers along every street, equipped with periodic brick sumps (catch-pits) where heavy sediment settled to prevent blockages.",
+    gameplayContext: "Discovered while walking the residential grid and inspecting the stone drain covers running parallel to the standardized brick houses.",
+    icon: "",
   },
   {
     id: "great_bath_hydraulics",
@@ -176,7 +195,7 @@ export const INDUS_JOURNAL_ENTRIES: IndusJournalEntry[] = [
     category: "HYDRAULIC_ENGINEERING",
     historicalNote: "The Great Bath used finely fitted baked bricks laid on edge with gypsum mortar, backed by a 2.5-centimeter-thick layer of natural asphalt (bitumen) to prevent any water leakage.",
     gameplayContext: "Unlocked by inspecting the sunken bath pool and opening the corbelled drainage culvert.",
-    icon: "🌊",
+    icon: "",
   },
   {
     id: "steatite_seals_script",
@@ -184,7 +203,7 @@ export const INDUS_JOURNAL_ENTRIES: IndusJournalEntry[] = [
     category: "GLYPTIC_ART_AND_SEALS",
     historicalNote: "Over 400 distinct pictographic signs written right-to-left were carved into soft soapstone (steatite), coated in alkali, and fired to create glossy white seals depicting Unicorns, Pashupati, and Zebu Bulls.",
     gameplayContext: "Secured after assembling the broken steatite seal fragments on the carver's workbench.",
-    icon: "📜",
+    icon: "",
   },
   {
     id: "lost_wax_bronze",
@@ -192,6 +211,6 @@ export const INDUS_JOURNAL_ENTRIES: IndusJournalEntry[] = [
     category: "METALLURGY_AND_BRONZE",
     historicalNote: "Harappan metalsmiths mastered the cire perdue (lost wax) casting process, creating hollow and solid bronze sculptures with delicate human anatomy like the famous Dancing Girl.",
     gameplayContext: "Received as the supreme cultural token of honour from the Priest-King atop the Citadel platform.",
-    icon: "✨",
+    icon: "",
   },
 ];
