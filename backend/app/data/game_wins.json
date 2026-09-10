@@ -247,5 +247,37 @@
       "completedAt": "2026-09-05T05:42:37.829Z"
     },
     "_id": "6a9babce06188c1b47ce6791"
+  },
+  {
+    "user_id": "default_traveller",
+    "era": "indus",
+    "game_type": "great_bath_drainage",
+    "solved": true,
+    "is_solved": true,
+    "status": "solved",
+    "prize_unlocked": "Corbelled Terracotta Sluice Fragment",
+    "clues_found": [],
+    "score": 150,
+    "moves": 0,
+    "created_at": "2026-09-10T16:28:19.276628",
+    "solved_at": "2026-09-10T16:28:19.276628",
+    "metadata": {},
+    "_id": "6aa2daa397549bcb9367b257"
+  },
+  {
+    "user_id": "default_traveller",
+    "era": "indus",
+    "game_type": "steatite_seal_decryption",
+    "solved": true,
+    "is_solved": true,
+    "status": "solved",
+    "prize_unlocked": "Ekasringa Unicorn Steatite Seal",
+    "clues_found": [],
+    "score": 200,
+    "moves": 0,
+    "created_at": "2026-09-10T16:28:44.850651",
+    "solved_at": "2026-09-10T16:28:44.850651",
+    "metadata": {},
+    "_id": "6aa2dabc97549bcb9367b258"
   }
 ]

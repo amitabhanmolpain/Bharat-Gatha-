@@ -1,0 +1,890 @@
+"use client";
+
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { soundFx } from "../../../services/soundService";
+import { playNarration, stopNarration } from "../../../services/narratorService";
+import { playCharacterDialogue, stopCharacterDialogue } from "../../../services/characterVoiceService";
+import { recordGameWinToDatabase } from "../../../services/gameProgressService";
+
+import {
+  IndusStage,
+  IndusSceneType,
+  IndusSaveState,
+} from "./types";
+import {
+  INDUS_STORAGE_KEY,
+  INITIAL_INDUS_STATE,
+  INDUS_SCENE_CONFIGS,
+} from "./constants";
+
+import IndusHUD from "./components/IndusHUD";
+import IndusJournalModal from "./components/IndusJournalModal";
+import GreatBathDrainagePuzzle from "./components/GreatBathDrainagePuzzle";
+import SteatiteSealPuzzle from "./components/SteatiteSealPuzzle";
+
+export default function IndusValleyGameScreen() {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
+
+  // HUD & Session Control States (Matching Image 2)
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [isTimerVisible, setIsTimerVisible] = useState(false);
+  const [isMusicMuted, setIsMusicMuted] = useState(false);
+  const [isSoundMuted, setIsSoundMuted] = useState(false);
+  const [showRestartConfirmModal, setShowRestartConfirmModal] = useState(false);
+
+  // Core Progression State
+  const [stage, setStage] = useState<IndusStage>(INITIAL_INDUS_STATE.stage);
+  const [scene, setScene] = useState<IndusSceneType>(INITIAL_INDUS_STATE.scene);
+  const [playerPos, setPlayerPos] = useState(INITIAL_INDUS_STATE.playerPos);
+  const [facingLeft, setFacingLeft] = useState(false);
+  const [isWalking, setIsWalking] = useState(false);
+  const [walkPhase, setWalkPhase] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
+  // Stage 1: Lower Town & Granary
+  const [hasMetCityOverseer, setHasMetCityOverseer] = useState(INITIAL_INDUS_STATE.hasMetCityOverseer);
+  const [hasInspectedBrickRatio, setHasInspectedBrickRatio] = useState(INITIAL_INDUS_STATE.hasInspectedBrickRatio);
+  const [hasFirstRelicChertWeight, setHasFirstRelicChertWeight] = useState(INITIAL_INDUS_STATE.hasFirstRelicChertWeight);
+  const [showOverseerDialogue, setShowOverseerDialogue] = useState(false);
+
+  // Stage 2: Great Bath
+  const [isDrainagePuzzleSolved, setIsDrainagePuzzleSolved] = useState(INITIAL_INDUS_STATE.isDrainagePuzzleSolved);
+  const [hasInspectedBitumenLining, setHasInspectedBitumenLining] = useState(INITIAL_INDUS_STATE.hasInspectedBitumenLining);
+  const [hasGreatBathPurificationBlessing, setHasGreatBathPurificationBlessing] = useState(INITIAL_INDUS_STATE.hasGreatBathPurificationBlessing);
+  const [showDrainagePuzzleModal, setShowDrainagePuzzleModal] = useState(false);
+
+  // Stage 3: Steatite Seal Workshop
+  const [isSealPuzzleSolved, setIsSealPuzzleSolved] = useState(INITIAL_INDUS_STATE.isSealPuzzleSolved);
+  const [hasUnicornSeal, setHasUnicornSeal] = useState(INITIAL_INDUS_STATE.hasUnicornSeal);
+  const [hasPashupatiSeal, setHasPashupatiSeal] = useState(INITIAL_INDUS_STATE.hasPashupatiSeal);
+  const [showSealPuzzleModal, setShowSealPuzzleModal] = useState(false);
+
+  // Stage 4: Priest-King's Citadel Platform
+  const [hasMetPriestKing, setHasMetPriestKing] = useState(INITIAL_INDUS_STATE.hasMetPriestKing);
+  const [hasBronzeDancingGirl, setHasBronzeDancingGirl] = useState(INITIAL_INDUS_STATE.hasBronzeDancingGirl);
+  const [isCampaignComplete, setIsCampaignComplete] = useState(INITIAL_INDUS_STATE.isCampaignComplete);
+  const [showPriestKingDialogue, setShowPriestKingDialogue] = useState(false);
+  const [showVictoryModal, setShowVictoryModal] = useState(false);
+
+  // Journal & Relics State
+  const [unlockedJournalEntries, setUnlockedJournalEntries] = useState<string[]>(
+    INITIAL_INDUS_STATE.unlockedJournalEntries
+  );
+  const [isJournalOpen, setIsJournalOpen] = useState(false);
+
+  // Scene Configuration
+  const currentSceneConfig = INDUS_SCENE_CONFIGS[scene] || INDUS_SCENE_CONFIGS.lower_town_gate;
+
+  // Compute total relics collected
+  const relicsCount =
+    (hasFirstRelicChertWeight ? 1 : 0) +
+    (hasInspectedBitumenLining ? 1 : 0) +
+    (hasUnicornSeal ? 1 : 0) +
+    (hasBronzeDancingGirl ? 1 : 0);
+
+  // 1. Initial Load from LocalStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem(INDUS_STORAGE_KEY);
+        if (saved) {
+          const p: IndusSaveState = JSON.parse(saved);
+          setStage(p.stage || 1);
+          setScene(p.scene || "lower_town_gate");
+          setPlayerPos(p.playerPos || { x: 50.0, y: 82.0 });
+          setHasMetCityOverseer(Boolean(p.hasMetCityOverseer));
+          setHasInspectedBrickRatio(Boolean(p.hasInspectedBrickRatio));
+          setHasFirstRelicChertWeight(Boolean(p.hasFirstRelicChertWeight));
+          setIsDrainagePuzzleSolved(Boolean(p.isDrainagePuzzleSolved));
+          setHasInspectedBitumenLining(Boolean(p.hasInspectedBitumenLining));
+          setHasGreatBathPurificationBlessing(Boolean(p.hasGreatBathPurificationBlessing));
+          setIsSealPuzzleSolved(Boolean(p.isSealPuzzleSolved));
+          setHasUnicornSeal(Boolean(p.hasUnicornSeal));
+          setHasPashupatiSeal(Boolean(p.hasPashupatiSeal));
+          setHasMetPriestKing(Boolean(p.hasMetPriestKing));
+          setHasBronzeDancingGirl(Boolean(p.hasBronzeDancingGirl));
+          setIsCampaignComplete(Boolean(p.isCampaignComplete));
+          setUnlockedJournalEntries(
+            p.unlockedJournalEntries || INITIAL_INDUS_STATE.unlockedJournalEntries
+          );
+        }
+      } catch (err) {
+        console.error("Failed to load Indus Valley state", err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  }, []);
+
+  // 2. State Persistence
+  const saveState = useCallback(() => {
+    if (typeof window === "undefined" || isLoading) return;
+    try {
+      const stateToSave: IndusSaveState = {
+        stage,
+        scene,
+        playerPos,
+        tutorialCompleted: true,
+        hasMetCityOverseer,
+        hasInspectedBrickRatio,
+        hasFirstRelicChertWeight,
+        isDrainagePuzzleSolved,
+        hasInspectedBitumenLining,
+        hasGreatBathPurificationBlessing,
+        isSealPuzzleSolved,
+        hasUnicornSeal,
+        hasPashupatiSeal,
+        hasMetPriestKing,
+        hasBronzeDancingGirl,
+        isCampaignComplete,
+        unlockedJournalEntries,
+      };
+      localStorage.setItem(INDUS_STORAGE_KEY, JSON.stringify(stateToSave));
+    } catch (err) {
+      console.error("Failed to persist Indus Valley state", err);
+    }
+  }, [
+    stage,
+    scene,
+    playerPos,
+    hasMetCityOverseer,
+    hasInspectedBrickRatio,
+    hasFirstRelicChertWeight,
+    isDrainagePuzzleSolved,
+    hasInspectedBitumenLining,
+    hasGreatBathPurificationBlessing,
+    isSealPuzzleSolved,
+    hasUnicornSeal,
+    hasPashupatiSeal,
+    hasMetPriestKing,
+    hasBronzeDancingGirl,
+    isCampaignComplete,
+    unlockedJournalEntries,
+    isLoading,
+  ]);
+
+  useEffect(() => {
+    saveState();
+  }, [saveState]);
+
+  // Cleanup voices on unmount
+  useEffect(() => {
+    return () => {
+      stopNarration();
+      stopCharacterDialogue();
+    };
+  }, []);
+
+  // Session timer increment
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setElapsedSeconds((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // 3. Reset Campaign Handler
+  const handleResetCampaign = () => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.removeItem(INDUS_STORAGE_KEY);
+      } catch {}
+    }
+    setStage(1);
+    setScene("lower_town_gate");
+    setPlayerPos({ x: 50.0, y: 82.0 });
+    setHasMetCityOverseer(false);
+    setHasInspectedBrickRatio(false);
+    setHasFirstRelicChertWeight(false);
+    setIsDrainagePuzzleSolved(false);
+    setHasInspectedBitumenLining(false);
+    setHasGreatBathPurificationBlessing(false);
+    setIsSealPuzzleSolved(false);
+    setHasUnicornSeal(false);
+    setHasPashupatiSeal(false);
+    setHasMetPriestKing(false);
+    setHasBronzeDancingGirl(false);
+    setIsCampaignComplete(false);
+    setUnlockedJournalEntries(INITIAL_INDUS_STATE.unlockedJournalEntries);
+    setShowRestartConfirmModal(false);
+  };
+
+  // 4. Proximity Checks
+  // Stage 1: Overseer Somnath (near x: 48-62, y: 55-75)
+  const isNearOverseer =
+    scene === "lower_town_gate" &&
+    playerPos.x >= 42.0 &&
+    playerPos.x <= 68.0 &&
+    playerPos.y >= 54.0 &&
+    playerPos.y <= 74.0;
+
+  // Stage 1 -> Stage 2 North Gateway
+  const isNearGranaryExit =
+    scene === "lower_town_gate" &&
+    hasFirstRelicChertWeight &&
+    playerPos.y <= 52.0;
+
+  // Stage 2: Great Bath sunken basin
+  const isNearGreatBathBasin =
+    scene === "great_bath_citadel" &&
+    playerPos.x >= 35.0 &&
+    playerPos.x <= 65.0 &&
+    playerPos.y >= 52.0 &&
+    playerPos.y <= 75.0;
+
+  // Stage 2 -> Stage 3 East Artisan archway
+  const isNearArtisanQuarterExit =
+    scene === "great_bath_citadel" &&
+    isDrainagePuzzleSolved &&
+    playerPos.x >= 75.0;
+
+  // Stage 3: Seal Carving Bench
+  const isNearSealBench =
+    scene === "steatite_seal_workshop" &&
+    playerPos.x >= 35.0 &&
+    playerPos.x <= 65.0 &&
+    playerPos.y >= 52.0 &&
+    playerPos.y <= 75.0;
+
+  // Stage 3 -> Stage 4 Citadel stairs
+  const isNearCitadelStairs =
+    scene === "steatite_seal_workshop" &&
+    isSealPuzzleSolved &&
+    playerPos.y <= 52.0;
+
+  // Stage 4: Priest-King
+  const isNearPriestKing =
+    scene === "priest_king_citadel" &&
+    playerPos.x >= 40.0 &&
+    playerPos.x <= 62.0 &&
+    playerPos.y >= 52.0 &&
+    playerPos.y <= 72.0;
+
+  // 5. Scene Transitions
+  const triggerTransition = (
+    nextScene: IndusSceneType,
+    nextPos: { x: number; y: number },
+    nextStage?: IndusStage
+  ) => {
+    setIsTransitioning(true);
+    soundFx.playSelect();
+    setTimeout(() => {
+      setScene(nextScene);
+      setPlayerPos(nextPos);
+      if (nextStage) setStage(nextStage);
+      setIsTransitioning(false);
+    }, 600);
+  };
+
+  // 6. Keyboard Movement Engine
+  useEffect(() => {
+    let animationFrameId: number;
+    const keysPressed: Record<string, boolean> = {};
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        showOverseerDialogue ||
+        showDrainagePuzzleModal ||
+        showSealPuzzleModal ||
+        showPriestKingDialogue ||
+        isJournalOpen ||
+        showVictoryModal
+      ) {
+        return;
+      }
+
+      keysPressed[e.key.toLowerCase()] = true;
+
+      // Interaction key: [E] or Spacebar
+      if (e.key === "e" || e.key === "E" || e.key === " ") {
+        if (isNearOverseer) {
+          setShowOverseerDialogue(true);
+        } else if (isNearGreatBathBasin) {
+          setShowDrainagePuzzleModal(true);
+        } else if (isNearSealBench) {
+          setShowSealPuzzleModal(true);
+        } else if (isNearPriestKing) {
+          setShowPriestKingDialogue(true);
+        } else if (isNearGranaryExit) {
+          triggerTransition("great_bath_citadel", { x: 50.0, y: 82.0 }, 2);
+        } else if (isNearArtisanQuarterExit) {
+          triggerTransition("steatite_seal_workshop", { x: 25.0, y: 72.0 }, 3);
+        } else if (isNearCitadelStairs) {
+          triggerTransition("priest_king_citadel", { x: 50.0, y: 80.0 }, 4);
+        }
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      keysPressed[e.key.toLowerCase()] = false;
+    };
+
+    const updateMovement = () => {
+      let dx = 0;
+      let dy = 0;
+
+      if (keysPressed["arrowup"] || keysPressed["w"]) dy -= 0.65;
+      if (keysPressed["arrowdown"] || keysPressed["s"]) dy += 0.65;
+      if (keysPressed["arrowleft"] || keysPressed["a"]) {
+        dx -= 0.75;
+        setFacingLeft(true);
+      }
+      if (keysPressed["arrowright"] || keysPressed["d"]) {
+        dx += 0.75;
+        setFacingLeft(false);
+      }
+
+      if (dx !== 0 || dy !== 0) {
+        setIsWalking(true);
+        setWalkPhase((prev) => (prev + 0.25) % (Math.PI * 2));
+
+        setPlayerPos((prev) => {
+          const targetX = Math.min(
+            Math.max(prev.x + dx, currentSceneConfig.minX),
+            currentSceneConfig.maxX
+          );
+          const targetY = Math.min(
+            Math.max(prev.y + dy, currentSceneConfig.minY),
+            currentSceneConfig.maxY
+          );
+          return { x: targetX, y: targetY };
+        });
+      } else {
+        setIsWalking(false);
+      }
+
+      animationFrameId = requestAnimationFrame(updateMovement);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    animationFrameId = requestAnimationFrame(updateMovement);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [
+    scene,
+    currentSceneConfig,
+    showOverseerDialogue,
+    showDrainagePuzzleModal,
+    showSealPuzzleModal,
+    showPriestKingDialogue,
+    isJournalOpen,
+    showVictoryModal,
+    isNearOverseer,
+    isNearGreatBathBasin,
+    isNearSealBench,
+    isNearPriestKing,
+    isNearGranaryExit,
+    isNearArtisanQuarterExit,
+    isNearCitadelStairs,
+    hasFirstRelicChertWeight,
+    isDrainagePuzzleSolved,
+    isSealPuzzleSolved,
+  ]);
+
+  // Dynamic Depth Scaling (0.88 to 1.15)
+  const depthScale = 0.88 + ((playerPos.y - 45) / 45) * 0.26;
+  const walkBob = isWalking ? Math.sin(walkPhase * 2) * 3 : 0;
+  const walkSway = isWalking ? Math.sin(walkPhase) * 2 : 0;
+
+  // Handlers for Puzzle Completions
+  const handleDrainageComplete = () => {
+    setIsDrainagePuzzleSolved(true);
+    setHasInspectedBitumenLining(true);
+    setHasGreatBathPurificationBlessing(true);
+    setShowDrainagePuzzleModal(false);
+
+    if (!unlockedJournalEntries.includes("great_bath_hydraulics")) {
+      setUnlockedJournalEntries((prev) => [...prev, "great_bath_hydraulics"]);
+    }
+
+    playNarration(
+      "Sublime engineering! The bitumen seal holds firm, and the subterranean culvert directs the sacred water into the Great Bath.",
+      { speaker: "ratan", pace: 0.88, language_code: "en-IN" }
+    );
+
+    recordGameWinToDatabase({
+      era: "indus",
+      gameType: "great_bath_drainage",
+      prizeUnlocked: "Corbelled Terracotta Sluice Fragment",
+      score: 150,
+    });
+  };
+
+  const handleSealComplete = () => {
+    setIsSealPuzzleSolved(true);
+    setHasUnicornSeal(true);
+    setHasPashupatiSeal(true);
+    setShowSealPuzzleModal(false);
+
+    if (!unlockedJournalEntries.includes("steatite_seals_script")) {
+      setUnlockedJournalEntries((prev) => [...prev, "steatite_seals_script"]);
+    }
+
+    playNarration(
+      "The Ekasringa Unicorn seal is assembled! Its sacred inscription grants you clearance to ascend the high Citadel platform.",
+      { speaker: "ratan", pace: 0.88, language_code: "en-IN" }
+    );
+
+    recordGameWinToDatabase({
+      era: "indus",
+      gameType: "steatite_seal_decryption",
+      prizeUnlocked: "Ekasringa Unicorn Steatite Seal",
+      score: 200,
+    });
+  };
+
+  const handlePriestKingBlessing = () => {
+    setHasMetPriestKing(true);
+    setHasBronzeDancingGirl(true);
+    setIsCampaignComplete(true);
+    setShowPriestKingDialogue(false);
+
+    if (!unlockedJournalEntries.includes("lost_wax_bronze")) {
+      setUnlockedJournalEntries((prev) => [...prev, "lost_wax_bronze"]);
+    }
+
+    setShowVictoryModal(true);
+    soundFx.playClueFound();
+
+    playNarration(
+      "You hold the Bronze Dancing Girl in your hands, crafted through the lost-wax process 4,500 years ago. You have mastered the urban dawn of the Indus Valley!",
+      { speaker: "ratan", pace: 0.88, language_code: "en-IN" }
+    );
+  };
+
+  return (
+    <div className="relative w-full h-screen overflow-hidden bg-black font-sans select-none">
+      {/* --- SCENE BACKGROUND CANVAS --- */}
+      <div
+        className="absolute inset-0 bg-cover bg-center transition-all duration-700 filter brightness-95"
+        style={{ backgroundImage: `url('${currentSceneConfig.backgroundImage}')` }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 pointer-events-none"></div>
+
+        {/* --- SCENE HOTSPOTS & NPCS --- */}
+
+        {/* Stage 1: City Overseer Somnath in Lower Town Gate */}
+        {scene === "lower_town_gate" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
+            style={{ left: "55%", top: "62%" }}
+          >
+            {isNearOverseer && (
+              <div className="mb-2 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
+                <span className="text-[#d8a86a] font-bold">[E]</span>
+                <span>Speak with City Overseer Somnath 📐</span>
+              </div>
+            )}
+            <div className="w-12 h-16 bg-[#2d2218]/90 border-2 border-[#d8a86a] rounded-2xl flex items-center justify-center text-3xl shadow-lg">
+              🧔🏽‍♂️
+            </div>
+            <span className="text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#54412e] mt-1">
+              Overseer Somnath
+            </span>
+          </div>
+        )}
+
+        {/* Stage 1: North Granary Gateway Trigger */}
+        {scene === "lower_town_gate" && hasFirstRelicChertWeight && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
+            style={{ left: "50%", top: "50%" }}
+          >
+            <div className="mb-1 bg-[#1b1510]/90 border-2 border-[#52a45a] text-[#baf1be] px-3 py-1 rounded-lg text-xs font-serif shadow-md animate-pulse whitespace-nowrap">
+              <span>▲ [E] Walk north toward The Great Bath (Stage 2)</span>
+            </div>
+            <span className="text-2xl">🏛️</span>
+          </div>
+        )}
+
+        {/* Stage 2: Great Bath Hotspot */}
+        {scene === "great_bath_citadel" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
+            style={{ left: "50%", top: "65%" }}
+          >
+            {isNearGreatBathBasin && (
+              <div className="mb-2 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
+                <span className="text-[#d8a86a] font-bold">[E]</span>
+                <span>
+                  {isDrainagePuzzleSolved
+                    ? "Inspect Restored Hydraulic Basin 🌊"
+                    : "Restore Great Bath Drainage Culvert 🌊"}
+                </span>
+              </div>
+            )}
+            <div className="w-14 h-14 bg-[#231b14]/90 border-2 border-[#5dbcd2] rounded-2xl flex items-center justify-center text-3xl shadow-lg animate-pulse">
+              🌊
+            </div>
+            <span className="text-[10px] font-serif font-bold text-[#e6f7fa] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#376b75] mt-1">
+              The Great Bath
+            </span>
+          </div>
+        )}
+
+        {/* Stage 2: East Colonnade to Artisan Quarter */}
+        {scene === "great_bath_citadel" && isDrainagePuzzleSolved && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
+            style={{ left: "80%", top: "68%" }}
+          >
+            <div className="mb-1 bg-[#1b1510]/90 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1 rounded-lg text-xs font-serif shadow-md animate-pulse whitespace-nowrap">
+              <span>► [E] Enter Steatite Artisan Quarter (Stage 3)</span>
+            </div>
+            <span className="text-2xl">🏺</span>
+          </div>
+        )}
+
+        {/* Stage 3: Seal Carver Bench Hotspot */}
+        {scene === "steatite_seal_workshop" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
+            style={{ left: "50%", top: "65%" }}
+          >
+            {isNearSealBench && (
+              <div className="mb-2 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
+                <span className="text-[#d8a86a] font-bold">[E]</span>
+                <span>
+                  {isSealPuzzleSolved
+                    ? "Examine Master Unicorn Seal 🦄"
+                    : "Carve & Align Steatite Unicorn Seal 🦄"}
+                </span>
+              </div>
+            )}
+            <div className="w-14 h-14 bg-[#2d2218]/90 border-2 border-[#d8a86a] rounded-2xl flex items-center justify-center text-3xl shadow-lg">
+              🦄
+            </div>
+            <span className="text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#54412e] mt-1">
+              Seal Carver&apos;s Bench
+            </span>
+          </div>
+        )}
+
+        {/* Stage 3: North Stairs to Citadel Platform */}
+        {scene === "steatite_seal_workshop" && isSealPuzzleSolved && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
+            style={{ left: "50%", top: "50%" }}
+          >
+            <div className="mb-1 bg-[#1b1510]/90 border-2 border-[#52a45a] text-[#baf1be] px-3 py-1 rounded-lg text-xs font-serif shadow-md animate-pulse whitespace-nowrap">
+              <span>▲ [E] Ascend Citadel to The Priest-King (Stage 4)</span>
+            </div>
+            <span className="text-2xl">👑</span>
+          </div>
+        )}
+
+        {/* Stage 4: Priest-King Hotspot */}
+        {scene === "priest_king_citadel" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
+            style={{ left: "52%", top: "62%" }}
+          >
+            {isNearPriestKing && (
+              <div className="mb-2 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
+                <span className="text-[#d8a86a] font-bold">[E]</span>
+                <span>Speak with The Priest-King 👑</span>
+              </div>
+            )}
+            <div className="w-14 h-18 bg-[#382b1d]/90 border-2 border-[#c29357] rounded-2xl flex items-center justify-center text-4xl shadow-xl animate-pulse">
+              🗿
+            </div>
+            <span className="text-[10px] font-serif font-bold text-[#fdfaf3] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#6b533a] mt-1">
+              The Priest-King
+            </span>
+          </div>
+        )}
+
+        {/* --- MAIN HERO SPRITE --- */}
+        <div
+          className="absolute pointer-events-none flex flex-col items-center z-20"
+          style={{
+            left: `${playerPos.x}%`,
+            top: `${playerPos.y}%`,
+            transformOrigin: "bottom center",
+            transform: `translate(-50%, -96%) scale(${depthScale}) scaleX(${
+              facingLeft ? -1 : 1
+            })`,
+          }}
+        >
+          <img
+            src="/player.png"
+            alt="Hero Player"
+            className="w-32 h-32 md:w-36 md:h-36 object-contain"
+            style={{
+              imageRendering: "pixelated",
+              transform: `translateY(${walkBob}px) rotate(${walkSway}deg)`,
+              transition: isWalking ? "none" : "transform 0.15s ease-out",
+            }}
+          />
+        </div>
+      </div>
+
+      {/* --- HUD OVERLAY (Exact Image 2 Style) --- */}
+      <IndusHUD
+        stage={stage}
+        scene={scene}
+        objective={currentSceneConfig.defaultObjective}
+        relicsCount={relicsCount}
+        totalRelics={4}
+        journalCount={unlockedJournalEntries.length}
+        totalJournal={5}
+        onOpenJournal={() => setIsJournalOpen(true)}
+        onResetCampaign={() => setShowRestartConfirmModal(true)}
+        isTransitioning={isTransitioning}
+        elapsedSeconds={elapsedSeconds}
+        isTimerVisible={isTimerVisible}
+        onToggleTimer={() => setIsTimerVisible((prev) => !prev)}
+        isMusicMuted={isMusicMuted}
+        onToggleMusic={() => setIsMusicMuted((prev) => !prev)}
+        isSoundMuted={isSoundMuted}
+        onToggleSound={() => {
+          const muted = soundFx.toggleMute();
+          setIsSoundMuted(muted);
+        }}
+        onLeaveWorld={() => router.push("/dashboard")}
+      />
+
+      {/* --- JOURNAL & RELICS MODAL --- */}
+      <IndusJournalModal
+        isOpen={isJournalOpen}
+        onClose={() => setIsJournalOpen(false)}
+        unlockedEntryIds={unlockedJournalEntries}
+        relicsCount={relicsCount}
+      />
+
+      {/* --- GREAT BATH DRAINAGE PUZZLE MODAL --- */}
+      <GreatBathDrainagePuzzle
+        isOpen={showDrainagePuzzleModal}
+        onClose={() => setShowDrainagePuzzleModal(false)}
+        onComplete={handleDrainageComplete}
+        alreadySolved={isDrainagePuzzleSolved}
+      />
+
+      {/* --- STEATITE SEAL PUZZLE MODAL --- */}
+      <SteatiteSealPuzzle
+        isOpen={showSealPuzzleModal}
+        onClose={() => setShowSealPuzzleModal(false)}
+        onComplete={handleSealComplete}
+        alreadySolved={isSealPuzzleSolved}
+      />
+
+      {/* --- STAGE 1 OVERSEER DIALOGUE MODAL --- */}
+      {showOverseerDialogue && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+          <div className="relative w-full max-w-xl bg-[#1c1611] text-[#f4ebd9] rounded-2xl border-4 border-[#c29357] p-6 shadow-[0_0_50px_rgba(194,147,87,0.35)] max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b-2 border-[#54412e] mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-[#2e2319] border-2 border-[#c29357] flex items-center justify-center text-3xl shadow-inner">
+                  📐
+                </div>
+                <div>
+                  <div className="text-[10px] font-mono text-[#c29357] uppercase tracking-widest">
+                    Chief Architect of the Lower Town • Mohenjo-daro
+                  </div>
+                  <h3 className="text-xl font-serif font-bold text-[#fdfaf3]">
+                    Overseer Somnath
+                  </h3>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowOverseerDialogue(false)}
+                className="text-[#a4917b] hover:text-[#fdfaf3] text-sm bg-[#2e2319] hover:bg-[#423223] border border-[#6b533a] px-3 py-1.5 rounded-lg transition-all cursor-pointer"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            <div className="p-4 rounded-xl bg-[#281f16] border border-[#4d3a28] text-sm font-serif leading-relaxed text-[#eedbbf] mb-5 space-y-2">
+              <p className="font-bold text-[#d8a86a]">
+                &ldquo;Welcome, traveler, to the world&apos;s first planned grid city!&rdquo;
+              </p>
+              <p className="text-xs text-[#c9b7a1]">
+                &ldquo;Notice how our avenues cross at exact ninety-degree angles. Every baked brick in this citadel adheres to the sacred ratio: 1 thickness to 2 width to 4 length. Under this law of proportion, our foundations endure seasonal inundations without buckling.&rdquo;
+              </p>
+              <p className="text-xs text-[#d8a86a] italic">
+                &ldquo;Take this polished chert cube. Our binary balance weights are recognized in every market from Gujarat to ancient Mesopotamia.&rdquo;
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between pt-3 border-t border-[#3e2e1f]">
+              <span className="text-[10px] font-mono text-[#a8947d]">
+                Relic I: Polished Chert Binary Weight Secured ✦
+              </span>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setHasMetCityOverseer(true);
+                  setHasInspectedBrickRatio(true);
+                  setHasFirstRelicChertWeight(true);
+                  setShowOverseerDialogue(false);
+                  soundFx.playClueFound();
+                  playNarration(
+                    "You receive the polished chert binary balance weight! The path north to the Great Bath is now open.",
+                    { speaker: "ratan", pace: 0.88, language_code: "en-IN" }
+                  );
+                }}
+                className="bg-gradient-to-r from-[#9e733b] to-[#d8a86a] hover:from-[#b58545] hover:to-[#eec085] text-[#140f0b] font-serif font-bold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md"
+              >
+                Accept Chert Weight & Proceed North ▲
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- STAGE 4 PRIEST-KING DIALOGUE MODAL --- */}
+      {showPriestKingDialogue && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+          <div className="relative w-full max-w-xl bg-[#1c1611] text-[#f4ebd9] rounded-2xl border-4 border-[#c29357] p-6 shadow-[0_0_50px_rgba(194,147,87,0.35)] max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b-2 border-[#54412e] mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-[#2e2319] border-2 border-[#c29357] flex items-center justify-center text-3xl shadow-inner">
+                  🗿
+                </div>
+                <div>
+                  <div className="text-[10px] font-mono text-[#c29357] uppercase tracking-widest">
+                    Spiritual Dignitary of the Citadel • Mohenjo-daro
+                  </div>
+                  <h3 className="text-xl font-serif font-bold text-[#fdfaf3]">
+                    The Priest-King
+                  </h3>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowPriestKingDialogue(false)}
+                className="text-[#a4917b] hover:text-[#fdfaf3] text-sm bg-[#2e2319] hover:bg-[#423223] border border-[#6b533a] px-3 py-1.5 rounded-lg transition-all cursor-pointer"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            <div className="p-4 rounded-xl bg-[#281f16] border border-[#4d3a28] text-sm font-serif leading-relaxed text-[#eedbbf] mb-5 space-y-2">
+              <p className="font-bold text-[#d8a86a]">
+                &ldquo;You have traced the full lifeblood of our civilisation, seeker.&rdquo;
+              </p>
+              <p className="text-xs text-[#c9b7a1]">
+                &ldquo;You began in the quiet streets of the Lower Town where standard bricks form peaceful homes. You purified the waters of the Great Bath using bitumen culverts. You aligned the Unicorn seal that brands our ships sailing to Meluhha.&rdquo;
+              </p>
+              <p className="text-xs text-[#eedbbf] italic">
+                &ldquo;Unlike realms built upon conquest, our civilization stands on civic harmony, craftsmanship, and hydraulic mastery. Accept this lost-wax cast Bronze Dancing Girl — the immortal embodiment of Harappan artistic spirit.&rdquo;
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between pt-3 border-t border-[#3e2e1f]">
+              <span className="text-[10px] font-mono text-[#a8947d]">
+                Supreme Cultural Relic • Bronze Dancing Girl (cire perdue)
+              </span>
+
+              <button
+                type="button"
+                onClick={handlePriestKingBlessing}
+                className="bg-gradient-to-r from-[#9e733b] to-[#d8a86a] hover:from-[#b58545] hover:to-[#eec085] text-[#140f0b] font-serif font-bold px-6 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md"
+              >
+                Receive Bronze Dancing Girl 💃
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- VICTORY FINALE MODAL --- */}
+      {showVictoryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fadeIn">
+          <div className="relative w-full max-w-xl bg-[#1c1611] text-[#f4ebd9] rounded-2xl border-4 border-[#c29357] p-7 shadow-[0_0_60px_rgba(194,147,87,0.5)] text-center">
+            <div className="w-16 h-16 rounded-2xl bg-[#2e2319] border-2 border-[#c29357] flex items-center justify-center text-3xl mx-auto mb-4 shadow-lg animate-bounce">
+              🏛️
+            </div>
+
+            <span className="text-[10px] font-mono text-[#d8a86a] uppercase tracking-[0.25em]">
+              Chronicle Completed • Mature Harappan Civilisation
+            </span>
+
+            <h3 className="text-2xl font-serif font-bold text-[#fdfaf3] mt-1 mb-3">
+              The First Urban Dawn Preserved
+            </h3>
+
+            <p className="text-xs font-serif text-[#eedbbf] leading-relaxed max-w-md mx-auto mb-6">
+              You have uncovered the four pillars of the Indus Valley: cardinal grid architecture, bitumen hydraulic engineering, steatite glyptic seals, and the lost-wax Bronze Dancing Girl.
+            </p>
+
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              <div className="p-3 rounded-xl bg-[#241c14] border border-[#54412e] text-left">
+                <div className="text-[10px] font-mono text-[#a8947d]">Relics Secured</div>
+                <div className="text-sm font-bold text-[#d8a86a] font-serif">4 / 4 Complete 🏺</div>
+              </div>
+              <div className="p-3 rounded-xl bg-[#241c14] border border-[#54412e] text-left">
+                <div className="text-[10px] font-mono text-[#a8947d]">Era Placement</div>
+                <div className="text-sm font-bold text-[#baf1be] font-serif">Era 1 of 4 (Opening) ✦</div>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <button
+                type="button"
+                onClick={() => setIsJournalOpen(true)}
+                className="bg-[#2e2319] hover:bg-[#423223] border border-[#c29357] text-[#f4ebd9] text-xs font-serif font-bold px-5 py-2.5 rounded-xl transition-all cursor-pointer"
+              >
+                Inspect All Inscriptions 📜
+              </button>
+
+              <Link
+                href="/dashboard"
+                className="bg-gradient-to-r from-[#9e733b] to-[#d8a86a] hover:from-[#b58545] hover:to-[#eec085] text-[#140f0b] font-serif font-bold px-6 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md block"
+              >
+                Return to Games Dashboard 🚀
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- RESTART CONFIRMATION MODAL (Exact Image 2 Style) --- */}
+      {showRestartConfirmModal && (
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 select-none animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-[#fff9ea] border-4 border-black rounded-2xl p-6 max-w-md w-full shadow-[6px_6px_0_0_rgba(0,0,0,1)] text-center">
+            <div className="w-14 h-14 bg-red-100 border-2 border-black rounded-full flex items-center justify-center mx-auto mb-3 text-3xl shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
+              ⚠️
+            </div>
+            <h3 className="text-xl font-black text-black mb-2">
+              Restart Indus Valley Odyssey?
+            </h3>
+            <p className="text-xs text-gray-700 font-medium leading-relaxed mb-6">
+              Are you sure you want to start from the beginning? Your current Harappan puzzle clearances, unlocked relics, and journal records will be reset.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  soundFx.playKeyboardClick();
+                  handleResetCampaign();
+                }}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs py-3.5 rounded-xl border-2 border-black shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 cursor-pointer transition-all"
+              >
+                Yes, Start Again
+              </button>
+              <button
+                onClick={() => {
+                  soundFx.playKeyboardClick();
+                  setShowRestartConfirmModal(false);
+                }}
+                className="flex-1 bg-white hover:bg-gray-100 text-black font-bold text-xs py-3.5 rounded-xl border-2 border-black shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 cursor-pointer transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

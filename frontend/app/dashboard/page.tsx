@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useTheme } from "./ThemeContext";
 
 interface CampaignMeta {
-  id: "mughal" | "rajasthan" | "vijayanagara";
+  id: "indus" | "rajasthan" | "vijayanagara" | "mughal";
   region: string;
   title: string;
   subtitle: string;
@@ -25,15 +25,15 @@ export default function GamesDashboard() {
     if (typeof window !== "undefined") {
       const progress: Record<string, { statusText: string; isComplete: boolean }> = {};
 
-      // Check Mughal Progress
+      // Check Indus Valley Progress
       try {
-        const mughalSave = localStorage.getItem("mughal_save");
-        if (mughalSave) {
-          const parsed = JSON.parse(mughalSave);
-          if (parsed.scene === "red_fort_interior") {
-            progress.mughal = { statusText: "✓ Imperial Chronicle Complete", isComplete: true };
-          } else {
-            progress.mughal = { statusText: "In Progress", isComplete: false };
+        const indusSave = localStorage.getItem("indus_save_state");
+        if (indusSave) {
+          const parsed = JSON.parse(indusSave);
+          if (parsed.isCampaignComplete) {
+            progress.indus = { statusText: "✓ Urban Dawn Complete", isComplete: true };
+          } else if (parsed.stage) {
+            progress.indus = { statusText: `Stage ${parsed.stage}/4 Active`, isComplete: false };
           }
         }
       } catch {
@@ -70,22 +70,37 @@ export default function GamesDashboard() {
         // Safe fallback
       }
 
+      // Check Mughal Progress
+      try {
+        const mughalSave = localStorage.getItem("mughal_save");
+        if (mughalSave) {
+          const parsed = JSON.parse(mughalSave);
+          if (parsed.scene === "red_fort_interior") {
+            progress.mughal = { statusText: "✓ Imperial Chronicle Complete", isComplete: true };
+          } else {
+            progress.mughal = { statusText: "In Progress", isComplete: false };
+          }
+        }
+      } catch {
+        // Safe fallback
+      }
+
       setCampaignProgress(progress);
     }
   }, []);
 
   const campaigns: CampaignMeta[] = [
     {
-      id: "mughal",
-      region: "Agra · Taj Mahal · Delhi",
-      title: "Takht Ka Rahasya",
-      subtitle: "Mughal Empire Chronicle",
-      tagline: "Power · Loyalty · Secrets",
+      id: "indus",
+      region: "Mohenjo-daro · Harappa · Dholavira",
+      title: "The First Urban Dawn",
+      subtitle: "Indus Valley Civilisation",
+      tagline: "Grid Cities · Glyptic Art · Hydraulics",
       description:
-        "Beyond empires lie untold truths. Step into the majestic courts of Agra Fort and the Taj Mahal to uncover palace secrets, sentry warnings, and imperial conspiracies.",
-      image: "/poster-takht-ka-rahasya.jpg",
-      href: "/play/mughal",
-      features: ["Agra Fort", "Amar Singh Gate", "Taj Mahal", "Red Fort"],
+        "The dawn of planned civilisation. Uncover the bitumen-sealed Great Bath, precision baked-brick avenues, and mysterious steatite Unicorn seals 4,500 years ago.",
+      image: "/poster-indus-valley.jpg",
+      href: "/play/indus",
+      features: ["The Great Bath", "Grid City Streets", "Steatite Seals", "Priest-King Sanctuary"],
     },
     {
       id: "rajasthan",
@@ -111,6 +126,18 @@ export default function GamesDashboard() {
       href: "/play/vijayanagara",
       features: ["Virupaksha Temple", "Stone Chariot", "Musical Pillars", "Anegundi River"],
     },
+    {
+      id: "mughal",
+      region: "Agra · Taj Mahal · Delhi",
+      title: "Takht Ka Rahasya",
+      subtitle: "Mughal Empire Chronicle",
+      tagline: "Power · Loyalty · Secrets",
+      description:
+        "Beyond empires lie untold truths. Step into the majestic courts of Agra Fort and the Taj Mahal to uncover palace secrets, sentry warnings, and imperial conspiracies.",
+      image: "/poster-takht-ka-rahasya.jpg",
+      href: "/play/mughal",
+      features: ["Agra Fort", "Amar Singh Gate", "Taj Mahal", "Red Fort"],
+    },
   ];
 
   return (
@@ -134,7 +161,7 @@ export default function GamesDashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-6xl">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-7xl">
         {campaigns.map((campaign) => {
           const prog = campaignProgress[campaign.id];
 
@@ -159,7 +186,7 @@ export default function GamesDashboard() {
               {/* Cinematic Poster Header */}
               <Link
                 href={campaign.href}
-                className="w-full h-80 mb-5 rounded-xl overflow-hidden relative z-10 shadow-2xl block group-hover:shadow-[0_0_25px_rgba(180,152,107,0.3)] transition-all duration-500 border border-[#483824]/40"
+                className="w-full h-72 mb-5 rounded-xl overflow-hidden relative z-10 shadow-2xl block group-hover:shadow-[0_0_25px_rgba(180,152,107,0.3)] transition-all duration-500 border border-[#483824]/40"
               >
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10"></div>
                 <img
@@ -232,7 +259,6 @@ export default function GamesDashboard() {
                   ))}
                 </div>
               </div>
-
 
               <Link
                 href={campaign.href}
