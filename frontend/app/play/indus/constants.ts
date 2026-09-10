@@ -34,10 +34,10 @@ export const INDUS_SCENE_CONFIGS: Record<IndusSceneType, IndusSceneMeta> = {
     subtitle: "Riverside Landing & Trade Regulation",
     backgroundImage: "/bg-indus-ghat.jpg",
     defaultObjective: "Arrive at the Indus river ghat and approach Trade Overseer Somnath at the raised checkpoint platform.",
-    minX: 24.0,
+    minX: 30.0,
     maxX: 88.0,
-    minY: 44.0,
-    maxY: 88.0,
+    minY: 42.0,
+    maxY: 86.0,
   },
   granary_avenue: {
     title: "The Great Granary Thoroughfare",

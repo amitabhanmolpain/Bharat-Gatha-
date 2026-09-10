@@ -49,6 +49,8 @@ export default function IndusValleyGameScreen() {
   const [hasInspectedBrickRatio, setHasInspectedBrickRatio] = useState(INITIAL_INDUS_STATE.hasInspectedBrickRatio);
   const [hasFirstRelicChertWeight, setHasFirstRelicChertWeight] = useState(INITIAL_INDUS_STATE.hasFirstRelicChertWeight);
   const [showOverseerDialogue, setShowOverseerDialogue] = useState(false);
+  const [showForeignTradersModal, setShowForeignTradersModal] = useState(false);
+  const [hasInspectedForeignTraders, setHasInspectedForeignTraders] = useState(false);
 
   // Stage 2: Great Bath
   const [isDrainagePuzzleSolved, setIsDrainagePuzzleSolved] = useState(INITIAL_INDUS_STATE.isDrainagePuzzleSolved);
@@ -213,21 +215,29 @@ export default function IndusValleyGameScreen() {
   };
 
   // 4. Proximity Checks
-  // Stage 1: Overseer Somnath at the raised checkpoint platform (near x: 58-82, y: 46-70)
+  // Stage 1: Dock Official Somnath in front of City Gateway (at x: 71.5%, y: 48%)
   const isNearOverseer =
     scene === "lower_town_gate" &&
-    playerPos.x >= 58.0 &&
-    playerPos.x <= 82.0 &&
-    playerPos.y >= 46.0 &&
-    playerPos.y <= 70.0;
+    playerPos.x >= 60.0 &&
+    playerPos.x <= 84.0 &&
+    playerPos.y >= 40.0 &&
+    playerPos.y <= 62.0;
 
-  // Stage 1 -> Stage 2 City Gateway to Mohenjo-daro (at gate x: 32-52, y: 40-54)
+  // Stage 1: Foreign Mesopotamian & Dilmun Traders on the ghat steps (at x: 52%, y: 67%)
+  const isNearForeignTraders =
+    scene === "lower_town_gate" &&
+    playerPos.x >= 42.0 &&
+    playerPos.x <= 64.0 &&
+    playerPos.y >= 58.0 &&
+    playerPos.y <= 78.0;
+
+  // Stage 1 -> Stage 2 City Gateway to Mohenjo-daro (at gate x: 64-78, y: 36-46)
   const isNearGranaryExit =
     scene === "lower_town_gate" &&
     hasFirstRelicChertWeight &&
-    playerPos.x >= 32.0 &&
-    playerPos.x <= 52.0 &&
-    playerPos.y <= 54.0;
+    playerPos.x >= 64.0 &&
+    playerPos.x <= 78.0 &&
+    playerPos.y <= 46.0;
 
   // Stage 2: Great Bath sunken basin
   const isNearGreatBathBasin =
@@ -304,6 +314,8 @@ export default function IndusValleyGameScreen() {
       if (e.key === "e" || e.key === "E" || e.key === " ") {
         if (isNearOverseer) {
           setShowOverseerDialogue(true);
+        } else if (isNearForeignTraders) {
+          setShowForeignTradersModal(true);
         } else if (isNearGreatBathBasin) {
           setShowDrainagePuzzleModal(true);
         } else if (isNearSealBench) {
@@ -473,23 +485,50 @@ export default function IndusValleyGameScreen() {
 
         {/* --- SCENE HOTSPOTS & NPCS --- */}
 
-        {/* Stage 1: Trade Overseer Somnath on the Raised Checkpoint Platform */}
+        {/* Stage 1: Dock Official Somnath in front of City Gateway */}
         {scene === "lower_town_gate" && (
           <div
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
-            style={{ left: "69%", top: "54%" }}
+            className="absolute flex flex-col items-center z-15 pointer-events-auto cursor-pointer select-none transition-transform hover:scale-105"
+            style={{ left: "71.5%", top: "48%", transform: "translate(-50%, -100%)" }}
+            onClick={() => setShowOverseerDialogue(true)}
           >
             {isNearOverseer && (
-              <div className="mb-2 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
+              <div className="mb-1.5 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
                 <span className="text-[#d8a86a] font-bold">[E]</span>
-                <span>Speak with Trade Overseer Somnath 📐</span>
+                <span>Speak with Dock Official Somnath 📐</span>
               </div>
             )}
-            <div className="w-12 h-16 bg-[#2d2218]/90 border-2 border-[#d8a86a] rounded-2xl flex items-center justify-center text-3xl shadow-lg">
-              🧔🏽‍♂️
-            </div>
-            <span className="text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#54412e] mt-1">
-              Overseer Somnath
+            <img
+              src="/sprite-indus-official.png"
+              alt="Dock Official Somnath"
+              className="h-28 sm:h-32 md:h-34 w-auto object-contain filter drop-shadow-[0_6px_8px_rgba(0,0,0,0.55)]"
+            />
+            <span className="text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/90 px-2 py-0.5 rounded border border-[#d8a86a]/60 shadow-md mt-1 whitespace-nowrap">
+              📐 Dock Official Somnath
+            </span>
+          </div>
+        )}
+
+        {/* Stage 1: Foreign Mesopotamian & Dilmun Traders on the Steps */}
+        {scene === "lower_town_gate" && (
+          <div
+            className="absolute flex flex-col items-center z-15 pointer-events-auto cursor-pointer select-none transition-transform hover:scale-105"
+            style={{ left: "52%", top: "67%", transform: "translate(-50%, -100%)" }}
+            onClick={() => setShowForeignTradersModal(true)}
+          >
+            {isNearForeignTraders && (
+              <div className="mb-1.5 bg-[#1b1510]/95 border-2 border-[#38bdf8] text-[#f0f9ff] px-3 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
+                <span className="text-[#38bdf8] font-bold">[E]</span>
+                <span>Inspect Foreign Mesopotamian Trader 🏺</span>
+              </div>
+            )}
+            <img
+              src="/sprite-indus-trader.png"
+              alt="Foreign Mesopotamian Trader"
+              className="h-28 sm:h-32 md:h-34 w-auto object-contain filter drop-shadow-[0_6px_8px_rgba(0,0,0,0.55)]"
+            />
+            <span className="text-[10px] font-serif font-bold text-[#f0f9ff] bg-[#0c1a24]/90 px-2 py-0.5 rounded border border-[#38bdf8]/60 shadow-md mt-1 whitespace-nowrap">
+              🏺 Foreign Trader (Sumer & Dilmun)
             </span>
           </div>
         )}
@@ -498,7 +537,7 @@ export default function IndusValleyGameScreen() {
         {scene === "lower_town_gate" && hasFirstRelicChertWeight && (
           <div
             className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
-            style={{ left: "42%", top: "42%" }}
+            style={{ left: "71.5%", top: "33%" }}
           >
             <div className="mb-1 bg-[#1b1510]/90 border-2 border-[#52a45a] text-[#baf1be] px-3 py-1 rounded-lg text-xs font-serif shadow-md animate-pulse whitespace-nowrap">
               <span>▲ [E] Enter City Gate to The Great Bath (Stage 2)</span>
@@ -738,6 +777,70 @@ export default function IndusValleyGameScreen() {
                 className="bg-gradient-to-r from-[#9e733b] to-[#d8a86a] hover:from-[#b58545] hover:to-[#eec085] text-[#140f0b] font-serif font-bold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md"
               >
                 Accept Chert Weight & Proceed North ▲
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- STAGE 1 FOREIGN TRADERS (MESOPOTAMIA & DILMUN) MODAL --- */}
+      {showForeignTradersModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+          <div className="relative w-full max-w-xl bg-[#1c1611] text-[#f4ebd9] rounded-2xl border-4 border-[#38bdf8] p-6 shadow-[0_0_50px_rgba(56,189,248,0.3)] max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b-2 border-[#54412e] mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-[#122838] border-2 border-[#38bdf8] flex items-center justify-center text-3xl shadow-inner">
+                  🏺
+                </div>
+                <div>
+                  <div className="text-[10px] font-mono text-[#38bdf8] uppercase tracking-widest">
+                    Maritime Trade Delegation • Bronze Age (c. 2500 BCE)
+                  </div>
+                  <h3 className="text-xl font-serif font-bold text-[#fdfaf3]">
+                    Foreign Merchants of Sumer & Dilmun
+                  </h3>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowForeignTradersModal(false)}
+                className="text-[#a4917b] hover:text-[#fdfaf3] text-sm bg-[#2e2319] hover:bg-[#423223] border border-[#6b533a] px-3 py-1.5 rounded-lg transition-all cursor-pointer"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            <div className="p-4 rounded-xl bg-[#131d24] border border-[#234559] text-sm font-serif leading-relaxed text-[#d7e9f4] mb-5 space-y-2.5">
+              <p className="font-bold text-[#38bdf8]">
+                &ldquo;Greetings from the Persian Gulf! We have sailed across the high seas from the ports of Dilmun and the great city of Ur in Sumer.&rdquo;
+              </p>
+              <p className="text-xs text-[#b8d5e5]">
+                In Mesopotamian cuneiform tablets from King Sargon of Akkad, your realm is celebrated as <strong className="text-amber-300">&ldquo;Meluhha&rdquo;</strong> — the legendary eastern land of exotic timbers, gold, lapis lazuli, ivory dice, and prized deep-red carnelian beads.
+              </p>
+              <p className="text-xs text-[#b8d5e5]">
+                The bearded Sumerian merchant in the fringed kaunakes mantle opens his carved chest, presenting bars of pure silver bullion, cedar beams, and fine wool. They await inspection by <strong className="text-amber-300">Dock Official Somnath</strong> to calibrate their exchange against Harappan standard chert weights!
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between pt-3 border-t border-[#3e2e1f]">
+              <span className="text-[10px] font-mono text-[#38bdf8]">
+                ✦ Historical Lore: Meluhha-Mesopotamia Maritime Trade
+              </span>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setHasInspectedForeignTraders(true);
+                  setShowForeignTradersModal(false);
+                  soundFx.playClueFound();
+                  playNarration(
+                    "You discover the ancient trade ties between Meluhha and Mesopotamia! Foreign merchants from Sumer and Dilmun arrived with silver and wool to trade for Harappan carnelian and ivory.",
+                    { speaker: "ratan", pace: 0.88, language_code: "en-IN" }
+                  );
+                }}
+                className="bg-gradient-to-r from-[#0284c7] to-[#38bdf8] hover:from-[#0369a1] hover:to-[#0284c7] text-[#082f49] font-serif font-extrabold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md"
+              >
+                Record in Trade Annals 📜
               </button>
             </div>
           </div>
