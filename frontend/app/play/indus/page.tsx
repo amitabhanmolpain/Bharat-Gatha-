@@ -118,6 +118,11 @@ export default function IndusValleyGameScreen() {
   );
   const [isJournalOpen, setIsJournalOpen] = useState(false);
 
+  // Stage 1.5: Animated walking Water Carrier (Nano Banana generated 4-frame walk cycle)
+  const [carrierProgress, setCarrierProgress] = useState(0.4); // 0 (top of lane) to 1 (bottom of lane)
+  const [carrierDirection, setCarrierDirection] = useState<1 | -1>(1); // 1 = down-left, -1 = up-right
+  const [carrierFrame, setCarrierFrame] = useState(1); // 1 to 4
+
   // Scene Configuration
   const currentSceneConfig = INDUS_SCENE_CONFIGS[scene] || INDUS_SCENE_CONFIGS.lower_town_gate;
 
@@ -535,13 +540,16 @@ export default function IndusValleyGameScreen() {
     playerPos.y >= 36.0 &&
     playerPos.y <= 48.0;
 
-  // Stage 1.5: Road Pedestrian / Water Carrier (at x: 44%, y: 83% on paved avenue)
+  // Moving Water Carrier position along straight open street path (no collisions)
+  const waterCarrierX = 55.0 - 13.0 * carrierProgress;
+  const waterCarrierY = 56.0 + 24.0 * carrierProgress;
+  const isCarrierFacingLeft = carrierDirection === 1; // 1 = moving towards x=42 (left / forward down avenue)
+
+  // Stage 1.5: Road Pedestrian / Water Carrier (Walking along paved avenue)
   const isNearRoadPedestrian =
     scene === "residential_grid" &&
-    playerPos.x >= 36.0 &&
-    playerPos.x <= 54.0 &&
-    playerPos.y >= 74.0 &&
-    playerPos.y <= 92.0;
+    Math.abs(playerPos.x - waterCarrierX) <= 8.5 &&
+    Math.abs(playerPos.y - waterCarrierY) <= 8.5;
 
   // Stage 1.5: Marked Spot 1 - Cargo Inspector (at x: 87.5%, y: 43.5%)
   const isNearCargoInspector =
@@ -634,6 +642,47 @@ export default function IndusValleyGameScreen() {
       setIsTransitioning(false);
     }, 600);
   };
+
+  // 5.5. Animated Walking Water Carrier Engine (Nano Banana generated 4-frame walk cycle)
+  useEffect(() => {
+    if (scene !== "residential_grid") return;
+
+    // Cycle walk animation frames (1 -> 2 -> 3 -> 4)
+    const frameInterval = setInterval(() => {
+      setCarrierFrame((prev) => (prev % 4) + 1);
+    }, 180);
+
+    // Continuous smooth movement along open brick street path
+    let lastTime = performance.now();
+    let animId: number;
+
+    const moveLoop = (now: number) => {
+      const dt = Math.min((now - lastTime) / 1000, 0.1);
+      lastTime = now;
+
+      setCarrierProgress((prev) => {
+        const speed = 0.07; // completes traversal in ~14 seconds
+        let next = prev + carrierDirection * speed * dt;
+        if (next >= 1.0) {
+          next = 1.0;
+          setCarrierDirection(-1);
+        } else if (next <= 0.0) {
+          next = 0.0;
+          setCarrierDirection(1);
+        }
+        return next;
+      });
+
+      animId = requestAnimationFrame(moveLoop);
+    };
+
+    animId = requestAnimationFrame(moveLoop);
+
+    return () => {
+      clearInterval(frameInterval);
+      cancelAnimationFrame(animId);
+    };
+  }, [scene, carrierDirection]);
 
   // 6. Keyboard Movement Engine
   useEffect(() => {
@@ -1194,11 +1243,14 @@ export default function IndusValleyGameScreen() {
           </div>
         )}
 
-        {/* Stage 1.5: Road Townsman / Water Carrier (Standing firmly on the paved avenue in front of the house doorway) */}
+        {/* Stage 1.5: Road Townsman / Water Carrier (Animated walking down the paved avenue) */}
         {scene === "residential_grid" && (
           <div
             className="absolute z-15 pointer-events-auto cursor-pointer select-none group"
-            style={{ left: "44%", top: "83%" }}
+            style={{
+              left: `${waterCarrierX}%`,
+              top: `${waterCarrierY}%`,
+            }}
             onClick={() =>
               setActiveCitizenDialogue({
                 name: "Harappan Water Carrier",
@@ -1208,21 +1260,33 @@ export default function IndusValleyGameScreen() {
               })
             }
           >
-            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform group-hover:scale-105">
+            <div
+              className={`relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform duration-200 ${
+                isCarrierFacingLeft ? "-scale-x-100" : "scale-x-100"
+              } group-hover:scale-105`}
+            >
               {isNearRoadPedestrian && (
-                <div className="mb-1.5 bg-[#1b1510]/95 border border-[#38bdf8] text-[#f0f9ff] px-2.5 py-0.5 rounded text-[11px] font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap">
+                <div
+                  className={`mb-1.5 bg-[#1b1510]/95 border border-[#38bdf8] text-[#f0f9ff] px-2.5 py-0.5 rounded text-[11px] font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap ${
+                    isCarrierFacingLeft ? "-scale-x-100" : ""
+                  }`}
+                >
                   <span className="text-[#38bdf8] font-bold">[G]</span>
                   <span>Greet Water Carrier</span>
                 </div>
               )}
-              <span className={`text-[10px] font-serif font-bold text-[#f0f9ff] bg-[#0c1a24]/90 px-2 py-0.5 rounded border border-[#38bdf8]/50 shadow mb-1 whitespace-nowrap transition-opacity duration-200 ${
-                isNearRoadPedestrian ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-              }`}>
+              <span
+                className={`text-[10px] font-serif font-bold text-[#f0f9ff] bg-[#0c1a24]/90 px-2 py-0.5 rounded border border-[#38bdf8]/50 shadow mb-1 whitespace-nowrap transition-opacity duration-200 ${
+                  isCarrierFacingLeft ? "-scale-x-100" : ""
+                } ${
+                  isNearRoadPedestrian ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                }`}
+              >
                 Water Carrier
               </span>
               <img
-                src="/sprite-indus-pedestrian.png?v=3"
-                alt="Harappan Water Carrier"
+                src={`/sprite-pedestrian-walk-${carrierFrame}.png?v=2`}
+                alt="Harappan Water Carrier Walking"
                 className="h-24 sm:h-[108px] md:h-[122px] w-auto object-contain block select-none"
               />
             </div>
