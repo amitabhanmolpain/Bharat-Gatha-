@@ -466,18 +466,17 @@ export default function IndusValleyGameScreen() {
     playerPos.y >= 66.0 &&
     playerPos.y <= 86.0;
 
-  // Stage 1.5: Residential Grid -> The Great Granary (at avenue bottom x: 68%, y: 84%)
+  // Stage 1.5: Residential Grid -> The Great Granary (Moving forward up avenue to top-right)
   const isNearResidentialGranaryForward =
     scene === "residential_grid" &&
-    playerPos.x >= 58.0 &&
-    playerPos.x <= 78.0 &&
-    playerPos.y >= 78.0;
+    playerPos.x >= 68.0 &&
+    playerPos.y <= 44.0;
 
-  // Stage 1.5: Residential Grid -> Return to Ghat Gate (at x: 82%, y: 37%)
+  // Stage 1.5: Residential Grid -> Return to Ghat Gate (at bottom of avenue)
   const isNearResidentialGhatReturn =
     scene === "residential_grid" &&
-    playerPos.x >= 74.0 &&
-    playerPos.y <= 44.0;
+    playerPos.x >= 54.0 &&
+    playerPos.y >= 74.0;
 
   // Stage 1.7: The Great Granary -> Return to Residential Grid (at bottom-left x: 22%, y: 82%)
   const isNearGranaryGridReturn =
@@ -735,7 +734,7 @@ export default function IndusValleyGameScreen() {
           triggerTransition("lower_town_gate", { x: 71.5, y: 41.0 });
           return;
         } else if (isNearGranaryGridReturn) {
-          triggerTransition("residential_grid", { x: 68.0, y: 78.0 });
+          triggerTransition("residential_grid", { x: 76.0, y: 38.0 });
           return;
         } else if (isNearGreatBathGranaryReturn) {
           triggerTransition("granary_avenue", { x: 72.0, y: 52.0 });
@@ -1471,27 +1470,41 @@ export default function IndusValleyGameScreen() {
           </div>
         )}
 
-        {/* Stage 1.5: Residential Grid -> The Great Granary (Front Avenue) */}
+        {/* Stage 1.5: Residential Grid -> The Great Granary (Moving forward up avenue to top-right) */}
         {scene === "residential_grid" && (
           <div
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
-            style={{ left: "68%", top: "84%" }}
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "80%", top: "34%" }}
+            onClick={() => triggerTransition("granary_avenue", { x: 26.0, y: 78.0 })}
           >
-            <div className="bg-[#1b1510]/95 border-2 border-[#52a45a] text-[#baf1be] px-3 py-1 rounded-lg text-xs font-serif shadow-md animate-pulse whitespace-nowrap">
-              <span>▲ [E] To The Great Granary</span>
-            </div>
+            {isNearResidentialGranaryForward ? (
+              <div className="bg-[#1b1510]/95 border-2 border-[#52a45a] text-[#baf1be] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-lg animate-bounce whitespace-nowrap group-hover:bg-[#251d16] transition-colors">
+                <span>▲ [E] To The Great Granary</span>
+              </div>
+            ) : (
+              <div className="bg-[#1b1510]/80 border border-[#52a45a]/60 text-[#baf1be]/80 px-2 py-0.5 rounded text-[11px] font-serif whitespace-nowrap">
+                <span>To The Great Granary</span>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Stage 1.5: Residential Grid -> Return to Ghat Gate */}
+        {/* Stage 1.5: Residential Grid -> Return to Ghat Gate (At bottom of avenue) */}
         {scene === "residential_grid" && (
           <div
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
-            style={{ left: "82%", top: "37%" }}
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "68%", top: "84%" }}
+            onClick={() => triggerTransition("lower_town_gate", { x: 71.5, y: 41.0 })}
           >
-            <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-2.5 py-1 rounded-lg text-[11px] font-serif shadow-md whitespace-nowrap">
-              <span>▼ [F] To River Ghat</span>
-            </div>
+            {isNearResidentialGhatReturn ? (
+              <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-md whitespace-nowrap animate-bounce group-hover:bg-[#251d16] transition-colors">
+                <span>▼ [F] To River Ghat</span>
+              </div>
+            ) : (
+              <div className="bg-[#1b1510]/80 border border-[#d8a86a]/60 text-[#f7eedf]/80 px-2 py-0.5 rounded text-[11px] font-serif whitespace-nowrap">
+                <span>To River Ghat</span>
+              </div>
+            )}
           </div>
         )}
 
