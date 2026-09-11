@@ -1934,10 +1934,11 @@ export default function IndusValleyGameScreen() {
         {/* Stage 1.7: Return to Residential Grid Trigger */}
         {scene === "granary_avenue" && (
           <div
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
             style={{ left: "20%", top: "84%" }}
+            onClick={() => triggerTransition("residential_grid", { x: 76.0, y: 38.0 })}
           >
-            <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-2.5 py-1 rounded-lg text-[11px] font-serif shadow-md whitespace-nowrap">
+            <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1.5 rounded-lg text-xs font-serif shadow-md whitespace-nowrap animate-bounce group-hover:bg-[#251d16] transition-colors">
               <span>▼ [F] Return to Residential Grid</span>
             </div>
           </div>
@@ -1946,82 +1947,81 @@ export default function IndusValleyGameScreen() {
         {/* Stage 1.7: Ascend to Citadel & Great Bath Trigger */}
         {scene === "granary_avenue" && (
           <div
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
             style={{ left: "76%", top: "48%" }}
+            onClick={() => triggerTransition("great_bath_citadel", { x: 50.0, y: 82.0 }, 2)}
           >
-            <div className="bg-[#1b1510]/95 border-2 border-[#52a45a] text-[#baf1be] px-3 py-1 rounded-lg text-xs font-serif shadow-md animate-pulse whitespace-nowrap">
+            <div className="bg-[#1b1510]/95 border-2 border-[#52a45a] text-[#baf1be] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-lg animate-pulse whitespace-nowrap group-hover:bg-[#251d16] transition-colors">
               <span>▲ [E] Ascend to The Great Bath (Stage 2)</span>
             </div>
           </div>
         )}
 
-        {/* Stage 1.7: Granary Laborer / Sack Carrier NPC */}
+        {/* Stage 1.7: Granary Grain Reserves & Baskets Hotspot */}
         {scene === "granary_avenue" && (
           <div
-            className="absolute z-14 pointer-events-auto cursor-pointer select-none group"
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-12"
             style={{ left: "34%", top: "62%" }}
-            onClick={() =>
+            onClick={() => {
               setActiveCitizenDialogue({
-                name: "Harappan Granary Laborer",
-                title: "Grain Carrier • Mohenjo-daro Granary",
+                name: "Harappan Granary Grain Reserves",
+                title: "Barley & Emmer Wheat Storage • Mohenjo-daro",
                 icon: "",
-                text: "We haul sacks of freshly threshed barley and emmer wheat from the river quays up these wooden ramps! Notice how the platforms are raised above the ground—warm, dry air circulates continuously through the brick vents to prevent rot.",
-              })
-            }
+                text: "Heaps of freshly threshed barley and emmer wheat fill these woven reed baskets and burlap sacks! Notice how the brick platforms are elevated above the ground—warm, dry air circulates continuously through the subterranean vents to prevent rot and pest infestation.",
+              });
+              soundFx.playSelect();
+            }}
           >
-            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform group-hover:scale-105">
-              {isNearGranaryWorker && (
-                <div className="mb-1.5 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded text-[10px] font-serif shadow-lg animate-bounce whitespace-nowrap">
-                  <span className="text-[#d8a86a] font-bold mr-1">[G]</span>
-                  <span>Speak with Laborer</span>
-                </div>
-              )}
-              <span className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow mb-1 whitespace-nowrap transition-opacity duration-200 ${
-                isNearGranaryWorker ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-              }`}>
-                Granary Laborer
-              </span>
-              <img
-                src="/sprite-indus-watercarrier.png?v=2"
-                alt="Granary Laborer"
-                className="h-24 sm:h-[108px] md:h-[122px] w-auto object-contain block select-none"
-              />
+            {isNearGranaryWorker && (
+              <div className="mb-1.5 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-2.5 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
+                <span className="text-[#d8a86a] font-bold">[G]</span>
+                <span>Inspect Grain Sacks & Baskets</span>
+              </div>
+            )}
+            <div className="w-10 h-10 rounded-xl bg-[#281c14]/90 border-2 border-[#d8a86a] flex items-center justify-center shadow-lg group-hover:border-[#eedbbf] transition-all">
+              <svg className="w-5 h-5 text-[#d8a86a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
             </div>
+            <span className={`text-[9px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/90 px-1.5 py-0.5 rounded border border-[#d8a86a]/60 shadow-md mt-0.5 whitespace-nowrap transition-opacity duration-200 ${
+              isNearGranaryWorker ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            }`}>
+              Grain Sacks & Reserves
+            </span>
           </div>
         )}
 
-        {/* Stage 1.7: Granary Metrology Scribe NPC */}
+        {/* Stage 1.7: Granary Metrology Station Hotspot */}
         {scene === "granary_avenue" && (
           <div
-            className="absolute z-14 pointer-events-auto cursor-pointer select-none group"
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-12"
             style={{ left: "74%", top: "66%" }}
-            onClick={() =>
+            onClick={() => {
               setActiveCitizenDialogue({
-                name: "Granary Metrology Scribe",
-                title: "Civic Grain Overseer • Mohenjo-daro",
+                name: "Granary Metrology Station",
+                title: "Standardized Chert Weights & Grain Registry",
                 icon: "",
-                text: "Every basket entering these rectangular bays is measured against standard chert cube weights. Centralized storage ensures that even during drought years or unpredictable Indus river floods, the civic granary guarantees food security for the entire population.",
-              })
-            }
+                text: "Every basket entering these rectangular bays is measured against standard binary chert cube weights. Centralized storage ensures that even during drought years or unpredictable Indus river floods, the civic granary guarantees food security for the entire population.",
+              });
+              soundFx.playSelect();
+            }}
           >
-            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform group-hover:scale-105">
-              {isNearGranaryScribe && (
-                <div className="mb-1.5 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded text-[10px] font-serif shadow-lg animate-bounce whitespace-nowrap">
-                  <span className="text-[#d8a86a] font-bold mr-1">[G]</span>
-                  <span>Speak with Grain Scribe</span>
-                </div>
-              )}
-              <span className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow mb-1 whitespace-nowrap transition-opacity duration-200 ${
-                isNearGranaryScribe ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-              }`}>
-                Granary Scribe
-              </span>
-              <img
-                src="/sprite-indus-official.png?v=1"
-                alt="Granary Scribe"
-                className="h-24 sm:h-[108px] md:h-[122px] w-auto object-contain block select-none"
-              />
+            {isNearGranaryScribe && (
+              <div className="mb-1.5 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-2.5 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
+                <span className="text-[#d8a86a] font-bold">[G]</span>
+                <span>Inspect Metrology Station</span>
+              </div>
+            )}
+            <div className="w-10 h-10 rounded-xl bg-[#281c14]/90 border-2 border-[#d8a86a] flex items-center justify-center shadow-lg group-hover:border-[#eedbbf] transition-all">
+              <svg className="w-5 h-5 text-[#d8a86a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
             </div>
+            <span className={`text-[9px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/90 px-1.5 py-0.5 rounded border border-[#d8a86a]/60 shadow-md mt-0.5 whitespace-nowrap transition-opacity duration-200 ${
+              isNearGranaryScribe ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            }`}>
+              Metrology Registry
+            </span>
           </div>
         )}
 
