@@ -1083,7 +1083,7 @@ export default function IndusValleyGameScreen() {
                 Dock Official Somnath
               </span>
               <img
-                src="/sprite-indus-official.png?v=3"
+                src="/sprite-indus-official.png?v=4"
                 alt="Dock Official Somnath"
                 className="h-24 sm:h-[108px] md:h-[122px] w-auto object-contain block select-none"
               />
@@ -1291,7 +1291,7 @@ export default function IndusValleyGameScreen() {
                 Cargo Inspector
               </span>
               <img
-                src="/sprite-indus-official.png?v=3"
+                src="/sprite-indus-official.png?v=4"
                 alt="Cargo Inspector"
                 className="h-[68px] sm:h-[75px] md:h-[84px] w-auto object-contain block select-none"
               />
