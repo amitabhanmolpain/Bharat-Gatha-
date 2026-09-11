@@ -52,8 +52,16 @@ export default function IndusHUD({
     switch (sc) {
       case "lower_town_gate":
         return "INDUS VALLEY - THE GHAT OF MOHENJO-DARO (c. 2500 BCE)";
+      case "residential_grid":
+        return "INDUS VALLEY - RESIDENTIAL GRID (MOHENJO-DARO)";
+      case "house_courtyard":
+        return "INDUS VALLEY - CENTRAL DOMESTIC COURTYARD (MOHENJO-DARO)";
+      case "house_interior":
+        return "INDUS VALLEY - GROUND FLOOR RESIDENCE (MOHENJO-DARO)";
+      case "house_second_floor":
+        return "INDUS VALLEY - RESIDENTIAL SECOND FLOOR & ROOF (MOHENJO-DARO)";
       case "granary_avenue":
-        return "INDUS VALLEY - LOWER TOWN & GRANARY (c. 2500 BCE)";
+        return "INDUS VALLEY - THE GREAT GRANARY (MOHENJO-DARO)";
       case "great_bath_citadel":
       case "drainage_culvert":
         return "INDUS VALLEY - THE GREAT BATH (MOHENJO-DARO)";
@@ -72,8 +80,16 @@ export default function IndusHUD({
     switch (sc) {
       case "lower_town_gate":
         return "The Indus Ghat";
+      case "residential_grid":
+        return "Residential Grid";
+      case "house_courtyard":
+        return "Domestic Courtyard";
+      case "house_interior":
+        return "Ground Floor Room";
+      case "house_second_floor":
+        return "Second Floor & Roof";
       case "granary_avenue":
-        return "Lower Town Grid";
+        return "The Great Granary";
       case "great_bath_citadel":
       case "drainage_culvert":
         return "The Great Bath";

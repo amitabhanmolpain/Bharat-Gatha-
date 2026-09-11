@@ -74,6 +74,25 @@ export default function IndusValleyGameScreen() {
     text: string;
   } | null>(null);
 
+  // Stage 1.55: Central Domestic Courtyard
+  const [showCourtyardToiletModal, setShowCourtyardToiletModal] = useState(false);
+  const [showCourtyardWellModal, setShowCourtyardWellModal] = useState(false);
+  const [showCourtyardStaircaseModal, setShowCourtyardStaircaseModal] = useState(false);
+  const [hasInspectedCourtyardToilet, setHasInspectedCourtyardToilet] = useState(false);
+  const [lastCourtyardDoor, setLastCourtyardDoor] = useState<"left" | "right">("right");
+
+  // Stage 1.6: House Interior
+  const [showInteriorStaircaseModal, setShowInteriorStaircaseModal] = useState(false);
+  const [showInteriorCharpoyModal, setShowInteriorCharpoyModal] = useState(false);
+  const [showInteriorBathModal, setShowInteriorBathModal] = useState(false);
+  const [showInteriorQuernModal, setShowInteriorQuernModal] = useState(false);
+
+  // Stage 1.7: The Great Granary
+  const [showGranaryDuctsModal, setShowGranaryDuctsModal] = useState(false);
+  const [showGranaryPlatformsModal, setShowGranaryPlatformsModal] = useState(false);
+  const [hasInspectedGranaryDucts, setHasInspectedGranaryDucts] = useState(false);
+  const [hasInspectedGranaryPlatforms, setHasInspectedGranaryPlatforms] = useState(false);
+
   // Stage 2: Great Bath
   const [isDrainagePuzzleSolved, setIsDrainagePuzzleSolved] = useState(INITIAL_INDUS_STATE.isDrainagePuzzleSolved);
   const [hasInspectedBitumenLining, setHasInspectedBitumenLining] = useState(INITIAL_INDUS_STATE.hasInspectedBitumenLining);
@@ -232,6 +251,18 @@ export default function IndusValleyGameScreen() {
     setHasMetPriestKing(false);
     setHasBronzeDancingGirl(false);
     setIsCampaignComplete(false);
+    setHasInspectedGranaryDucts(false);
+    setHasInspectedGranaryPlatforms(false);
+    setShowGranaryDuctsModal(false);
+    setShowGranaryPlatformsModal(false);
+    setShowCourtyardToiletModal(false);
+    setShowCourtyardWellModal(false);
+    setShowCourtyardStaircaseModal(false);
+    setHasInspectedCourtyardToilet(false);
+    setShowInteriorStaircaseModal(false);
+    setShowInteriorCharpoyModal(false);
+    setShowInteriorBathModal(false);
+    setShowInteriorQuernModal(false);
     setUnlockedJournalEntries(INITIAL_INDUS_STATE.unlockedJournalEntries);
     setShowRestartConfirmModal(false);
   };
@@ -253,13 +284,14 @@ export default function IndusValleyGameScreen() {
     playerPos.y >= 66.0 &&
     playerPos.y <= 86.0;
 
-  // Stage 1 -> Stage 1.5 City Gateway to Residential Grid (at gate x: 64-78, y: 34-46)
+  // Stage 1 -> Stage 1.5 City Arch Gateway to Residential Grid (at arch gateway x: 67-76%, y: 32-38%)
   const isNearGranaryExit =
     scene === "lower_town_gate" &&
     hasFirstRelicChertWeight &&
-    playerPos.x >= 64.0 &&
-    playerPos.x <= 78.0 &&
-    playerPos.y <= 46.0;
+    playerPos.x >= 67.0 &&
+    playerPos.x <= 76.0 &&
+    playerPos.y >= 32.0 &&
+    playerPos.y <= 38.0;
 
   // Stage 1.5: Residential Grid - Covered Drains inspection (at x: 62%, y: 58%)
   const isNearResidentialDrains =
@@ -277,8 +309,165 @@ export default function IndusValleyGameScreen() {
     playerPos.y >= 58.0 &&
     playerPos.y <= 74.0;
 
-  // Stage 1.5: Residential Grid -> Citadel & Great Bath Exit (at x: 68%, y: 84%)
-  const isNearResidentialCitadelExit =
+  // Stage 1.5: Residential Grid -> Enter Courtyard Doorway (at avenue doorway x: 48%, y: 60%)
+  const isNearHouseDoorway =
+    scene === "residential_grid" &&
+    playerPos.x >= 42.0 &&
+    playerPos.x <= 54.0 &&
+    playerPos.y >= 52.0 &&
+    playerPos.y <= 66.0;
+
+  // Stage 1.55: Central Domestic Courtyard -> Exit back to Street Grid (at bottom entrance)
+  const isNearCourtyardExit =
+    scene === "house_courtyard" &&
+    playerPos.x >= 42.0 &&
+    playerPos.x <= 58.0 &&
+    playerPos.y >= 78.0;
+
+  // Stage 1.55: Central Domestic Courtyard -> Outside Doorway of Latrine Room (Bottom-left room)
+  const isNearCourtyardToiletDoor =
+    scene === "house_courtyard" &&
+    playerPos.x >= 32.0 &&
+    playerPos.x <= 46.0 &&
+    playerPos.y >= 52.0 &&
+    playerPos.y <= 68.0;
+
+  // Stage 1.55: Central Domestic Courtyard -> Inside Enclosed Latrine Room
+  const isInsideCourtyardToilet =
+    scene === "house_courtyard" &&
+    playerPos.x <= 34.0 &&
+    playerPos.y >= 54.0;
+
+  // Stage 1.55: Central Domestic Courtyard -> Enclosed Harappan Brick Latrine Inspection Hotspot
+  const isNearCourtyardToilet =
+    scene === "house_courtyard" &&
+    playerPos.x >= 14.0 &&
+    playerPos.x <= 34.0 &&
+    playerPos.y >= 54.0 &&
+    playerPos.y <= 76.0;
+
+  // Stage 1.55: Central Domestic Courtyard -> Doorway to Street Grid Exit (Right door - as requested)
+  const isNearCourtyardRightExitDoor =
+    scene === "house_courtyard" &&
+    playerPos.x >= 54.0 &&
+    playerPos.x <= 78.0 &&
+    playerPos.y >= 38.0 &&
+    playerPos.y <= 64.0;
+
+  // Stage 1.55: Central Domestic Courtyard -> Doorway to Ground Floor Interior (Left door - Image 3)
+  const isNearCourtyardLeftInteriorDoor =
+    scene === "house_courtyard" &&
+    playerPos.x >= 28.0 &&
+    playerPos.x <= 44.0 &&
+    playerPos.y >= 32.0 &&
+    playerPos.y <= 52.0;
+
+  const isNearCourtyardInteriorDoor = isNearCourtyardLeftInteriorDoor;
+
+  // Stage 1.55: Central Domestic Courtyard -> Outside Doorway of Bath Room
+  const isNearCourtyardBathDoor =
+    scene === "house_courtyard" &&
+    playerPos.x >= 52.0 &&
+    playerPos.x <= 64.0 &&
+    playerPos.y >= 70.0 &&
+    playerPos.y <= 82.0;
+
+  // Stage 1.55: Central Domestic Courtyard -> Inside Private Bath Room
+  const isInsideCourtyardBath =
+    scene === "house_courtyard" &&
+    playerPos.x >= 64.0 &&
+    playerPos.y >= 54.0;
+
+  // Stage 1.55: Central Domestic Courtyard -> Private Bath Platform Inspection Hotspot
+  const isNearCourtyardBath =
+    scene === "house_courtyard" &&
+    playerPos.x >= 64.0 &&
+    playerPos.x <= 84.0 &&
+    playerPos.y >= 54.0 &&
+    playerPos.y <= 84.0;
+
+  // Stage 1.55: Central Domestic Courtyard -> Household Brick Well with Pulley
+  const isNearCourtyardWell =
+    scene === "house_courtyard" &&
+    playerPos.x >= 44.0 &&
+    playerPos.x <= 58.0 &&
+    playerPos.y >= 38.0 &&
+    playerPos.y <= 54.0;
+
+  // Stage 1.55: Central Domestic Courtyard -> Top of Brick Staircase (Climb to 2nd Floor)
+  const isNearCourtyardToInterior =
+    scene === "house_courtyard" &&
+    playerPos.y <= 32.0 &&
+    playerPos.x >= 44.0 &&
+    playerPos.x <= 58.0;
+
+  // Stage 1.55: Central Domestic Courtyard -> Brick Staircase Inspection (Lower steps)
+  const isNearCourtyardStaircase =
+    scene === "house_courtyard" &&
+    playerPos.x >= 44.0 &&
+    playerPos.x <= 58.0 &&
+    playerPos.y >= 34.0 &&
+    playerPos.y <= 44.0;
+
+  // Stage 1.6: House Interior -> Exit to Central Courtyard (Doorway Image 4)
+  const isNearHouseExit =
+    scene === "house_interior" &&
+    playerPos.y >= 78.0;
+
+  // Stage 1.6: House Interior -> Brick Staircase to Upper Floor (middle back wall)
+  const isNearInteriorStaircase =
+    scene === "house_interior" &&
+    playerPos.x >= 38.0 &&
+    playerPos.x <= 58.0 &&
+    playerPos.y >= 46.0 &&
+    playerPos.y <= 62.0;
+
+  // Stage 1.6: House Interior -> Traditional Woven Charpoy Bed (left room side)
+  const isNearInteriorCharpoy =
+    scene === "house_interior" &&
+    playerPos.x >= 14.0 &&
+    playerPos.x <= 36.0 &&
+    playerPos.y >= 58.0 &&
+    playerPos.y <= 78.0;
+
+  // Stage 1.6: House Interior -> Saddle Quern & Storage Jars (right side)
+  const isNearInteriorQuern =
+    scene === "house_interior" &&
+    playerPos.x >= 64.0 &&
+    playerPos.x <= 82.0 &&
+    playerPos.y >= 64.0 &&
+    playerPos.y <= 80.0;
+
+  // Stage 1.56: Residential Second Floor & Roof Terrace Proximity Flags
+  const isNearSecondFloorExit =
+    scene === "house_second_floor" &&
+    playerPos.y >= 68.0 &&
+    playerPos.x >= 36.0 &&
+    playerPos.x <= 64.0;
+
+  const isNearSecondFloorGallery =
+    scene === "house_second_floor" &&
+    playerPos.x >= 46.0 &&
+    playerPos.x <= 86.0 &&
+    playerPos.y >= 44.0 &&
+    playerPos.y <= 66.0;
+
+  const isNearSecondFloorCharpoy =
+    scene === "house_second_floor" &&
+    playerPos.x >= 14.0 &&
+    playerPos.x <= 34.0 &&
+    playerPos.y >= 40.0 &&
+    playerPos.y <= 62.0;
+
+  const isNearSecondFloorStorage =
+    scene === "house_second_floor" &&
+    playerPos.x >= 8.0 &&
+    playerPos.x <= 30.0 &&
+    playerPos.y >= 66.0 &&
+    playerPos.y <= 86.0;
+
+  // Stage 1.5: Residential Grid -> The Great Granary (at avenue bottom x: 68%, y: 84%)
+  const isNearResidentialGranaryForward =
     scene === "residential_grid" &&
     playerPos.x >= 58.0 &&
     playerPos.x <= 78.0 &&
@@ -290,6 +479,55 @@ export default function IndusValleyGameScreen() {
     playerPos.x >= 74.0 &&
     playerPos.y <= 44.0;
 
+  // Stage 1.7: The Great Granary -> Return to Residential Grid (at bottom-left x: 22%, y: 82%)
+  const isNearGranaryGridReturn =
+    scene === "granary_avenue" &&
+    playerPos.x <= 32.0 &&
+    playerPos.y >= 72.0;
+
+  // Stage 1.7: The Great Granary -> Citadel & Great Bath Ascent (at ramp top-right x: 76%, y: 50%)
+  const isNearGranaryCitadelAscent =
+    scene === "granary_avenue" &&
+    playerPos.x >= 68.0 &&
+    playerPos.y <= 56.0;
+
+  // Stage 1.7: Raised Brick Air Ducts (Subterranean ventilation)
+  const isNearGranaryAirDucts =
+    scene === "granary_avenue" &&
+    playerPos.x >= 38.0 &&
+    playerPos.x <= 54.0 &&
+    playerPos.y >= 62.0 &&
+    playerPos.y <= 76.0;
+
+  // Stage 1.7: Elevated Loading Platforms & Grain Reserves
+  const isNearGranaryPlatforms =
+    scene === "granary_avenue" &&
+    playerPos.x >= 56.0 &&
+    playerPos.x <= 70.0 &&
+    playerPos.y >= 58.0 &&
+    playerPos.y <= 74.0;
+
+  // Stage 1.7: Granary Worker / Sack Carrier
+  const isNearGranaryWorker =
+    scene === "granary_avenue" &&
+    playerPos.x >= 28.0 &&
+    playerPos.x <= 40.0 &&
+    playerPos.y >= 54.0 &&
+    playerPos.y <= 68.0;
+
+  // Stage 1.7: Granary Metrology Scribe
+  const isNearGranaryScribe =
+    scene === "granary_avenue" &&
+    playerPos.x >= 70.0 &&
+    playerPos.x <= 82.0 &&
+    playerPos.y >= 60.0 &&
+    playerPos.y <= 76.0;
+
+  // Stage 2 -> Return to The Great Granary (at bottom entrance)
+  const isNearGreatBathGranaryReturn =
+    scene === "great_bath_citadel" &&
+    playerPos.y >= 80.0;
+
   // Stage 1.5: Rooftop Resident (at x: 43.5%, y: 41.5%)
   const isNearRooftopCitizen =
     scene === "residential_grid" &&
@@ -298,13 +536,45 @@ export default function IndusValleyGameScreen() {
     playerPos.y >= 36.0 &&
     playerPos.y <= 48.0;
 
-  // Stage 1.5: Road Pedestrian / Water Carrier (at x: 38%, y: 76% on open left avenue)
+  // Stage 1.5: Road Pedestrian / Water Carrier (at x: 44%, y: 83% on paved avenue)
   const isNearRoadPedestrian =
     scene === "residential_grid" &&
-    playerPos.x >= 28.0 &&
-    playerPos.x <= 46.0 &&
-    playerPos.y >= 68.0 &&
-    playerPos.y <= 84.0;
+    playerPos.x >= 36.0 &&
+    playerPos.x <= 54.0 &&
+    playerPos.y >= 74.0 &&
+    playerPos.y <= 92.0;
+
+  // Stage 1.5: Marked Spot 1 - Cargo Inspector (at x: 87.5%, y: 43.5%)
+  const isNearCargoInspector =
+    scene === "residential_grid" &&
+    playerPos.x >= 78.0 &&
+    playerPos.x <= 96.0 &&
+    playerPos.y >= 36.0 &&
+    playerPos.y <= 52.0;
+
+  // Stage 1.5: Marked Spot 2 - Municipal Drain Inspector (at x: 83%, y: 58%)
+  const isNearDrainInspector =
+    scene === "residential_grid" &&
+    playerPos.x >= 74.0 &&
+    playerPos.x <= 92.0 &&
+    playerPos.y >= 50.0 &&
+    playerPos.y <= 66.0;
+
+  // Stage 1.5: Marked Spot 3 - Cotton Weaver (at x: 78.5%, y: 72%)
+  const isNearCottonWeaver =
+    scene === "residential_grid" &&
+    playerPos.x >= 70.0 &&
+    playerPos.x <= 88.0 &&
+    playerPos.y >= 64.0 &&
+    playerPos.y <= 80.0;
+
+  // Stage 1.5: Marked Spot 4 - Master Potter (at x: 91%, y: 93%)
+  const isNearMasterPotter =
+    scene === "residential_grid" &&
+    playerPos.x >= 80.0 &&
+    playerPos.x <= 98.0 &&
+    playerPos.y >= 84.0 &&
+    playerPos.y <= 99.0;
 
   // Stage 1.5: Courtyard Resident (at x: 33.5%, y: 57.5%)
   const isNearCourtyardResident =
@@ -377,6 +647,15 @@ export default function IndusValleyGameScreen() {
         showForeignTradersModal ||
         showDrainsModal ||
         showHouseModal ||
+        showCourtyardToiletModal ||
+        showCourtyardWellModal ||
+        showCourtyardStaircaseModal ||
+        showInteriorStaircaseModal ||
+        showInteriorCharpoyModal ||
+        showInteriorBathModal ||
+        showInteriorQuernModal ||
+        showGranaryDuctsModal ||
+        showGranaryPlatformsModal ||
         showDrainagePuzzleModal ||
         showSealPuzzleModal ||
         showPriestKingDialogue ||
@@ -389,16 +668,36 @@ export default function IndusValleyGameScreen() {
 
       keysPressed[e.key.toLowerCase()] = true;
 
-      // Exit key: [F] or [f] (Per user requirement: "if the player wants to exit from this place has to press F")
-      if (e.key === "f" || e.key === "F") {
-        if (isNearResidentialGhatReturn) {
-          triggerTransition("lower_town_gate", { x: 71.5, y: 44.0 });
+      // Enter key: [E] or [e] (Per user requirement: "for entering anywhere E")
+      if (e.key === "e" || e.key === "E") {
+        if (isNearHouseDoorway) {
+          triggerTransition("house_courtyard", { x: 50.0, y: 72.0 });
           return;
-        } else if (isNearResidentialCitadelExit) {
-          triggerTransition("great_bath_citadel", { x: 50.0, y: 82.0 }, 2);
+        } else if (isNearCourtyardToiletDoor) {
+          setPlayerPos({ x: 26.0, y: 68.0 });
+          soundFx.playSelect();
+          return;
+        } else if (isNearCourtyardBathDoor) {
+          setPlayerPos({ x: 70.0, y: 70.0 });
+          soundFx.playSelect();
+          return;
+        } else if (isNearCourtyardLeftInteriorDoor || isNearCourtyardInteriorDoor) {
+          triggerTransition("house_interior", { x: 50.0, y: 80.0 });
+          return;
+        } else if (isNearCourtyardToInterior) {
+          triggerTransition("house_second_floor", { x: 50.0, y: 64.0 });
+          return;
+        } else if (isNearInteriorStaircase) {
+          triggerTransition("house_second_floor", { x: 50.0, y: 64.0 });
           return;
         } else if (isNearGranaryExit) {
           triggerTransition("residential_grid", { x: 80.0, y: 38.0 });
+          return;
+        } else if (isNearResidentialGranaryForward) {
+          triggerTransition("granary_avenue", { x: 26.0, y: 78.0 });
+          return;
+        } else if (isNearGranaryCitadelAscent) {
+          triggerTransition("great_bath_citadel", { x: 50.0, y: 82.0 }, 2);
           return;
         } else if (isNearArtisanQuarterExit) {
           triggerTransition("steatite_seal_workshop", { x: 25.0, y: 72.0 }, 3);
@@ -409,9 +708,66 @@ export default function IndusValleyGameScreen() {
         }
       }
 
-      // Interaction key: [E] or Spacebar (also allow E on exits for smooth navigation)
-      if (e.key === "e" || e.key === "E" || e.key === " ") {
-        if (isNearOverseer) {
+      // Exit key: [F] or [f] (Per user requirement: "exiting F")
+      if (e.key === "f" || e.key === "F") {
+        if (isInsideCourtyardToilet) {
+          // Exit latrine room to corridor outside
+          setPlayerPos({ x: 38.0, y: 58.0 });
+          soundFx.playSelect();
+          return;
+        } else if (isInsideCourtyardBath) {
+          setPlayerPos({ x: 60.0, y: 56.0 });
+          soundFx.playSelect();
+          return;
+        } else if (isNearCourtyardRightExitDoor || isNearCourtyardExit) {
+          // Exit from courtyard to street grid directly from this doorway (as requested)
+          triggerTransition("residential_grid", { x: 48.0, y: 60.0 });
+          return;
+        } else if (isNearHouseExit) {
+          // Exit from ground floor interior back to courtyard
+          triggerTransition("house_courtyard", { x: 36.0, y: 46.0 });
+          return;
+        } else if (isNearSecondFloorExit) {
+          // Descend from second floor back to top of stairs in courtyard
+          triggerTransition("house_courtyard", { x: 51.0, y: 28.0 });
+          return;
+        } else if (isNearResidentialGhatReturn) {
+          triggerTransition("lower_town_gate", { x: 71.5, y: 41.0 });
+          return;
+        } else if (isNearGranaryGridReturn) {
+          triggerTransition("residential_grid", { x: 68.0, y: 78.0 });
+          return;
+        } else if (isNearGreatBathGranaryReturn) {
+          triggerTransition("granary_avenue", { x: 72.0, y: 52.0 });
+          return;
+        }
+      }
+
+      // Inspect key: [G] or [g] (Per user requirement: "for all the inspect part keep G")
+      if (e.key === "g" || e.key === "G") {
+        if (isNearCourtyardToilet) {
+          setShowCourtyardToiletModal(true);
+        } else if (isNearCourtyardBath) {
+          setShowInteriorBathModal(true);
+        } else if (isNearCourtyardWell) {
+          setShowCourtyardWellModal(true);
+        } else if (isNearCourtyardStaircase) {
+          setShowCourtyardStaircaseModal(true);
+        } else if (isNearInteriorStaircase) {
+          setShowInteriorStaircaseModal(true);
+        } else if (isNearInteriorCharpoy || isNearSecondFloorCharpoy) {
+          setShowInteriorCharpoyModal(true);
+        } else if (isNearInteriorQuern || isNearSecondFloorStorage) {
+          setShowInteriorQuernModal(true);
+        } else if (isNearSecondFloorGallery) {
+          setActiveCitizenDialogue({
+            name: "Harappan Upper Balustrade Gallery",
+            title: "Mohenjo-daro Two-Story Domestic Architecture",
+            icon: "",
+            text: "Looking down from this upper wooden balustrade, the central courtyard acts as an evaporative chimney. Cool air from the water jars and well rises up through the upper story, keeping both floors comfortably ventilated under the summer sun.",
+          });
+          soundFx.playSelect();
+        } else if (isNearOverseer) {
           setShowOverseerDialogue(true);
         } else if (isNearForeignTraders) {
           setShowForeignTradersModal(true);
@@ -431,6 +787,38 @@ export default function IndusValleyGameScreen() {
             text: "I carry cool water from our neighborhood brick well. Notice that our streets have covered drains on both sides with sediment traps. No waste ever pools in our lanes—our city stays cleaner than any kingdom in Sumer or Dilmun!",
           });
           soundFx.playSelect();
+        } else if (isNearCargoInspector) {
+          setActiveCitizenDialogue({
+            name: "Harappan Cargo Inspector",
+            title: "River Quay Port Official • Mohenjo-daro",
+            icon: "",
+            text: "Boats from the lower Indus delta arrive at our river quays laden with lapis lazuli, carnelian beads, and timber! I inspect and log every shipment before carts bring the goods into the inner city avenues.",
+          });
+          soundFx.playSelect();
+        } else if (isNearDrainInspector) {
+          setActiveCitizenDialogue({
+            name: "Municipal Drain Inspector",
+            title: "Civic Sanitation Surveyor • Mohenjo-daro",
+            icon: "",
+            text: "I inspect this sediment silt-trap. Every week, municipal crews lift the stone inspection slabs to scoop out sediment, ensuring our covered drainage channels flow freely towards the city perimeter.",
+          });
+          soundFx.playSelect();
+        } else if (isNearCottonWeaver) {
+          setActiveCitizenDialogue({
+            name: "Harappan Cotton Weaver",
+            title: "Textile Artisan • Mohenjo-daro",
+            icon: "",
+            text: "Our dyed cotton textiles are prized from Dilmun to ancient Ur! We spin fine threads using standardized terracotta spindle whorls right here along the sunny avenues.",
+          });
+          soundFx.playSelect();
+        } else if (isNearMasterPotter) {
+          setActiveCitizenDialogue({
+            name: "Harappan Master Potter",
+            title: "Terracotta Artisan • Mohenjo-daro",
+            icon: "",
+            text: "These large storage amphorae are wheel-thrown from fine Indus alluvial clay. Coated with lustrous red slip and painted with black geometric motifs, they keep grain, sesame oil, and clean well-water cool in the summer heat.",
+          });
+          soundFx.playSelect();
         } else if (isNearCourtyardResident) {
           setActiveCitizenDialogue({
             name: "Harappan Courtyard Inhabitant",
@@ -439,26 +827,36 @@ export default function IndusValleyGameScreen() {
             text: "Welcome to our inner courtyard! Notice how our home has no windows facing the busy street. The thick baked-brick walls keep out the street dust and noise, giving our family acoustic peace and natural cooling throughout the year.",
           });
           soundFx.playSelect();
+        } else if (isNearGranaryWorker) {
+          setActiveCitizenDialogue({
+            name: "Harappan Granary Laborer",
+            title: "Grain Carrier • Mohenjo-daro Granary",
+            icon: "",
+            text: "We haul sacks of freshly threshed barley and emmer wheat from the river quays up these wooden ramps! Notice how the platforms are raised above the ground—warm, dry air circulates continuously through the brick vents to prevent rot.",
+          });
+          soundFx.playSelect();
+        } else if (isNearGranaryScribe) {
+          setActiveCitizenDialogue({
+            name: "Granary Metrology Scribe",
+            title: "Civic Grain Overseer • Mohenjo-daro",
+            icon: "",
+            text: "Every basket entering these rectangular bays is measured against standard chert cube weights. Centralized storage ensures that even during drought years or unpredictable Indus river floods, the civic granary guarantees food security for the entire population.",
+          });
+          soundFx.playSelect();
+        } else if (isNearGranaryAirDucts) {
+          setShowGranaryDuctsModal(true);
+        } else if (isNearGranaryPlatforms) {
+          setShowGranaryPlatformsModal(true);
         } else if (isNearResidentialDrains) {
           setShowDrainsModal(true);
         } else if (isNearResidentialHouse) {
           setShowHouseModal(true);
-        } else if (isNearResidentialCitadelExit) {
-          triggerTransition("great_bath_citadel", { x: 50.0, y: 82.0 }, 2);
-        } else if (isNearResidentialGhatReturn) {
-          triggerTransition("lower_town_gate", { x: 71.5, y: 44.0 });
         } else if (isNearGreatBathBasin) {
           setShowDrainagePuzzleModal(true);
         } else if (isNearSealBench) {
           setShowSealPuzzleModal(true);
         } else if (isNearPriestKing) {
           setShowPriestKingDialogue(true);
-        } else if (isNearGranaryExit) {
-          triggerTransition("residential_grid", { x: 80.0, y: 38.0 });
-        } else if (isNearArtisanQuarterExit) {
-          triggerTransition("steatite_seal_workshop", { x: 25.0, y: 72.0 }, 3);
-        } else if (isNearCitadelStairs) {
-          triggerTransition("priest_king_citadel", { x: 50.0, y: 80.0 }, 4);
         }
       };
     };
@@ -517,13 +915,62 @@ export default function IndusValleyGameScreen() {
     scene,
     currentSceneConfig,
     showOverseerDialogue,
+    showForeignTradersModal,
+    showDrainsModal,
+    showHouseModal,
+    showInteriorStaircaseModal,
+    showInteriorCharpoyModal,
+    showInteriorBathModal,
+    showInteriorQuernModal,
+    showGranaryDuctsModal,
+    showCourtyardToiletModal,
+    showCourtyardWellModal,
+    showCourtyardStaircaseModal,
     showDrainagePuzzleModal,
     showSealPuzzleModal,
     showPriestKingDialogue,
+    activeCitizenDialogue,
     isJournalOpen,
     showVictoryModal,
     isNearOverseer,
+    isNearForeignTraders,
+    isNearRooftopCitizen,
+    isNearRoadPedestrian,
+    isNearCourtyardResident,
+    isNearResidentialDrains,
+    isNearResidentialHouse,
+    isNearHouseDoorway,
+    isNearCourtyardExit,
+    isNearCourtyardToiletDoor,
+    isInsideCourtyardToilet,
+    isNearCourtyardInteriorDoor,
+    isNearCourtyardRightExitDoor,
+    isNearCourtyardLeftInteriorDoor,
+    isNearCourtyardBathDoor,
+    isInsideCourtyardBath,
+    isNearCourtyardToInterior,
+    isNearCourtyardToilet,
+    isNearCourtyardBath,
+    isNearCourtyardWell,
+    isNearCourtyardStaircase,
+    isNearHouseExit,
+    isNearInteriorStaircase,
+    isNearInteriorCharpoy,
+    isNearInteriorQuern,
+    isNearSecondFloorExit,
+    isNearSecondFloorGallery,
+    isNearSecondFloorCharpoy,
+    isNearSecondFloorStorage,
+    isNearResidentialGranaryForward,
+    isNearResidentialGhatReturn,
+    isNearGranaryGridReturn,
+    isNearGranaryCitadelAscent,
+    isNearGranaryAirDucts,
+    isNearGranaryPlatforms,
+    isNearGranaryWorker,
+    isNearGranaryScribe,
     isNearGreatBathBasin,
+    isNearGreatBathGranaryReturn,
     isNearSealBench,
     isNearPriestKing,
     isNearGranaryExit,
@@ -623,14 +1070,11 @@ export default function IndusValleyGameScreen() {
             style={{ left: "70.5%", top: "56.5%" }}
             onClick={() => setShowOverseerDialogue(true)}
           >
-            {/* Soft ground contact shadow touching the brick floor */}
-            <div className="absolute left-1/2 -translate-x-1/2 -bottom-1 w-10 h-2 bg-black/60 rounded-full blur-[2px] pointer-events-none" />
-
             {/* Sprite container aligned so feet touch bottom */}
             <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform group-hover:scale-105">
               {isNearOverseer && (
-                <div className="mb-1 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                  <span className="text-[#d8a86a] font-bold">[E]</span>
+                <div className="mb-1.5 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
+                  <span className="text-[#d8a86a] font-bold">[G]</span>
                   <span>Speak with Dock Official</span>
                 </div>
               )}
@@ -642,8 +1086,7 @@ export default function IndusValleyGameScreen() {
               <img
                 src="/sprite-indus-official.png?v=3"
                 alt="Dock Official Somnath"
-                className="h-16 sm:h-18 md:h-20 w-auto object-contain block select-none"
-                style={{ filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.4))" }}
+                className="h-24 sm:h-[108px] md:h-[122px] w-auto object-contain block select-none"
               />
             </div>
           </div>
@@ -656,14 +1099,11 @@ export default function IndusValleyGameScreen() {
             style={{ left: "31%", top: "76%" }}
             onClick={() => setShowForeignTradersModal(true)}
           >
-            {/* Soft ground contact shadow touching the brick floor */}
-            <div className="absolute left-1/2 -translate-x-1/2 -bottom-1 w-10 h-2 bg-black/60 rounded-full blur-[2px] pointer-events-none" />
-
             {/* Sprite container aligned so feet touch bottom */}
             <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform group-hover:scale-105">
               {isNearForeignTraders && (
-                <div className="mb-1 bg-[#1b1510]/95 border-2 border-[#38bdf8] text-[#f0f9ff] px-2.5 py-0.5 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                  <span className="text-[#38bdf8] font-bold">[E]</span>
+                <div className="mb-1.5 bg-[#1b1510]/95 border-2 border-[#38bdf8] text-[#f0f9ff] px-2.5 py-0.5 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
+                  <span className="text-[#38bdf8] font-bold">[G]</span>
                   <span>Inspect Foreign Trader</span>
                 </div>
               )}
@@ -675,21 +1115,20 @@ export default function IndusValleyGameScreen() {
               <img
                 src="/sprite-indus-trader.png?v=3"
                 alt="Foreign Mesopotamian Trader"
-                className="h-16 sm:h-18 md:h-20 w-auto object-contain block select-none"
-                style={{ filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.4))" }}
+                className="h-24 sm:h-[108px] md:h-[122px] w-auto object-contain block select-none"
               />
             </div>
           </div>
         )}
 
         {/* Stage 1: Mohenjo-daro City Gateway Trigger to Residential Grid */}
-        {scene === "lower_town_gate" && hasFirstRelicChertWeight && (
+        {scene === "lower_town_gate" && hasFirstRelicChertWeight && isNearGranaryExit && (
           <div
             className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
-            style={{ left: "71.5%", top: "33%" }}
+            style={{ left: "71.5%", top: "31%" }}
           >
-            <div className="bg-[#1b1510]/95 border-2 border-[#52a45a] text-[#baf1be] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-md animate-pulse whitespace-nowrap">
-              <span>▲ [F] Enter City Gate to Residential Grid</span>
+            <div className="bg-[#1b1510]/95 border-2 border-[#52a45a] text-[#baf1be] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-md animate-bounce whitespace-nowrap">
+              <span>▲ [E] Enter City Gate to Residential Grid</span>
             </div>
           </div>
         )}
@@ -708,15 +1147,14 @@ export default function IndusValleyGameScreen() {
               })
             }
           >
-            <div className="absolute left-1/2 -translate-x-1/2 -bottom-0.5 w-7 h-1.5 bg-black/55 rounded-full blur-[1px] pointer-events-none" />
             <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform group-hover:scale-105">
               {isNearRooftopCitizen && (
-                <div className="mb-1 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2 py-0.5 rounded text-[10px] font-serif shadow-lg animate-bounce whitespace-nowrap">
-                  <span className="text-[#d8a86a] font-bold mr-1">[E]</span>
+                <div className="mb-1.5 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2 py-0.5 rounded text-[10px] font-serif shadow-lg animate-bounce whitespace-nowrap">
+                  <span className="text-[#d8a86a] font-bold mr-1">[G]</span>
                   <span>Greet Rooftop Resident</span>
                 </div>
               )}
-              <span className={`text-[8px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-1.5 py-0.5 rounded border border-[#d8a86a]/50 shadow mb-0.5 whitespace-nowrap transition-opacity duration-200 ${
+              <span className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow mb-1 whitespace-nowrap transition-opacity duration-200 ${
                 isNearRooftopCitizen ? "opacity-100" : "opacity-0 group-hover:opacity-100"
               }`}>
                 Rooftop Citizen
@@ -724,8 +1162,7 @@ export default function IndusValleyGameScreen() {
               <img
                 src="/sprite-indus-rooftop.png?v=3"
                 alt="Harappan Rooftop Resident"
-                className="h-9 sm:h-10 md:h-11 w-auto object-contain block select-none"
-                style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.35))" }}
+                className="h-[68px] sm:h-[75px] md:h-[88px] w-auto object-contain block select-none"
               />
             </div>
           </div>
@@ -745,26 +1182,24 @@ export default function IndusValleyGameScreen() {
               })
             }
           >
-            <div className="absolute left-1/2 -translate-x-1/2 -bottom-0.5 w-9 h-2 bg-black/55 rounded-full blur-[1.5px] pointer-events-none" />
             <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform group-hover:scale-105 -scale-x-100">
-              <span className="text-[9px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-1.5 py-0.5 rounded border border-[#d8a86a]/50 shadow mb-0.5 whitespace-nowrap -scale-x-100 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              <span className="text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow mb-1 whitespace-nowrap -scale-x-100 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                 Terrace Watcher
               </span>
               <img
                 src="/sprite-indus-rooftop.png?v=3"
                 alt="Harappan Terrace Lookout"
-                className="h-13 sm:h-14 md:h-15 w-auto object-contain block select-none"
-                style={{ filter: "drop-shadow(0 3px 5px rgba(0,0,0,0.4))" }}
+                className="h-[82px] sm:h-[95px] md:h-[109px] w-auto object-contain block select-none"
               />
             </div>
           </div>
         )}
 
-        {/* Stage 1.5: Road Townsman / Water Carrier (Placed on the OPEN LEFT AVENUE away from drain) */}
+        {/* Stage 1.5: Road Townsman / Water Carrier (Standing firmly on the paved avenue in front of the house doorway) */}
         {scene === "residential_grid" && (
           <div
             className="absolute z-15 pointer-events-auto cursor-pointer select-none group"
-            style={{ left: "38%", top: "76%" }}
+            style={{ left: "44%", top: "83%" }}
             onClick={() =>
               setActiveCitizenDialogue({
                 name: "Harappan Water Carrier",
@@ -774,15 +1209,14 @@ export default function IndusValleyGameScreen() {
               })
             }
           >
-            <div className="absolute left-1/2 -translate-x-1/2 -bottom-1 w-8 h-1.5 bg-black/60 rounded-full blur-[2px] pointer-events-none" />
             <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform group-hover:scale-105">
               {isNearRoadPedestrian && (
-                <div className="mb-1 bg-[#1b1510]/95 border border-[#38bdf8] text-[#f0f9ff] px-2.5 py-0.5 rounded text-[11px] font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap">
-                  <span className="text-[#38bdf8] font-bold">[E]</span>
+                <div className="mb-1.5 bg-[#1b1510]/95 border border-[#38bdf8] text-[#f0f9ff] px-2.5 py-0.5 rounded text-[11px] font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap">
+                  <span className="text-[#38bdf8] font-bold">[G]</span>
                   <span>Greet Water Carrier</span>
                 </div>
               )}
-              <span className={`text-[9px] font-serif font-bold text-[#f0f9ff] bg-[#0c1a24]/90 px-2 py-0.5 rounded border border-[#38bdf8]/50 shadow mb-0.5 whitespace-nowrap transition-opacity duration-200 ${
+              <span className={`text-[10px] font-serif font-bold text-[#f0f9ff] bg-[#0c1a24]/90 px-2 py-0.5 rounded border border-[#38bdf8]/50 shadow mb-1 whitespace-nowrap transition-opacity duration-200 ${
                 isNearRoadPedestrian ? "opacity-100" : "opacity-0 group-hover:opacity-100"
               }`}>
                 Water Carrier
@@ -790,8 +1224,7 @@ export default function IndusValleyGameScreen() {
               <img
                 src="/sprite-indus-pedestrian.png?v=3"
                 alt="Harappan Water Carrier"
-                className="h-13 sm:h-14 md:h-15 w-auto object-contain block select-none"
-                style={{ filter: "drop-shadow(0 3px 5px rgba(0,0,0,0.45))" }}
+                className="h-24 sm:h-[108px] md:h-[122px] w-auto object-contain block select-none"
               />
             </div>
           </div>
@@ -811,15 +1244,14 @@ export default function IndusValleyGameScreen() {
               })
             }
           >
-            <div className="absolute left-1/2 -translate-x-1/2 -bottom-1 w-7 h-1.5 bg-black/60 rounded-full blur-[1.5px] pointer-events-none" />
             <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform group-hover:scale-105">
               {isNearCourtyardResident && (
-                <div className="mb-1 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded text-[11px] font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap">
-                  <span className="text-[#d8a86a] font-bold">[E]</span>
+                <div className="mb-1.5 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded text-[11px] font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap">
+                  <span className="text-[#d8a86a] font-bold">[G]</span>
                   <span>Speak with Courtyard Resident</span>
                 </div>
               )}
-              <span className={`text-[9px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow mb-0.5 whitespace-nowrap transition-opacity duration-200 ${
+              <span className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow mb-1 whitespace-nowrap transition-opacity duration-200 ${
                 isNearCourtyardResident ? "opacity-100" : "opacity-0 group-hover:opacity-100"
               }`}>
                 Courtyard Resident
@@ -827,8 +1259,147 @@ export default function IndusValleyGameScreen() {
               <img
                 src="/sprite-indus-courtyard.png?v=3"
                 alt="Harappan Courtyard Resident"
-                className="h-11 sm:h-12 md:h-13 w-auto object-contain block select-none"
-                style={{ filter: "drop-shadow(0 3px 5px rgba(0,0,0,0.4))" }}
+                className="h-[82px] sm:h-[95px] md:h-[109px] w-auto object-contain block select-none"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Stage 1.5: Marked Spot 1 - Harappan Cargo Inspector (Upper right avenue across covered drain) */}
+        {scene === "residential_grid" && (
+          <div
+            className="absolute z-13 pointer-events-auto cursor-pointer select-none group"
+            style={{ left: "87.5%", top: "43.5%" }}
+            onClick={() =>
+              setActiveCitizenDialogue({
+                name: "Harappan Cargo Inspector",
+                title: "River Quay Port Official • Mohenjo-daro",
+                icon: "",
+                text: "Boats from the lower Indus delta arrive at our river quays laden with lapis lazuli, carnelian beads, and timber! I inspect and log every shipment before carts bring the goods into the inner city avenues.",
+              })
+            }
+          >
+            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform group-hover:scale-105">
+              {isNearCargoInspector && (
+                <div className="mb-1.5 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2 py-0.5 rounded text-[10px] font-serif shadow-lg animate-bounce whitespace-nowrap">
+                  <span className="text-[#d8a86a] font-bold mr-1">[G]</span>
+                  <span>Speak with Cargo Inspector</span>
+                </div>
+              )}
+              <span className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow mb-1 whitespace-nowrap transition-opacity duration-200 ${
+                isNearCargoInspector ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+              }`}>
+                Cargo Inspector
+              </span>
+              <img
+                src="/sprite-indus-official.png?v=3"
+                alt="Cargo Inspector"
+                className="h-[68px] sm:h-[75px] md:h-[84px] w-auto object-contain block select-none"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Stage 1.5: Marked Spot 2 - Municipal Drain Inspector (Mid-right avenue beside culvert bridge) */}
+        {scene === "residential_grid" && (
+          <div
+            className="absolute z-14 pointer-events-auto cursor-pointer select-none group"
+            style={{ left: "83%", top: "58%" }}
+            onClick={() =>
+              setActiveCitizenDialogue({
+                name: "Municipal Drain Inspector",
+                title: "Civic Sanitation Surveyor • Mohenjo-daro",
+                icon: "",
+                text: "I inspect this sediment silt-trap. Every week, municipal crews lift the stone inspection slabs to scoop out sediment, ensuring our covered drainage channels flow freely towards the city perimeter.",
+              })
+            }
+          >
+            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform group-hover:scale-105">
+              {isNearDrainInspector && (
+                <div className="mb-1.5 bg-[#1b1510]/95 border border-[#38bdf8] text-[#f0f9ff] px-2.5 py-0.5 rounded text-[11px] font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap">
+                  <span className="text-[#38bdf8] font-bold">[G]</span>
+                  <span>Speak with Drain Inspector</span>
+                </div>
+              )}
+              <span className={`text-[10px] font-serif font-bold text-[#f0f9ff] bg-[#0c1a24]/90 px-2 py-0.5 rounded border border-[#38bdf8]/50 shadow mb-1 whitespace-nowrap transition-opacity duration-200 ${
+                isNearDrainInspector ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+              }`}>
+                Drain Inspector
+              </span>
+              <img
+                src="/sprite-indus-pedestrian.png?v=3"
+                alt="Drain Inspector"
+                className="h-[82px] sm:h-[95px] md:h-[109px] w-auto object-contain block select-none"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Stage 1.5: Marked Spot 3 - Harappan Cotton Weaver (Lower-mid right avenue) */}
+        {scene === "residential_grid" && (
+          <div
+            className="absolute z-14 pointer-events-auto cursor-pointer select-none group"
+            style={{ left: "78.5%", top: "72%" }}
+            onClick={() =>
+              setActiveCitizenDialogue({
+                name: "Harappan Cotton Weaver",
+                title: "Textile Artisan • Mohenjo-daro",
+                icon: "",
+                text: "Our dyed cotton textiles are prized from Dilmun to ancient Ur! We spin fine threads using standardized terracotta spindle whorls right here along the sunny avenues.",
+              })
+            }
+          >
+            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform group-hover:scale-105">
+              {isNearCottonWeaver && (
+                <div className="mb-1.5 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded text-[11px] font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap">
+                  <span className="text-[#d8a86a] font-bold">[G]</span>
+                  <span>Speak with Cotton Weaver</span>
+                </div>
+              )}
+              <span className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow mb-1 whitespace-nowrap transition-opacity duration-200 ${
+                isNearCottonWeaver ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+              }`}>
+                Cotton Weaver
+              </span>
+              <img
+                src="/sprite-indus-courtyard.png?v=3"
+                alt="Cotton Weaver"
+                className="h-[88px] sm:h-[102px] md:h-[116px] w-auto object-contain block select-none"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Stage 1.5: Marked Spot 4 - Master Potter (Bottom-right corner in front of doorway and pottery amphorae) */}
+        {scene === "residential_grid" && (
+          <div
+            className="absolute z-16 pointer-events-auto cursor-pointer select-none group"
+            style={{ left: "91%", top: "93%" }}
+            onClick={() =>
+              setActiveCitizenDialogue({
+                name: "Harappan Master Potter",
+                title: "Terracotta Artisan • Mohenjo-daro",
+                icon: "",
+                text: "These large storage amphorae are wheel-thrown from fine Indus alluvial clay. Coated with lustrous red slip and painted with black geometric motifs, they keep grain, sesame oil, and clean well-water cool in the summer heat.",
+              })
+            }
+          >
+            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform group-hover:scale-105">
+              {isNearMasterPotter && (
+                <div className="mb-1.5 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded text-[11px] font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap">
+                  <span className="text-[#d8a86a] font-bold">[G]</span>
+                  <span>Speak with Master Potter</span>
+                </div>
+              )}
+              <span className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow mb-1 whitespace-nowrap transition-opacity duration-200 ${
+                isNearMasterPotter ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+              }`}>
+                Master Potter
+              </span>
+              <img
+                src="/sprite-indus-trader.png?v=3"
+                alt="Master Potter"
+                className="h-24 sm:h-[108px] md:h-[122px] w-auto object-contain block select-none"
               />
             </div>
           </div>
@@ -843,7 +1414,7 @@ export default function IndusValleyGameScreen() {
           >
             {isNearResidentialDrains && !isNearRoadPedestrian && (
               <div className="mb-1 bg-[#1b1510]/95 border-2 border-[#38bdf8] text-[#f0f9ff] px-2.5 py-0.5 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap">
-                <span className="text-[#38bdf8] font-bold">[E]</span>
+                <span className="text-[#38bdf8] font-bold">[G]</span>
                 <span>Inspect Covered Drain</span>
               </div>
             )}
@@ -869,7 +1440,7 @@ export default function IndusValleyGameScreen() {
           >
             {isNearResidentialHouse && !isNearCourtyardResident && (
               <div className="mb-1 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap">
-                <span className="text-[#d8a86a] font-bold">[E]</span>
+                <span className="text-[#d8a86a] font-bold">[G]</span>
                 <span>Inspect Brick Residence</span>
               </div>
             )}
@@ -886,14 +1457,28 @@ export default function IndusValleyGameScreen() {
           </div>
         )}
 
-        {/* Stage 1.5: Residential Grid -> Citadel Archway */}
+        {/* Stage 1.5: Residential Grid -> Enter Central Courtyard Doorway */}
+        {scene === "residential_grid" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
+            style={{ left: "48%", top: "54%" }}
+          >
+            {isNearHouseDoorway && (
+              <div className="bg-[#1b1510]/95 border-2 border-[#52a45a] text-[#baf1be] px-3 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce whitespace-nowrap">
+                <span>▲ [E] Enter Central Courtyard</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Stage 1.5: Residential Grid -> The Great Granary (Front Avenue) */}
         {scene === "residential_grid" && (
           <div
             className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
             style={{ left: "68%", top: "84%" }}
           >
             <div className="bg-[#1b1510]/95 border-2 border-[#52a45a] text-[#baf1be] px-3 py-1 rounded-lg text-xs font-serif shadow-md animate-pulse whitespace-nowrap">
-              <span>▲ [F] To The Great Bath (Stage 2)</span>
+              <span>▲ [E] To The Great Granary</span>
             </div>
           </div>
         )}
@@ -910,6 +1495,575 @@ export default function IndusValleyGameScreen() {
           </div>
         )}
 
+        {/* ========================================================= */}
+        {/* Stage 1.55: Central Domestic Courtyard Canvas Scene       */}
+        {/* ========================================================= */}
+
+        {/* Stage 1.55: House Courtyard -> Exit to Street Grid Trigger */}
+        {scene === "house_courtyard" && isNearCourtyardExit && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
+            style={{ left: "50%", top: "86%" }}
+          >
+            <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1 rounded-lg text-xs font-serif shadow-md whitespace-nowrap animate-bounce">
+              <span>▼ [F] Exit to Street Grid</span>
+            </div>
+          </div>
+        )}
+
+        {/* Stage 1.55: House Courtyard -> Doorway to Latrine Room (Outside -> Enter E) */}
+        {scene === "house_courtyard" && isNearCourtyardToiletDoor && !isInsideCourtyardToilet && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "38%", top: "54%" }}
+            onClick={() => {
+              setPlayerPos({ x: 26.0, y: 68.0 });
+              soundFx.playSelect();
+            }}
+          >
+            <div className="bg-[#1b1510]/95 border-2 border-[#52a45a] text-[#baf1be] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-lg animate-bounce whitespace-nowrap group-hover:bg-[#251d16] transition-colors">
+              <span>▲ [E] Enter Latrine Room</span>
+            </div>
+          </div>
+        )}
+
+        {/* Stage 1.55: House Courtyard -> Latrine Room (Inside -> Exit F) */}
+        {scene === "house_courtyard" && isInsideCourtyardToilet && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "26%", top: "68%" }}
+            onClick={() => {
+              setPlayerPos({ x: 38.0, y: 58.0 });
+              soundFx.playSelect();
+            }}
+          >
+            <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-md whitespace-nowrap animate-pulse group-hover:bg-[#251d16] transition-colors">
+              <span>▼ [F] Exit to Courtyard</span>
+            </div>
+          </div>
+        )}
+
+        {/* Stage 1.55: House Courtyard -> Doorway to Street Grid Exit (Right door - as requested) */}
+        {scene === "house_courtyard" && isNearCourtyardRightExitDoor && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "68%", top: "34%" }}
+            onClick={() => triggerTransition("residential_grid", { x: 48.0, y: 60.0 })}
+          >
+            <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-md whitespace-nowrap animate-bounce group-hover:bg-[#251d16] transition-colors">
+              <span>▼ [F] Exit to Street Grid</span>
+            </div>
+          </div>
+        )}
+
+        {/* Stage 1.55: House Courtyard -> Doorway to Ground Floor Interior Room (Left - Image 3) */}
+        {scene === "house_courtyard" && isNearCourtyardLeftInteriorDoor && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "36%", top: "32%" }}
+            onClick={() => triggerTransition("house_interior", { x: 50.0, y: 80.0 })}
+          >
+            <div className="bg-[#1b1510]/95 border-2 border-[#52a45a] text-[#baf1be] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-lg animate-bounce whitespace-nowrap group-hover:bg-[#251d16] transition-colors">
+              <span>▲ [E] Enter Interior Room</span>
+            </div>
+          </div>
+        )}
+
+        {/* Stage 1.55: House Courtyard -> Doorway to Bath Room (Outside -> Enter E) */}
+        {scene === "house_courtyard" && isNearCourtyardBathDoor && !isInsideCourtyardBath && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
+            style={{ left: "58%", top: "74%" }}
+          >
+            <div className="bg-[#1b1510]/95 border-2 border-[#52a45a] text-[#baf1be] px-3 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce whitespace-nowrap">
+              <span>▲ [E] Enter Bath Room</span>
+            </div>
+          </div>
+        )}
+
+        {/* Stage 1.55: House Courtyard -> Bath Room (Inside -> Exit F) */}
+        {scene === "house_courtyard" && isInsideCourtyardBath && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
+            style={{ left: "70%", top: "72%" }}
+          >
+            <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1 rounded-lg text-xs font-serif shadow-md whitespace-nowrap animate-pulse">
+              <span>▼ [F] Exit to Courtyard</span>
+            </div>
+          </div>
+        )}
+
+        {/* Stage 1.55: House Courtyard -> Climb to Second Floor Trigger (At Top of Stairs) */}
+        {scene === "house_courtyard" && isNearCourtyardToInterior && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "51%", top: "28%" }}
+            onClick={() => triggerTransition("house_second_floor", { x: 50.0, y: 64.0 })}
+          >
+            <div className="bg-[#1b1510]/95 border-2 border-[#52a45a] text-[#baf1be] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-lg animate-bounce whitespace-nowrap group-hover:bg-[#251d16] transition-colors">
+              <span>▲ [E] Enter Second Floor</span>
+            </div>
+          </div>
+        )}
+
+        {/* Stage 1.55: House Courtyard -> Enclosed Harappan Toilet & Wall Chute Hotspot (Left Room) */}
+        {scene === "house_courtyard" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-12"
+            style={{ left: "21%", top: "68%" }}
+            onClick={() => setShowCourtyardToiletModal(true)}
+          >
+            {isNearCourtyardToilet && (
+              <div className="mb-1.5 bg-[#1b1510]/95 border-2 border-[#38bdf8] text-[#f0f9ff] px-2.5 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
+                <span className="text-[#38bdf8] font-bold">[G]</span>
+                <span>Inspect Enclosed Brick Latrine</span>
+              </div>
+            )}
+            <div className="w-10 h-10 rounded-xl bg-[#1b252b]/90 border-2 border-[#38bdf8] flex items-center justify-center shadow-lg group-hover:border-[#eedbbf] transition-all">
+              <svg className="w-5 h-5 text-[#38bdf8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+            </div>
+            <span className={`text-[10px] font-serif font-bold text-[#e0f2fe] bg-[#0c1a24]/90 px-1.5 py-0.5 rounded border border-[#38bdf8]/60 shadow-md mt-0.5 whitespace-nowrap transition-opacity duration-200 ${
+              isNearCourtyardToilet ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            }`}>
+              Enclosed Brick Latrine & Chute
+            </span>
+          </div>
+        )}
+
+        {/* Stage 1.55: House Courtyard -> Private Bathing Platform with Water Hotspot (Right Room) */}
+        {scene === "house_courtyard" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-12"
+            style={{ left: "74%", top: "74%" }}
+            onClick={() => setShowInteriorBathModal(true)}
+          >
+            {isNearCourtyardBath && (
+              <div className="mb-1.5 bg-[#1b1510]/95 border-2 border-[#38bdf8] text-[#f0f9ff] px-2.5 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
+                <span className="text-[#38bdf8] font-bold">[G]</span>
+                <span>Inspect Private Bath with Water</span>
+              </div>
+            )}
+            <div className="w-10 h-10 rounded-xl bg-[#1b252b]/90 border-2 border-[#38bdf8] flex items-center justify-center shadow-lg group-hover:border-[#eedbbf] transition-all">
+              <svg className="w-5 h-5 text-[#38bdf8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+            </div>
+            <span className={`text-[10px] font-serif font-bold text-[#e0f2fe] bg-[#0c1a24]/90 px-1.5 py-0.5 rounded border border-[#38bdf8]/60 shadow-md mt-0.5 whitespace-nowrap transition-opacity duration-200 ${
+              isNearCourtyardBath ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            }`}>
+              Private Bath & Water Drain
+            </span>
+          </div>
+        )}
+
+        {/* Stage 1.55: House Courtyard -> Household Brick Well Hotspot */}
+        {scene === "house_courtyard" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-12"
+            style={{ left: "51%", top: "45%" }}
+            onClick={() => setShowCourtyardWellModal(true)}
+          >
+            {isNearCourtyardWell && (
+              <div className="mb-1.5 bg-[#1b1510]/95 border-2 border-[#38bdf8] text-[#f0f9ff] px-2.5 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
+                <span className="text-[#38bdf8] font-bold">[G]</span>
+                <span>Inspect Household Well</span>
+              </div>
+            )}
+            <div className="w-10 h-10 rounded-xl bg-[#1b252b]/90 border-2 border-[#38bdf8] flex items-center justify-center shadow-lg group-hover:border-[#eedbbf] transition-all">
+              <svg className="w-5 h-5 text-[#38bdf8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            </div>
+            <span className={`text-[10px] font-serif font-bold text-[#e0f2fe] bg-[#0c1a24]/90 px-1.5 py-0.5 rounded border border-[#38bdf8]/60 shadow-md mt-0.5 whitespace-nowrap transition-opacity duration-200 ${
+              isNearCourtyardWell ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            }`}>
+              Household Brick Well
+            </span>
+          </div>
+        )}
+
+        {/* Stage 1.55: House Courtyard -> Brick Staircase to Upper Gallery */}
+        {scene === "house_courtyard" && !isNearCourtyardToInterior && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-12"
+            style={{ left: "51%", top: "38%" }}
+            onClick={() => setShowCourtyardStaircaseModal(true)}
+          >
+            {isNearCourtyardStaircase && (
+              <div className="mb-1.5 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-2.5 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
+                <span className="text-[#d8a86a] font-bold">[G]</span>
+                <span>Inspect Staircase to Upper Story</span>
+              </div>
+            )}
+            <div className="w-10 h-10 rounded-xl bg-[#281c14]/90 border-2 border-[#d8a86a] flex items-center justify-center shadow-lg group-hover:border-[#eedbbf] transition-all">
+              <svg className="w-5 h-5 text-[#d8a86a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+              </svg>
+            </div>
+            <span className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/90 px-1.5 py-0.5 rounded border border-[#d8a86a]/60 shadow-md mt-0.5 whitespace-nowrap transition-opacity duration-200 ${
+              isNearCourtyardStaircase ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            }`}>
+              Staircase to Upper Story
+            </span>
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* Stage 1.6: Harappan Residence Interior Canvas Scene       */}
+        {/* ========================================================= */}
+
+        {/* Stage 1.6: House Interior -> Return to Courtyard Trigger */}
+        {scene === "house_interior" && isNearHouseExit && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "50%", top: "86%" }}
+            onClick={() => {
+              const returnPos = lastCourtyardDoor === "left"
+                ? { x: 36.0, y: 46.0 } // Left door (Image 3)
+                : { x: 67.0, y: 54.0 }; // Right door (Image 1)
+              triggerTransition("house_courtyard", returnPos);
+            }}
+          >
+            <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-md whitespace-nowrap animate-bounce group-hover:bg-[#251d16] transition-colors">
+              <span>▼ [F] Exit to Courtyard</span>
+            </div>
+          </div>
+        )}
+
+        {/* Stage 1.6: House Interior -> Brick Staircase to Upper Floor Hotspot */}
+        {scene === "house_interior" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-12"
+            style={{ left: "48%", top: "44%" }}
+            onClick={() => setShowInteriorStaircaseModal(true)}
+          >
+            {isNearInteriorStaircase && (
+              <div className="mb-1.5 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-2.5 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
+                <span className="text-[#d8a86a] font-bold">[G]</span>
+                <span>Inspect Brick Staircase</span>
+              </div>
+            )}
+            <div className="w-10 h-10 rounded-xl bg-[#281c14]/90 border-2 border-[#d8a86a] flex items-center justify-center shadow-lg group-hover:border-[#eedbbf] transition-all">
+              <svg className="w-5 h-5 text-[#d8a86a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+              </svg>
+            </div>
+            <span className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/90 px-1.5 py-0.5 rounded border border-[#d8a86a]/60 shadow-md mt-0.5 whitespace-nowrap transition-opacity duration-200 ${
+              isNearInteriorStaircase ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            }`}>
+              Staircase to Upper Floor
+            </span>
+          </div>
+        )}
+
+        {/* Stage 1.6: House Interior -> Traditional Woven Charpoy Bed Hotspot */}
+        {scene === "house_interior" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-12"
+            style={{ left: "24%", top: "68%" }}
+            onClick={() => setShowInteriorCharpoyModal(true)}
+          >
+            {isNearInteriorCharpoy && (
+              <div className="mb-1.5 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-2.5 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
+                <span className="text-[#d8a86a] font-bold">[G]</span>
+                <span>Inspect Woven Charpoy Bed</span>
+              </div>
+            )}
+            <div className="w-10 h-10 rounded-xl bg-[#281c14]/90 border-2 border-[#d8a86a] flex items-center justify-center shadow-lg group-hover:border-[#eedbbf] transition-all">
+              <svg className="w-5 h-5 text-[#d8a86a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+            </div>
+            <span className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/90 px-1.5 py-0.5 rounded border border-[#d8a86a]/60 shadow-md mt-0.5 whitespace-nowrap transition-opacity duration-200 ${
+              isNearInteriorCharpoy ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            }`}>
+              Woven Charpoy Bed
+            </span>
+          </div>
+        )}
+
+        {/* Stage 1.6: House Interior -> Saddle Quern & Storage Jars Hotspot */}
+        {scene === "house_interior" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-12"
+            style={{ left: "74%", top: "72%" }}
+            onClick={() => setShowInteriorQuernModal(true)}
+          >
+            {isNearInteriorQuern && (
+              <div className="mb-1.5 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-2.5 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
+                <span className="text-[#d8a86a] font-bold">[G]</span>
+                <span>Inspect Saddle Quern & Grain Jars</span>
+              </div>
+            )}
+            <div className="w-10 h-10 rounded-xl bg-[#281c14]/90 border-2 border-[#d8a86a] flex items-center justify-center shadow-lg group-hover:border-[#eedbbf] transition-all">
+              <svg className="w-5 h-5 text-[#d8a86a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+            </div>
+            <span className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/90 px-1.5 py-0.5 rounded border border-[#d8a86a]/60 shadow-md mt-0.5 whitespace-nowrap transition-opacity duration-200 ${
+              isNearInteriorQuern ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            }`}>
+              Saddle Quern & Food Jars
+            </span>
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* Stage 1.56: Residential Second Floor & Upper Gallery Scene*/}
+        {/* ========================================================= */}
+
+        {/* Stage 1.56: Second Floor -> Return to Courtyard Trigger (Image 3) */}
+        {scene === "house_second_floor" && isNearSecondFloorExit && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "50%", top: "72%" }}
+            onClick={() => triggerTransition("house_courtyard", { x: 55.0, y: 26.0 })}
+          >
+            <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-md whitespace-nowrap animate-bounce group-hover:bg-[#251d16] transition-colors">
+              <span>▼ [F] Descend to Courtyard</span>
+            </div>
+          </div>
+        )}
+
+        {/* Stage 1.56: Second Floor -> Upper Balustrade & Mohenjo-daro Avenue View Hotspot */}
+        {scene === "house_second_floor" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-12"
+            style={{ left: "66%", top: "54%" }}
+            onClick={() => {
+              setActiveCitizenDialogue({
+                name: "Second Floor Rooftop Balustrade",
+                title: "Harappan Upper Balustrade Overlooking Mohenjo-daro",
+                icon: "",
+                text: "Looking out from the second floor terrace across the residential avenue, you can see how the standardized baked-brick houses line the central stone-covered municipal drain. Cool afternoon winds from the Indus river sweep across the flat roofs, where families relax on charpoys and dry freshly dyed cotton.",
+              });
+              soundFx.playSelect();
+            }}
+          >
+            {isNearSecondFloorGallery && (
+              <div className="mb-1.5 bg-[#1b1510]/95 border-2 border-[#38bdf8] text-[#f0f9ff] px-2.5 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
+                <span className="text-[#38bdf8] font-bold">[G]</span>
+                <span>Inspect Mohenjo-daro Avenue & Covered Drain</span>
+              </div>
+            )}
+            <div className="w-10 h-10 rounded-xl bg-[#1b252b]/90 border-2 border-[#38bdf8] flex items-center justify-center shadow-lg group-hover:border-[#eedbbf] transition-all">
+              <svg className="w-5 h-5 text-[#38bdf8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+            </div>
+            <span className={`text-[10px] font-serif font-bold text-[#e0f2fe] bg-[#0c1a24]/90 px-1.5 py-0.5 rounded border border-[#38bdf8]/60 shadow-md mt-0.5 whitespace-nowrap transition-opacity duration-200 ${
+              isNearSecondFloorGallery ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            }`}>
+              Avenue & Covered Drain View
+            </span>
+          </div>
+        )}
+
+        {/* Stage 1.56: Second Floor -> Rooftop Charpoy Sleeping Platform Hotspot */}
+        {scene === "house_second_floor" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-12"
+            style={{ left: "22%", top: "50%" }}
+            onClick={() => setShowInteriorCharpoyModal(true)}
+          >
+            {isNearSecondFloorCharpoy && (
+              <div className="mb-1.5 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-2.5 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
+                <span className="text-[#d8a86a] font-bold">[G]</span>
+                <span>Inspect Rooftop Charpoy Bed</span>
+              </div>
+            )}
+            <div className="w-10 h-10 rounded-xl bg-[#281c14]/90 border-2 border-[#d8a86a] flex items-center justify-center shadow-lg group-hover:border-[#eedbbf] transition-all">
+              <svg className="w-5 h-5 text-[#d8a86a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+            </div>
+            <span className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/90 px-1.5 py-0.5 rounded border border-[#d8a86a]/60 shadow-md mt-0.5 whitespace-nowrap transition-opacity duration-200 ${
+              isNearSecondFloorCharpoy ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            }`}>
+              Rooftop Charpoy Bed
+            </span>
+          </div>
+        )}
+
+        {/* Stage 1.56: Second Floor -> Rooftop Storage & Quern Hotspot */}
+        {scene === "house_second_floor" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-12"
+            style={{ left: "14%", top: "78%" }}
+            onClick={() => setShowInteriorQuernModal(true)}
+          >
+            {isNearSecondFloorStorage && (
+              <div className="mb-1.5 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-2.5 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
+                <span className="text-[#d8a86a] font-bold">[G]</span>
+                <span>Inspect Rooftop Grain Jars & Quern</span>
+              </div>
+            )}
+            <div className="w-10 h-10 rounded-xl bg-[#281c14]/90 border-2 border-[#d8a86a] flex items-center justify-center shadow-lg group-hover:border-[#eedbbf] transition-all">
+              <svg className="w-5 h-5 text-[#d8a86a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+            </div>
+            <span className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/90 px-1.5 py-0.5 rounded border border-[#d8a86a]/60 shadow-md mt-0.5 whitespace-nowrap transition-opacity duration-200 ${
+              isNearSecondFloorStorage ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            }`}>
+              Rooftop Storage & Grain Jars
+            </span>
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* Stage 1.7: The Great Granary of Mohenjo-daro Canvas Scene */}
+        {/* ========================================================= */}
+
+        {/* Stage 1.7: Return to Residential Grid Trigger */}
+        {scene === "granary_avenue" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
+            style={{ left: "20%", top: "84%" }}
+          >
+            <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-2.5 py-1 rounded-lg text-[11px] font-serif shadow-md whitespace-nowrap">
+              <span>▼ [F] Return to Residential Grid</span>
+            </div>
+          </div>
+        )}
+
+        {/* Stage 1.7: Ascend to Citadel & Great Bath Trigger */}
+        {scene === "granary_avenue" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
+            style={{ left: "76%", top: "48%" }}
+          >
+            <div className="bg-[#1b1510]/95 border-2 border-[#52a45a] text-[#baf1be] px-3 py-1 rounded-lg text-xs font-serif shadow-md animate-pulse whitespace-nowrap">
+              <span>▲ [E] Ascend to The Great Bath (Stage 2)</span>
+            </div>
+          </div>
+        )}
+
+        {/* Stage 1.7: Granary Laborer / Sack Carrier NPC */}
+        {scene === "granary_avenue" && (
+          <div
+            className="absolute z-14 pointer-events-auto cursor-pointer select-none group"
+            style={{ left: "34%", top: "62%" }}
+            onClick={() =>
+              setActiveCitizenDialogue({
+                name: "Harappan Granary Laborer",
+                title: "Grain Carrier • Mohenjo-daro Granary",
+                icon: "",
+                text: "We haul sacks of freshly threshed barley and emmer wheat from the river quays up these wooden ramps! Notice how the platforms are raised above the ground—warm, dry air circulates continuously through the brick vents to prevent rot.",
+              })
+            }
+          >
+            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform group-hover:scale-105">
+              {isNearGranaryWorker && (
+                <div className="mb-1.5 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded text-[10px] font-serif shadow-lg animate-bounce whitespace-nowrap">
+                  <span className="text-[#d8a86a] font-bold mr-1">[G]</span>
+                  <span>Speak with Laborer</span>
+                </div>
+              )}
+              <span className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow mb-1 whitespace-nowrap transition-opacity duration-200 ${
+                isNearGranaryWorker ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+              }`}>
+                Granary Laborer
+              </span>
+              <img
+                src="/sprite-indus-watercarrier.png?v=2"
+                alt="Granary Laborer"
+                className="h-24 sm:h-[108px] md:h-[122px] w-auto object-contain block select-none"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Stage 1.7: Granary Metrology Scribe NPC */}
+        {scene === "granary_avenue" && (
+          <div
+            className="absolute z-14 pointer-events-auto cursor-pointer select-none group"
+            style={{ left: "74%", top: "66%" }}
+            onClick={() =>
+              setActiveCitizenDialogue({
+                name: "Granary Metrology Scribe",
+                title: "Civic Grain Overseer • Mohenjo-daro",
+                icon: "",
+                text: "Every basket entering these rectangular bays is measured against standard chert cube weights. Centralized storage ensures that even during drought years or unpredictable Indus river floods, the civic granary guarantees food security for the entire population.",
+              })
+            }
+          >
+            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform group-hover:scale-105">
+              {isNearGranaryScribe && (
+                <div className="mb-1.5 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded text-[10px] font-serif shadow-lg animate-bounce whitespace-nowrap">
+                  <span className="text-[#d8a86a] font-bold mr-1">[G]</span>
+                  <span>Speak with Grain Scribe</span>
+                </div>
+              )}
+              <span className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow mb-1 whitespace-nowrap transition-opacity duration-200 ${
+                isNearGranaryScribe ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+              }`}>
+                Granary Scribe
+              </span>
+              <img
+                src="/sprite-indus-official.png?v=1"
+                alt="Granary Scribe"
+                className="h-24 sm:h-[108px] md:h-[122px] w-auto object-contain block select-none"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Stage 1.7: Subterranean Brick Air Ducts Hotspot */}
+        {scene === "granary_avenue" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-12"
+            style={{ left: "46%", top: "69%" }}
+            onClick={() => setShowGranaryDuctsModal(true)}
+          >
+            {isNearGranaryAirDucts && (
+              <div className="mb-1.5 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-2.5 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
+                <span className="text-[#d8a86a] font-bold">[G]</span>
+                <span>Inspect Raised Brick Air Ducts</span>
+              </div>
+            )}
+            <div className="w-10 h-10 rounded-xl bg-[#281c14]/90 border-2 border-[#d8a86a] flex items-center justify-center shadow-lg group-hover:border-[#eedbbf] transition-all">
+              <svg className="w-5 h-5 text-[#d8a86a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </div>
+            <span className={`text-[9px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/90 px-1.5 py-0.5 rounded border border-[#d8a86a]/60 shadow-md mt-0.5 whitespace-nowrap transition-opacity duration-200 ${
+              isNearGranaryAirDucts ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            }`}>
+              Raised Air Ducts
+            </span>
+          </div>
+        )}
+
+        {/* Stage 1.7: Elevated Loading Bays & Platforms Hotspot */}
+        {scene === "granary_avenue" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-12"
+            style={{ left: "64%", top: "64%" }}
+            onClick={() => setShowGranaryPlatformsModal(true)}
+          >
+            {isNearGranaryPlatforms && (
+              <div className="mb-1.5 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-2.5 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
+                <span className="text-[#d8a86a] font-bold">[G]</span>
+                <span>Examine Grain Loading Bays</span>
+              </div>
+            )}
+            <div className="w-10 h-10 rounded-xl bg-[#281c14]/90 border-2 border-[#d8a86a] flex items-center justify-center shadow-lg group-hover:border-[#eedbbf] transition-all">
+              <svg className="w-5 h-5 text-[#d8a86a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+            </div>
+            <span className={`text-[9px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/90 px-1.5 py-0.5 rounded border border-[#d8a86a]/60 shadow-md mt-0.5 whitespace-nowrap transition-opacity duration-200 ${
+              isNearGranaryPlatforms ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            }`}>
+              Rectangular Grain Bays
+            </span>
+          </div>
+        )}
+
         {/* Stage 2: Great Bath Hotspot */}
         {scene === "great_bath_citadel" && (
           <div
@@ -918,7 +2072,7 @@ export default function IndusValleyGameScreen() {
           >
             {isNearGreatBathBasin && (
               <div className="mb-2 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                <span className="text-[#d8a86a] font-bold">[E]</span>
+                <span className="text-[#d8a86a] font-bold">[G]</span>
                 <span>
                   {isDrainagePuzzleSolved
                     ? "Inspect Restored Hydraulic Basin"
@@ -944,7 +2098,19 @@ export default function IndusValleyGameScreen() {
             style={{ left: "80%", top: "68%" }}
           >
             <div className="mb-1 bg-[#1b1510]/90 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1 rounded-lg text-xs font-serif shadow-md animate-pulse whitespace-nowrap">
-              <span>► [F] Enter Steatite Artisan Quarter (Stage 3)</span>
+              <span>► [E] Enter Steatite Artisan Quarter (Stage 3)</span>
+            </div>
+          </div>
+        )}
+
+        {/* Stage 2: Return to The Great Granary */}
+        {scene === "great_bath_citadel" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
+            style={{ left: "50%", top: "86%" }}
+          >
+            <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-2.5 py-1 rounded-lg text-[11px] font-serif shadow-md whitespace-nowrap">
+              <span>▼ [F] Return to The Great Granary</span>
             </div>
           </div>
         )}
@@ -957,7 +2123,7 @@ export default function IndusValleyGameScreen() {
           >
             {isNearSealBench && (
               <div className="mb-2 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                <span className="text-[#d8a86a] font-bold">[E]</span>
+                <span className="text-[#d8a86a] font-bold">[G]</span>
                 <span>
                   {isSealPuzzleSolved
                     ? "Examine Master Unicorn Seal"
@@ -983,7 +2149,7 @@ export default function IndusValleyGameScreen() {
             style={{ left: "50%", top: "50%" }}
           >
             <div className="mb-1 bg-[#1b1510]/90 border-2 border-[#52a45a] text-[#baf1be] px-3 py-1 rounded-lg text-xs font-serif shadow-md animate-pulse whitespace-nowrap">
-              <span>▲ [F] Ascend Citadel to The Priest-King (Stage 4)</span>
+              <span>▲ [E] Ascend Citadel to The Priest-King (Stage 4)</span>
             </div>
           </div>
         )}
@@ -996,7 +2162,7 @@ export default function IndusValleyGameScreen() {
           >
             {isNearPriestKing && (
               <div className="mb-2 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                <span className="text-[#d8a86a] font-bold">[E]</span>
+                <span className="text-[#d8a86a] font-bold">[G]</span>
                 <span>Speak with The Priest-King</span>
               </div>
             )}
@@ -1349,7 +2515,560 @@ export default function IndusValleyGameScreen() {
         </div>
       )}
 
-      {/* --- CITIZEN DIALOGUE MODAL --- */}
+      {/* --- STAGE 1.55 CENTRAL COURTYARD: ENCLOSED BRICK TOILET MODAL --- */}
+      {showCourtyardToiletModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+          <div className="relative w-full max-w-xl bg-[#1c1611] text-[#f4ebd9] rounded-2xl border-4 border-[#38bdf8] p-6 shadow-[0_0_50px_rgba(56,189,248,0.35)] max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b-2 border-[#1e293b] mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-[#0f172a] border-2 border-[#38bdf8] flex items-center justify-center shadow-inner">
+                  <svg className="w-6 h-6 text-[#38bdf8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="text-[10px] font-mono text-[#38bdf8] uppercase tracking-widest">
+                    Harappan Hydraulic & Sanitation Engineering • Mohenjo-daro
+                  </div>
+                  <h3 className="text-xl font-serif font-bold text-[#f0f9ff]">
+                    Enclosed Brick Flush Toilet & Wall Drainage Chute
+                  </h3>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowCourtyardToiletModal(false)}
+                className="text-[#94a3b8] hover:text-[#f8fafc] text-sm bg-[#1e293b] hover:bg-[#334155] border border-[#475569] px-3 py-1.5 rounded-lg transition-all cursor-pointer"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            <div className="p-4 rounded-xl bg-[#0f172a] border border-[#1e293b] text-sm font-serif leading-relaxed text-[#cbd5e1] mb-5 space-y-3">
+              <p className="font-bold text-[#38bdf8]">
+                &ldquo;Over 4,500 years ago, Mohenjo-daro pioneered the world&apos;s earliest private enclosed flush latrines, built entirely of baked mud bricks.&rdquo;
+              </p>
+              <p className="text-xs text-[#94a3b8]">
+                As uncovered in archaeological excavations and preserved in museum reconstructions, each Harappan toilet was enclosed in a private brick stall. Two sturdy brick side piers flanked a raised horizontal bench seat constructed of kiln-fired bricks with a central aperture.
+              </p>
+              <p className="text-xs text-[#38bdf8]">
+                Water stored in clay jars was poured to flush effluent downward into a steeply sloped brick chute running through the exterior wall. From there, waste emptied directly into the covered municipal stone street drain or a perforated soak-pit outside, ensuring odorless, sanitary domestic life.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between pt-3 border-t border-[#1e293b]">
+              <span className="text-[10px] font-mono text-[#64748b]">
+                Journal Entry: Enclosed Flush Toilets & Wall Chutes
+              </span>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCourtyardToiletModal(false);
+                  setHasInspectedCourtyardToilet(true);
+                  if (!unlockedJournalEntries.includes("harappan_closed_toilet")) {
+                    setUnlockedJournalEntries((prev) => [...prev, "harappan_closed_toilet"]);
+                  }
+                  soundFx.playClueFound();
+                }}
+                className="bg-gradient-to-r from-[#0284c7] to-[#38bdf8] hover:from-[#0369a1] hover:to-[#0284c7] text-[#081521] font-serif font-bold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md"
+              >
+                Record in Journal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- STAGE 1.55 CENTRAL COURTYARD: HOUSEHOLD WELL MODAL --- */}
+      {showCourtyardWellModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+          <div className="relative w-full max-w-xl bg-[#1c1611] text-[#f4ebd9] rounded-2xl border-4 border-[#38bdf8] p-6 shadow-[0_0_50px_rgba(56,189,248,0.35)] max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b-2 border-[#1e293b] mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-[#0f172a] border-2 border-[#38bdf8] flex items-center justify-center shadow-inner">
+                  <svg className="w-6 h-6 text-[#38bdf8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="text-[10px] font-mono text-[#38bdf8] uppercase tracking-widest">
+                    Domestic Hydrology • Mohenjo-daro
+                  </div>
+                  <h3 className="text-xl font-serif font-bold text-[#f0f9ff]">
+                    Household Brick Well & Wedge Brick Architecture
+                  </h3>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowCourtyardWellModal(false)}
+                className="text-[#94a3b8] hover:text-[#f8fafc] text-sm bg-[#1e293b] hover:bg-[#334155] border border-[#475569] px-3 py-1.5 rounded-lg transition-all cursor-pointer"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            <div className="p-4 rounded-xl bg-[#0f172a] border border-[#1e293b] text-sm font-serif leading-relaxed text-[#cbd5e1] mb-5 space-y-3">
+              <p className="font-bold text-[#38bdf8]">
+                &ldquo;Over 700 brick wells across Mohenjo-daro ensured independent clean groundwater for every domestic courtyard.&rdquo;
+              </p>
+              <p className="text-xs text-[#94a3b8]">
+                Indus well builders crafted specially shaped trapezoidal (wedge-shaped) baked bricks. When placed in a ring, the narrower inner edges wedged tightly against one another under the lateral pressure of the surrounding earth, preventing the well cylinder from ever collapsing.
+              </p>
+              <p className="text-xs text-[#38bdf8]">
+                Ropes and pulleys mounted over wooden crossbeams allowed residents to draw fresh water into terracotta jars for drinking, cooking, and daily bathing.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end pt-3 border-t border-[#1e293b]">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCourtyardWellModal(false);
+                  soundFx.playClueFound();
+                }}
+                className="bg-gradient-to-r from-[#0284c7] to-[#38bdf8] hover:from-[#0369a1] hover:to-[#0284c7] text-[#081521] font-serif font-bold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md"
+              >
+                Understood
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- STAGE 1.55 CENTRAL COURTYARD: STAIRCASE MODAL --- */}
+      {showCourtyardStaircaseModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+          <div className="relative w-full max-w-xl bg-[#1c1611] text-[#f4ebd9] rounded-2xl border-4 border-[#c29357] p-6 shadow-[0_0_50px_rgba(194,147,87,0.35)] max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b-2 border-[#54412e] mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-[#2e2319] border-2 border-[#c29357] flex items-center justify-center shadow-inner">
+                  <svg className="w-6 h-6 text-[#c29357]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="text-[10px] font-mono text-[#c29357] uppercase tracking-widest">
+                    Harappan Domestic Architecture • Mohenjo-daro
+                  </div>
+                  <h3 className="text-xl font-serif font-bold text-[#fdfaf3]">
+                    Courtyard Staircase & Upper Gallery
+                  </h3>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowCourtyardStaircaseModal(false)}
+                className="text-[#a4917b] hover:text-[#fdfaf3] text-sm bg-[#2e2319] hover:bg-[#423223] border border-[#6b533a] px-3 py-1.5 rounded-lg transition-all cursor-pointer"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            <div className="p-4 rounded-xl bg-[#281f16] border border-[#4d3a28] text-sm font-serif leading-relaxed text-[#eedbbf] mb-5 space-y-3">
+              <p className="font-bold text-[#d8a86a]">
+                &ldquo;Standardized two-story residences with thick load-bearing brick walls, upper sleeping rooms, and flat rooftop terraces.&rdquo;
+              </p>
+              <p className="text-xs text-[#c9b7a1]">
+                Twin brick stairways framed by timber balustrades ascended from the open-air courtyard to the second-floor gallery and roof terrace. Thick baked-brick walls kept the interior bedrooms insulated and cool through Sindh&apos;s intense daytime heat.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end pt-3 border-t border-[#3e2e1f]">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCourtyardStaircaseModal(false);
+                  soundFx.playClueFound();
+                }}
+                className="bg-gradient-to-r from-[#9e733b] to-[#d8a86a] hover:from-[#b58545] hover:to-[#eec085] text-[#140f0b] font-serif font-bold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md"
+              >
+                Understood
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- STAGE 1.6 HOUSE INTERIOR: BRICK STAIRCASE MODAL --- */}
+      {showInteriorStaircaseModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+          <div className="relative w-full max-w-xl bg-[#1c1611] text-[#f4ebd9] rounded-2xl border-4 border-[#c29357] p-6 shadow-[0_0_50px_rgba(194,147,87,0.35)] max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b-2 border-[#54412e] mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-[#2e2319] border-2 border-[#c29357] flex items-center justify-center shadow-inner">
+                  <svg className="w-6 h-6 text-[#c29357]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="text-[10px] font-mono text-[#c29357] uppercase tracking-widest">
+                    Harappan Domestic Architecture • Mohenjo-daro
+                  </div>
+                  <h3 className="text-xl font-serif font-bold text-[#fdfaf3]">
+                    Staircase to Upper Story & Roof Terrace
+                  </h3>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowInteriorStaircaseModal(false)}
+                className="text-[#a4917b] hover:text-[#fdfaf3] text-sm bg-[#2e2319] hover:bg-[#423223] border border-[#6b533a] px-3 py-1.5 rounded-lg transition-all cursor-pointer"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            <div className="p-4 rounded-xl bg-[#281f16] border border-[#4d3a28] text-sm font-serif leading-relaxed text-[#eedbbf] mb-5 space-y-3">
+              <p className="font-bold text-[#d8a86a]">
+                &ldquo;Standardized two-story residences with thick load-bearing brick walls and flat rooftop terraces.&rdquo;
+              </p>
+              <p className="text-xs text-[#c9b7a1]">
+                Archaeological digs across Mohenjo-daro consistently revealed massive brick foundations and recessed wooden beam sockets engineered specifically to support a second floor. The ground floor housed grain storage, private bathing, and daily work, while upper rooms offered quiet, cool sleeping quarters away from street dust.
+              </p>
+              <p className="text-xs text-[#d8a86a]">
+                The sturdy brick staircase led all the way to the flat rooftop. In the blistering summers of Sindh, families slept on the roof terrace to catch the cool night breeze, and used the sunlit terrace by day for spinning cotton, drying wheat grains, and preparing pottery.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between pt-3 border-t border-[#3e2e1f]">
+              <span className="text-[10px] font-mono text-[#a8947d]">
+                Journal Entry: The Cardinal Grid & Insulae
+              </span>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowInteriorStaircaseModal(false);
+                  if (!unlockedJournalEntries.includes("grid_planning")) {
+                    setUnlockedJournalEntries((prev) => [...prev, "grid_planning"]);
+                  }
+                  soundFx.playClueFound();
+                }}
+                className="bg-gradient-to-r from-[#9e733b] to-[#d8a86a] hover:from-[#b58545] hover:to-[#eec085] text-[#140f0b] font-serif font-bold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md"
+              >
+                Record in Journal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- STAGE 1.6 HOUSE INTERIOR: WOVEN CHARPOY BED MODAL --- */}
+      {showInteriorCharpoyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+          <div className="relative w-full max-w-xl bg-[#1c1611] text-[#f4ebd9] rounded-2xl border-4 border-[#c29357] p-6 shadow-[0_0_50px_rgba(194,147,87,0.35)] max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b-2 border-[#54412e] mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-[#2e2319] border-2 border-[#c29357] flex items-center justify-center shadow-inner">
+                  <svg className="w-6 h-6 text-[#c29357]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="text-[10px] font-mono text-[#c29357] uppercase tracking-widest">
+                    Harappan Woodcraft & Domestic Comfort • Mohenjo-daro
+                  </div>
+                  <h3 className="text-xl font-serif font-bold text-[#fdfaf3]">
+                    Traditional Woven Charpoy Bedstead
+                  </h3>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowInteriorCharpoyModal(false)}
+                className="text-[#a4917b] hover:text-[#fdfaf3] text-sm bg-[#2e2319] hover:bg-[#423223] border border-[#6b533a] px-3 py-1.5 rounded-lg transition-all cursor-pointer"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            <div className="p-4 rounded-xl bg-[#281f16] border border-[#4d3a28] text-sm font-serif leading-relaxed text-[#eedbbf] mb-5 space-y-3">
+              <p className="font-bold text-[#d8a86a]">
+                &ldquo;Lightweight timber bedsteads woven with natural coir and hemp rope provided cool, elevated comfort off the baked brick floor.&rdquo;
+              </p>
+              <p className="text-xs text-[#c9b7a1]">
+                Terracotta miniature models and preserved joinery from Indus excavations reveal that Harappan carpenters fashioned wooden charpoy frames with four turned legs and mortise-and-tenon joints.
+              </p>
+              <p className="text-xs text-[#d8a86a]">
+                The bed was strung with breathable rope webbing and dressed with woven reed mats, woven cotton blankets, and soft bolsters. Because of its light wooden construction, families could easily carry the charpoy up the brick staircase to sleep under the starlit sky on the roof terrace during warm summer nights.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end pt-3 border-t border-[#3e2e1f]">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowInteriorCharpoyModal(false);
+                  soundFx.playClueFound();
+                }}
+                className="bg-gradient-to-r from-[#9e733b] to-[#d8a86a] hover:from-[#b58545] hover:to-[#eec085] text-[#140f0b] font-serif font-bold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md"
+              >
+                Understood
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- STAGE 1.6 HOUSE INTERIOR: PRIVATE BATH & DRAIN MODAL --- */}
+      {showInteriorBathModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+          <div className="relative w-full max-w-xl bg-[#1c1611] text-[#f4ebd9] rounded-2xl border-4 border-[#38bdf8] p-6 shadow-[0_0_50px_rgba(56,189,248,0.35)] max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b-2 border-[#1e293b] mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-[#0f172a] border-2 border-[#38bdf8] flex items-center justify-center shadow-inner">
+                  <svg className="w-6 h-6 text-[#38bdf8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="text-[10px] font-mono text-[#38bdf8] uppercase tracking-widest">
+                    Domestic Sanitation Engineering • Mohenjo-daro
+                  </div>
+                  <h3 className="text-xl font-serif font-bold text-[#f0f9ff]">
+                    Private Brick Bathing Platform & Wall Drain
+                  </h3>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowInteriorBathModal(false)}
+                className="text-[#94a3b8] hover:text-[#f8fafc] text-sm bg-[#1e293b] hover:bg-[#334155] border border-[#475569] px-3 py-1.5 rounded-lg transition-all cursor-pointer"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            <div className="p-4 rounded-xl bg-[#0f172a] border border-[#1e293b] text-sm font-serif leading-relaxed text-[#cbd5e1] mb-5 space-y-3">
+              <p className="font-bold text-[#38bdf8]">
+                &ldquo;Nearly every private home had its own waterproof brick bathroom connected directly to municipal street drains.&rdquo;
+              </p>
+              <p className="text-xs text-[#94a3b8]">
+                The bathing area was paved with finely-rubbed, tightly-fitted baked bricks with a gentle slope towards the corner drain. This waterproof brick basin ensured that water never pooled or rotted the house foundation.
+              </p>
+              <p className="text-xs text-[#38bdf8]">
+                Wastewater flowed through an earthenware pipe built directly inside the exterior house wall, discharging cleanly into the covered municipal stone drain running outside. This level of domestic hygiene and municipal infrastructure remained unmatched anywhere in the ancient world for millennia.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between pt-3 border-t border-[#1e293b]">
+              <span className="text-[10px] font-mono text-[#64748b]">
+                Journal Entry: Covered Municipal Drains
+              </span>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowInteriorBathModal(false);
+                  if (!unlockedJournalEntries.includes("covered_drainage_system")) {
+                    setUnlockedJournalEntries((prev) => [...prev, "covered_drainage_system"]);
+                  }
+                  soundFx.playClueFound();
+                }}
+                className="bg-gradient-to-r from-[#0284c7] to-[#38bdf8] hover:from-[#0369a1] hover:to-[#0284c7] text-[#081521] font-serif font-bold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md"
+              >
+                Record in Journal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- STAGE 1.6 HOUSE INTERIOR: SADDLE QUERN & GRAIN JARS MODAL --- */}
+      {showInteriorQuernModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+          <div className="relative w-full max-w-xl bg-[#1c1611] text-[#f4ebd9] rounded-2xl border-4 border-[#c29357] p-6 shadow-[0_0_50px_rgba(194,147,87,0.35)] max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b-2 border-[#54412e] mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-[#2e2319] border-2 border-[#c29357] flex items-center justify-center shadow-inner">
+                  <svg className="w-6 h-6 text-[#c29357]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="text-[10px] font-mono text-[#c29357] uppercase tracking-widest">
+                    Harappan Domestic Life & Diet • Mohenjo-daro
+                  </div>
+                  <h3 className="text-xl font-serif font-bold text-[#fdfaf3]">
+                    Saddle Quern & Terracotta Grain Storage Jars
+                  </h3>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowInteriorQuernModal(false)}
+                className="text-[#a4917b] hover:text-[#fdfaf3] text-sm bg-[#2e2319] hover:bg-[#423223] border border-[#6b533a] px-3 py-1.5 rounded-lg transition-all cursor-pointer"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            <div className="p-4 rounded-xl bg-[#281f16] border border-[#4d3a28] text-sm font-serif leading-relaxed text-[#eedbbf] mb-5 space-y-3">
+              <p className="font-bold text-[#d8a86a]">
+                &ldquo;Hard quartzite grinding stones and painted storage amphorae formed the hearth of daily Indus sustenance.&rdquo;
+              </p>
+              <p className="text-xs text-[#c9b7a1]">
+                The saddle quern (a curved stone base with a cylindrical muller/roller) was an essential tool in every kitchen. Household cooks ground harvested emmer wheat, barley, and lentils into fine flour to prepare daily flatbreads over clay hearths.
+              </p>
+              <p className="text-xs text-[#d8a86a]">
+                Large painted earthenware vessels with black slip motifs held grain, sesame oil, and clean water drawn from neighborhood wells. Clay oil lamps set into wall alcoves provided gentle illumination during evening family gatherings.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between pt-3 border-t border-[#3e2e1f]">
+              <span className="text-[10px] font-mono text-[#a8947d]">
+                Journal Entry: Universal 1:2:4 Baked Brick Ratio
+              </span>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowInteriorQuernModal(false);
+                  if (!unlockedJournalEntries.includes("standard_brick_ratio")) {
+                    setUnlockedJournalEntries((prev) => [...prev, "standard_brick_ratio"]);
+                  }
+                  soundFx.playClueFound();
+                }}
+                className="bg-gradient-to-r from-[#9e733b] to-[#d8a86a] hover:from-[#b58545] hover:to-[#eec085] text-[#140f0b] font-serif font-bold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md"
+              >
+                Record in Journal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- STAGE 1.7 THE GREAT GRANARY AIR DUCTS MODAL --- */}
+      {showGranaryDuctsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+          <div className="relative w-full max-w-xl bg-[#1c1611] text-[#f4ebd9] rounded-2xl border-4 border-[#c29357] p-6 shadow-[0_0_50px_rgba(194,147,87,0.35)] max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b-2 border-[#54412e] mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-[#2e2319] border-2 border-[#c29357] flex items-center justify-center shadow-inner">
+                  <svg className="w-6 h-6 text-[#c29357]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="text-[10px] font-mono text-[#c29357] uppercase tracking-widest">
+                    Harappan Ventilation Engineering • Mohenjo-daro
+                  </div>
+                  <h3 className="text-xl font-serif font-bold text-[#fdfaf3]">
+                    Subterranean Air Ducts & High Brick Vents
+                  </h3>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowGranaryDuctsModal(false)}
+                className="text-[#a4917b] hover:text-[#fdfaf3] text-sm bg-[#2e2319] hover:bg-[#423223] border border-[#6b533a] px-3 py-1.5 rounded-lg transition-all cursor-pointer"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            <div className="p-4 rounded-xl bg-[#281f16] border border-[#4d3a28] text-sm font-serif leading-relaxed text-[#eedbbf] mb-5 space-y-3">
+              <p className="font-bold text-[#d8a86a]">
+                &ldquo;Ingenious air channels beneath the floorboards protected harvested grain from moisture rot and mold.&rdquo;
+              </p>
+              <p className="text-xs text-[#c9b7a1]">
+                The real Great Granary of Mohenjo-daro was constructed upon a high, elevated brick podium with rows of deep subterranean air ducts running between each storage platform. In the humid river climate of the Indus floodplains, moisture was the primary enemy of grain storage.
+              </p>
+              <p className="text-xs text-[#d8a86a]">
+                Warm, dusty daylight poured into the bays through high brick vents set into the upper walls. These vents allowed dry breezes to circulate continuously under the wooden floorboards, keeping tens of thousands of grain bushels dry, cool, and safe from insect infestation throughout the year.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between pt-3 border-t border-[#3e2e1f]">
+              <span className="text-[10px] font-mono text-[#a8947d]">
+                Journal Entry: The Great Granary & Subterranean Air Ducts
+              </span>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowGranaryDuctsModal(false);
+                  setHasInspectedGranaryDucts(true);
+                  if (!unlockedJournalEntries.includes("great_granary_reserves")) {
+                    setUnlockedJournalEntries((prev) => [...prev, "great_granary_reserves"]);
+                  }
+                  soundFx.playClueFound();
+                }}
+                className="bg-gradient-to-r from-[#9e733b] to-[#d8a86a] hover:from-[#b58545] hover:to-[#eec085] text-[#140f0b] font-serif font-bold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md"
+              >
+                Record in Journal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- STAGE 1.7 THE GREAT GRANARY LOADING PLATFORMS MODAL --- */}
+      {showGranaryPlatformsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+          <div className="relative w-full max-w-xl bg-[#1c1611] text-[#f4ebd9] rounded-2xl border-4 border-[#c29357] p-6 shadow-[0_0_50px_rgba(194,147,87,0.35)] max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b-2 border-[#54412e] mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-[#2e2319] border-2 border-[#c29357] flex items-center justify-center shadow-inner">
+                  <svg className="w-6 h-6 text-[#c29357]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="text-[10px] font-mono text-[#c29357] uppercase tracking-widest">
+                    Civic Planning & Metrology • Mohenjo-daro
+                  </div>
+                  <h3 className="text-xl font-serif font-bold text-[#fdfaf3]">
+                    Rectangular Loading Bays & Food Security
+                  </h3>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowGranaryPlatformsModal(false)}
+                className="text-[#a4917b] hover:text-[#fdfaf3] text-sm bg-[#2e2319] hover:bg-[#423223] border border-[#6b533a] px-3 py-1.5 rounded-lg transition-all cursor-pointer"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            <div className="p-4 rounded-xl bg-[#281f16] border border-[#4d3a28] text-sm font-serif leading-relaxed text-[#eedbbf] mb-5 space-y-3">
+              <p className="font-bold text-[#d8a86a]">
+                &ldquo;Centralized surplus grain storage ensured civic stability and famine prevention across the Indus realm.&rdquo;
+              </p>
+              <p className="text-xs text-[#c9b7a1]">
+                The structure was partitioned into 27 rectangular baked-brick platforms arranged in neat rows. Wooden ramps led up to each bay, enabling porters and ox-cart handlers to move heavy sacks of barley and wheat directly into the building from the lower river quays.
+              </p>
+              <p className="text-xs text-[#d8a86a]">
+                To historians, this granary represents undeniable evidence of municipal food security and centralized governance. Mohenjo-daro stored collective surplus to feed specialized craftspeople (bead-makers, seal-carvers, coppersmiths) and guarantee sustenance during bad harvests, without relying on militarized conquest.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between pt-3 border-t border-[#3e2e1f]">
+              <span className="text-[10px] font-mono text-[#a8947d]">
+                Journal Entry: The Great Granary & Subterranean Air Ducts
+              </span>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowGranaryPlatformsModal(false);
+                  setHasInspectedGranaryPlatforms(true);
+                  if (!unlockedJournalEntries.includes("great_granary_reserves")) {
+                    setUnlockedJournalEntries((prev) => [...prev, "great_granary_reserves"]);
+                  }
+                  soundFx.playClueFound();
+                }}
+                className="bg-gradient-to-r from-[#9e733b] to-[#d8a86a] hover:from-[#b58545] hover:to-[#eec085] text-[#140f0b] font-serif font-bold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md"
+              >
+                Record in Journal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {activeCitizenDialogue && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
           <div className="relative w-full max-w-md bg-[#1c1611] text-[#f4ebd9] rounded-2xl border-4 border-[#d8a86a] p-5 shadow-[0_0_40px_rgba(216,168,106,0.3)]">
