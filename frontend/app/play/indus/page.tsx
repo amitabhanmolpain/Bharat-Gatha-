@@ -2080,8 +2080,21 @@ export default function IndusValleyGameScreen() {
         {/* Stage 2: Great Bath Hotspot */}
         {scene === "great_bath_citadel" && (
           <div
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
-            style={{ left: "50%", top: "65%" }}
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-12"
+            style={{ left: "52%", top: "54%" }}
+            onClick={() => {
+              if (isDrainagePuzzleSolved) {
+                setActiveCitizenDialogue({
+                  name: "The Great Bath of Mohenjo-daro",
+                  title: "Ritual Purification Basin",
+                  icon: "",
+                  text: "The monumental Great Bath pool measures approximately 12 by 7 meters with a depth of 2.4 meters. Lined with natural bitumen waterproofing and gypsum mortar between finely dressed bricks, it served as the sacred bathing sanctum of the ancient metropolis.",
+                });
+                soundFx.playSelect();
+              } else {
+                setShowDrainagePuzzleModal(true);
+              }
+            }}
           >
             {isNearGreatBathBasin && (
               <div className="mb-2 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
@@ -2093,12 +2106,12 @@ export default function IndusValleyGameScreen() {
                 </span>
               </div>
             )}
-            <div className="w-14 h-14 bg-[#231b14]/90 border-2 border-[#5dbcd2] rounded-2xl flex items-center justify-center shadow-lg animate-pulse">
+            <div className="w-14 h-14 bg-[#231b14]/90 border-2 border-[#5dbcd2] rounded-2xl flex items-center justify-center shadow-lg group-hover:border-[#eedbbf] transition-all">
               <svg className="w-7 h-7 text-[#5dbcd2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
               </svg>
             </div>
-            <span className="text-[10px] font-serif font-bold text-[#e6f7fa] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#376b75] mt-1">
+            <span className="text-[10px] font-serif font-bold text-[#e6f7fa] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#376b75] mt-1 shadow-md">
               The Great Bath
             </span>
           </div>
@@ -2107,10 +2120,11 @@ export default function IndusValleyGameScreen() {
         {/* Stage 2: East Colonnade to Artisan Quarter */}
         {scene === "great_bath_citadel" && isDrainagePuzzleSolved && (
           <div
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
-            style={{ left: "80%", top: "68%" }}
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "82%", top: "52%" }}
+            onClick={() => triggerTransition("steatite_seal_workshop", { x: 25.0, y: 72.0 }, 3)}
           >
-            <div className="mb-1 bg-[#1b1510]/90 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1 rounded-lg text-xs font-serif shadow-md animate-pulse whitespace-nowrap">
+            <div className="mb-1 bg-[#1b1510]/90 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1 rounded-lg text-xs font-serif shadow-md animate-pulse whitespace-nowrap group-hover:bg-[#251d16] transition-colors">
               <span>► [E] Enter Steatite Artisan Quarter (Stage 3)</span>
             </div>
           </div>
@@ -2119,10 +2133,11 @@ export default function IndusValleyGameScreen() {
         {/* Stage 2: Return to The Great Granary */}
         {scene === "great_bath_citadel" && (
           <div
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
-            style={{ left: "50%", top: "86%" }}
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "50%", top: "84%" }}
+            onClick={() => triggerTransition("granary_avenue", { x: 72.0, y: 52.0 })}
           >
-            <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-2.5 py-1 rounded-lg text-[11px] font-serif shadow-md whitespace-nowrap">
+            <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1 rounded-lg text-xs font-serif shadow-md whitespace-nowrap animate-bounce group-hover:bg-[#251d16] transition-colors">
               <span>▼ [F] Return to The Great Granary</span>
             </div>
           </div>
