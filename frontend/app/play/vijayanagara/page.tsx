@@ -27,6 +27,9 @@ import TalikotaNarrationModal from "./components/TalikotaNarrationModal";
 import CampaignCompletionModal from "./components/CampaignCompletionModal";
 import DialoguePanel from "../../components/DialoguePanel";
 import NarratorSubtitle from "../../../components/NarratorSubtitle";
+import GameIcon from "./components/GameIcon";
+
+export const PLAYER_VISUAL_SCALE = 1.75;
 
 export default function VijayanagaraGameScreen() {
   const [isLoading, setIsLoading] = useState(true);
@@ -1207,7 +1210,7 @@ export default function VijayanagaraGameScreen() {
   const currentSceneConfig = SCENE_CONFIGS[scene];
 
   // Dynamic Perspective Depth Scaling for Vijayanagara Landscapes
-  const depthScale = 0.7 + ((playerPos.y - 50.0) / 40.0) * 0.55;
+  const depthScale = (0.7 + ((playerPos.y - 50.0) / 40.0) * 0.55) * PLAYER_VISUAL_SCALE;
   const walkBob = isWalking ? Math.sin(walkPhase) * 1.8 : 0;
   const walkSway = isWalking ? Math.sin(walkPhase * 0.5) * 1.5 : 0;
 
@@ -1243,12 +1246,12 @@ export default function VijayanagaraGameScreen() {
             >
               {isNearRiverUphillExit && (
                 <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                  <span className="text-[#d4a359] font-bold">[E]</span>
+                  <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">E</kbd>
                   <span>Ascend Trail to Anegundi Old Fort Ruins</span>
                 </div>
               )}
-              <div className="w-10 h-10 bg-[#383027]/70 border border-[#d4a359] rounded-xl flex items-center justify-center text-xl shadow">
-                ⛰️
+              <div className="w-10 h-10 bg-[#383027]/85 border border-[#d4a359] rounded-xl flex items-center justify-center shadow-[2px_2px_0_0_rgba(0,0,0,0.6)]">
+                <GameIcon name="fort_trail" size={20} className="text-[#eedfc8]" />
               </div>
               <span className="text-[10px] font-serif font-bold text-[#d6c7b2] bg-[#1a1714]/80 px-2 py-0.5 rounded border border-[#5a4d3f] mt-1">
                 Old Fort Trail
@@ -1261,16 +1264,16 @@ export default function VijayanagaraGameScreen() {
             >
               {isNearCoracle && (
                 <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                  <span className="text-[#d4a359] font-bold">[E]</span>
+                  <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">E</kbd>
                   <span>
                     {hasVidyaranyaBlessing
-                      ? "Cross River to Hampi Bazaar (Stage 2) 🛶"
+                      ? "Cross River to Hampi Bazaar (Stage 2)"
                       : "Inspect Coracle Ferry"}
                   </span>
                 </div>
               )}
-              <div className="w-11 h-11 bg-[#233538]/80 border-2 border-[#1b4d52] rounded-full flex items-center justify-center text-2xl shadow-lg">
-                🛶
+              <div className="w-11 h-11 bg-[#233538]/85 border-2 border-[#1b4d52] rounded-full flex items-center justify-center shadow-lg">
+                <GameIcon name="coracle" size={20} className="text-[#8ec5c8]" />
               </div>
               <span className="text-[10px] font-serif font-bold text-[#f6ede0] bg-[#1a1714]/80 px-2 py-0.5 rounded border border-[#384e50] mt-1">
                 Coracle Ferry
@@ -1288,12 +1291,12 @@ export default function VijayanagaraGameScreen() {
             >
               {isNearVidyaranya && (
                 <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                  <span className="text-[#d4a359] font-bold">[E]</span>
+                  <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">E</kbd>
                   <span>{isStage1Complete ? "Speak with Sage Vidyaranya" : "Speak & Challenge to Chowka Bara"}</span>
                 </div>
               )}
-              <div className="w-12 h-14 bg-[#3d3328]/90 border-2 border-[#d4a359] rounded-2xl flex items-center justify-center text-2xl shadow-lg animate-pulse">
-                📿
+              <div className="w-12 h-14 bg-[#3d3328]/90 border-2 border-[#d4a359] rounded-2xl flex items-center justify-center shadow-lg animate-pulse">
+                <GameIcon name="sage" size={24} className="text-[#d4a359]" />
               </div>
               <span className="text-[10px] font-serif font-bold text-[#f6ede0] bg-[#1a1714]/85 px-2 py-0.5 rounded border border-[#5a4d3f] mt-1">
                 Sage Vidyaranya
@@ -1306,12 +1309,12 @@ export default function VijayanagaraGameScreen() {
             >
               {isNearFortDownhillExit && (
                 <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                  <span className="text-[#d4a359] font-bold">[E]</span>
+                  <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">E</kbd>
                   <span>Descend to Tungabhadra River Crossing</span>
                 </div>
               )}
-              <div className="w-10 h-10 bg-[#2b2520]/70 border border-[#5a4d3f] rounded-xl flex items-center justify-center text-xl shadow">
-                🌊
+              <div className="w-10 h-10 bg-[#2b2520]/80 border border-[#5a4d3f] rounded-xl flex items-center justify-center shadow">
+                <GameIcon name="river" size={18} className="text-[#89b4c4]" />
               </div>
               <span className="text-[10px] font-serif font-bold text-[#d6c7b2] bg-[#1a1714]/80 px-2 py-0.5 rounded border border-[#5a4d3f] mt-1">
                 Riverbank Trail
@@ -1329,12 +1332,12 @@ export default function VijayanagaraGameScreen() {
             >
               {isNearBazaarNorthExit && (
                 <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                  <span className="text-[#d4a359] font-bold">[E]</span>
+                  <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">E</kbd>
                   <span>Board Coracle back to Anegundi (Stage 1)</span>
                 </div>
               )}
-              <div className="w-10 h-10 bg-[#233538]/80 border-2 border-[#1b4d52] rounded-full flex items-center justify-center text-xl shadow">
-                🛶
+              <div className="w-10 h-10 bg-[#233538]/85 border-2 border-[#1b4d52] rounded-full flex items-center justify-center shadow">
+                <GameIcon name="coracle" size={18} className="text-[#8ec5c8]" />
               </div>
               <span className="text-[10px] font-serif font-bold text-[#f6ede0] bg-[#1a1714]/80 px-2 py-0.5 rounded border border-[#384e50] mt-1">
                 River Ferry
@@ -1347,12 +1350,12 @@ export default function VijayanagaraGameScreen() {
             >
               {isNearBazaarGemRow && (
                 <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                  <span className="text-[#d4a359] font-bold">[E]</span>
-                  <span>Enter Gem Traders&apos; Row 💎</span>
+                  <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">E</kbd>
+                  <span>Enter Gem Traders&apos; Row</span>
                 </div>
               )}
-              <div className="w-11 h-11 bg-[#3d3328]/90 border-2 border-[#d4a359] rounded-xl flex items-center justify-center text-2xl shadow-lg">
-                💎
+              <div className="w-11 h-11 bg-[#3d3328]/90 border-2 border-[#d4a359] rounded-xl flex items-center justify-center shadow-lg">
+                <GameIcon name="gem" size={20} className="text-[#6ee7b7]" />
               </div>
               <span className="text-[10px] font-serif font-bold text-[#f6ede0] bg-[#1a1714]/85 px-2 py-0.5 rounded border border-[#5a4d3f] mt-1">
                 Gem Arcade
@@ -1365,12 +1368,12 @@ export default function VijayanagaraGameScreen() {
             >
               {isNearBazaarToymaker && (
                 <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                  <span className="text-[#d4a359] font-bold">[E]</span>
-                  <span>Visit Kinhal Toymaker Stall 🎨</span>
+                  <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">E</kbd>
+                  <span>Visit Kinhal Toymaker Stall</span>
                 </div>
               )}
-              <div className="w-11 h-11 bg-[#2e261f]/90 border-2 border-[#c86446] rounded-xl flex items-center justify-center text-2xl shadow-lg">
-                🐘
+              <div className="w-11 h-11 bg-[#2e261f]/90 border-2 border-[#c86446] rounded-xl flex items-center justify-center shadow-lg">
+                <GameIcon name="artisan" size={20} className="text-[#f59e0b]" />
               </div>
               <span className="text-[10px] font-serif font-bold text-[#f6ede0] bg-[#1a1714]/85 px-2 py-0.5 rounded border border-[#5a4d3f] mt-1">
                 Kinhal Toys
@@ -1383,12 +1386,12 @@ export default function VijayanagaraGameScreen() {
             >
               {isNearBazaarForeignTraveler && (
                 <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                  <span className="text-[#d4a359] font-bold">[E]</span>
+                  <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">E</kbd>
                   <span>Speak with Overseas Traveler (Portuguese Visitor)</span>
                 </div>
               )}
-              <div className="w-12 h-16 md:w-14 md:h-20 bg-[#3d3328]/90 border-2 border-[#d4a359] rounded-2xl flex items-center justify-center text-3xl shadow-lg animate-pulse">
-                🕵️‍♂️
+              <div className="w-12 h-16 md:w-14 md:h-20 bg-[#3d3328]/90 border-2 border-[#d4a359] rounded-2xl flex items-center justify-center shadow-lg animate-pulse">
+                <GameIcon name="traveler" size={24} className="text-[#eedfc8]" />
               </div>
               <span className="text-[10px] font-serif font-bold text-[#d6c7b2] bg-[#1a1714]/80 px-2 py-0.5 rounded border border-[#5a4d3f] mt-1">
                 Overseas Traveler
@@ -1402,12 +1405,12 @@ export default function VijayanagaraGameScreen() {
               >
                 {isNearBazaarStage3Road && (
                   <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                    <span className="text-[#d4a359] font-bold">[E]</span>
-                    <span>Royal Procession Road to Vittala Temple (Stage 3) 🏛️</span>
+                    <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">E</kbd>
+                    <span>Royal Procession Road to Vittala Temple (Stage 3)</span>
                   </div>
                 )}
-                <div className="w-11 h-11 bg-[#3d3328]/90 border-2 border-[#d4a359] rounded-xl flex items-center justify-center text-2xl shadow-lg">
-                  🏛️
+                <div className="w-11 h-11 bg-[#3d3328]/90 border-2 border-[#d4a359] rounded-xl flex items-center justify-center shadow-lg">
+                  <GameIcon name="temple" size={20} className="text-[#d4a359]" />
                 </div>
                 <span className="text-[10px] font-serif font-bold text-[#d4a359] bg-[#1a1714]/90 px-2 py-0.5 rounded border border-[#d4a359] mt-1">
                   Vittala Temple Road
@@ -1426,12 +1429,12 @@ export default function VijayanagaraGameScreen() {
             >
               {isNearGemAssessor && (
                 <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                  <span className="text-[#d4a359] font-bold">[E]</span>
+                  <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">E</kbd>
                   <span>Speak with Master Gem Assessor (Setti Somappa)</span>
                 </div>
               )}
-              <div className="w-12 h-14 bg-[#3d3328]/90 border-2 border-[#d4a359] rounded-2xl flex items-center justify-center text-2xl shadow-lg">
-                💎
+              <div className="w-12 h-14 bg-[#3d3328]/90 border-2 border-[#d4a359] rounded-2xl flex items-center justify-center shadow-lg">
+                <GameIcon name="gem" size={22} className="text-[#6ee7b7]" />
               </div>
               <span className="text-[10px] font-serif font-bold text-[#f6ede0] bg-[#1a1714]/85 px-2 py-0.5 rounded border border-[#5a4d3f] mt-1">
                 Setti Somappa
@@ -1444,12 +1447,12 @@ export default function VijayanagaraGameScreen() {
             >
               {isNearGemRowExit && (
                 <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                  <span className="text-[#d4a359] font-bold">[E]</span>
+                  <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">E</kbd>
                   <span>Return to Virupaksha Car Street</span>
                 </div>
               )}
-              <div className="w-10 h-10 bg-[#2b2520]/70 border border-[#5a4d3f] rounded-xl flex items-center justify-center text-xl shadow">
-                🏛️
+              <div className="w-10 h-10 bg-[#2b2520]/80 border border-[#5a4d3f] rounded-xl flex items-center justify-center shadow">
+                <GameIcon name="courtyard" size={18} className="text-[#d6c7b2]" />
               </div>
               <span className="text-[10px] font-serif font-bold text-[#d6c7b2] bg-[#1a1714]/80 px-2 py-0.5 rounded border border-[#5a4d3f] mt-1">
                 Car Street
@@ -1467,12 +1470,12 @@ export default function VijayanagaraGameScreen() {
             >
               {isNearToymakerNpc && (
                 <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                  <span className="text-[#d4a359] font-bold">[E]</span>
+                  <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">E</kbd>
                   <span>Speak with Toymaker Kallappa & Inspect Toys</span>
                 </div>
               )}
-              <div className="w-12 h-14 bg-[#2e261f]/90 border-2 border-[#c86446] rounded-2xl flex items-center justify-center text-2xl shadow-lg">
-                🎨
+              <div className="w-12 h-14 bg-[#2e261f]/90 border-2 border-[#c86446] rounded-2xl flex items-center justify-center shadow-lg">
+                <GameIcon name="artisan" size={22} className="text-[#f59e0b]" />
               </div>
               <span className="text-[10px] font-serif font-bold text-[#f6ede0] bg-[#1a1714]/85 px-2 py-0.5 rounded border border-[#5a4d3f] mt-1">
                 Master Kallappa
@@ -1485,12 +1488,12 @@ export default function VijayanagaraGameScreen() {
             >
               {isNearToymakerExit && (
                 <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                  <span className="text-[#d4a359] font-bold">[E]</span>
+                  <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">E</kbd>
                   <span>Return to Virupaksha Car Street</span>
                 </div>
               )}
-              <div className="w-10 h-10 bg-[#2b2520]/70 border border-[#5a4d3f] rounded-xl flex items-center justify-center text-xl shadow">
-                🏛️
+              <div className="w-10 h-10 bg-[#2b2520]/80 border border-[#5a4d3f] rounded-xl flex items-center justify-center shadow">
+                <GameIcon name="courtyard" size={18} className="text-[#d6c7b2]" />
               </div>
               <span className="text-[10px] font-serif font-bold text-[#d6c7b2] bg-[#1a1714]/80 px-2 py-0.5 rounded border border-[#5a4d3f] mt-1">
                 Car Street
@@ -1508,16 +1511,16 @@ export default function VijayanagaraGameScreen() {
             >
               {isNearChariotMusician && (
                 <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                  <span className="text-[#d4a359] font-bold">[E]</span>
+                  <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">E</kbd>
                   <span>
                     {hasSecondLedgerFragment
-                      ? "Listen to Musician's Warning ⚠️"
-                      : "Speak with Maestoso Raghavendra 🎶"}
+                      ? "Listen to Musician's Warning"
+                      : "Speak with Maestoso Raghavendra"}
                   </span>
                 </div>
               )}
-              <div className="w-12 h-14 bg-[#3d3328]/90 border-2 border-[#d4a359] rounded-2xl flex items-center justify-center text-2xl shadow-lg animate-pulse">
-                🎶
+              <div className="w-12 h-14 bg-[#3d3328]/90 border-2 border-[#d4a359] rounded-2xl flex items-center justify-center shadow-lg animate-pulse">
+                <GameIcon name="music" size={24} className="text-[#d4a359]" />
               </div>
               <span className="text-[10px] font-serif font-bold text-[#f6ede0] bg-[#1a1714]/85 px-2 py-0.5 rounded border border-[#5a4d3f] mt-1">
                 Maestoso Raghavendra
@@ -1530,12 +1533,12 @@ export default function VijayanagaraGameScreen() {
             >
               {isNearChariotMandapaExit && (
                 <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                  <span className="text-[#d4a359] font-bold">[E]</span>
-                  <span>Enter Ranga Mandapa (Musical Pillars) 🏛️</span>
+                  <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">E</kbd>
+                  <span>Enter Ranga Mandapa (Musical Pillars)</span>
                 </div>
               )}
-              <div className="w-11 h-11 bg-[#2e261f]/90 border-2 border-[#d4a359] rounded-xl flex items-center justify-center text-2xl shadow-lg">
-                🏛️
+              <div className="w-11 h-11 bg-[#2e261f]/90 border-2 border-[#d4a359] rounded-xl flex items-center justify-center shadow-lg">
+                <GameIcon name="temple" size={20} className="text-[#d4a359]" />
               </div>
               <span className="text-[10px] font-serif font-bold text-[#f6ede0] bg-[#1a1714]/85 px-2 py-0.5 rounded border border-[#5a4d3f] mt-1">
                 Musical Mandapa
@@ -1548,12 +1551,12 @@ export default function VijayanagaraGameScreen() {
             >
               {isNearChariotHazaraRamaExit && (
                 <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                  <span className="text-[#d4a359] font-bold">[E]</span>
+                  <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">E</kbd>
                   <span>Inspect Hazara Rama Temple Walls (Optional)</span>
                 </div>
               )}
-              <div className="w-10 h-10 bg-[#25201b]/80 border border-[#d4a359] rounded-xl flex items-center justify-center text-xl shadow">
-                🏹
+              <div className="w-10 h-10 bg-[#25201b]/80 border border-[#d4a359] rounded-xl flex items-center justify-center shadow">
+                <GameIcon name="archery" size={18} className="text-[#d6c7b2]" />
               </div>
               <span className="text-[10px] font-serif font-bold text-[#d6c7b2] bg-[#1a1714]/80 px-2 py-0.5 rounded border border-[#5a4d3f] mt-1">
                 Hazara Rama
@@ -1568,12 +1571,12 @@ export default function VijayanagaraGameScreen() {
               >
                 {isNearChariotStage4Road && (
                   <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                    <span className="text-[#d4a359] font-bold">[E]</span>
-                    <span>Path to Mahanavami Dibba (Stage 4) 🏛️</span>
+                    <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">E</kbd>
+                    <span>Path to Mahanavami Dibba (Stage 4)</span>
                   </div>
                 )}
-                <div className="w-11 h-11 bg-[#3d3328]/90 border-2 border-[#d4a359] rounded-xl flex items-center justify-center text-2xl shadow-lg">
-                  🏛️
+                <div className="w-11 h-11 bg-[#3d3328]/90 border-2 border-[#d4a359] rounded-xl flex items-center justify-center shadow-lg">
+                  <GameIcon name="temple" size={20} className="text-[#d4a359]" />
                 </div>
                 <span className="text-[10px] font-serif font-bold text-[#d4a359] bg-[#1a1714]/90 px-2 py-0.5 rounded border border-[#d4a359] mt-1">
                   Mahanavami Dibba
@@ -1587,12 +1590,12 @@ export default function VijayanagaraGameScreen() {
             >
               {isNearChariotBazaarReturn && (
                 <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                  <span className="text-[#d4a359] font-bold">[E]</span>
+                  <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">E</kbd>
                   <span>Return to Hampi Bazaar (Stage 2)</span>
                 </div>
               )}
-              <div className="w-10 h-10 bg-[#2b2520]/70 border border-[#5a4d3f] rounded-xl flex items-center justify-center text-xl shadow">
-                🏪
+              <div className="w-10 h-10 bg-[#2b2520]/80 border border-[#5a4d3f] rounded-xl flex items-center justify-center shadow">
+                <GameIcon name="courtyard" size={18} className="text-[#d6c7b2]" />
               </div>
               <span className="text-[10px] font-serif font-bold text-[#d6c7b2] bg-[#1a1714]/80 px-2 py-0.5 rounded border border-[#5a4d3f] mt-1">
                 Hampi Bazaar
@@ -1610,12 +1613,12 @@ export default function VijayanagaraGameScreen() {
             >
               {isNearMusicalPillarsCenter && (
                 <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                  <span className="text-[#d4a359] font-bold">[E]</span>
-                  <span>Resonate 56 Musical Pillars of Vittala 🎵</span>
+                  <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">E</kbd>
+                  <span>Resonate 56 Musical Pillars of Vittala</span>
                 </div>
               )}
-              <div className="w-14 h-14 bg-[#3d3328]/90 border-2 border-[#d4a359] rounded-2xl flex items-center justify-center text-3xl shadow-lg animate-pulse">
-                🎵
+              <div className="w-14 h-14 bg-[#3d3328]/90 border-2 border-[#d4a359] rounded-2xl flex items-center justify-center shadow-lg animate-pulse">
+                <GameIcon name="music" size={26} className="text-[#d4a359]" />
               </div>
               <span className="text-[10px] font-serif font-bold text-[#f6ede0] bg-[#1a1714]/85 px-2 py-0.5 rounded border border-[#5a4d3f] mt-1">
                 Musical Pillars
@@ -1628,12 +1631,12 @@ export default function VijayanagaraGameScreen() {
             >
               {isNearMusicalPillarsExit && (
                 <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                  <span className="text-[#d4a359] font-bold">[E]</span>
+                  <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">E</kbd>
                   <span>Return to Stone Chariot Courtyard</span>
                 </div>
               )}
-              <div className="w-10 h-10 bg-[#2b2520]/70 border border-[#5a4d3f] rounded-xl flex items-center justify-center text-xl shadow">
-                🛞
+              <div className="w-10 h-10 bg-[#2b2520]/80 border border-[#5a4d3f] rounded-xl flex items-center justify-center shadow">
+                <GameIcon name="courtyard" size={18} className="text-[#d6c7b2]" />
               </div>
               <span className="text-[10px] font-serif font-bold text-[#d6c7b2] bg-[#1a1714]/80 px-2 py-0.5 rounded border border-[#5a4d3f] mt-1">
                 Courtyard
@@ -1651,12 +1654,12 @@ export default function VijayanagaraGameScreen() {
             >
               {isNearHazaraFriezes && (
                 <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                  <span className="text-[#d4a359] font-bold">[E]</span>
-                  <span>Examine Narrative Ramayana Bas-Reliefs 🏹</span>
+                  <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">E</kbd>
+                  <span>Examine Narrative Ramayana Bas-Reliefs</span>
                 </div>
               )}
-              <div className="w-12 h-14 bg-[#2e261f]/90 border-2 border-[#d4a359] rounded-2xl flex items-center justify-center text-2xl shadow-lg">
-                🏹
+              <div className="w-12 h-14 bg-[#2e261f]/90 border-2 border-[#d4a359] rounded-2xl flex items-center justify-center shadow-lg">
+                <GameIcon name="archery" size={22} className="text-[#eedfc8]" />
               </div>
               <span className="text-[10px] font-serif font-bold text-[#f6ede0] bg-[#1a1714]/85 px-2 py-0.5 rounded border border-[#5a4d3f] mt-1">
                 Ramayana Friezes
@@ -1669,12 +1672,12 @@ export default function VijayanagaraGameScreen() {
             >
               {isNearHazaraRamaExit && (
                 <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                  <span className="text-[#d4a359] font-bold">[E]</span>
+                  <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">E</kbd>
                   <span>Return to Stone Chariot Courtyard</span>
                 </div>
               )}
-              <div className="w-10 h-10 bg-[#2b2520]/70 border border-[#5a4d3f] rounded-xl flex items-center justify-center text-xl shadow">
-                🛞
+              <div className="w-10 h-10 bg-[#2b2520]/80 border border-[#5a4d3f] rounded-xl flex items-center justify-center shadow">
+                <GameIcon name="courtyard" size={18} className="text-[#d6c7b2]" />
               </div>
               <span className="text-[10px] font-serif font-bold text-[#d6c7b2] bg-[#1a1714]/80 px-2 py-0.5 rounded border border-[#5a4d3f] mt-1">
                 Courtyard
@@ -1693,18 +1696,18 @@ export default function VijayanagaraGameScreen() {
             >
               {isNearMahanavamiTierTrigger && (
                 <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                  <span className="text-[#d4a359] font-bold">[E]</span>
+                  <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">E</kbd>
                   <span>
                     {!isFestivalSceneRestored
-                      ? "Witness 1565 Festival Flashback 🎪"
+                      ? "Witness 1565 Festival Flashback"
                       : !hasFinalLedgerFragment
-                      ? "Unseal Royal Niche for Final Fragment 📜"
-                      : "Inspect Master Ledger Niche 📜"}
+                      ? "Unseal Royal Niche for Final Fragment"
+                      : "Inspect Master Ledger Niche"}
                   </span>
                 </div>
               )}
-              <div className="w-14 h-14 bg-[#3d3328]/90 border-2 border-[#d4a359] rounded-2xl flex items-center justify-center text-3xl shadow-lg animate-pulse">
-                {isFestivalSceneRestored ? "📜" : "🎪"}
+              <div className="w-14 h-14 bg-[#3d3328]/90 border-2 border-[#d4a359] rounded-2xl flex items-center justify-center shadow-lg animate-pulse">
+                <GameIcon name={isFestivalSceneRestored ? "ledger" : "temple"} size={26} className="text-[#d4a359]" />
               </div>
               <span className="text-[10px] font-serif font-bold text-[#f6ede0] bg-[#1a1714]/85 px-2 py-0.5 rounded border border-[#5a4d3f] mt-1">
                 {isFestivalSceneRestored ? "Stone Vault Niche" : "Imperial Dais"}
@@ -1718,12 +1721,12 @@ export default function VijayanagaraGameScreen() {
             >
               {isNearMahanavamiSouthExit && (
                 <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                  <span className="text-[#d4a359] font-bold">[E]</span>
-                  <span>Walk to Pushkarani Stepped Tank (Closing Reflection) 🌅</span>
+                  <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">E</kbd>
+                  <span>Walk to Pushkarani Stepped Tank (Closing Reflection)</span>
                 </div>
               )}
-              <div className="w-10 h-10 bg-[#233538]/80 border-2 border-[#1b4d52] rounded-xl flex items-center justify-center text-xl shadow">
-                🌅
+              <div className="w-10 h-10 bg-[#233538]/85 border-2 border-[#1b4d52] rounded-xl flex items-center justify-center shadow">
+                <GameIcon name="sunset" size={18} className="text-[#f59e0b]" />
               </div>
               <span className="text-[10px] font-serif font-bold text-[#f6ede0] bg-[#1a1714]/80 px-2 py-0.5 rounded border border-[#384e50] mt-1">
                 Pushkarani Path
@@ -1737,12 +1740,12 @@ export default function VijayanagaraGameScreen() {
             >
               {isNearMahanavamiWestExit && (
                 <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                  <span className="text-[#d4a359] font-bold">[E]</span>
+                  <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">E</kbd>
                   <span>Return to Vittala Temple (Stage 3)</span>
                 </div>
               )}
-              <div className="w-10 h-10 bg-[#2b2520]/70 border border-[#5a4d3f] rounded-xl flex items-center justify-center text-xl shadow">
-                🛞
+              <div className="w-10 h-10 bg-[#2b2520]/80 border border-[#5a4d3f] rounded-xl flex items-center justify-center shadow">
+                <GameIcon name="courtyard" size={18} className="text-[#d6c7b2]" />
               </div>
               <span className="text-[10px] font-serif font-bold text-[#d6c7b2] bg-[#1a1714]/80 px-2 py-0.5 rounded border border-[#5a4d3f] mt-1">
                 Vittala Temple
@@ -1761,16 +1764,16 @@ export default function VijayanagaraGameScreen() {
             >
               {isNearPushkaraniKeeper && (
                 <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                  <span className="text-[#d4a359] font-bold">[E]</span>
+                  <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">E</kbd>
                   <span>
                     {isCampaignComplete
                       ? "Speak with Keeper of Memory"
-                      : "Closing Reflection & Receive Final Keepsake ✦"}
+                      : "Closing Reflection & Receive Final Keepsake"}
                   </span>
                 </div>
               )}
-              <div className="w-12 h-14 bg-[#3d3328]/90 border-2 border-[#d4a359] rounded-2xl flex items-center justify-center text-3xl shadow-lg animate-pulse">
-                🪨
+              <div className="w-12 h-14 bg-[#3d3328]/90 border-2 border-[#d4a359] rounded-2xl flex items-center justify-center shadow-lg animate-pulse">
+                <GameIcon name="keeper" size={24} className="text-[#d4a359]" />
               </div>
               <span className="text-[10px] font-serif font-bold text-[#f6ede0] bg-[#1a1714]/85 px-2 py-0.5 rounded border border-[#5a4d3f] mt-1">
                 Keeper of Memory
@@ -1784,12 +1787,12 @@ export default function VijayanagaraGameScreen() {
             >
               {isNearPushkaraniReturn && (
                 <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                  <span className="text-[#d4a359] font-bold">[E]</span>
+                  <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">E</kbd>
                   <span>Return to Mahanavami Dibba</span>
                 </div>
               )}
-              <div className="w-10 h-10 bg-[#2b2520]/70 border border-[#5a4d3f] rounded-xl flex items-center justify-center text-xl shadow">
-                🏛️
+              <div className="w-10 h-10 bg-[#2b2520]/80 border border-[#5a4d3f] rounded-xl flex items-center justify-center shadow">
+                <GameIcon name="courtyard" size={18} className="text-[#d6c7b2]" />
               </div>
               <span className="text-[10px] font-serif font-bold text-[#d6c7b2] bg-[#1a1714]/80 px-2 py-0.5 rounded border border-[#5a4d3f] mt-1">
                 Mahanavami Platform
@@ -1800,14 +1803,15 @@ export default function VijayanagaraGameScreen() {
 
         {/* --- 2.5D PLAYER SPRITE --- */}
         <div
-          className="absolute transform -translate-x-1/2 -translate-y-1/2 transition-transform duration-75 z-20 pointer-events-none flex flex-col items-center"
+          className="absolute transition-transform duration-75 z-20 pointer-events-none flex flex-col items-center"
           style={{
             left: `${playerPos.x}%`,
             top: `${playerPos.y}%`,
-            transform: `translate(-50%, -50%) scale(${depthScale}) rotate(${walkSway}deg) translateY(${walkBob}px)`,
+            transformOrigin: "bottom center",
+            transform: `translate(-50%, -100%) scale(${depthScale}) rotate(${walkSway}deg) translateY(${walkBob}px)`,
           }}
         >
-          <div className="text-[9px] font-serif font-bold bg-[#1a1714]/80 text-[#d4a359] border border-[#5a4d3f] px-1.5 py-0.5 rounded mb-1 whitespace-nowrap shadow">
+          <div className="text-[9px] font-serif font-bold bg-[#1a1714]/85 text-[#d4a359] border border-[#5a4d3f] px-1.5 py-0.5 rounded mb-1 whitespace-nowrap shadow-[1px_1px_0_0_rgba(0,0,0,0.8)]">
             Traveler
           </div>
 
@@ -1817,6 +1821,7 @@ export default function VijayanagaraGameScreen() {
             className="w-12 h-16 object-contain drop-shadow-[0_8px_12px_rgba(0,0,0,0.9)]"
             style={{
               transform: facingLeft ? "scaleX(-1)" : "scaleX(1)",
+              imageRendering: "pixelated",
             }}
           />
         </div>
@@ -2135,8 +2140,8 @@ export default function VijayanagaraGameScreen() {
             <div className="relative w-full max-w-2xl bg-[#1e1b18] text-[#f6ede0] rounded-2xl border-4 border-[#d4a359] p-6 shadow-[0_0_50px_rgba(212,163,89,0.4)] max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between pb-3 border-b-2 border-[#5a4d3f] mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-[#3d3328] border-2 border-[#d4a359] flex items-center justify-center text-3xl shadow-inner">
-                    🪨
+                  <div className="w-12 h-12 rounded-xl bg-[#3d3328] border-2 border-[#d4a359] flex items-center justify-center shadow-inner">
+                    <GameIcon name="keeper" size={26} className="text-[#d4a359]" />
                   </div>
                   <div>
                     <div className="text-[10px] font-mono text-[#d4a359] uppercase tracking-widest">
@@ -2194,8 +2199,8 @@ export default function VijayanagaraGameScreen() {
             <div className="relative w-full max-w-2xl bg-[#1e1b18] text-[#f6ede0] rounded-2xl border-4 border-[#5a4d3f] p-6 shadow-[0_0_50px_rgba(0,0,0,0.95)] max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between pb-3 border-b-2 border-[#5a4d3f] mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-[#2e261f] border-2 border-[#d4a359] flex items-center justify-center text-3xl shadow-inner">
-                    🏹
+                  <div className="w-12 h-12 rounded-xl bg-[#2e261f] border-2 border-[#d4a359] flex items-center justify-center shadow-inner">
+                    <GameIcon name="archery" size={26} className="text-[#d4a359]" />
                   </div>
                   <div>
                     <div className="text-[10px] font-mono text-[#d4a359] uppercase tracking-widest">
@@ -2248,8 +2253,8 @@ export default function VijayanagaraGameScreen() {
             <div className="relative w-full max-w-2xl bg-[#1e1b18] text-[#f6ede0] rounded-2xl border-4 border-[#5a4d3f] p-6 shadow-[0_0_50px_rgba(0,0,0,0.95)] max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between pb-3 border-b-2 border-[#5a4d3f] mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-[#3d3328] border-2 border-[#d4a359] flex items-center justify-center text-3xl shadow-inner">
-                    🎶
+                  <div className="w-12 h-12 rounded-xl bg-[#3d3328] border-2 border-[#d4a359] flex items-center justify-center shadow-inner">
+                    <GameIcon name="music" size={26} className="text-[#d4a359]" />
                   </div>
                   <div>
                     <div className="text-[10px] font-mono text-[#d4a359] uppercase tracking-widest">
