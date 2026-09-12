@@ -118,6 +118,61 @@ function getPathPosition(
   return { x: first.x, y: first.y, opacity: 1, isInside: false, facingLeft: false, scale: 1, filter: "none" };
 }
 
+interface TwoWayPatrolState {
+  x: number;
+  y: number;
+  isWalking: boolean;
+  facingLeft: boolean;
+}
+
+function getTwoWayPatrolPosition(
+  pointA: { x: number; y: number },
+  pointB: { x: number; y: number },
+  walkDuration: number,
+  stayDuration: number,
+  elapsedTime: number
+): TwoWayPatrolState {
+  const halfCycle = walkDuration + stayDuration;
+  const totalCycle = halfCycle * 2;
+  const t = ((elapsedTime % totalCycle) + totalCycle) % totalCycle;
+
+  if (t < walkDuration) {
+    // Walking A -> B
+    const prog = t / walkDuration;
+    return {
+      x: pointA.x + (pointB.x - pointA.x) * prog,
+      y: pointA.y + (pointB.y - pointA.y) * prog,
+      isWalking: true,
+      facingLeft: pointB.x < pointA.x,
+    };
+  } else if (t < halfCycle) {
+    // Paused at B for stayDuration (6 seconds)
+    return {
+      x: pointB.x,
+      y: pointB.y,
+      isWalking: false,
+      facingLeft: true,
+    };
+  } else if (t < halfCycle + walkDuration) {
+    // Walking back B -> A
+    const prog = (t - halfCycle) / walkDuration;
+    return {
+      x: pointB.x + (pointA.x - pointB.x) * prog,
+      y: pointB.y + (pointA.y - pointB.y) * prog,
+      isWalking: true,
+      facingLeft: pointA.x < pointB.x,
+    };
+  } else {
+    // Paused at A for stayDuration (6 seconds)
+    return {
+      x: pointA.x,
+      y: pointA.y,
+      isWalking: false,
+      facingLeft: false,
+    };
+  }
+}
+
 export default function IndusValleyGameScreen() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
@@ -206,6 +261,7 @@ export default function IndusValleyGameScreen() {
   const [carrierTime, setCarrierTime] = useState(0);
   const [carrierFrame, setCarrierFrame] = useState(1); // 1 to 4
   const [talkingArtisansFrame, setTalkingArtisansFrame] = useState<1 | 2>(1);
+  const [rooftopFrame, setRooftopFrame] = useState<1 | 2>(1);
 
   // Scene Configuration
   const currentSceneConfig = INDUS_SCENE_CONFIGS[scene] || INDUS_SCENE_CONFIGS.lower_town_gate;
@@ -616,13 +672,25 @@ export default function IndusValleyGameScreen() {
     scene === "great_bath_citadel" &&
     playerPos.y >= 80.0;
 
-  // Stage 1.5: Rooftop Resident (at x: 43.5%, y: 41.5%)
+  // Person 1: Foreground Rooftop Lookout (Image 1: walks across terrace floor to corner, stays 6s, walks back)
+  const roof1PointA = { x: 13.5, y: 53.0 };
+  const roof1PointB = { x: 7.0, y: 64.0 };
+  const roof1State = getTwoWayPatrolPosition(roof1PointA, roof1PointB, 5.0, 6.0, carrierTime);
+
+  // Person 2: Upper Terrace Resident (Image 2: walks across terrace floor to left corner, stays 6s, walks back)
+  const roof2PointA = { x: 43.5, y: 46.5 };
+  const roof2PointB = { x: 23.0, y: 43.0 };
+  const roof2State = getTwoWayPatrolPosition(roof2PointA, roof2PointB, 6.0, 6.0, carrierTime + 2.5);
+
+  // Stage 1.5: Rooftop Resident (Upper terrace patrol)
   const isNearRooftopCitizen =
     scene === "residential_grid" &&
-    playerPos.x >= 36.0 &&
-    playerPos.x <= 52.0 &&
-    playerPos.y >= 36.0 &&
-    playerPos.y <= 48.0;
+    Math.hypot(playerPos.x - roof2State.x, playerPos.y - roof2State.y) <= 12.0;
+
+  // Stage 1.5: Foreground Rooftop Lookout (Foreground terrace patrol)
+  const isNearRooftopLookout =
+    scene === "residential_grid" &&
+    Math.hypot(playerPos.x - roof1State.x, playerPos.y - roof1State.y) <= 12.0;
 
   // Left Lane Water Carrier Route (grounded on brick street, walking into upper house doorway, 17.5s walk + 4s pause inside)
   const guy1Waypoints = [
@@ -673,13 +741,13 @@ export default function IndusValleyGameScreen() {
   const isNearCottonWeaver = isNearArtisans;
   const isNearMasterPotter = isNearArtisans;
 
-  // Stage 1.5: Courtyard Resident (at x: 33.5%, y: 57.5%)
+  // Stage 1.5: Courtyard Resident (Grounded inside courtyard stone floor at x: 31%, y: 61.8%)
   const isNearCourtyardResident =
     scene === "residential_grid" &&
-    playerPos.x >= 28.0 &&
-    playerPos.x <= 39.0 &&
-    playerPos.y >= 52.0 &&
-    playerPos.y <= 64.0;
+    playerPos.x >= 24.0 &&
+    playerPos.x <= 38.0 &&
+    playerPos.y >= 54.0 &&
+    playerPos.y <= 68.0;
 
   // Stage 2: Great Bath sunken basin
   const isNearGreatBathBasin =
@@ -737,10 +805,11 @@ export default function IndusValleyGameScreen() {
   useEffect(() => {
     if (scene !== "residential_grid") return;
 
-    // Cycle walk animation frames (1 -> 2 -> 3 -> 4)
+    // Cycle walk animation frames (1 -> 2 -> 3 -> 4 for carriers, 1 -> 2 for rooftop)
     const frameInterval = setInterval(() => {
       setCarrierFrame((prev) => (prev % 4) + 1);
-    }, 180);
+      setRooftopFrame((prev) => (prev === 1 ? 2 : 1));
+    }, 200);
 
     // Cycle talking animation frames between woman and man (1 -> 2)
     const talkInterval = setInterval(() => {
@@ -908,6 +977,14 @@ export default function IndusValleyGameScreen() {
             title: "Citizen of the Upper Terraces • Mohenjo-daro",
             icon: "",
             text: "From atop our baked-brick roofs, you can see how our streets cross at perfect cardinal angles! When the summer sun sets over the Indus, our families gather on these cool flat terraces to spin cotton and catch the river breeze.",
+          });
+          soundFx.playSelect();
+        } else if (isNearRooftopLookout) {
+          setActiveCitizenDialogue({
+            name: "Harappan Lookout",
+            title: "Lower Town Watcher • Mohenjo-daro",
+            icon: "",
+            text: "I watch the sunrise over the eastern wall! Look along the street below—the covered drains carry every drop of wastewater away safely under the stone slabs. No other city on earth has such engineering.",
           });
           soundFx.playSelect();
         } else if (isNearRoadPedestrian) {
@@ -1256,11 +1333,11 @@ export default function IndusValleyGameScreen() {
           </div>
         )}
 
-        {/* Stage 1.5: Rooftop Citizen on Upper House Terrace */}
+        {/* Stage 1.5: Rooftop Citizen on Upper House Terrace (Patrolling to left corner, staying 6s, walking back) */}
         {scene === "residential_grid" && (
           <div
             className="absolute z-12 pointer-events-auto cursor-pointer select-none group"
-            style={{ left: "43.5%", top: "41.5%" }}
+            style={{ left: `${roof2State.x}%`, top: `${roof2State.y}%` }}
             onClick={() =>
               setActiveCitizenDialogue({
                 name: "Harappan Rooftop Resident",
@@ -1270,32 +1347,48 @@ export default function IndusValleyGameScreen() {
               })
             }
           >
-            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform group-hover:scale-105">
-              {isNearRooftopCitizen && (
-                <div className="mb-1.5 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2 py-0.5 rounded text-[10px] font-serif shadow-lg animate-bounce whitespace-nowrap">
-                  <span className="text-[#d8a86a] font-bold mr-1">[G]</span>
-                  <span>Greet Rooftop Resident</span>
-                </div>
-              )}
-              <span className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow mb-1 whitespace-nowrap transition-opacity duration-200 ${
-                isNearRooftopCitizen ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-              }`}>
-                Rooftop Citizen
-              </span>
+            <div
+              className={`relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform duration-200 group-hover:scale-105 ${
+                roof2State.facingLeft ? "scale-x-100" : "-scale-x-100"
+              }`}
+            >
+              <div
+                className={`absolute bottom-full mb-1 flex flex-col items-center pointer-events-none ${
+                  roof2State.facingLeft ? "scale-x-100" : "-scale-x-100"
+                }`}
+              >
+                {isNearRooftopCitizen && (
+                  <div className="mb-1 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded text-[10px] font-serif shadow-lg animate-bounce whitespace-nowrap pointer-events-auto">
+                    <span className="text-[#d8a86a] font-bold mr-1">[G]</span>
+                    <span>Greet Rooftop Resident</span>
+                  </div>
+                )}
+                <span
+                  className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow whitespace-nowrap transition-opacity duration-200 ${
+                    isNearRooftopCitizen ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  Rooftop Citizen
+                </span>
+              </div>
               <img
-                src="/sprite-indus-rooftop.png?v=3"
+                src={
+                  roof2State.isWalking
+                    ? `/sprite-rooftop-walk-${rooftopFrame}.png?v=2`
+                    : "/sprite-indus-rooftop.png?v=3"
+                }
                 alt="Harappan Rooftop Resident"
-                className="h-[68px] sm:h-[75px] md:h-[88px] w-auto object-contain block select-none"
+                className="h-[68px] sm:h-[75px] md:h-[84px] w-auto object-contain block select-none"
               />
             </div>
           </div>
         )}
 
-        {/* Stage 1.5: Foreground Rooftop Lookout */}
+        {/* Stage 1.5: Foreground Rooftop Lookout (Patrolling foreground terrace to front corner, staying 6s, walking back) */}
         {scene === "residential_grid" && (
           <div
             className="absolute z-14 pointer-events-auto cursor-pointer select-none group"
-            style={{ left: "10.5%", top: "52%" }}
+            style={{ left: `${roof1State.x}%`, top: `${roof1State.y}%` }}
             onClick={() =>
               setActiveCitizenDialogue({
                 name: "Harappan Lookout",
@@ -1305,14 +1398,38 @@ export default function IndusValleyGameScreen() {
               })
             }
           >
-            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform group-hover:scale-105 -scale-x-100">
-              <span className="text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow mb-1 whitespace-nowrap -scale-x-100 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                Terrace Watcher
-              </span>
+            <div
+              className={`relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform duration-200 group-hover:scale-105 ${
+                roof1State.facingLeft ? "scale-x-100" : "-scale-x-100"
+              }`}
+            >
+              <div
+                className={`absolute bottom-full mb-1 flex flex-col items-center pointer-events-none ${
+                  roof1State.facingLeft ? "scale-x-100" : "-scale-x-100"
+                }`}
+              >
+                {isNearRooftopLookout && (
+                  <div className="mb-1 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded text-[10px] font-serif shadow-lg animate-bounce whitespace-nowrap pointer-events-auto">
+                    <span className="text-[#d8a86a] font-bold mr-1">[G]</span>
+                    <span>Greet Terrace Watcher</span>
+                  </div>
+                )}
+                <span
+                  className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow whitespace-nowrap transition-opacity duration-200 ${
+                    isNearRooftopLookout ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  Terrace Watcher
+                </span>
+              </div>
               <img
-                src="/sprite-indus-rooftop.png?v=3"
+                src={
+                  roof1State.isWalking
+                    ? `/sprite-rooftop-walk-${rooftopFrame}.png?v=2`
+                    : "/sprite-indus-rooftop.png?v=3"
+                }
                 alt="Harappan Terrace Lookout"
-                className="h-[82px] sm:h-[95px] md:h-[109px] w-auto object-contain block select-none"
+                className="h-[75px] sm:h-[84px] md:h-[95px] w-auto object-contain block select-none"
               />
             </div>
           </div>
@@ -1376,11 +1493,11 @@ export default function IndusValleyGameScreen() {
           </div>
         )}
 
-        {/* Stage 1.5: Courtyard Resident Woman (Inside the Courtyard) */}
+        {/* Stage 1.5: Courtyard Resident Woman (Grounded on courtyard stone floor at x: 31%, y: 61.8%) */}
         {scene === "residential_grid" && (
           <div
             className="absolute z-13 pointer-events-auto cursor-pointer select-none group"
-            style={{ left: "33.5%", top: "57.5%" }}
+            style={{ left: "31.0%", top: "61.8%" }}
             onClick={() =>
               setActiveCitizenDialogue({
                 name: "Harappan Courtyard Inhabitant",
@@ -1390,22 +1507,26 @@ export default function IndusValleyGameScreen() {
               })
             }
           >
-            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform group-hover:scale-105">
-              {isNearCourtyardResident && (
-                <div className="mb-1.5 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded text-[11px] font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap">
-                  <span className="text-[#d8a86a] font-bold">[G]</span>
-                  <span>Speak with Courtyard Resident</span>
-                </div>
-              )}
-              <span className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow mb-1 whitespace-nowrap transition-opacity duration-200 ${
-                isNearCourtyardResident ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-              }`}>
-                Courtyard Resident
-              </span>
+            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform duration-200 group-hover:scale-105">
+              <div className="absolute bottom-full mb-1 flex flex-col items-center pointer-events-none">
+                {isNearCourtyardResident && (
+                  <div className="mb-1 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded text-[11px] font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap pointer-events-auto">
+                    <span className="text-[#d8a86a] font-bold">[G]</span>
+                    <span>Speak with Courtyard Resident</span>
+                  </div>
+                )}
+                <span
+                  className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow whitespace-nowrap transition-opacity duration-200 ${
+                    isNearCourtyardResident ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  Courtyard Resident
+                </span>
+              </div>
               <img
                 src="/sprite-indus-courtyard.png?v=3"
                 alt="Harappan Courtyard Resident"
-                className="h-[82px] sm:h-[95px] md:h-[109px] w-auto object-contain block select-none"
+                className="h-[68px] sm:h-[75px] md:h-[84px] w-auto object-contain block select-none"
               />
             </div>
           </div>
