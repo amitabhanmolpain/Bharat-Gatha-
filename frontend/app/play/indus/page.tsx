@@ -1370,7 +1370,7 @@ export default function IndusValleyGameScreen() {
               <img
                 src={`/sprite-pedestrian-walk-${carrierFrame}.png?v=2`}
                 alt="Harappan Water Carrier Walking"
-                className="h-[68px] sm:h-[72px] md:h-[76px] w-auto object-contain block select-none"
+                className="h-[96px] sm:h-[108px] md:h-[118px] w-auto object-contain block select-none"
               />
             </div>
           </div>
@@ -1497,7 +1497,7 @@ export default function IndusValleyGameScreen() {
               <img
                 src={`/sprite-pedestrian-walk-${carrierFrame}.png?v=2`}
                 alt="Drain Inspector Walking"
-                className="h-[68px] sm:h-[72px] md:h-[76px] w-auto object-contain block select-none"
+                className="h-[96px] sm:h-[108px] md:h-[118px] w-auto object-contain block select-none"
               />
             </div>
           </div>
