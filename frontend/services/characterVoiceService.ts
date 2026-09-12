@@ -24,6 +24,24 @@ export interface CharacterVoiceState {
 
 type CharacterVoiceListener = (state: CharacterVoiceState) => void;
 
+type ExternalVoiceStopper = () => void;
+const externalVoiceStoppers = new Set<ExternalVoiceStopper>();
+
+export const registerExternalVoiceStopper = (stopper: ExternalVoiceStopper): (() => void) => {
+  externalVoiceStoppers.add(stopper);
+  return () => {
+    externalVoiceStoppers.delete(stopper);
+  };
+};
+
+export const notifyExternalVoiceStoppers = (): void => {
+  externalVoiceStoppers.forEach((stopper) => {
+    try {
+      stopper();
+    } catch (e) {}
+  });
+};
+
 class CharacterVoiceManager {
   private activeAudio: HTMLAudioElement | null = null;
   private audioCache: Map<string, string> = new Map();
@@ -79,7 +97,7 @@ class CharacterVoiceManager {
   }
 
   /**
-   * Stop any active character dialogue audio immediately.
+   * Stop any active character dialogue audio immediately and notify all registered voice stoppers.
    */
   public stopCharacterDialogue(): void {
     this.currentSessionId++;
@@ -89,6 +107,7 @@ class CharacterVoiceManager {
       this.abortController = null;
     }
     this.stopCharacterDialogueInternal(true);
+    notifyExternalVoiceStoppers();
   }
 
   private stopCharacterDialogueInternal(resetState: boolean): void {
@@ -103,7 +122,6 @@ class CharacterVoiceManager {
       try {
         audioToStop.pause();
         audioToStop.currentTime = 0;
-        audioToStop.src = "";
       } catch (e) {}
     }
     if (resetState) {
@@ -281,6 +299,7 @@ class CharacterVoiceManager {
 
     // 3. Stop currently playing audio or speech synthesis immediately
     this.stopCharacterDialogueInternal(false);
+    notifyExternalVoiceStoppers();
 
     this.updateState({
       isLoading: true,
@@ -538,6 +557,14 @@ export const playCharacterDialogue = (options: CharacterDialogueOptions) =>
   characterVoice.playCharacterDialogue(options);
 
 export const stopCharacterDialogue = () =>
+  characterVoice.stopCharacterDialogue();
+
+/**
+ * Universal voice stop function for Bharat Gatha.
+ * Halts HTML audio, browser speechSynthesis, aborts in-flight TTS,
+ * and clears active voice states across all character and narrator channels.
+ */
+export const stopAllCharacterVoice = () =>
   characterVoice.stopCharacterDialogue();
 
 export const getCharacterVoiceState = () =>

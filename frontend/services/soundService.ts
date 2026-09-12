@@ -9,6 +9,8 @@
 class SoundEffectsService {
   private ctx: AudioContext | null = null;
   private isMuted: boolean = false;
+  private lastClickTime: number = 0;
+  private lastHoverTime: number = 0;
 
   private getContext(): AudioContext | null {
     if (typeof window === "undefined") return null;
@@ -44,6 +46,9 @@ class SoundEffectsService {
    */
   public playKeyboardClick(pitch: number = 1.0) {
     if (this.isMuted) return;
+    const nowMs = Date.now();
+    if (nowMs - this.lastClickTime < 50) return;
+    this.lastClickTime = nowMs;
     try {
       const ctx = this.getContext();
       if (!ctx) return;
@@ -118,6 +123,9 @@ class SoundEffectsService {
    */
   public playButtonHover() {
     if (this.isMuted) return;
+    const nowMs = Date.now();
+    if (nowMs - this.lastHoverTime < 40) return;
+    this.lastHoverTime = nowMs;
     try {
       const ctx = this.getContext();
       if (!ctx) return;

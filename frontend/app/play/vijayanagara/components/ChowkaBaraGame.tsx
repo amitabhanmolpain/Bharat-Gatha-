@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import AccessibleModal from "./AccessibleModal";
+import GameIcon from "./GameIcon";
 import { soundFx } from "../../../../services/soundService";
-import { playNarration, stopNarration } from "../../../../services/narratorService";
+import { playNarration, stopAllCharacterVoice } from "../../../../services/narratorService";
 
 interface ChowkaBaraGameProps {
   isOpen: boolean;
@@ -28,7 +29,7 @@ export default function ChowkaBaraGame({
   const [gameStatus, setGameStatus] = useState<"playing" | "player_won" | "ai_won">("playing");
   const [gameAttempts, setGameAttempts] = useState(attempts);
   const [dialogueMessage, setDialogueMessage] = useState<string>(
-    "Roll the four sacred cowrie shells to advance your carved stone pawns toward the central sanctuary."
+    "Roll the four cowrie shells to advance your pawns toward the center."
   );
 
   // Timer references for clean cancellation
@@ -54,7 +55,7 @@ export default function ChowkaBaraGame({
     setIsRolling(false);
     setGameStatus("playing");
     setDialogueMessage(
-      "Roll the four sacred cowrie shells to advance your carved stone pawns toward the central sanctuary."
+      "Roll the four cowrie shells to advance your pawns toward the center."
     );
   }, []);
 
@@ -62,18 +63,18 @@ export default function ChowkaBaraGame({
   useEffect(() => {
     if (!isOpen) {
       clearAllTimers();
-      stopNarration();
+      stopAllCharacterVoice();
       resetMatchState();
     } else {
       // Intro narration for Chowka Bara match
       playNarration(
-        "Roll the four sacred cowrie shells to advance your carved stone pawns toward the central sanctuary.",
+        "Roll the four cowrie shells to advance your pawns toward the center.",
         { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
       );
     }
     return () => {
       clearAllTimers();
-      stopNarration();
+      stopAllCharacterVoice();
     };
   }, [isOpen, clearAllTimers, resetMatchState]);
 
@@ -130,17 +131,17 @@ export default function ChowkaBaraGame({
           const nextAtt = prevAtt + 1;
           const endMsg =
             nextAtt >= 2
-              ? "Vidyaranya smiles warmly: 'A true leader is not measured by winning every board game, but by their resilience and inner purpose. You have proven your spirit.'"
-              : "Vidyaranya's pawns reach the sanctuary first. 'A good strategist learns from each turn of fortune. Try again, traveler!'";
+              ? "Vidyaranya smiles warmly: 'True leadership comes from resilience. You have proven your spirit.'"
+              : "Vidyaranya's pawns reach the sanctuary first. 'A wise strategist learns from each turn. Try again!'";
           setDialogueMessage(endMsg);
           playNarration(endMsg, { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true });
           return nextAtt;
         });
       } else {
         setCurrentTurn("player");
-        const aiMsg = `Vidyaranya rolled ${roll}. Your turn to cast the cowries!`;
+        const aiMsg = `Vidyaranya rolled ${roll}. Your turn to cast!`;
         setDialogueMessage(aiMsg);
-        playNarration(`Vidyaranya casts the shells and rolls a ${roll}. Your turn to cast!`, {
+        playNarration(`Vidyaranya rolled a ${roll}. Your turn to cast!`, {
           speaker: "ratan",
           pace: 0.88,
           language_code: "en-IN",
@@ -195,8 +196,8 @@ export default function ChowkaBaraGame({
           moved = true;
         } else {
           nextPieces = [p1, p2];
-          setDialogueMessage(`Rolled ${roll}! A leap too far — steady your next roll.`);
-          playNarration(`Rolled a ${roll}! A leap beyond the sanctuary — steady your next cast.`, {
+          setDialogueMessage(`Rolled ${roll}! A leap beyond the sanctuary — try again next turn.`);
+          playNarration(`Rolled a ${roll}! A leap beyond the sanctuary — try again next turn.`, {
             speaker: "ratan",
             pace: 0.88,
             language_code: "en-IN",
@@ -214,10 +215,10 @@ export default function ChowkaBaraGame({
         if (nextPieces[0] === 12 && nextPieces[1] === 12) {
           setGameStatus("player_won");
           setDialogueMessage(
-            "Splendid match! You navigated the stone grid with patience and strategic grace."
+            "Splendid match! You navigated the board with patience and skill."
           );
           playNarration(
-            "Splendid match! You navigated the stone grid with patience and strategic grace, winning the blessing of Sage Vidyaranya!",
+            "Splendid match! You navigated the board with patience and skill, winning Vidyaranya's blessing!",
             { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
           );
           return;
@@ -228,10 +229,10 @@ export default function ChowkaBaraGame({
         if (moved) {
           const rollSpoken =
             roll === 8
-              ? "Ashta! You rolled an eight! Supreme fortune smiles upon your cast!"
+              ? "Ashta! You rolled an eight! Your pawn leaps forward."
               : roll === 4
-              ? "Chowka! You rolled a four! Your stone pawn surges forward!"
-              : `You rolled a ${roll}! Your golden pawn advances.`;
+              ? "Chowka! You rolled a four! Your pawn surges ahead."
+              : `You rolled a ${roll}! Your pawn advances.`;
           setDialogueMessage(`You rolled ${roll}! Vidyaranya observes and prepares his counter-move.`);
           playNarration(rollSpoken, { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true });
         }
@@ -247,15 +248,16 @@ export default function ChowkaBaraGame({
 
   const handleRestartMatch = () => {
     clearAllTimers();
-    stopNarration();
+    stopAllCharacterVoice();
     resetMatchState();
   };
 
   const handleFinish = () => {
     clearAllTimers();
+    stopAllCharacterVoice();
     const won = gameStatus === "player_won";
     playNarration(
-      "Shabash, traveler! You carry the blessing of Sage Vidyaranya. Cross the Tungabhadra river to enter the golden bazaars of Hampi!",
+      "Well done, traveler! You carry Vidyaranya's blessing. Cross the Tungabhadra to enter Hampi Bazaar!",
       { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
     );
     onComplete(won, gameAttempts);
@@ -263,7 +265,7 @@ export default function ChowkaBaraGame({
 
   const handleModalClose = () => {
     clearAllTimers();
-    stopNarration();
+    stopAllCharacterVoice();
     resetMatchState();
     onClose();
   };
@@ -296,8 +298,8 @@ export default function ChowkaBaraGame({
       {/* Top Header */}
       <div className="flex items-center justify-between pb-3 border-b-2 border-[#5a4d3f] mb-4">
         <div className="flex items-center gap-2.5">
-          <div className="w-10 h-10 rounded-xl bg-[#3d3328] border border-[#d4a359] flex items-center justify-center text-xl shadow-inner">
-            🎲
+          <div className="w-10 h-10 rounded-xl bg-[#3d3328] border border-[#d4a359] flex items-center justify-center shadow-inner">
+            <GameIcon name="sage" size={20} className="text-[#d4a359]" />
           </div>
           <div>
             <div className="text-[10px] font-mono text-[#d4a359] uppercase tracking-[0.2em]">

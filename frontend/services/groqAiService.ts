@@ -78,7 +78,7 @@ export async function askHistoricalQuestionDetailed(
   } catch (error: any) {
     console.warn("Groq/LangChain Ask Question notice:", error?.message || error);
     return {
-      answer: "Mere aaka! The magical astral scrolls are aligning with this historical era. Please ask me again in just a moment!",
+      answer: "I am checking the ancient chronicles. Please ask me again in a moment!",
       behavior: "normal"
     };
   }

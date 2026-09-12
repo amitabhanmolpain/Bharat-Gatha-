@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { playNarration, stopNarration } from "../../../services/narratorService";
-import { playCharacterDialogue, stopCharacterDialogue } from "../../../services/characterVoiceService";
+import { playCharacterDialogue, stopCharacterDialogue, stopAllCharacterVoice } from "../../../services/characterVoiceService";
 import Link from "next/link";
 import {
   VijayanagaraStage,
@@ -29,7 +29,7 @@ import DialoguePanel from "../../components/DialoguePanel";
 import NarratorSubtitle from "../../../components/NarratorSubtitle";
 import GameIcon from "./components/GameIcon";
 
-export const PLAYER_VISUAL_SCALE = 1.75;
+const PLAYER_VISUAL_SCALE = 1.75;
 
 export default function VijayanagaraGameScreen() {
   const [isLoading, setIsLoading] = useState(true);
@@ -98,6 +98,7 @@ export default function VijayanagaraGameScreen() {
   // Modal UI States
   const [isJournalOpen, setIsJournalOpen] = useState(false);
   const [showVidyaranyaDialogue, setShowVidyaranyaDialogue] = useState(false);
+  const [isVidyaranyaVoiceActive, setIsVidyaranyaVoiceActive] = useState(false);
   const [dialogueTopic, setDialogueTopic] = useState<"intro" | "founders" | "region" | "vidyaranya">("intro");
   const [showChowkaBaraModal, setShowChowkaBaraModal] = useState(false);
   const [showBlessingCutscene, setShowBlessingCutscene] = useState(false);
@@ -191,9 +192,7 @@ export default function VijayanagaraGameScreen() {
     if (!isLoading && scene === "anegundi_river_crossing" && !hasPlayedIntroNarrationRef.current) {
       hasPlayedIntroNarrationRef.current = true;
       const introText =
-        "You have entered the year 1336 AD, the dawn of the Vijayanagara Empire.\n\n" +
-        "Before the grand city of Hampi rose in stone, it all began here at ancient Anegundi, along the sacred Tungabhadra River.\n\n" +
-        "Cross the waters and seek Sage Vidyaranya, traveler. The foundation of a legendary kingdom awaits your steps.";
+        "The year is 1336 AD. Vijayanagara begins here at Anegundi beside the Tungabhadra River. Cross the river and speak with Sage Vidyaranya.";
       const timer = setTimeout(() => {
         setShowOpeningAtmosphere(false);
         playNarration(introText, { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
@@ -208,8 +207,7 @@ export default function VijayanagaraGameScreen() {
     if (!isLoading && stage === 2 && !hasPlayedStage2NarrationRef.current) {
       hasPlayedStage2NarrationRef.current = true;
       const text =
-        "The year is 1520 AD, the golden age of Emperor Krishnadevaraya.\n\n" +
-        "The vibrant Hampi Bazaar beckons with exotic silks and gemstones, but whispers speak of a missing merchant's ledger.";
+        "The year is 1520 AD. Welcome to Hampi Bazaar during the golden age. Search the market and find the missing merchant's ledger.";
       const timer = setTimeout(() => {
         setShowStage2OpeningBanner(false);
         playNarration(text, { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
@@ -223,8 +221,7 @@ export default function VijayanagaraGameScreen() {
     if (!isLoading && stage === 3 && !hasPlayedStage3NarrationRef.current) {
       hasPlayedStage3NarrationRef.current = true;
       const text =
-        "The year is 1540 AD, before the sacred Vittala Temple.\n\n" +
-        "The magnificent Stone Chariot and musical pillars echo ancient melodies. Uncover the acoustic resonance within.";
+        "The year is 1540 AD. You stand before the Vittala Temple. Explore the Stone Chariot and listen to the musical pillars.";
       const timer = setTimeout(() => {
         setShowStage3OpeningBanner(false);
         playNarration(text, { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
@@ -238,8 +235,7 @@ export default function VijayanagaraGameScreen() {
     if (!isLoading && stage === 4 && !hasPlayedStage4NarrationRef.current) {
       hasPlayedStage4NarrationRef.current = true;
       const text =
-        "The year is 1565 AD, atop the grand platform of Mahanavami Dibba.\n\n" +
-        "As fateful clouds gather over the empire, assemble the scattered ledger fragments and safeguard the eternal memory of Vijayanagara.";
+        "The year is 1565 AD at Mahanavami Dibba. Find the last ledger fragment to preserve the story of Vijayanagara.";
       const timer = setTimeout(() => {
         setShowStage4OpeningBanner(false);
         playNarration(text, { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
@@ -254,29 +250,43 @@ export default function VijayanagaraGameScreen() {
       let speech = "";
       if (dialogueTopic === "intro") {
         speech =
-          "Khamma, traveler. Welcome to the granite crags of Anegundi. Here on the northern banks of the Tungabhadra, history gathers its breath before surging forward. Sit with me. Let us discuss the purpose of an empire, or test your strategic patience upon the Chowka Bara board.";
+          "Welcome to Anegundi. This town stands beside the Tungabhadra River. It is an important place in Vijayanagara's history. Before you travel south, let us talk. A great empire will soon rise across the river. I can also teach you a game called Chowka Bara.";
       } else if (dialogueTopic === "founders") {
         speech =
-          "Harihara and Bukka are two brothers of noble resolve. In a period of turmoil across the Deccan, they chose not to yield to fragmentation, but to build a haven where our traditions, arts, and trade could flourish unhindered.";
+          "Harihara and Bukka founded Vijayanagara in 1336. The two brothers wanted to protect our culture, arts, and trade. They built a strong and united kingdom.";
       } else if (dialogueTopic === "region") {
         speech =
-          "Observe these colossal boulders and the torrential Tungabhadra river. Nature crafted an invincible fortress long before our stonemasons laid a single chisel. The granite ramparts shield our people, while the fertile valley provides boundless sustenance.";
+          "These huge granite rocks and the river protect us like a natural fort. Enemy armies cannot enter easily. The river valley also gives good soil and water.";
       } else if (dialogueTopic === "vidyaranya") {
         speech =
-          "Thrones rise and fall, and armies disperse like mist. But knowledge, music, craftsmanship, and dharma endure across ages. My role is to ensure that as this empire grows in wealth and stone, it never forgets its founding soul.";
+          "Kings and armies pass away, but knowledge and culture last forever. I guided the founders to build temples, support learning, and protect justice.";
       }
 
       if (speech) {
-        playNarration(speech, { speaker: "ratan", pace: 0.86, language_code: "en-IN", hideSubtitle: true });
+        setIsVidyaranyaVoiceActive(true);
+        playNarration(speech, {
+          speaker: "ratan",
+          pace: 0.88,
+          language_code: "en-IN",
+          hideSubtitle: true,
+          onStart: () => setIsVidyaranyaVoiceActive(true),
+          onEnd: () => setIsVidyaranyaVoiceActive(false),
+          onError: () => setIsVidyaranyaVoiceActive(false),
+        });
       }
+    } else {
+      setIsVidyaranyaVoiceActive(false);
     }
+    return () => {
+      stopAllCharacterVoice();
+      setIsVidyaranyaVoiceActive(false);
+    };
   }, [showVidyaranyaDialogue, dialogueTopic]);
 
   // Cleanup narration on component unmount
   useEffect(() => {
     return () => {
-      stopNarration();
-      stopCharacterDialogue();
+      stopAllCharacterVoice();
     };
   }, []);
 
@@ -664,6 +674,9 @@ export default function VijayanagaraGameScreen() {
     // Re-entrancy guard
     if (isTransitioning) return;
 
+    stopAllCharacterVoice();
+    setIsVidyaranyaVoiceActive(false);
+
     setIsTransitioning(true);
     setTransitionTitle(title);
     setTransitionDesc(desc);
@@ -1002,10 +1015,12 @@ export default function VijayanagaraGameScreen() {
         setIsJournalOpen((prev) => !prev);
       }
 
-      // Handle Escape Key to close modals
+      // Handle Escape Key to close modals & immediately stop voice
       if (key === "escape") {
+        stopAllCharacterVoice();
         setIsJournalOpen(false);
         setShowVidyaranyaDialogue(false);
+        setShowJollyDialogue(false);
         setShowCoracleNotice(false);
         setShowGemAssessorDialogue(false);
         setShowToymakerDialogue(false);
@@ -1854,71 +1869,71 @@ export default function VijayanagaraGameScreen() {
                 let customOptions: Array<{ id: number; text: string }> = [];
 
                 if (scene === "anegundi_river_crossing") {
-                  speechText = "Ah, welcome traveller! I am Jolly Bhai! Look around — before there was the grand empire of Hampi, there was Anegundi, nestled beside the mighty Tungabhadra River. Seek out Sage Vidyaranya at the Old Fort ruins to learn the true origin of this realm!";
+                  speechText = "Welcome, friend! I am Jolly Bhai. Before grand Hampi, there was Anegundi beside the Tungabhadra River. Find Sage Vidyaranya at the Old Fort to discover how it all began!";
                   customOptions = [
                     { id: 1, text: "Who was Sage Vidyaranya?" },
-                    { id: 2, text: "How was the Vijayanagara Empire founded?" },
-                    { id: 3, text: "How do we cross to Hampi Bazaar?" }
+                    { id: 2, text: "How was the empire founded?" },
+                    { id: 3, text: "How do we cross the river?" }
                   ];
                 } else if (scene === "anegundi_old_fort") {
-                  speechText = "Sage Vidyaranya holds ancient wisdom. Ask him about the founding of Vijayanagara and the sacred Chowka Bara match!";
+                  speechText = "Sage Vidyaranya holds ancient wisdom. Ask him about founding Vijayanagara, and play a match of Chowka Bara!";
                   customOptions = [
-                    { id: 1, text: "What is the secret of Chowka Bara?" },
-                    { id: 2, text: "Tell me about the brothers Harihara and Bukka." }
+                    { id: 1, text: "What is Chowka Bara?" },
+                    { id: 2, text: "Who were Harihara and Bukka?" }
                   ];
                 } else if (scene === "gem_traders_row") {
-                  speechText = "Ah, the gem traders of Hampi Bazaar! Listen closely to their gossip — they whisper of a missing merchant who carried secret royal ledgers!";
+                  speechText = "Welcome to Hampi Bazaar! The gem merchants are whispering about a missing royal scribe who hid secret ledgers.";
                   customOptions = [
-                    { id: 1, text: "Why were gems sold on open streets in Hampi?" },
-                    { id: 2, text: "Where did the missing merchant go?" }
+                    { id: 1, text: "Why were gems sold on the street?" },
+                    { id: 2, text: "Where is the missing merchant?" }
                   ];
                 } else if (scene === "toymaker_stall") {
                   speechText = hasFirstLedgerFragment
-                    ? "Aha! You found the first ledger fragment! The merchant was hiding crucial economic records beneath these innocent toys!"
-                    : "Inspect the wooden Channapatna toys closely! The missing merchant hid a crucial clue inside one of them!";
+                    ? "You found the first ledger fragment! The merchant hid key records inside these wooden toys."
+                    : "Check these wooden Channapatna toys closely! The missing merchant hid a secret clue inside one of them.";
                   customOptions = [
-                    { id: 1, text: "Tell me about traditional Channapatna toy making." },
-                    { id: 2, text: "What is recorded on the first ledger fragment?" }
+                    { id: 1, text: "How are Channapatna toys made?" },
+                    { id: 2, text: "What does the first fragment say?" }
                   ];
                 } else if (scene === "stone_chariot_entry" || scene === "musical_pillars") {
                   speechText = isMusicalPillarsComplete
-                    ? "Brilliant melody, mere aaka! The pillars sang the ancient raga and unlocked the second fragment! We are close to solving the mystery!"
-                    : "Magnificent! The Stone Chariot of Vittala Temple... built during the golden age under King Krishnadevaraya. The musical pillars nearby hold the next key!";
+                    ? "Great job! The musical pillars sang their notes and revealed the second fragment. We are close to the truth!"
+                    : "This is the Stone Chariot of Vittala Temple from Emperor Krishnadevaraya's golden age. The musical pillars hold your next clue!";
                   customOptions = [
-                    { id: 1, text: "How do the musical pillars produce notes?" },
-                    { id: 2, text: "Who was Emperor Krishnadevaraya?" }
+                    { id: 1, text: "How do musical pillars work?" },
+                    { id: 2, text: "Who was Krishnadevaraya?" }
                   ];
                 } else if (scene === "hazara_rama_walls") {
-                  speechText = "Look at the bas-relief carvings on these temple walls! They tell the legendary epics of the Ramayana in carved stone!";
+                  speechText = "Look at the stone carvings on these walls! They tell stories from the Ramayana epic in beautiful detail.";
                   customOptions = [
-                    { id: 1, text: "Why was Hazara Rama the private temple of the kings?" },
-                    { id: 2, text: "Tell me about the royal processions depicted here." }
+                    { id: 1, text: "Why was this temple special?" },
+                    { id: 2, text: "What do the carvings show?" }
                   ];
                 } else if (scene === "musicians_warning") {
-                  speechText = "The court musicians whisper warnings of gathering armies... Our journey leads to the Great Mahanavami Dibba where the fate of Vijayanagara hangs in the balance.";
+                  speechText = "The royal musicians warn of gathering armies. Head to Mahanavami Dibba where the fate of the empire awaits.";
                   customOptions = [
-                    { id: 1, text: "Why are dark clouds gathering over Vijayanagara?" },
-                    { id: 2, text: "What happened at Mahanavami Dibba?" }
+                    { id: 1, text: "Why is danger coming?" },
+                    { id: 2, text: "What is Mahanavami Dibba?" }
                   ];
                 } else if (scene === "mahanavami_celebration") {
                   speechText = isLedgerAssembled
-                    ? "The full truth is revealed! The royal merchant foresaw the coming conflict and hid the empire's heritage to preserve it forever!"
-                    : "The grand Mahanavami platform... here the King reviewed royal troops, dancers, and envoys at the zenith of the empire's power!";
+                    ? "The truth is revealed! Merchant Ramayya hid these records so Vijayanagara's memory and culture would never be lost."
+                    : "This is the grand Mahanavami platform. Here the King inspected troops, artists, and guests during the sacred festival!";
                   customOptions = [
-                    { id: 1, text: "What was the Mahanavami festival?" },
-                    { id: 2, text: "What was the royal merchant trying to save?" }
+                    { id: 1, text: "What was the festival like?" },
+                    { id: 2, text: "What was the merchant protecting?" }
                   ];
                 } else if (scene === "closing_reflection") {
-                  speechText = "Though time passes and kingdoms rise and fall, the story of Vijayanagara remains eternal in our hearts. Thank you for walking this path with me!";
+                  speechText = "Empires rise and fall, but the art, music, and spirit of Vijayanagara live forever. Thank you for walking this journey with me!";
                   customOptions = [
-                    { id: 1, text: "What is the ultimate legacy of Vijayanagara?" },
-                    { id: 2, text: "Tell me about the ruins of Hampi today." }
+                    { id: 1, text: "What is Vijayanagara's legacy?" },
+                    { id: 2, text: "What can we see in Hampi today?" }
                   ];
                 } else {
-                  speechText = "Greetings, traveller! I am Jolly Bhai. Ask me anything about the Vijayanagara Empire, Hampi, or its rich heritage!";
+                  speechText = "Hello, traveler! I am Jolly Bhai. Ask me anything about Vijayanagara, Hampi, and its glorious history!";
                   customOptions = [
-                    { id: 1, text: "Tell me about Vijayanagara architecture." },
-                    { id: 2, text: "Who were the great rulers of Vijayanagara?" }
+                    { id: 1, text: "Tell me about Vijayanagara art." },
+                    { id: 2, text: "Who were the great rulers?" }
                   ];
                 }
 
@@ -1928,6 +1943,7 @@ export default function VijayanagaraGameScreen() {
                 if (isShaking) {
                   setHeardClueScenes((prev) => [...prev, scene]);
                 }
+                stopAllCharacterVoice();
                 playCharacterDialogue({
                   character: "jolly",
                   text: speechText,
@@ -2152,22 +2168,25 @@ export default function VijayanagaraGameScreen() {
                 </div>
 
                 <button
-                  onClick={() => setShowKeeperDialogue(false)}
+                  onClick={() => {
+                    stopAllCharacterVoice();
+                    setShowKeeperDialogue(false);
+                  }}
                   className="text-[#a89985] hover:text-[#f6ede0] text-sm bg-[#2b2520] hover:bg-[#3d3329] border border-[#5a4d3f] px-3 py-1.5 rounded-lg transition-all cursor-pointer"
                 >
                   ✕ Close
                 </button>
               </div>
 
-              <div className="p-4 rounded-xl bg-[#26201b] border border-[#473d32] text-sm font-serif leading-relaxed text-[#eedfc8] mb-5 space-y-3">
+              <div className="p-4 rounded-xl bg-[#26201b] border border-[#473d32] text-sm font-serif leading-relaxed text-[#eedfc8] mb-5 space-y-2">
                 <p className="font-semibold text-[#d4a359]">
                   &ldquo;You have walked the full path of our ancestors, traveler.&rdquo;
                 </p>
                 <p className="text-xs text-[#d6c7b2]">
-                  &ldquo;You began at the humble cradle of Anegundi and received Vidyaranya&apos;s blessing upon the Chowka Bara board. You walked the global bazaar of gems and discovered the merchant&apos;s secret within a craftsman&apos;s toy. You resonated the musical pillars of Vittala under Krishnadevaraya&apos;s golden age, and witnessed the solemn memories of Mahanavami Dibba.&rdquo;
+                  &ldquo;You began at Anegundi, explored the gem bazaar, unlocked the musical pillars, and stood atop Mahanavami Dibba.&rdquo;
                 </p>
                 <p className="text-xs text-[#eedfc8] italic">
-                  &ldquo;Merchant Ramayya was right: Gold is forgotten, but stories, music, art, crafts, and heritage survive forever. Receive our sovereign seal — you are now a Master Chronicler of Vijayanagara.&rdquo;
+                  &ldquo;Merchant Ramayya was right: Gold may fade, but knowledge, art, and stories survive forever. You are now a Master Chronicler of Vijayanagara.&rdquo;
                 </p>
               </div>
 
@@ -2176,10 +2195,13 @@ export default function VijayanagaraGameScreen() {
                   ✦ Final Keepsake & All Journal Inscriptions Unlocked
                 </div>
                 <button
-                  onClick={handleCompleteCampaignFinale}
+                  onClick={() => {
+                    stopAllCharacterVoice();
+                    handleCompleteCampaignFinale();
+                  }}
                   className="bg-gradient-to-r from-[#8b6528] to-[#d4a359] hover:from-[#a07430] hover:to-[#e5b56a] text-[#141210] font-serif font-bold px-6 py-2.5 rounded-xl shadow-md transition-all cursor-pointer text-xs uppercase tracking-wider"
                 >
-                  Accept Gandaberunda Seal & Complete Campaign ✦
+                  Accept Gandaberunda Seal ✦
                 </button>
               </div>
             </div>
@@ -2189,7 +2211,10 @@ export default function VijayanagaraGameScreen() {
         {/* --- CAMPAIGN COMPLETION FINAL KEEPSAKE MODAL --- */}
         <CampaignCompletionModal
           isOpen={showCampaignCompletionModal}
-          onClose={() => setShowCampaignCompletionModal(false)}
+          onClose={() => {
+            stopAllCharacterVoice();
+            setShowCampaignCompletionModal(false);
+          }}
           onOpenJournal={() => setIsJournalOpen(true)}
         />
 
@@ -2213,22 +2238,25 @@ export default function VijayanagaraGameScreen() {
                 </div>
 
                 <button
-                  onClick={() => setShowHazaraRamaModal(false)}
+                  onClick={() => {
+                    stopAllCharacterVoice();
+                    setShowHazaraRamaModal(false);
+                  }}
                   className="text-[#a89985] hover:text-[#f6ede0] text-sm bg-[#2b2520] hover:bg-[#3d3329] border border-[#5a4d3f] px-3 py-1.5 rounded-lg transition-all cursor-pointer"
                 >
                   ✕ Close
                 </button>
               </div>
 
-              <div className="p-4 rounded-xl bg-[#26201b] border border-[#473d32] text-sm font-serif leading-relaxed text-[#eedfc8] mb-5 space-y-3">
+              <div className="p-4 rounded-xl bg-[#26201b] border border-[#473d32] text-sm font-serif leading-relaxed text-[#eedfc8] mb-5 space-y-2">
                 <p className="font-semibold text-[#d4a359]">
                   Continuous Epic Stone Chronicle
                 </p>
                 <p className="text-xs text-[#d6c7b2]">
-                  The outer walls of Hazara Rama Temple present thousands of continuous stone friezes. Lower tiers depict royal war elephants, dancing troupes with sticks (Kolata), and cavalry charges, while upper panels narrate the entire Ramayana.
+                  The outer walls of Hazara Rama Temple present thousands of stone friezes. Lower rows depict royal elephants and dancers, while upper panels narrate the entire Ramayana epic.
                 </p>
                 <p className="text-xs text-[#eedfc8] italic">
-                  &ldquo;A king’s valor may conquer boundaries, but eternal devotion and righteous rule outlive all conquerors.&rdquo;
+                  &ldquo;A king&apos;s valor may conquer lands, but devotion and righteous rule outlive all conquerors.&rdquo;
                 </p>
               </div>
 
@@ -2237,7 +2265,10 @@ export default function VijayanagaraGameScreen() {
                   ✦ Hazara Rama Inscription added to Palm-Leaf Journal
                 </div>
                 <button
-                  onClick={() => setShowHazaraRamaModal(false)}
+                  onClick={() => {
+                    stopAllCharacterVoice();
+                    setShowHazaraRamaModal(false);
+                  }}
                   className="bg-[#2b2520] hover:bg-[#3d3329] border border-[#5a4d3f] text-[#f6ede0] font-serif px-6 py-2 rounded-xl text-xs transition-all cursor-pointer"
                 >
                   Return to Courtyard
@@ -2265,7 +2296,10 @@ export default function VijayanagaraGameScreen() {
                 </div>
 
                 <button
-                  onClick={() => setShowRaghavendraDialogue(false)}
+                  onClick={() => {
+                    stopAllCharacterVoice();
+                    setShowRaghavendraDialogue(false);
+                  }}
                   className="text-[#a89985] hover:text-[#f6ede0] text-sm bg-[#2b2520] hover:bg-[#3d3329] border border-[#5a4d3f] px-3 py-1.5 rounded-lg transition-all cursor-pointer"
                 >
                   ✕ Close
@@ -2276,10 +2310,10 @@ export default function VijayanagaraGameScreen() {
                 {raghavendraTopic === "king" && (
                   <div>
                     <p className="mb-2 font-bold text-[#d4a359]">
-                      The Era of Emperor Krishnadevaraya
+                      Emperor Krishnadevaraya
                     </p>
                     <p className="text-xs leading-relaxed text-[#d6c7b2]">
-                      &ldquo;Under Krishnadevaraya, the empire achieved its golden zenith. He was not only a conqueror of invincible fortitude, but an exquisite poet who composed the Amuktamalyada. He surrounded his court with the Ashtadiggajas — the eight celestial literary giants.&rdquo;
+                      &ldquo;Krishnadevaraya led our empire to its golden age. He was a brave leader, a fine poet, and a great patron of scholars and artists.&rdquo;
                     </p>
                   </div>
                 )}
@@ -2287,10 +2321,10 @@ export default function VijayanagaraGameScreen() {
                 {raghavendraTopic === "chariot" && (
                   <div>
                     <p className="mb-2 font-bold text-[#d4a359]">
-                      The Monolithic Stone Chariot
+                      The Stone Chariot
                     </p>
                     <p className="text-xs leading-relaxed text-[#d6c7b2]">
-                      &ldquo;Behold the Garuda shrine before us. It was sculpted with revolving granite wheels and elephant balustrades. Travelers from every sea believe it to be a magical chariot that descended directly from the heavens.&rdquo;
+                      &ldquo;This Garuda shrine is carved from granite with turning stone wheels. Travelers from all lands marvel at its beauty.&rdquo;
                     </p>
                   </div>
                 )}
@@ -2298,10 +2332,10 @@ export default function VijayanagaraGameScreen() {
                 {raghavendraTopic === "pillars" && (
                   <div>
                     <p className="mb-2 font-bold text-[#d4a359]">
-                      The 56 Resonant Musical Pillars
+                      The 56 Musical Pillars
                     </p>
                     <p className="text-xs leading-relaxed text-[#d6c7b2]">
-                      &ldquo;Inside the Ranga Mandapa, each pillar cluster is carved from resonant monolithic granite. When struck with wooden mallets, they ring out the sacred notes of Sa-Re-Ga-Ma-Pa. Step inside and test your ears against their harmony!&rdquo;
+                      &ldquo;Each pillar cluster in the Ranga Mandapa is carved from solid stone. When tapped gently, they ring out musical notes. Test them yourself!&rdquo;
                     </p>
                   </div>
                 )}
@@ -2309,13 +2343,13 @@ export default function VijayanagaraGameScreen() {
                 {raghavendraTopic === "warning" && (
                   <div>
                     <p className="mb-2 font-bold text-[#c86446]">
-                      ⚠️ The Musician&apos;s Solemn Warning
+                      The Musician&apos;s Warning
                     </p>
                     <p className="text-xs leading-relaxed text-[#d6c7b2] mb-2">
-                      &ldquo;You hold the second fragment of Ramayya&apos;s ledger. His notes confirm that the final ledger fragment was hidden during the imperial celebrations atop Mahanavami Dibba.&rdquo;
+                      &ldquo;You have found the second ledger fragment. Ramayya hid the final part at Mahanavami Dibba.&rdquo;
                     </p>
                     <p className="text-xs leading-relaxed text-[#eedfc8] italic">
-                      &ldquo;Listen carefully, traveler: our golden age was glorious, but prosperity invites envy. A great shadow approaches our borders in 1565 AD. Your journey ahead is no longer about wealth, but about safeguarding the eternal memory of our people.&rdquo;
+                      &ldquo;Danger approaches our borders in 1565. Your mission is to protect the memory and culture of our people.&rdquo;
                     </p>
                   </div>
                 )}
@@ -2330,7 +2364,7 @@ export default function VijayanagaraGameScreen() {
                       : "bg-[#201c18] border-[#383027] text-[#a89985] hover:text-[#f6ede0]"
                   }`}
                 >
-                  👑 The Golden King
+                  The King
                 </button>
                 <button
                   onClick={() => setRaghavendraTopic("chariot")}
@@ -2340,7 +2374,7 @@ export default function VijayanagaraGameScreen() {
                       : "bg-[#201c18] border-[#383027] text-[#a89985] hover:text-[#f6ede0]"
                   }`}
                 >
-                  🛞 Stone Chariot
+                  Stone Chariot
                 </button>
                 <button
                   onClick={() => setRaghavendraTopic("pillars")}
@@ -2350,7 +2384,7 @@ export default function VijayanagaraGameScreen() {
                       : "bg-[#201c18] border-[#383027] text-[#a89985] hover:text-[#f6ede0]"
                   }`}
                 >
-                  🎵 Musical Pillars
+                  Musical Pillars
                 </button>
                 <button
                   onClick={() => {
@@ -2366,7 +2400,7 @@ export default function VijayanagaraGameScreen() {
                       : "bg-[#201c18] border-[#383027] text-[#a89985] hover:text-[#f6ede0]"
                   }`}
                 >
-                  ⚠️ Musician&apos;s Warning
+                  Musician&apos;s Warning
                 </button>
               </div>
 
@@ -2376,6 +2410,7 @@ export default function VijayanagaraGameScreen() {
                 </div>
                 <button
                   onClick={() => {
+                    stopAllCharacterVoice();
                     setShowRaghavendraDialogue(false);
                     if (raghavendraTopic === "warning" && hasSecondLedgerFragment) {
                       setIsStage3Complete(true);
@@ -2384,7 +2419,7 @@ export default function VijayanagaraGameScreen() {
                   }}
                   className="bg-gradient-to-r from-[#8b6528] to-[#d4a359] hover:from-[#a07430] hover:to-[#e5b56a] text-[#141210] font-serif font-bold px-6 py-2.5 rounded-xl shadow-md transition-all cursor-pointer text-xs uppercase tracking-wider"
                 >
-                  {hasSecondLedgerFragment ? "Accept Warning & Continue" : "Thank Maestoso Raghavendra"}
+                  {hasSecondLedgerFragment ? "Accept Warning & Continue" : "Thank Raghavendra"}
                 </button>
               </div>
             </div>
@@ -2397,8 +2432,8 @@ export default function VijayanagaraGameScreen() {
             <div className="relative w-full max-w-2xl bg-[#1e1b18] text-[#f6ede0] rounded-2xl border-4 border-[#5a4d3f] p-6 shadow-[0_0_50px_rgba(0,0,0,0.95)] max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between pb-3 border-b-2 border-[#5a4d3f] mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-[#3d3328] border-2 border-[#d4a359] flex items-center justify-center text-3xl shadow-inner">
-                    📿
+                  <div className="w-12 h-12 rounded-xl bg-[#3d3328] border-2 border-[#d4a359] flex items-center justify-center shadow-inner">
+                    <GameIcon name="sage" size={24} className="text-[#d4a359]" />
                   </div>
                   <div>
                     <div className="text-[10px] font-mono text-[#d4a359] uppercase tracking-widest">
@@ -2412,31 +2447,51 @@ export default function VijayanagaraGameScreen() {
                   <button
                     type="button"
                     onClick={() => {
+                      if (isVidyaranyaVoiceActive) {
+                        stopAllCharacterVoice();
+                        setIsVidyaranyaVoiceActive(false);
+                        return;
+                      }
+                      stopAllCharacterVoice();
                       let speech = "";
                       if (dialogueTopic === "intro") {
                         speech =
-                          "Khamma, traveler. Welcome to the granite crags of Anegundi. Here on the northern banks of the Tungabhadra, history gathers its breath before surging forward. Sit with me. Let us discuss the purpose of an empire, or test your strategic patience upon the Chowka Bara board.";
+                          "Welcome to Anegundi. This town stands beside the Tungabhadra River. It is an important place in Vijayanagara's history. Before you travel south, let us talk. A great empire will soon rise across the river. I can also teach you a game called Chowka Bara.";
                       } else if (dialogueTopic === "founders") {
                         speech =
-                          "Harihara and Bukka are two brothers of noble resolve. In a period of turmoil across the Deccan, they chose not to yield to fragmentation, but to build a haven where our traditions, arts, and trade could flourish unhindered.";
+                          "Harihara and Bukka founded Vijayanagara in 1336. The two brothers wanted to protect our culture, arts, and trade. They built a strong and united kingdom.";
                       } else if (dialogueTopic === "region") {
                         speech =
-                          "Observe these colossal boulders and the torrential Tungabhadra river. Nature crafted an invincible fortress long before our stonemasons laid a single chisel. The granite ramparts shield our people, while the fertile valley provides boundless sustenance.";
+                          "These huge granite rocks and the river protect us like a natural fort. Enemy armies cannot enter easily. The river valley also gives good soil and water.";
                       } else if (dialogueTopic === "vidyaranya") {
                         speech =
-                          "Thrones rise and fall, and armies disperse like mist. But knowledge, music, craftsmanship, and dharma endure across ages. My role is to ensure that as this empire grows in wealth and stone, it never forgets its founding soul.";
+                          "Kings and armies pass away, but knowledge and culture last forever. I guided the founders to build temples, support learning, and protect justice.";
                       }
-                      playNarration(speech, { speaker: "ratan", pace: 0.86, language_code: "en-IN", hideSubtitle: true });
+                      setIsVidyaranyaVoiceActive(true);
+                      playNarration(speech, {
+                        speaker: "ratan",
+                        pace: 0.88,
+                        language_code: "en-IN",
+                        hideSubtitle: true,
+                        onStart: () => setIsVidyaranyaVoiceActive(true),
+                        onEnd: () => setIsVidyaranyaVoiceActive(false),
+                        onError: () => setIsVidyaranyaVoiceActive(false),
+                      });
                     }}
-                    className="text-[#d4a359] hover:text-[#f6ede0] text-xs bg-[#2b2520] hover:bg-[#3d3329] border border-[#5a4d3f] px-2.5 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
-                    title="Listen to Sage Vidyaranya's Voice"
+                    className={`text-xs border px-2.5 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                      isVidyaranyaVoiceActive
+                        ? "text-[#f6ede0] bg-[#3d3329] border-[#d4a359]"
+                        : "text-[#d4a359] hover:text-[#f6ede0] bg-[#2b2520] hover:bg-[#3d3329] border-[#5a4d3f]"
+                    }`}
+                    title={isVidyaranyaVoiceActive ? "Stop voice" : "Listen to Sage Vidyaranya's Voice"}
                   >
-                    <span>🔊</span>
-                    <span>Listen</span>
+                    <span>{isVidyaranyaVoiceActive ? "⏹" : "🔊"}</span>
+                    <span>{isVidyaranyaVoiceActive ? "Stop Voice" : "Listen"}</span>
                   </button>
                   <button
                     onClick={() => {
-                      stopNarration();
+                      stopAllCharacterVoice();
+                      setIsVidyaranyaVoiceActive(false);
                       setShowVidyaranyaDialogue(false);
                     }}
                     className="text-[#a89985] hover:text-[#f6ede0] text-sm bg-[#2b2520] hover:bg-[#3d3329] border border-[#5a4d3f] px-3 py-1.5 rounded-lg transition-all cursor-pointer"
@@ -2449,11 +2504,11 @@ export default function VijayanagaraGameScreen() {
               <div className="p-4 rounded-xl bg-[#26201b] border border-[#473d32] text-sm font-serif leading-relaxed text-[#eedfc8] mb-5">
                 {dialogueTopic === "intro" && (
                   <div>
-                    <p className="mb-3 font-semibold">
-                      &ldquo;Khamma, traveler. Welcome to the granite crags of Anegundi. Here on the northern banks of the Tungabhadra, history gathers its breath before surging forward.&rdquo;
+                    <p className="mb-2 font-semibold">
+                      &ldquo;Welcome to Anegundi. This town stands beside the Tungabhadra River. It is an important place in Vijayanagara&apos;s history.&rdquo;
                     </p>
                     <p className="italic text-[#d4a359] text-xs">
-                      &ldquo;Before you venture south toward the great capital that will rise across the water, sit with me. Let us discuss the purpose of an empire, or test your strategic patience upon the Chowka Bara board.&rdquo;
+                      &ldquo;Before you travel south, let us talk. A great empire will soon rise across the river. I can also teach you a game called Chowka Bara.&rdquo;
                     </p>
                   </div>
                 )}
@@ -2461,10 +2516,10 @@ export default function VijayanagaraGameScreen() {
                 {dialogueTopic === "founders" && (
                   <div>
                     <p className="mb-2 font-bold text-[#d4a359]">
-                      Who were Harihara I and Bukka Raya I?
+                      Who founded the empire?
                     </p>
                     <p className="text-xs leading-relaxed text-[#d6c7b2]">
-                      &ldquo;They are two brothers of noble resolve. In a period of turmoil across the Deccan, they chose not to yield to fragmentation, but to build a haven where our traditions, arts, and trade could flourish unhindered. They built this realm not for conquest, but for sanctuary and resilience.&rdquo;
+                      &ldquo;Harihara and Bukka founded Vijayanagara in 1336. The two brothers wanted to protect our culture, arts, and trade. They built a strong and united kingdom.&rdquo;
                     </p>
                   </div>
                 )}
@@ -2472,10 +2527,10 @@ export default function VijayanagaraGameScreen() {
                 {dialogueTopic === "region" && (
                   <div>
                     <p className="mb-2 font-bold text-[#d4a359]">
-                      Why was this rocky region of Anegundi chosen?
+                      Why are these rocks important?
                     </p>
                     <p className="text-xs leading-relaxed text-[#d6c7b2]">
-                      &ldquo;Observe these colossal boulders and the torrential Tungabhadra river. Nature crafted an invincible fortress long before our stonemasons laid a single chisel. The granite ramparts shield our people, while the fertile valley provides boundless sustenance.&rdquo;
+                      &ldquo;These huge granite rocks and the river protect us like a natural fort. Enemy armies cannot enter easily. The river valley also gives good soil and water.&rdquo;
                     </p>
                   </div>
                 )}
@@ -2483,10 +2538,10 @@ export default function VijayanagaraGameScreen() {
                 {dialogueTopic === "vidyaranya" && (
                   <div>
                     <p className="mb-2 font-bold text-[#d4a359]">
-                      What is the purpose of Vidyaranya&apos;s guidance?
+                      What did Vidyaranya believe?
                     </p>
                     <p className="text-xs leading-relaxed text-[#d6c7b2]">
-                      &ldquo;Thrones rise and fall, and armies disperse like mist. But knowledge, music, craftsmanship, and dharma endure across ages. My role is to ensure that as this empire grows in wealth and stone, it never forgets its founding soul.&rdquo;
+                      &ldquo;Kings and armies pass away, but knowledge and culture last forever. I guided the founders to build temples, support learning, and protect justice.&rdquo;
                     </p>
                   </div>
                 )}
@@ -2501,7 +2556,7 @@ export default function VijayanagaraGameScreen() {
                       : "bg-[#201c18] border-[#383027] text-[#a89985] hover:text-[#f6ede0]"
                   }`}
                 >
-                  👑 Who were the Founders?
+                  Who founded it?
                 </button>
                 <button
                   onClick={() => setDialogueTopic("region")}
@@ -2511,7 +2566,7 @@ export default function VijayanagaraGameScreen() {
                       : "bg-[#201c18] border-[#383027] text-[#a89985] hover:text-[#f6ede0]"
                   }`}
                 >
-                  ⛰️ Why Anegundi&apos;s Rocks?
+                  Why are these rocks important?
                 </button>
                 <button
                   onClick={() => setDialogueTopic("vidyaranya")}
@@ -2521,7 +2576,7 @@ export default function VijayanagaraGameScreen() {
                       : "bg-[#201c18] border-[#383027] text-[#a89985] hover:text-[#f6ede0]"
                   }`}
                 >
-                  📿 The Spiritual Vision
+                  What did Vidyaranya believe?
                 </button>
               </div>
 
@@ -2531,7 +2586,8 @@ export default function VijayanagaraGameScreen() {
                 </div>
                 <button
                   onClick={() => {
-                    stopNarration();
+                    stopAllCharacterVoice();
+                    setIsVidyaranyaVoiceActive(false);
                     setShowVidyaranyaDialogue(false);
                     setShowChowkaBaraModal(true);
                   }}
@@ -2550,8 +2606,8 @@ export default function VijayanagaraGameScreen() {
             <div className="relative w-full max-w-2xl bg-[#1e1b18] text-[#f6ede0] rounded-2xl border-4 border-[#5a4d3f] p-6 shadow-[0_0_50px_rgba(0,0,0,0.95)] max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between pb-3 border-b-2 border-[#5a4d3f] mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-[#3d3328] border-2 border-[#d4a359] flex items-center justify-center text-3xl shadow-inner">
-                    💎
+                  <div className="w-12 h-12 rounded-xl bg-[#3d3328] border-2 border-[#d4a359] flex items-center justify-center shadow-inner">
+                    <GameIcon name="gem" size={24} className="text-[#d4a359]" />
                   </div>
                   <div>
                     <div className="text-[10px] font-mono text-[#d4a359] uppercase tracking-widest">
@@ -2562,7 +2618,10 @@ export default function VijayanagaraGameScreen() {
                 </div>
 
                 <button
-                  onClick={() => setShowGemAssessorDialogue(false)}
+                  onClick={() => {
+                    stopAllCharacterVoice();
+                    setShowGemAssessorDialogue(false);
+                  }}
                   className="text-[#a89985] hover:text-[#f6ede0] text-sm bg-[#2b2520] hover:bg-[#3d3329] border border-[#5a4d3f] px-3 py-1.5 rounded-lg transition-all cursor-pointer"
                 >
                   ✕ Close
@@ -2572,11 +2631,11 @@ export default function VijayanagaraGameScreen() {
               <div className="p-4 rounded-xl bg-[#26201b] border border-[#473d32] text-sm font-serif leading-relaxed text-[#eedfc8] mb-5">
                 {gemDialogueTopic === "gems" && (
                   <div>
-                    <p className="mb-3 font-semibold">
-                      &ldquo;Welcome, traveler! Nowhere under heaven will you behold wealth like ours. We measure diamonds from Kollur, pearls from the Persian Gulf, and Ceylon rubies by the dry measure like sesame seeds!&rdquo;
+                    <p className="mb-2 font-semibold">
+                      &ldquo;Welcome, traveler! In Hampi Bazaar, diamonds from Kollur, pearls from the Persian Gulf, and rubies from Ceylon are sold openly on the streets.&rdquo;
                     </p>
                     <p className="text-xs text-[#d6c7b2]">
-                      Ask me what you wish of our commerce, or of the strange rumors stirring our market colonnades.
+                      Ask about our gem trade, or the rumors about the missing merchant.
                     </p>
                   </div>
                 )}
@@ -2584,13 +2643,13 @@ export default function VijayanagaraGameScreen() {
                 {gemDialogueTopic === "rumor" && (
                   <div>
                     <p className="mb-2 font-bold text-[#d4a359]">
-                      What is this rumor regarding the Missing Merchant?
+                      The Missing Merchant
                     </p>
                     <p className="text-xs leading-relaxed text-[#d6c7b2] mb-2">
-                      &ldquo;Ah, you speak of Ramayya the Scribe-Merchant. He managed confidential ledgers recording temple gifts and the royal guild accounts. He was deeply trusted by the palace.&rdquo;
+                      &ldquo;Ramayya the Scribe-Merchant managed royal accounts. He feared our records might be lost one day, so he hid three ledger fragments.&rdquo;
                     </p>
                     <p className="text-xs leading-relaxed text-[#eedfc8] italic">
-                      &ldquo;Before his sudden disappearance, rumors say he feared the empire&apos;s records would one day be lost. He divided his master ledger into three hidden fragments. The first clue was supposedly entrusted to his close friend, Master Kallappa the Toymaker!&rdquo;
+                      &ldquo;He left the first clue with his friend Master Kallappa, the toymaker.&rdquo;
                     </p>
                   </div>
                 )}
@@ -2598,10 +2657,10 @@ export default function VijayanagaraGameScreen() {
                 {gemDialogueTopic === "merchant" && (
                   <div>
                     <p className="mb-2 font-bold text-[#d4a359]">
-                      Why did Ramayya hide the ledgers?
+                      Why hide the ledger?
                     </p>
                     <p className="text-xs leading-relaxed text-[#d6c7b2]">
-                      &ldquo;Ramayya believed that gold and stone palaces might crumble in future centuries, but written memory, knowledge, and fair accounts are the true treasury of a civilization. If you seek the truth, inspect Kallappa&apos;s wooden toys.&rdquo;
+                      &ldquo;Ramayya believed gold and stone fade over time, but written records and culture last forever. Inspect Kallappa&apos;s wooden toys to learn more.&rdquo;
                     </p>
                   </div>
                 )}
@@ -2616,7 +2675,7 @@ export default function VijayanagaraGameScreen() {
                       : "bg-[#201c18] border-[#383027] text-[#a89985] hover:text-[#f6ede0]"
                   }`}
                 >
-                  💎 Precious Gem Trade
+                  Gem Trade
                 </button>
                 <button
                   onClick={() => {
@@ -2629,7 +2688,7 @@ export default function VijayanagaraGameScreen() {
                       : "bg-[#201c18] border-[#383027] text-[#a89985] hover:text-[#f6ede0]"
                   }`}
                 >
-                  📜 The Missing Merchant (Rumor)
+                  The Missing Merchant
                 </button>
                 <button
                   onClick={() => {
@@ -2642,7 +2701,7 @@ export default function VijayanagaraGameScreen() {
                       : "bg-[#201c18] border-[#383027] text-[#a89985] hover:text-[#f6ede0]"
                   }`}
                 >
-                  🗝️ Why Hide the Ledger?
+                  Why Hide the Ledger?
                 </button>
               </div>
 
@@ -2651,7 +2710,10 @@ export default function VijayanagaraGameScreen() {
                   Clue Status: {hasEncounteredFirstRumor ? "Rumor Logged in Memory ✦" : "Inquire with Assessor"}
                 </div>
                 <button
-                  onClick={() => setShowGemAssessorDialogue(false)}
+                  onClick={() => {
+                    stopAllCharacterVoice();
+                    setShowGemAssessorDialogue(false);
+                  }}
                   className="bg-[#2b2520] hover:bg-[#3d3329] border border-[#5a4d3f] text-[#f6ede0] font-serif px-6 py-2 rounded-xl text-xs transition-all cursor-pointer"
                 >
                   Thank the Assessor
@@ -2667,8 +2729,8 @@ export default function VijayanagaraGameScreen() {
             <div className="relative w-full max-w-2xl bg-[#1e1b18] text-[#f6ede0] rounded-2xl border-4 border-[#5a4d3f] p-6 shadow-[0_0_50px_rgba(0,0,0,0.95)] max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between pb-3 border-b-2 border-[#5a4d3f] mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-[#2e261f] border-2 border-[#c86446] flex items-center justify-center text-3xl shadow-inner">
-                    🎨
+                  <div className="w-12 h-12 rounded-xl bg-[#2e261f] border-2 border-[#c86446] flex items-center justify-center shadow-inner">
+                    <GameIcon name="artisan" size={24} className="text-[#c86446]" />
                   </div>
                   <div>
                     <div className="text-[10px] font-mono text-[#c86446] uppercase tracking-widest">
@@ -2679,7 +2741,10 @@ export default function VijayanagaraGameScreen() {
                 </div>
 
                 <button
-                  onClick={() => setShowToymakerDialogue(false)}
+                  onClick={() => {
+                    stopAllCharacterVoice();
+                    setShowToymakerDialogue(false);
+                  }}
                   className="text-[#a89985] hover:text-[#f6ede0] text-sm bg-[#2b2520] hover:bg-[#3d3329] border border-[#5a4d3f] px-3 py-1.5 rounded-lg transition-all cursor-pointer"
                 >
                   ✕ Close
@@ -2687,14 +2752,14 @@ export default function VijayanagaraGameScreen() {
               </div>
 
               <div className="p-4 rounded-xl bg-[#26201b] border border-[#473d32] text-sm font-serif leading-relaxed text-[#eedfc8] mb-5">
-                <p className="mb-3 font-semibold">
-                  &ldquo;Namaskara! Every toy on these shelves is hand-carved from seasoned wood and coated with natural mineral lacquer from Kinhal.&rdquo;
+                <p className="mb-2 font-semibold">
+                  &ldquo;Namaskara! Every toy here is hand-carved from seasoned wood and colored with natural Kinhal lacquer.&rdquo;
                 </p>
-                <p className="text-xs text-[#d6c7b2] mb-3">
-                  &ldquo;You ask of Merchant Ramayya? Yes, he was my dearest childhood friend. Shortly before he vanished, he spent hours in my workshop, admiring these very pieces and carving intricate marks into their bases.&rdquo;
+                <p className="text-xs text-[#d6c7b2] mb-2">
+                  &ldquo;Ramayya was my childhood friend. Before he vanished, he spent hours carving marks into these toy bases.&rdquo;
                 </p>
                 <p className="text-xs text-[#d4a359] italic">
-                  &ldquo;He told me: &lsquo;A child sees play, but a discerning seeker will discover memory.&rsquo; Feel free to inspect them closely upon my workbench!&rdquo;
+                  &ldquo;He said: &lsquo;A child sees a toy, but a seeker finds memory.&rsquo; Inspect them on my workbench!&rdquo;
                 </p>
               </div>
 
@@ -2704,6 +2769,7 @@ export default function VijayanagaraGameScreen() {
                 </div>
                 <button
                   onClick={() => {
+                    stopAllCharacterVoice();
                     setShowToymakerDialogue(false);
                     setShowToyInspectionModal(true);
                   }}
@@ -2722,8 +2788,8 @@ export default function VijayanagaraGameScreen() {
             <div className="relative w-full max-w-2xl bg-[#1e1b18] text-[#f6ede0] rounded-2xl border-4 border-[#5a4d3f] p-6 shadow-[0_0_50px_rgba(0,0,0,0.95)] max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between pb-3 border-b-2 border-[#5a4d3f] mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-[#25201b] border-2 border-[#d4a359] flex items-center justify-center text-3xl shadow-inner">
-                    📜
+                  <div className="w-12 h-12 rounded-xl bg-[#25201b] border-2 border-[#d4a359] flex items-center justify-center shadow-inner">
+                    <GameIcon name="traveler" size={24} className="text-[#d4a359]" />
                   </div>
                   <div>
                     <div className="text-[10px] font-mono text-[#d4a359] uppercase tracking-widest">
@@ -2734,7 +2800,10 @@ export default function VijayanagaraGameScreen() {
                 </div>
 
                 <button
-                  onClick={() => setShowForeignTravelerDialogue(false)}
+                  onClick={() => {
+                    stopAllCharacterVoice();
+                    setShowForeignTravelerDialogue(false);
+                  }}
                   className="text-[#a89985] hover:text-[#f6ede0] text-sm bg-[#2b2520] hover:bg-[#3d3329] border border-[#5a4d3f] px-3 py-1.5 rounded-lg transition-all cursor-pointer"
                 >
                   ✕ Close
@@ -2742,14 +2811,14 @@ export default function VijayanagaraGameScreen() {
               </div>
 
               <div className="p-4 rounded-xl bg-[#26201b] border border-[#473d32] text-sm font-serif leading-relaxed text-[#eedfc8] mb-5">
-                <p className="mb-3 font-semibold">
-                  &ldquo;Bom dia, senhor! In all my voyages across Venice, Cairo, and Lisbon, I have never witnessed a city of such boundless prosperity and majestic order.&rdquo;
+                <p className="mb-2 font-semibold">
+                  &ldquo;Bom dia, senhor! In all my voyages across Venice, Cairo, and Lisbon, I have never seen a city of such boundless prosperity.&rdquo;
                 </p>
-                <p className="text-xs text-[#d6c7b2] mb-3">
-                  &ldquo;The Portuguese crown buys war horses from Vijayanagara traders in exchange for fine silks. The king&apos;s administration maintains immense ledgers recording every horse and jewel.&rdquo;
+                <p className="text-xs text-[#d6c7b2] mb-2">
+                  &ldquo;Portugal trades war horses with Vijayanagara for fine silks and spices. Royal scribes keep detailed records of every trade.&rdquo;
                 </p>
                 <p className="text-xs text-[#d4a359] italic">
-                  &ldquo;In the royal court, I overheard whisperings of an elder merchant who hid secret scrolls within everyday artisan wares across the city. The people here preserve knowledge with great ingenuity.&rdquo;
+                  &ldquo;I heard an elder merchant hid secret scrolls within artisan wares across the city to protect historical knowledge.&rdquo;
                 </p>
               </div>
 
@@ -2758,10 +2827,13 @@ export default function VijayanagaraGameScreen() {
                   ✦ Chronicle recorded into Palm-Leaf Journal
                 </div>
                 <button
-                  onClick={() => setShowForeignTravelerDialogue(false)}
+                  onClick={() => {
+                    stopAllCharacterVoice();
+                    setShowForeignTravelerDialogue(false);
+                  }}
                   className="bg-[#2b2520] hover:bg-[#3d3329] border border-[#5a4d3f] text-[#f6ede0] font-serif px-6 py-2 rounded-xl text-xs transition-all cursor-pointer"
                 >
-                  Farewell, Chronicler
+                  Farewell, Duarte
                 </button>
               </div>
             </div>
@@ -2772,8 +2844,8 @@ export default function VijayanagaraGameScreen() {
         {showBlessingCutscene && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fadeIn">
             <div className="relative w-full max-w-xl bg-[#1e1b18] text-[#f6ede0] rounded-2xl border-4 border-[#d4a359] p-8 shadow-[0_0_60px_rgba(212,163,89,0.5)] text-center">
-              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-[#3d3328] to-[#141210] border-2 border-[#d4a359] flex items-center justify-center text-4xl shadow-[0_0_30px_rgba(212,163,89,0.4)] animate-pulse">
-                📿
+              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-[#3d3328] to-[#141210] border-2 border-[#d4a359] flex items-center justify-center shadow-[0_0_30px_rgba(212,163,89,0.4)] animate-pulse">
+                <GameIcon name="sage" size={36} className="text-[#d4a359]" />
               </div>
 
               <div className="text-[11px] font-mono uppercase tracking-[0.3em] text-[#d4a359] mb-2">
@@ -2785,12 +2857,13 @@ export default function VijayanagaraGameScreen() {
               </h2>
 
               <div className="p-4 rounded-xl bg-[#26201b] border border-[#473d32] text-sm font-serif italic text-[#eedfc8] leading-relaxed mb-6">
-                &ldquo;A kingdom begins not merely with stone walls and overflowing coffers, but with enduring purpose. You have shown patience and strategic balance. Take my blessing, traveler. Beyond the Tungabhadra lies Hampi, where our small beginning will grow into a jewel of the world.&rdquo;
+                &ldquo;A kingdom begins with enduring purpose, not just stone walls. You have shown patience and balance. Across the river lies Hampi, where our journey continues.&rdquo;
               </div>
 
               <div className="flex justify-center gap-3">
                 <button
                   onClick={() => {
+                    stopAllCharacterVoice();
                     setShowBlessingCutscene(false);
                     setShowStage1VictoryModal(true);
                   }}
@@ -3085,7 +3158,7 @@ export default function VijayanagaraGameScreen() {
               historical_events: "Founding of Vijayanagara (1336 AD), Golden Age under Krishnadevaraya, Battle of Talikota (1565 AD)"
             }}
             dialogueText={
-              jollySpeechText || "Ah, welcome traveller! I am Jolly Bhai. I will guide you through the ancient Vijayanagara Empire!"
+              jollySpeechText || "Hello, friend! I am Jolly Bhai. Ask me anything about Vijayanagara!"
             }
             isSpeaking={true}
             showInput={true}
@@ -3093,18 +3166,18 @@ export default function VijayanagaraGameScreen() {
               jollyOptions.length > 0
                 ? jollyOptions
                 : [
-                    { id: 1, text: "Tell me about the founding of Vijayanagara." },
-                    { id: 2, text: "What was the significance of Hampi Bazaar?" },
-                    { id: 3, text: "How do the musical pillars of Vittala Temple work?" }
+                    { id: 1, text: "How was Vijayanagara founded?" },
+                    { id: 2, text: "Why was Hampi Bazaar famous?" },
+                    { id: 3, text: "How do musical pillars work?" }
                   ]
             }
             onOptionSelect={() => {
-              stopCharacterDialogue();
+              stopAllCharacterVoice();
               setShowJollyDialogue(false);
               setHeardClueScenes((prev) => (prev.includes(scene) ? prev : [...prev, scene]));
             }}
             onClose={() => {
-              stopCharacterDialogue();
+              stopAllCharacterVoice();
               setShowJollyDialogue(false);
               setHeardClueScenes((prev) => (prev.includes(scene) ? prev : [...prev, scene]));
             }}
