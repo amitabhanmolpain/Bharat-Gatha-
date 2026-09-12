@@ -173,6 +173,96 @@ function getTwoWayPatrolPosition(
   }
 }
 
+interface BoatPatrolState {
+  x: number;
+  y: number;
+  scale: number;
+  facingLeft: boolean;
+  isSailing: boolean;
+  rockingAngle: number;
+  bobbingY: number;
+}
+
+function getBoatPatrolPosition(
+  waypoints: { x: number; y: number }[],
+  downstreamDuration: number,
+  upstreamDuration: number,
+  stayDuration: number,
+  elapsedTime: number
+): BoatPatrolState {
+  const dists: number[] = [];
+  let totalDist = 0;
+  for (let i = 0; i < waypoints.length - 1; i++) {
+    const d = Math.hypot(
+      waypoints[i + 1].x - waypoints[i].x,
+      waypoints[i + 1].y - waypoints[i].y
+    );
+    dists.push(d);
+    totalDist += d;
+  }
+
+  const cycleTime = downstreamDuration + stayDuration + upstreamDuration + stayDuration;
+  const t = ((elapsedTime % cycleTime) + cycleTime) % cycleTime;
+
+  let x = waypoints[0].x;
+  let y = waypoints[0].y;
+  let facingLeft = false;
+  let isSailing = false;
+
+  if (t < downstreamDuration) {
+    // Sailing downstream (with Indus current)
+    isSailing = true;
+    const currentDist = (t / downstreamDuration) * totalDist;
+    let acc = 0;
+    for (let i = 0; i < dists.length; i++) {
+      if (acc + dists[i] >= currentDist || i === dists.length - 1) {
+        const segT = dists[i] > 0 ? (currentDist - acc) / dists[i] : 0;
+        x = waypoints[i].x + (waypoints[i + 1].x - waypoints[i].x) * segT;
+        y = waypoints[i].y + (waypoints[i + 1].y - waypoints[i].y) * segT;
+        facingLeft = waypoints[i + 1].x < waypoints[i].x;
+        break;
+      }
+      acc += dists[i];
+    }
+  } else if (t < downstreamDuration + stayDuration) {
+    // Paused at downstream delta
+    const last = waypoints[waypoints.length - 1];
+    x = last.x;
+    y = last.y;
+    facingLeft = true;
+    isSailing = false;
+  } else if (t < downstreamDuration + stayDuration + upstreamDuration) {
+    // Sailing upstream (against Indus current)
+    isSailing = true;
+    const progress = (t - (downstreamDuration + stayDuration)) / upstreamDuration;
+    const currentDist = (1 - progress) * totalDist;
+    let acc = 0;
+    for (let i = 0; i < dists.length; i++) {
+      if (acc + dists[i] >= currentDist || i === dists.length - 1) {
+        const segT = dists[i] > 0 ? (currentDist - acc) / dists[i] : 0;
+        x = waypoints[i].x + (waypoints[i + 1].x - waypoints[i].x) * segT;
+        y = waypoints[i].y + (waypoints[i + 1].y - waypoints[i].y) * segT;
+        facingLeft = !(waypoints[i + 1].x < waypoints[i].x);
+        break;
+      }
+      acc += dists[i];
+    }
+  } else {
+    // Paused at upstream horizon
+    x = waypoints[0].x;
+    y = waypoints[0].y;
+    facingLeft = false;
+    isSailing = false;
+  }
+
+  // Perspective scale along the Indus river
+  const scale = 0.46 + Math.max(0, Math.min(1.0, y / 100)) * 0.70;
+  const bobbingY = Math.sin(elapsedTime * 2.8) * 3.5;
+  const rockingAngle = Math.sin(elapsedTime * 1.8) * 2.2;
+
+  return { x, y, scale, facingLeft, isSailing, rockingAngle, bobbingY };
+}
+
 export default function IndusValleyGameScreen() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
@@ -262,6 +352,7 @@ export default function IndusValleyGameScreen() {
   const [carrierFrame, setCarrierFrame] = useState(1); // 1 to 4
   const [talkingArtisansFrame, setTalkingArtisansFrame] = useState<1 | 2>(1);
   const [rooftopFrame, setRooftopFrame] = useState<1 | 2>(1);
+  const [boatRowFrame, setBoatRowFrame] = useState<1 | 2>(1);
 
   // Scene Configuration
   const currentSceneConfig = INDUS_SCENE_CONFIGS[scene] || INDUS_SCENE_CONFIGS.lower_town_gate;
@@ -429,7 +520,21 @@ export default function IndusValleyGameScreen() {
     playerPos.y >= 66.0 &&
     playerPos.y <= 86.0;
 
-  // Stage 1 -> Stage 1.5 City Arch Gateway to Residential Grid (at arch gateway x: 67-76%, y: 32-38%)
+  // Stage 1: Ancient Egyptian Sailor River Boat Route along the Indus River
+  const egyptianBoatWaypoints = [
+    { x: 6.5, y: 16.0 },
+    { x: 5.0, y: 36.0 },
+    { x: 4.8, y: 56.0 },
+    { x: 5.8, y: 76.0 },
+    { x: 3.2, y: 94.0 },
+    { x: 1.0, y: 104.0 },
+  ];
+  const boatState = getBoatPatrolPosition(egyptianBoatWaypoints, 22.0, 26.0, 4.0, carrierTime);
+
+  // Proximity to Egyptian Sailor boat along the riverbank
+  const isNearEgyptianSailor =
+    scene === "lower_town_gate" &&
+    Math.hypot(playerPos.x - boatState.x, playerPos.y - boatState.y) <= 24.0;
   const isNearGranaryExit =
     scene === "lower_town_gate" &&
     hasFirstRelicChertWeight &&
@@ -801,9 +906,9 @@ export default function IndusValleyGameScreen() {
     }, 600);
   };
 
-  // 5.5. Animated Walking Water Carriers Engine (Nano Banana generated 4-frame walk cycle)
+  // 5.5. Animated Entities Engine (Water carriers, rooftop citizens, and Egyptian river boat)
   useEffect(() => {
-    if (scene !== "residential_grid") return;
+    if (scene !== "residential_grid" && scene !== "lower_town_gate") return;
 
     // Cycle walk animation frames (1 -> 2 -> 3 -> 4 for carriers, 1 -> 2 for rooftop)
     const frameInterval = setInterval(() => {
@@ -811,12 +916,17 @@ export default function IndusValleyGameScreen() {
       setRooftopFrame((prev) => (prev === 1 ? 2 : 1));
     }, 200);
 
+    // Cycle rowing stroke animation frames for Egyptian sailor (1 -> 2)
+    const boatInterval = setInterval(() => {
+      setBoatRowFrame((prev) => (prev === 1 ? 2 : 1));
+    }, 600);
+
     // Cycle talking animation frames between woman and man (1 -> 2)
     const talkInterval = setInterval(() => {
       setTalkingArtisansFrame((prev) => (prev === 1 ? 2 : 1));
     }, 1400);
 
-    // Continuous smooth game time loop for walking routes
+    // Continuous smooth game time loop for walking and river routes
     let lastTime = performance.now();
     let animId: number;
 
@@ -831,6 +941,7 @@ export default function IndusValleyGameScreen() {
 
     return () => {
       clearInterval(frameInterval);
+      clearInterval(boatInterval);
       clearInterval(talkInterval);
       cancelAnimationFrame(animId);
     };
@@ -971,6 +1082,14 @@ export default function IndusValleyGameScreen() {
           setShowOverseerDialogue(true);
         } else if (isNearForeignTraders) {
           setShowForeignTradersModal(true);
+        } else if (isNearEgyptianSailor) {
+          setActiveCitizenDialogue({
+            name: "Kheti the Egyptian Sailor",
+            title: "Nile River Navigator & Trade Envoy • 2500 BCE",
+            icon: "",
+            text: "Greetings from the lands of Kemet (Ancient Egypt)! Our royal cedarwood and reed barques sail the Red Sea from the shores of Punt to the Arabian Gulf and across the ocean to your great city of Meluhha on the Indus. We trade Egyptian linen, gold, and fine faience beads in exchange for your prized Indus carnelian, lapis lazuli, and fragrant timber!",
+          });
+          soundFx.playSelect();
         } else if (isNearRooftopCitizen) {
           setActiveCitizenDialogue({
             name: "Harappan Rooftop Resident",
@@ -1134,6 +1253,7 @@ export default function IndusValleyGameScreen() {
     showVictoryModal,
     isNearOverseer,
     isNearForeignTraders,
+    isNearEgyptianSailor,
     isNearRooftopCitizen,
     isNearRoadPedestrian,
     isNearCourtyardResident,
@@ -1316,6 +1436,73 @@ export default function IndusValleyGameScreen() {
                 src="/sprite-indus-trader.png?v=3"
                 alt="Foreign Mesopotamian Trader"
                 className="h-24 sm:h-[108px] md:h-[122px] w-auto object-contain block select-none"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Stage 1: Ancient Egyptian Sailor River Boat Sailing along the Indus River */}
+        {scene === "lower_town_gate" && (
+          <div
+            className="absolute z-12 pointer-events-auto cursor-pointer select-none group transition-opacity duration-300"
+            style={{
+              left: `${boatState.x}%`,
+              top: `${boatState.y}%`,
+            }}
+            onClick={() => {
+              setActiveCitizenDialogue({
+                name: "Kheti the Egyptian Sailor",
+                title: "Nile River Navigator & Trade Envoy • 2500 BCE",
+                icon: "",
+                text: "Greetings from the lands of Kemet (Ancient Egypt)! Our royal cedarwood and reed barques sail the Red Sea from the shores of Punt to the Arabian Gulf and across the ocean to your great city of Meluhha on the Indus. We trade Egyptian linen, gold, and fine faience beads in exchange for your prized Indus carnelian, lapis lazuli, and fragrant timber!",
+              });
+              soundFx.playSelect();
+            }}
+          >
+            {/* Water wake ripple under boat */}
+            <div
+              className="absolute left-1/2 bottom-2 -translate-x-1/2 w-28 h-6 bg-cyan-200/25 rounded-[100%] blur-[2px] pointer-events-none animate-pulse"
+              style={{
+                transform: `translateX(-50%) scale(${boatState.scale * 1.15})`,
+              }}
+            />
+
+            <div
+              className="relative flex flex-col items-center transition-transform duration-200 group-hover:scale-105"
+              style={{
+                transform: `translate(-50%, -85%) translateY(${boatState.bobbingY}px) rotate(${boatState.rockingAngle}deg) scale(${boatState.scale}) ${
+                  boatState.facingLeft ? "scale-x-100" : "-scale-x-100"
+                }`,
+                transformOrigin: "bottom center",
+              }}
+            >
+              <div
+                className={`absolute bottom-full mb-1 flex flex-col items-center pointer-events-none ${
+                  boatState.facingLeft ? "scale-x-100" : "-scale-x-100"
+                }`}
+              >
+                {isNearEgyptianSailor && (
+                  <div className="mb-1 bg-[#1b1510]/95 border-2 border-[#38bdf8] text-[#f0f9ff] px-2.5 py-0.5 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap pointer-events-auto">
+                    <span className="text-[#38bdf8] font-bold">[G]</span>
+                    <span>Hail Egyptian Sailor</span>
+                  </div>
+                )}
+                <span
+                  className={`text-[10px] font-serif font-bold text-[#f0f9ff] bg-[#0c1a24]/90 px-2 py-0.5 rounded border border-[#38bdf8]/60 shadow-md whitespace-nowrap transition-opacity duration-200 ${
+                    isNearEgyptianSailor ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  Egyptian River Boat
+                </span>
+              </div>
+              <img
+                src={
+                  boatState.isSailing
+                    ? `/sprite-egyptian-boat-${boatRowFrame}.png?v=2`
+                    : "/sprite-egyptian-boat-1.png?v=2"
+                }
+                alt="Ancient Egyptian Sailor in River Boat"
+                className="h-28 sm:h-32 md:h-36 w-auto object-contain block select-none drop-shadow-[0_8px_14px_rgba(0,0,0,0.4)]"
               />
             </div>
           </div>
