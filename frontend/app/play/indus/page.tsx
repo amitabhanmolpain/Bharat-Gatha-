@@ -146,12 +146,12 @@ function getTwoWayPatrolPosition(
       facingLeft: pointB.x < pointA.x,
     };
   } else if (t < halfCycle) {
-    // Paused at B for stayDuration (6 seconds)
+    // Paused at B for stayDuration (keep facing B direction)
     return {
       x: pointB.x,
       y: pointB.y,
       isWalking: false,
-      facingLeft: true,
+      facingLeft: pointB.x < pointA.x,
     };
   } else if (t < halfCycle + walkDuration) {
     // Walking back B -> A
@@ -163,12 +163,12 @@ function getTwoWayPatrolPosition(
       facingLeft: pointA.x < pointB.x,
     };
   } else {
-    // Paused at A for stayDuration (6 seconds)
+    // Paused at A for stayDuration (keep facing A direction)
     return {
       x: pointA.x,
       y: pointA.y,
       isWalking: false,
-      facingLeft: false,
+      facingLeft: pointA.x < pointB.x,
     };
   }
 }
@@ -777,15 +777,15 @@ export default function IndusValleyGameScreen() {
     scene === "great_bath_citadel" &&
     playerPos.y >= 80.0;
 
-  // Person 1: Foreground Rooftop Lookout (Image 1: walks across terrace floor to corner, stays 6s, walks back)
-  const roof1PointA = { x: 13.5, y: 53.0 };
-  const roof1PointB = { x: 7.0, y: 64.0 };
+  // Person 1: Foreground Rooftop Lookout (Grounded on flat terrace floor, never touching rails)
+  const roof1PointA = { x: 16.5, y: 56.5 };
+  const roof1PointB = { x: 10.5, y: 59.5 };
   const roof1State = getTwoWayPatrolPosition(roof1PointA, roof1PointB, 5.0, 6.0, carrierTime);
 
-  // Person 2: Upper Terrace Resident (Image 2: walks across terrace floor to left corner, stays 6s, walks back)
-  const roof2PointA = { x: 43.5, y: 46.5 };
-  const roof2PointB = { x: 23.0, y: 43.0 };
-  const roof2State = getTwoWayPatrolPosition(roof2PointA, roof2PointB, 6.0, 6.0, carrierTime + 2.5);
+  // Person 2: Upper Balustrade Resident (Grounded on wooden balustrade terrace floor, never on rails)
+  const roof2PointA = { x: 42.5, y: 43.8 };
+  const roof2PointB = { x: 37.5, y: 41.5 };
+  const roof2State = getTwoWayPatrolPosition(roof2PointA, roof2PointB, 5.5, 6.0, carrierTime + 2.5);
 
   // Stage 1.5: Rooftop Resident (Upper terrace patrol)
   const isNearRooftopCitizen =
@@ -1536,12 +1536,12 @@ export default function IndusValleyGameScreen() {
           >
             <div
               className={`relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform duration-200 group-hover:scale-105 ${
-                roof2State.facingLeft ? "scale-x-100" : "-scale-x-100"
+                roof2State.facingLeft ? "-scale-x-100" : "scale-x-100"
               }`}
             >
               <div
                 className={`absolute bottom-full mb-1 flex flex-col items-center pointer-events-none ${
-                  roof2State.facingLeft ? "scale-x-100" : "-scale-x-100"
+                  roof2State.facingLeft ? "-scale-x-100" : "scale-x-100"
                 }`}
               >
                 {isNearRooftopCitizen && (
@@ -1587,12 +1587,12 @@ export default function IndusValleyGameScreen() {
           >
             <div
               className={`relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform duration-200 group-hover:scale-105 ${
-                roof1State.facingLeft ? "scale-x-100" : "-scale-x-100"
+                roof1State.facingLeft ? "-scale-x-100" : "scale-x-100"
               }`}
             >
               <div
                 className={`absolute bottom-full mb-1 flex flex-col items-center pointer-events-none ${
-                  roof1State.facingLeft ? "scale-x-100" : "-scale-x-100"
+                  roof1State.facingLeft ? "-scale-x-100" : "scale-x-100"
                 }`}
               >
                 {isNearRooftopLookout && (
