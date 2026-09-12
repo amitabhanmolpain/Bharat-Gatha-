@@ -34,6 +34,90 @@ const triggerIndusNarration = (
   playNarration(text, options);
 };
 
+interface PathWaypoint {
+  x: number;
+  y: number;
+}
+
+interface PathState {
+  x: number;
+  y: number;
+  opacity: number;
+  isInside: boolean;
+  facingLeft: boolean;
+  scale: number;
+  filter: string;
+}
+
+function getPathPosition(
+  waypoints: PathWaypoint[],
+  walkDuration: number,
+  pauseDuration: number,
+  elapsedTime: number
+): PathState {
+  const totalCycle = walkDuration + pauseDuration;
+  const cycleTime = elapsedTime % totalCycle;
+
+  // If in pause duration (inside house/building):
+  if (cycleTime >= walkDuration) {
+    const last = waypoints[waypoints.length - 1];
+    return {
+      x: last.x,
+      y: last.y,
+      opacity: 0,
+      isInside: true,
+      facingLeft: false,
+      scale: 0.75,
+      filter: "brightness(0.5)",
+    };
+  }
+
+  // Door entering transition in the last 1.2 seconds:
+  const timeLeft = walkDuration - cycleTime;
+  let scale = 1;
+  let opacity = 1;
+  let filter = "none";
+
+  if (timeLeft < 1.2) {
+    const t = 1 - timeLeft / 1.2; // 0 (start entering doorway) to 1 (fully inside)
+    scale = 1 - t * 0.28; // smooth perspective shrink into the doorway
+    filter = `brightness(${Math.max(0.4, 1 - t * 0.6)})`; // enters indoor shadow
+    if (timeLeft < 0.4) {
+      opacity = Math.max(0, timeLeft / 0.4); // cleanly vanishes into the interior
+    }
+  }
+
+  // Compute total path distance
+  const dists: number[] = [];
+  let totalDist = 0;
+  for (let i = 0; i < waypoints.length - 1; i++) {
+    const d = Math.hypot(
+      waypoints[i + 1].x - waypoints[i].x,
+      waypoints[i + 1].y - waypoints[i].y
+    );
+    dists.push(d);
+    totalDist += d;
+  }
+
+  const currentDist = (cycleTime / walkDuration) * totalDist;
+  let acc = 0;
+  for (let i = 0; i < dists.length; i++) {
+    if (acc + dists[i] >= currentDist || i === dists.length - 1) {
+      const segT = dists[i] > 0 ? (currentDist - acc) / dists[i] : 0;
+      const x = waypoints[i].x + (waypoints[i + 1].x - waypoints[i].x) * segT;
+      const y = waypoints[i].y + (waypoints[i + 1].y - waypoints[i].y) * segT;
+      const dx = waypoints[i + 1].x - waypoints[i].x;
+      // Facing left if moving towards negative x, facing right if moving towards positive x
+      const facingLeft = dx < 0;
+      return { x, y, opacity, isInside: false, facingLeft, scale, filter };
+    }
+    acc += dists[i];
+  }
+
+  const first = waypoints[0];
+  return { x: first.x, y: first.y, opacity: 1, isInside: false, facingLeft: false, scale: 1, filter: "none" };
+}
+
 export default function IndusValleyGameScreen() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
@@ -118,10 +202,10 @@ export default function IndusValleyGameScreen() {
   );
   const [isJournalOpen, setIsJournalOpen] = useState(false);
 
-  // Stage 1.5: Animated walking Water Carrier (Nano Banana generated 4-frame walk cycle)
-  const [carrierProgress, setCarrierProgress] = useState(0.4); // 0 (top of lane) to 1 (bottom of lane)
-  const [carrierDirection, setCarrierDirection] = useState<1 | -1>(1); // 1 = down-left, -1 = up-right
+  // Stage 1.5: Animated walking Water Carriers (Image 1 & 2 routes with 4-frame walk cycle)
+  const [carrierTime, setCarrierTime] = useState(0);
   const [carrierFrame, setCarrierFrame] = useState(1); // 1 to 4
+  const [talkingArtisansFrame, setTalkingArtisansFrame] = useState<1 | 2>(1);
 
   // Scene Configuration
   const currentSceneConfig = INDUS_SCENE_CONFIGS[scene] || INDUS_SCENE_CONFIGS.lower_town_gate;
@@ -540,16 +624,30 @@ export default function IndusValleyGameScreen() {
     playerPos.y >= 36.0 &&
     playerPos.y <= 48.0;
 
-  // Moving Water Carrier position along straight open street path (no collisions)
-  const waterCarrierX = 55.0 - 13.0 * carrierProgress;
-  const waterCarrierY = 56.0 + 24.0 * carrierProgress;
-  const isCarrierFacingLeft = carrierDirection === 1; // 1 = moving towards x=42 (left / forward down avenue)
+  // Left Lane Water Carrier Route (grounded on brick street, walking into upper house doorway, 17.5s walk + 4s pause inside)
+  const guy1Waypoints = [
+    { x: 25.0, y: 96.0 },
+    { x: 35.0, y: 84.0 },
+    { x: 45.0, y: 75.0 },
+    { x: 55.0, y: 65.5 },
+    { x: 63.5, y: 52.0 },
+    { x: 66.8, y: 42.5 },
+  ];
+  const guy1State = getPathPosition(guy1Waypoints, 17.5, 4.0, carrierTime);
 
-  // Stage 1.5: Road Pedestrian / Water Carrier (Walking along paved avenue)
+  // Right Lane Water Carrier Route (Image 2: straight up right avenue and turns into doorway, 13.8s walk + 3s pause inside)
+  const guy2Waypoints = [
+    { x: 74.0, y: 98.0 },
+    { x: 83.5, y: 56.0 },
+    { x: 88.5, y: 56.0 },
+  ];
+  const guy2State = getPathPosition(guy2Waypoints, 13.8, 3.0, carrierTime);
+
+  // Stage 1.5: Road Pedestrian / Water Carrier (Walking along left paved avenue)
   const isNearRoadPedestrian =
     scene === "residential_grid" &&
-    Math.abs(playerPos.x - waterCarrierX) <= 8.5 &&
-    Math.abs(playerPos.y - waterCarrierY) <= 8.5;
+    !guy1State.isInside &&
+    Math.hypot(playerPos.x - guy1State.x, playerPos.y - guy1State.y) <= 8.5;
 
   // Stage 1.5: Marked Spot 1 - Cargo Inspector (at x: 87.5%, y: 43.5%)
   const isNearCargoInspector =
@@ -559,29 +657,21 @@ export default function IndusValleyGameScreen() {
     playerPos.y >= 36.0 &&
     playerPos.y <= 52.0;
 
-  // Stage 1.5: Marked Spot 2 - Municipal Drain Inspector (at x: 83%, y: 58%)
+  // Stage 1.5: Marked Spot 2 - Municipal Drain Inspector (Walking along right paved avenue)
   const isNearDrainInspector =
     scene === "residential_grid" &&
-    playerPos.x >= 74.0 &&
-    playerPos.x <= 92.0 &&
-    playerPos.y >= 50.0 &&
-    playerPos.y <= 66.0;
+    !guy2State.isInside &&
+    Math.hypot(playerPos.x - guy2State.x, playerPos.y - guy2State.y) <= 8.5;
 
-  // Stage 1.5: Marked Spot 3 - Cotton Weaver (at x: 78.5%, y: 72%)
-  const isNearCottonWeaver =
+  // Stage 1.5: Marked Spot 3 & 4 - Harappan Artisans Conversing (Courtyard at x: 87.5%, y: 93.5%)
+  const isNearArtisans =
     scene === "residential_grid" &&
-    playerPos.x >= 70.0 &&
-    playerPos.x <= 88.0 &&
-    playerPos.y >= 64.0 &&
-    playerPos.y <= 80.0;
-
-  // Stage 1.5: Marked Spot 4 - Master Potter (at x: 91%, y: 93%)
-  const isNearMasterPotter =
-    scene === "residential_grid" &&
-    playerPos.x >= 80.0 &&
+    playerPos.x >= 76.0 &&
     playerPos.x <= 98.0 &&
-    playerPos.y >= 84.0 &&
+    playerPos.y >= 78.0 &&
     playerPos.y <= 99.0;
+  const isNearCottonWeaver = isNearArtisans;
+  const isNearMasterPotter = isNearArtisans;
 
   // Stage 1.5: Courtyard Resident (at x: 33.5%, y: 57.5%)
   const isNearCourtyardResident =
@@ -643,7 +733,7 @@ export default function IndusValleyGameScreen() {
     }, 600);
   };
 
-  // 5.5. Animated Walking Water Carrier Engine (Nano Banana generated 4-frame walk cycle)
+  // 5.5. Animated Walking Water Carriers Engine (Nano Banana generated 4-frame walk cycle)
   useEffect(() => {
     if (scene !== "residential_grid") return;
 
@@ -652,27 +742,19 @@ export default function IndusValleyGameScreen() {
       setCarrierFrame((prev) => (prev % 4) + 1);
     }, 180);
 
-    // Continuous smooth movement along open brick street path
+    // Cycle talking animation frames between woman and man (1 -> 2)
+    const talkInterval = setInterval(() => {
+      setTalkingArtisansFrame((prev) => (prev === 1 ? 2 : 1));
+    }, 1400);
+
+    // Continuous smooth game time loop for walking routes
     let lastTime = performance.now();
     let animId: number;
 
     const moveLoop = (now: number) => {
       const dt = Math.min((now - lastTime) / 1000, 0.1);
       lastTime = now;
-
-      setCarrierProgress((prev) => {
-        const speed = 0.07; // completes traversal in ~14 seconds
-        let next = prev + carrierDirection * speed * dt;
-        if (next >= 1.0) {
-          next = 1.0;
-          setCarrierDirection(-1);
-        } else if (next <= 0.0) {
-          next = 0.0;
-          setCarrierDirection(1);
-        }
-        return next;
-      });
-
+      setCarrierTime((prev) => prev + dt);
       animId = requestAnimationFrame(moveLoop);
     };
 
@@ -680,9 +762,10 @@ export default function IndusValleyGameScreen() {
 
     return () => {
       clearInterval(frameInterval);
+      clearInterval(talkInterval);
       cancelAnimationFrame(animId);
     };
-  }, [scene, carrierDirection]);
+  }, [scene]);
 
   // 6. Keyboard Movement Engine
   useEffect(() => {
@@ -851,20 +934,12 @@ export default function IndusValleyGameScreen() {
             text: "I inspect this sediment silt-trap. Every week, municipal crews lift the stone inspection slabs to scoop out sediment, ensuring our covered drainage channels flow freely towards the city perimeter.",
           });
           soundFx.playSelect();
-        } else if (isNearCottonWeaver) {
+        } else if (isNearArtisans) {
           setActiveCitizenDialogue({
-            name: "Harappan Cotton Weaver",
-            title: "Textile Artisan • Mohenjo-daro",
+            name: "Harappan Artisans (Weaver & Potter)",
+            title: "Craft Guild • Mohenjo-daro Artisan Quarter",
             icon: "",
-            text: "Our dyed cotton textiles are prized from Dilmun to ancient Ur! We spin fine threads using standardized terracotta spindle whorls right here along the sunny avenues.",
-          });
-          soundFx.playSelect();
-        } else if (isNearMasterPotter) {
-          setActiveCitizenDialogue({
-            name: "Harappan Master Potter",
-            title: "Terracotta Artisan • Mohenjo-daro",
-            icon: "",
-            text: "These large storage amphorae are wheel-thrown from fine Indus alluvial clay. Coated with lustrous red slip and painted with black geometric motifs, they keep grain, sesame oil, and clean well-water cool in the summer heat.",
+            text: "We are preparing goods for the maritime trade caravans! The weaver spins fine dyed cotton textiles using standardized terracotta whorls, while the master potter crafts wheel-thrown storage amphorae and glazed beads. Together, our artisan quarter supplies exports from Dilmun to ancient Mesopotamia!",
           });
           soundFx.playSelect();
         } else if (isNearCourtyardResident) {
@@ -1243,51 +1318,59 @@ export default function IndusValleyGameScreen() {
           </div>
         )}
 
-        {/* Stage 1.5: Road Townsman / Water Carrier (Animated walking down the paved avenue) */}
+        {/* Stage 1.5: Road Townsman / Water Carrier (Animated along Image 1 red line route) */}
         {scene === "residential_grid" && (
           <div
-            className="absolute z-15 pointer-events-auto cursor-pointer select-none group"
+            className="absolute z-15 select-none group transition-opacity duration-300"
             style={{
-              left: `${waterCarrierX}%`,
-              top: `${waterCarrierY}%`,
+              left: `${guy1State.x}%`,
+              top: `${guy1State.y}%`,
+              opacity: guy1State.opacity,
+              filter: guy1State.filter,
+              transform: `scale(${guy1State.scale})`,
+              transformOrigin: "bottom center",
+              pointerEvents: guy1State.isInside ? "none" : "auto",
+              cursor: guy1State.isInside ? "default" : "pointer",
             }}
-            onClick={() =>
+            onClick={() => {
+              if (guy1State.isInside) return;
               setActiveCitizenDialogue({
                 name: "Harappan Water Carrier",
                 title: "Neighborhood Municipal Worker • Mohenjo-daro",
                 icon: "",
-                text: "I carry cool water from our neighborhood brick well. Notice that our streets have covered drains on both sides with sediment traps. No waste ever pools in our lanes—our city stays cleaner than any kingdom in Sumer or Dilmun!",
-              })
-            }
+                text: "I carry cool water from our neighborhood brick well into the residential houses! Notice that our streets have covered drains on both sides with sediment traps. No waste ever pools in our lanes—our city stays cleaner than any kingdom in Sumer or Dilmun!",
+              });
+            }}
           >
             <div
               className={`relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform duration-200 ${
-                isCarrierFacingLeft ? "-scale-x-100" : "scale-x-100"
-              } group-hover:scale-105`}
+                guy1State.facingLeft ? "-scale-x-100" : "scale-x-100"
+              }`}
             >
-              {isNearRoadPedestrian && (
-                <div
-                  className={`mb-1.5 bg-[#1b1510]/95 border border-[#38bdf8] text-[#f0f9ff] px-2.5 py-0.5 rounded text-[11px] font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap ${
-                    isCarrierFacingLeft ? "-scale-x-100" : ""
-                  }`}
-                >
-                  <span className="text-[#38bdf8] font-bold">[G]</span>
-                  <span>Greet Water Carrier</span>
-                </div>
-              )}
-              <span
-                className={`text-[10px] font-serif font-bold text-[#f0f9ff] bg-[#0c1a24]/90 px-2 py-0.5 rounded border border-[#38bdf8]/50 shadow mb-1 whitespace-nowrap transition-opacity duration-200 ${
-                  isCarrierFacingLeft ? "-scale-x-100" : ""
-                } ${
-                  isNearRoadPedestrian ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+              {/* Floating badges positioned above the head without affecting ground anchoring */}
+              <div
+                className={`absolute bottom-full mb-1 flex flex-col items-center pointer-events-none ${
+                  guy1State.facingLeft ? "-scale-x-100" : ""
                 }`}
               >
-                Water Carrier
-              </span>
+                {isNearRoadPedestrian && (
+                  <div className="mb-1 bg-[#1b1510]/95 border border-[#38bdf8] text-[#f0f9ff] px-2.5 py-0.5 rounded text-[11px] font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap pointer-events-auto">
+                    <span className="text-[#38bdf8] font-bold">[G]</span>
+                    <span>Greet Water Carrier</span>
+                  </div>
+                )}
+                <span
+                  className={`text-[10px] font-serif font-bold text-[#f0f9ff] bg-[#0c1a24]/90 px-2 py-0.5 rounded border border-[#38bdf8]/50 shadow whitespace-nowrap transition-opacity duration-200 ${
+                    isNearRoadPedestrian ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  Water Carrier
+                </span>
+              </div>
               <img
                 src={`/sprite-pedestrian-walk-${carrierFrame}.png?v=2`}
                 alt="Harappan Water Carrier Walking"
-                className="h-24 sm:h-[108px] md:h-[122px] w-auto object-contain block select-none"
+                className="h-[68px] sm:h-[72px] md:h-[76px] w-auto object-contain block select-none"
               />
             </div>
           </div>
@@ -1363,106 +1446,99 @@ export default function IndusValleyGameScreen() {
           </div>
         )}
 
-        {/* Stage 1.5: Marked Spot 2 - Municipal Drain Inspector (Mid-right avenue beside culvert bridge) */}
+        {/* Stage 1.5: Marked Spot 2 - Municipal Drain Inspector (Animated along Image 2 red line route) */}
         {scene === "residential_grid" && (
           <div
-            className="absolute z-14 pointer-events-auto cursor-pointer select-none group"
-            style={{ left: "83%", top: "58%" }}
-            onClick={() =>
+            className="absolute z-14 select-none group transition-opacity duration-300"
+            style={{
+              left: `${guy2State.x}%`,
+              top: `${guy2State.y}%`,
+              opacity: guy2State.opacity,
+              filter: guy2State.filter,
+              transform: `scale(${guy2State.scale})`,
+              transformOrigin: "bottom center",
+              pointerEvents: guy2State.isInside ? "none" : "auto",
+              cursor: guy2State.isInside ? "default" : "pointer",
+            }}
+            onClick={() => {
+              if (guy2State.isInside) return;
               setActiveCitizenDialogue({
                 name: "Municipal Drain Inspector",
                 title: "Civic Sanitation Surveyor • Mohenjo-daro",
                 icon: "",
-                text: "I inspect this sediment silt-trap. Every week, municipal crews lift the stone inspection slabs to scoop out sediment, ensuring our covered drainage channels flow freely towards the city perimeter.",
-              })
-            }
+                text: "I inspect this sediment silt-trap and deliver fresh water to the east wing quarters. Every week, municipal crews lift the stone inspection slabs to scoop out sediment, ensuring our covered drainage channels flow freely towards the city perimeter.",
+              });
+            }}
           >
-            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform group-hover:scale-105">
-              {isNearDrainInspector && (
-                <div className="mb-1.5 bg-[#1b1510]/95 border border-[#38bdf8] text-[#f0f9ff] px-2.5 py-0.5 rounded text-[11px] font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap">
-                  <span className="text-[#38bdf8] font-bold">[G]</span>
-                  <span>Speak with Drain Inspector</span>
-                </div>
-              )}
-              <span className={`text-[10px] font-serif font-bold text-[#f0f9ff] bg-[#0c1a24]/90 px-2 py-0.5 rounded border border-[#38bdf8]/50 shadow mb-1 whitespace-nowrap transition-opacity duration-200 ${
-                isNearDrainInspector ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-              }`}>
-                Drain Inspector
-              </span>
+            <div
+              className={`relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform duration-200 ${
+                guy2State.facingLeft ? "-scale-x-100" : "scale-x-100"
+              }`}
+            >
+              <div
+                className={`absolute bottom-full mb-1 flex flex-col items-center pointer-events-none ${
+                  guy2State.facingLeft ? "-scale-x-100" : ""
+                }`}
+              >
+                {isNearDrainInspector && (
+                  <div className="mb-1 bg-[#1b1510]/95 border border-[#38bdf8] text-[#f0f9ff] px-2.5 py-0.5 rounded text-[11px] font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap pointer-events-auto">
+                    <span className="text-[#38bdf8] font-bold">[G]</span>
+                    <span>Speak with Drain Inspector</span>
+                  </div>
+                )}
+                <span
+                  className={`text-[10px] font-serif font-bold text-[#f0f9ff] bg-[#0c1a24]/90 px-2 py-0.5 rounded border border-[#38bdf8]/50 shadow whitespace-nowrap transition-opacity duration-200 ${
+                    isNearDrainInspector ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  Drain Inspector
+                </span>
+              </div>
               <img
-                src="/sprite-indus-pedestrian.png?v=3"
-                alt="Drain Inspector"
-                className="h-[82px] sm:h-[95px] md:h-[109px] w-auto object-contain block select-none"
+                src={`/sprite-pedestrian-walk-${carrierFrame}.png?v=2`}
+                alt="Drain Inspector Walking"
+                className="h-[68px] sm:h-[72px] md:h-[76px] w-auto object-contain block select-none"
               />
             </div>
           </div>
         )}
 
-        {/* Stage 1.5: Marked Spot 3 - Harappan Cotton Weaver (Lower-mid right avenue) */}
-        {scene === "residential_grid" && (
-          <div
-            className="absolute z-14 pointer-events-auto cursor-pointer select-none group"
-            style={{ left: "78.5%", top: "72%" }}
-            onClick={() =>
-              setActiveCitizenDialogue({
-                name: "Harappan Cotton Weaver",
-                title: "Textile Artisan • Mohenjo-daro",
-                icon: "",
-                text: "Our dyed cotton textiles are prized from Dilmun to ancient Ur! We spin fine threads using standardized terracotta spindle whorls right here along the sunny avenues.",
-              })
-            }
-          >
-            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform group-hover:scale-105">
-              {isNearCottonWeaver && (
-                <div className="mb-1.5 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded text-[11px] font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap">
-                  <span className="text-[#d8a86a] font-bold">[G]</span>
-                  <span>Speak with Cotton Weaver</span>
-                </div>
-              )}
-              <span className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow mb-1 whitespace-nowrap transition-opacity duration-200 ${
-                isNearCottonWeaver ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-              }`}>
-                Cotton Weaver
-              </span>
-              <img
-                src="/sprite-indus-courtyard.png?v=3"
-                alt="Cotton Weaver"
-                className="h-[88px] sm:h-[102px] md:h-[116px] w-auto object-contain block select-none"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Stage 1.5: Marked Spot 4 - Master Potter (Bottom-right corner in front of doorway and pottery amphorae) */}
+        {/* Stage 1.5: Harappan Artisans Conversing (Cotton Weaver & Master Potter down on courtyard ground) */}
         {scene === "residential_grid" && (
           <div
             className="absolute z-16 pointer-events-auto cursor-pointer select-none group"
-            style={{ left: "91%", top: "93%" }}
+            style={{ left: "87.5%", top: "93.5%" }}
             onClick={() =>
               setActiveCitizenDialogue({
-                name: "Harappan Master Potter",
-                title: "Terracotta Artisan • Mohenjo-daro",
+                name: "Harappan Artisans (Weaver & Potter)",
+                title: "Craft Guild • Mohenjo-daro Artisan Quarter",
                 icon: "",
-                text: "These large storage amphorae are wheel-thrown from fine Indus alluvial clay. Coated with lustrous red slip and painted with black geometric motifs, they keep grain, sesame oil, and clean well-water cool in the summer heat.",
+                text: "We are coordinating our shipment for the maritime trade caravans! The weaver spins fine dyed cotton textiles using standardized terracotta whorls, while the master potter crafts wheel-thrown storage amphorae and glazed beads. Together, our artisan quarter supplies exports from Dilmun to ancient Mesopotamia!",
               })
             }
           >
-            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform group-hover:scale-105">
-              {isNearMasterPotter && (
-                <div className="mb-1.5 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded text-[11px] font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap">
-                  <span className="text-[#d8a86a] font-bold">[G]</span>
-                  <span>Speak with Master Potter</span>
-                </div>
-              )}
-              <span className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow mb-1 whitespace-nowrap transition-opacity duration-200 ${
-                isNearMasterPotter ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-              }`}>
-                Master Potter
-              </span>
+            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform duration-200 group-hover:scale-105">
+              {/* Floating interaction badges above head without affecting ground anchoring */}
+              <div className="absolute bottom-full mb-1 flex flex-col items-center pointer-events-none">
+                {isNearArtisans && (
+                  <div className="mb-1 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded text-[11px] font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap pointer-events-auto">
+                    <span className="text-[#d8a86a] font-bold">[G]</span>
+                    <span>Speak with Artisans</span>
+                  </div>
+                )}
+                <span
+                  className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow whitespace-nowrap transition-opacity duration-200 ${
+                    isNearArtisans ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  Weaver & Potter in Conversation
+                </span>
+              </div>
+
               <img
-                src="/sprite-indus-trader.png?v=3"
-                alt="Master Potter"
-                className="h-24 sm:h-[108px] md:h-[122px] w-auto object-contain block select-none"
+                src={`/sprite-artisans-talk-${talkingArtisansFrame}.png?v=2`}
+                alt="Harappan Artisans Conversing"
+                className="h-[102px] sm:h-[114px] md:h-[126px] w-auto object-contain block select-none"
               />
             </div>
           </div>
