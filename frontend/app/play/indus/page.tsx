@@ -353,6 +353,7 @@ export default function IndusValleyGameScreen() {
   const [talkingArtisansFrame, setTalkingArtisansFrame] = useState<1 | 2>(1);
   const [rooftopFrame, setRooftopFrame] = useState<1 | 2>(1);
   const [boatRowFrame, setBoatRowFrame] = useState<1 | 2>(1);
+  const [grainWorkerFrame, setGrainWorkerFrame] = useState<1 | 2 | 3>(1);
 
   // Scene Configuration
   const currentSceneConfig = INDUS_SCENE_CONFIGS[scene] || INDUS_SCENE_CONFIGS.lower_town_gate;
@@ -772,6 +773,22 @@ export default function IndusValleyGameScreen() {
     playerPos.y >= 60.0 &&
     playerPos.y <= 76.0;
 
+  // Stage 1.7: Granary Bullock Cart Grain Unloader in Right Dirt Yard (Worker at cart at x: 84.5%, y: 86.5%)
+  const isNearGrainCartWorker =
+    scene === "granary_avenue" &&
+    playerPos.x >= 78.0 &&
+    playerPos.x <= 88.0 &&
+    playerPos.y >= 78.0 &&
+    playerPos.y <= 92.0;
+
+  // Stage 1.7: Harappan Merchants Conversing in Dirt Yard in front of ladder (x: 75.5%, y: 88.0%)
+  const isNearGranaryArtisans =
+    scene === "granary_avenue" &&
+    playerPos.x >= 70.0 &&
+    playerPos.x <= 82.0 &&
+    playerPos.y >= 80.0 &&
+    playerPos.y <= 92.0;
+
   // Stage 2 -> Return to The Great Granary (at bottom entrance)
   const isNearGreatBathGranaryReturn =
     scene === "great_bath_citadel" &&
@@ -815,6 +832,35 @@ export default function IndusValleyGameScreen() {
     { x: 88.5, y: 56.0 },
   ];
   const guy2State = getPathPosition(guy2Waypoints, 13.8, 3.0, carrierTime);
+
+  // Stage 1.7: Animated Granary Porters (Carrying grain sacks across the hall from corner to corner)
+  const grainCarrierWalkFrame = ((carrierFrame - 1) % 3) + 1;
+  // Worker 1: Along back aisle from (32.0%, 39.0%) to (73.0%, 34.0%)
+  const gPhase1 = (carrierTime % 18) / 18;
+  const gT1 = gPhase1 < 0.5 ? gPhase1 / 0.5 : (1.0 - gPhase1) / 0.5;
+  const granaryWorker1Pos = {
+    x: 32.0 + gT1 * 41.0,
+    y: 39.0 - gT1 * 5.0,
+    facingLeft: gPhase1 >= 0.5,
+  };
+
+  // Worker 2: Along parallel forward plank walkway from (35.0%, 41.5%) to (75.0%, 36.5%)
+  // Staggered by 9s and offset vertically by 2.5% so they never overlap
+  const gPhase2 = ((carrierTime + 9) % 20) / 20;
+  const gT2 = gPhase2 < 0.5 ? gPhase2 / 0.5 : (1.0 - gPhase2) / 0.5;
+  const granaryWorker2Pos = {
+    x: 35.0 + gT2 * 40.0,
+    y: 41.5 - gT2 * 5.0,
+    facingLeft: gPhase2 >= 0.5,
+  };
+
+  const isNearGranaryPorter1 =
+    scene === "granary_avenue" &&
+    Math.hypot(playerPos.x - granaryWorker1Pos.x, playerPos.y - granaryWorker1Pos.y) <= 8.0;
+
+  const isNearGranaryPorter2 =
+    scene === "granary_avenue" &&
+    Math.hypot(playerPos.x - granaryWorker2Pos.x, playerPos.y - granaryWorker2Pos.y) <= 8.0;
 
   // Stage 1.5: Road Pedestrian / Water Carrier (Walking along left paved avenue)
   const isNearRoadPedestrian =
@@ -906,9 +952,14 @@ export default function IndusValleyGameScreen() {
     }, 600);
   };
 
-  // 5.5. Animated Entities Engine (Water carriers, rooftop citizens, and Egyptian river boat)
+  // 5.5. Animated Entities Engine (Water carriers, rooftop citizens, Egyptian boat, granary unloader & talking artisans)
   useEffect(() => {
-    if (scene !== "residential_grid" && scene !== "lower_town_gate") return;
+    if (
+      scene !== "residential_grid" &&
+      scene !== "lower_town_gate" &&
+      scene !== "granary_avenue"
+    )
+      return;
 
     // Cycle walk animation frames (1 -> 2 -> 3 -> 4 for carriers, 1 -> 2 for rooftop)
     const frameInterval = setInterval(() => {
@@ -925,6 +976,14 @@ export default function IndusValleyGameScreen() {
     const talkInterval = setInterval(() => {
       setTalkingArtisansFrame((prev) => (prev === 1 ? 2 : 1));
     }, 1400);
+
+    // Cycle grain unloading animation frames (3 -> 2 -> 1 -> 2 -> 3)
+    const grainSequence: (1 | 2 | 3)[] = [3, 2, 1, 2];
+    let grainSeqIdx = 0;
+    const grainWorkerInterval = setInterval(() => {
+      grainSeqIdx = (grainSeqIdx + 1) % grainSequence.length;
+      setGrainWorkerFrame(grainSequence[grainSeqIdx]);
+    }, 750);
 
     // Continuous smooth game time loop for walking and river routes
     let lastTime = performance.now();
@@ -943,6 +1002,7 @@ export default function IndusValleyGameScreen() {
       clearInterval(frameInterval);
       clearInterval(boatInterval);
       clearInterval(talkInterval);
+      clearInterval(grainWorkerInterval);
       cancelAnimationFrame(animId);
     };
   }, [scene]);
@@ -1154,12 +1214,36 @@ export default function IndusValleyGameScreen() {
             text: "We haul sacks of freshly threshed barley and emmer wheat from the river quays up these wooden ramps! Notice how the platforms are raised above the ground—warm, dry air circulates continuously through the brick vents to prevent rot.",
           });
           soundFx.playSelect();
+        } else if (isNearGrainCartWorker) {
+          setActiveCitizenDialogue({
+            name: "Dhanu the Granary Worker",
+            title: "Bullock Cart Grain Handler • Mohenjo-daro Granary",
+            icon: "",
+            text: "Hup! Another wooden cart loaded with winter barley has arrived from the fertile alluvial fields along the Indus river. We carefully unload each heavy sack and storage pot down to the staging ground, ready to be weighed and hauled up the wooden ramp to the ventilated loading platforms!",
+          });
+          soundFx.playSelect();
+        } else if (isNearGranaryArtisans) {
+          setActiveCitizenDialogue({
+            name: "Harappan Merchants (Weaver & Grain Overseer)",
+            title: "Civic Distribution Guild • Mohenjo-daro",
+            icon: "",
+            text: "We are verifying the grain tallies for the city's craftspeople and municipal workers! Standardized binary chert weights ensure that every family and artisan receives their exact monthly ration of barley and sesame seeds directly from the state granary.",
+          });
+          soundFx.playSelect();
         } else if (isNearGranaryScribe) {
           setActiveCitizenDialogue({
             name: "Granary Metrology Scribe",
             title: "Civic Grain Overseer • Mohenjo-daro",
             icon: "",
             text: "Every basket entering these rectangular bays is measured against standard chert cube weights. Centralized storage ensures that even during drought years or unpredictable Indus river floods, the civic granary guarantees food security for the entire population.",
+          });
+          soundFx.playSelect();
+        } else if (isNearGranaryPorter1 || isNearGranaryPorter2) {
+          setActiveCitizenDialogue({
+            name: "Harappan Grain Porter",
+            title: "Granary Reserve Carrier • Mohenjo-daro",
+            icon: "",
+            text: "Step aside, friend! We are hauling sacks of harvested barley and emmer wheat from the cool storage chambers in the west corner across to the distribution loading bays. The subterranean air ducts below keep the grain dry and fresh through every season!",
           });
           soundFx.playSelect();
         } else if (isNearGranaryAirDucts) {
@@ -1288,6 +1372,10 @@ export default function IndusValleyGameScreen() {
     isNearGranaryAirDucts,
     isNearGranaryPlatforms,
     isNearGranaryWorker,
+    isNearGranaryPorter1,
+    isNearGranaryPorter2,
+    isNearGrainCartWorker,
+    isNearGranaryArtisans,
     isNearGranaryScribe,
     isNearGreatBathBasin,
     isNearGreatBathGranaryReturn,
@@ -2522,6 +2610,176 @@ export default function IndusValleyGameScreen() {
             }`}>
               Rectangular Grain Bays
             </span>
+          </div>
+        )}
+
+        {/* Stage 1.7: Granary Worker Unloading Grains from Bullock Cart */}
+        {scene === "granary_avenue" && (
+          <div
+            className="absolute z-13 pointer-events-auto cursor-pointer select-none group"
+            style={{ left: "84.5%", top: "86.5%" }}
+            onClick={() => {
+              setActiveCitizenDialogue({
+                name: "Dhanu the Granary Worker",
+                title: "Bullock Cart Grain Handler • Mohenjo-daro Granary",
+                icon: "",
+                text: "Hup! Another wooden cart loaded with winter barley has arrived from the fertile alluvial fields along the Indus river. We carefully unload each heavy sack and storage pot down to the staging ground, ready to be weighed and hauled up the wooden ramp to the ventilated loading platforms!",
+              });
+              soundFx.playSelect();
+            }}
+          >
+            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform duration-200 group-hover:scale-105">
+              <div className="absolute bottom-full mb-1 flex flex-col items-center pointer-events-none">
+                {isNearGrainCartWorker && (
+                  <div className="mb-1 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded text-[10px] font-serif shadow-lg animate-bounce whitespace-nowrap pointer-events-auto">
+                    <span className="text-[#d8a86a] font-bold mr-1">[G]</span>
+                    <span>Speak with Grain Unloader</span>
+                  </div>
+                )}
+                <span
+                  className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow whitespace-nowrap transition-opacity duration-200 ${
+                    isNearGrainCartWorker ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  Unloading Grain Cart
+                </span>
+              </div>
+              <img
+                src={`/sprite-grain-cart-${grainWorkerFrame}.png?v=2`}
+                alt="Harappan Laborer Unloading Grains from Cart"
+                className="h-32 sm:h-36 md:h-40 w-auto object-contain block select-none drop-shadow-[0_6px_12px_rgba(0,0,0,0.35)]"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Stage 1.7: Harappan Merchants Conversing in Dirt Yard beside Ramp (Boy & Girl Talking) */}
+        {scene === "granary_avenue" && (
+          <div
+            className="absolute z-12 pointer-events-auto cursor-pointer select-none group"
+            style={{ left: "75.5%", top: "88.0%" }}
+            onClick={() => {
+              setActiveCitizenDialogue({
+                name: "Harappan Merchants (Weaver & Grain Overseer)",
+                title: "Civic Distribution Guild • Mohenjo-daro",
+                icon: "",
+                text: "We are verifying the grain tallies for the city's craftspeople and municipal workers! Standardized binary chert weights ensure that every family and artisan receives their exact monthly ration of barley and sesame seeds directly from the state granary.",
+              });
+              soundFx.playSelect();
+            }}
+          >
+            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform duration-200 group-hover:scale-105">
+              <div className="absolute bottom-full mb-1 flex flex-col items-center pointer-events-none">
+                {isNearGranaryArtisans && (
+                  <div className="mb-1 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded text-[10px] font-serif shadow-lg animate-bounce whitespace-nowrap pointer-events-auto">
+                    <span className="text-[#d8a86a] font-bold mr-1">[G]</span>
+                    <span>Speak with Grain Merchants</span>
+                  </div>
+                )}
+                <span
+                  className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow whitespace-nowrap transition-opacity duration-200 ${
+                    isNearGranaryArtisans ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  Grain Merchants
+                </span>
+              </div>
+              <img
+                src={`/sprite-artisans-talk-${talkingArtisansFrame}.png?v=2`}
+                alt="Harappan Merchants Conversing"
+                className="h-20 sm:h-24 md:h-28 w-auto object-contain block select-none drop-shadow-[0_4px_8px_rgba(0,0,0,0.3)]"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Stage 1.7: Grain Porter 1 (Upper hall aisle from corner to corner) */}
+        {scene === "granary_avenue" && (
+          <div
+            className="absolute z-11 pointer-events-auto cursor-pointer select-none group"
+            style={{
+              left: `${granaryWorker1Pos.x}%`,
+              top: `${granaryWorker1Pos.y}%`,
+            }}
+            onClick={() => {
+              setActiveCitizenDialogue({
+                name: "Harappan Grain Porter",
+                title: "Granary Reserve Carrier • Mohenjo-daro",
+                icon: "",
+                text: "Step aside, friend! We are hauling sacks of harvested barley and emmer wheat from the cool storage chambers in the west corner across to the distribution loading bays. The subterranean air ducts below keep the grain dry and fresh through every season!",
+              });
+              soundFx.playSelect();
+            }}
+          >
+            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform duration-100 group-hover:scale-105">
+              <div className="absolute bottom-full mb-1 flex flex-col items-center pointer-events-none">
+                {isNearGranaryPorter1 && (
+                  <div className="mb-0.5 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2 py-0.5 rounded text-[9px] font-serif shadow animate-bounce whitespace-nowrap pointer-events-auto">
+                    <span className="text-[#d8a86a] font-bold mr-1">[G]</span>
+                    <span>Speak with Porter</span>
+                  </div>
+                )}
+                <span
+                  className={`text-[9px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-1.5 py-0.5 rounded border border-[#d8a86a]/50 shadow whitespace-nowrap transition-opacity duration-200 ${
+                    isNearGranaryPorter1 ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  Grain Porter
+                </span>
+              </div>
+              <img
+                src={`/sprite-grain-carrier-${grainCarrierWalkFrame}.png`}
+                alt="Grain Porter carrying sack"
+                className={`h-14 sm:h-16 md:h-[62px] w-auto object-contain block select-none drop-shadow-[0_4px_8px_rgba(0,0,0,0.3)] transition-transform duration-150 ${
+                  granaryWorker1Pos.facingLeft ? "-scale-x-100" : "scale-x-100"
+                }`}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Stage 1.7: Grain Porter 2 (Parallel platform runway, offset so no overlap) */}
+        {scene === "granary_avenue" && (
+          <div
+            className="absolute z-12 pointer-events-auto cursor-pointer select-none group"
+            style={{
+              left: `${granaryWorker2Pos.x}%`,
+              top: `${granaryWorker2Pos.y}%`,
+            }}
+            onClick={() => {
+              setActiveCitizenDialogue({
+                name: "Harappan Grain Porter",
+                title: "Granary Reserve Carrier • Mohenjo-daro",
+                icon: "",
+                text: "Step aside, friend! We are hauling sacks of harvested barley and emmer wheat from the cool storage chambers in the west corner across to the distribution loading bays. The subterranean air ducts below keep the grain dry and fresh through every season!",
+              });
+              soundFx.playSelect();
+            }}
+          >
+            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform duration-100 group-hover:scale-105">
+              <div className="absolute bottom-full mb-1 flex flex-col items-center pointer-events-none">
+                {isNearGranaryPorter2 && (
+                  <div className="mb-0.5 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2 py-0.5 rounded text-[9px] font-serif shadow animate-bounce whitespace-nowrap pointer-events-auto">
+                    <span className="text-[#d8a86a] font-bold mr-1">[G]</span>
+                    <span>Speak with Porter</span>
+                  </div>
+                )}
+                <span
+                  className={`text-[9px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-1.5 py-0.5 rounded border border-[#d8a86a]/50 shadow whitespace-nowrap transition-opacity duration-200 ${
+                    isNearGranaryPorter2 ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  Grain Porter
+                </span>
+              </div>
+              <img
+                src={`/sprite-grain-carrier-${grainCarrierWalkFrame}.png`}
+                alt="Grain Porter carrying sack"
+                className={`h-14 sm:h-16 md:h-[62px] w-auto object-contain block select-none drop-shadow-[0_4px_8px_rgba(0,0,0,0.3)] transition-transform duration-150 ${
+                  granaryWorker2Pos.facingLeft ? "-scale-x-100" : "scale-x-100"
+                }`}
+              />
+            </div>
           </div>
         )}
 

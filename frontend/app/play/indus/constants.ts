@@ -90,9 +90,9 @@ export const INDUS_SCENE_CONFIGS: Record<IndusSceneType, IndusSceneMeta> = {
     backgroundImage: "/bg-indus-great-granary.jpg",
     defaultObjective: "Inspect the elevated rectangular loading platforms, wooden ramps, and subterranean ventilation air ducts.",
     minX: 18.0,
-    maxX: 84.0,
+    maxX: 88.0,
     minY: 42.0,
-    maxY: 86.0,
+    maxY: 90.0,
   },
   great_bath_citadel: {
     title: "The Great Bath of Mohenjo-daro",
