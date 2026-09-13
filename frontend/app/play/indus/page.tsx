@@ -173,6 +173,65 @@ function getTwoWayPatrolPosition(
   }
 }
 
+// Stage 1.5: Municipal Drain Inspector / Water Carrier Route (User's red line route)
+// Walks full straight along the right avenue from bottom (74.0, 98.0) to top (88.5, 36.0),
+// disappears at the end, stays disappeared for 6 seconds, then restarts from the start point.
+function getRightAvenuePatrolState(elapsedTime: number) {
+  const pointA = { x: 74.0, y: 98.0 }; // Start point: bottom of right avenue
+  const pointB = { x: 88.5, y: 36.0 }; // End point: top of right avenue
+  const walkDuration = 15.0; // Duration of straight walk up avenue
+  const disappearDuration = 6.0; // Exactly 6 seconds disappeared before restarting
+  const totalCycle = walkDuration + disappearDuration; // 21.0s total cycle
+  const t = ((elapsedTime % totalCycle) + totalCycle) % totalCycle;
+
+  let x: number;
+  let y: number;
+  let facingLeft: boolean = false;
+  let isWalking: boolean;
+  let opacity: number;
+  let isInside: boolean = false;
+
+  if (t < walkDuration) {
+    // 1. Walking straight UP along the avenue (A -> B)
+    const prog = t / walkDuration;
+    x = pointA.x + (pointB.x - pointA.x) * prog;
+    y = pointA.y + (pointB.y - pointA.y) * prog;
+    facingLeft = false;
+    isWalking = true;
+
+    // Smooth fade-in at start point and fade-out as reaching top before disappearing
+    if (t < 0.6) {
+      opacity = Math.min(1, t / 0.6);
+    } else if (t > walkDuration - 0.8) {
+      opacity = Math.max(0, (walkDuration - t) / 0.8);
+    } else {
+      opacity = 1;
+    }
+  } else {
+    // 2. Disappeared at the end for 6 seconds, waiting to restart from start point
+    x = pointA.x;
+    y = pointA.y;
+    facingLeft = false;
+    isWalking = false;
+    opacity = 0;
+    isInside = true; // Disable clicks/hover interactions while disappeared
+  }
+
+  // Perspective depth scaling along the avenue
+  const scale = 0.65 + (y / 100) * 0.35;
+
+  return {
+    x,
+    y,
+    scale,
+    facingLeft,
+    isWalking,
+    opacity,
+    isInside,
+    filter: "none",
+  };
+}
+
 interface BoatPatrolState {
   x: number;
   y: number;
@@ -675,13 +734,13 @@ export default function IndusValleyGameScreen() {
     playerPos.y >= 58.0 &&
     playerPos.y <= 74.0;
 
-  // Stage 1.5: Residential Grid -> Enter Courtyard Doorway (at avenue doorway x: 48%, y: 60%)
+  // Stage 1.5: Residential Grid -> Enter Courtyard Doorway (Image 4 doorway on avenue right side: x: ~80%, y: ~78%)
   const isNearHouseDoorway =
     scene === "residential_grid" &&
-    playerPos.x >= 42.0 &&
-    playerPos.x <= 54.0 &&
-    playerPos.y >= 52.0 &&
-    playerPos.y <= 66.0;
+    playerPos.x >= 70.0 &&
+    playerPos.x <= 88.0 &&
+    playerPos.y >= 66.0 &&
+    playerPos.y <= 86.0;
 
   // Stage 1.55: Central Domestic Courtyard -> Exit back to Street Grid (at bottom entrance)
   const isNearCourtyardExit =
@@ -950,13 +1009,8 @@ export default function IndusValleyGameScreen() {
   ];
   const guy1State = getPathPosition(guy1Waypoints, 17.5, 4.0, carrierTime);
 
-  // Right Lane Water Carrier Route (Image 2: straight up right avenue and turns into doorway, 13.8s walk + 3s pause inside)
-  const guy2Waypoints = [
-    { x: 74.0, y: 98.0 },
-    { x: 83.5, y: 56.0 },
-    { x: 88.5, y: 56.0 },
-  ];
-  const guy2State = getPathPosition(guy2Waypoints, 13.8, 3.0, carrierTime);
+  // Right Lane Water Carrier Route (Straight along user's red line between bottom of avenue and cargo inspector)
+  const guy2State = getRightAvenuePatrolState(carrierTime);
 
   const isNearResidentialWaterCarrier1 =
     scene === "residential_grid" &&
@@ -971,29 +1025,29 @@ export default function IndusValleyGameScreen() {
   // Stage 1.7: Animated Granary Porters (Lifting grain sacks, walking on solid land/ramps, keeping sacks, and walking back empty)
   const grainCarrierWalkFrame = ((carrierFrame - 1) % 3) + 1;
 
-  // Worker 1: 4-point path on solid hall dirt floor, wooden ramp, and empty dirt platform 2:
+  // Worker 1: 4-point path following user's red marked route into Platform 2 sunken sand/grain bay (clear of all pots):
   // P0: Hall floor in front of reserve (34.0, 36.5)
-  // P1: Wooden plank bridge head (44.0, 40.0)
-  // P2: Wooden walkway behind sacks (50.0, 43.0)
-  // P3: Platform 2 empty dirt floor (53.0, 49.5)
+  // P1: Wooden plank bridge head (44.0, 37.0)
+  // P2: Entering sunken sand bay walkway (56.0, 38.0)
+  // P3: Platform 2 sunken sand bay deposit point (68.0, 39.5)
   const getW1InterpolatedPos = (normT: number) => {
-    if (normT <= 0.43) {
-      const segT = normT / 0.43;
+    if (normT <= 0.35) {
+      const segT = normT / 0.35;
       return {
         x: 34.0 + segT * (44.0 - 34.0),
-        y: 36.5 + segT * (40.0 - 36.5),
+        y: 36.5 + segT * (37.0 - 36.5),
       };
-    } else if (normT <= 0.70) {
-      const segT = (normT - 0.43) / 0.27;
+    } else if (normT <= 0.65) {
+      const segT = (normT - 0.35) / 0.30;
       return {
-        x: 44.0 + segT * (50.0 - 44.0),
-        y: 40.0 + segT * (43.0 - 40.0),
+        x: 44.0 + segT * (56.0 - 44.0),
+        y: 37.0 + segT * (38.0 - 37.0),
       };
     } else {
-      const segT = (normT - 0.70) / 0.30;
+      const segT = (normT - 0.65) / 0.35;
       return {
-        x: 50.0 + segT * (53.0 - 50.0),
-        y: 43.0 + segT * (49.5 - 43.0),
+        x: 56.0 + segT * (68.0 - 56.0),
+        y: 38.0 + segT * (39.5 - 38.0),
       };
     }
   };
@@ -1009,18 +1063,18 @@ export default function IndusValleyGameScreen() {
     w1FacingLeft = false;
     w1Carrying = true;
   } else if (w1Cycle < 7.0) {
-    // Walking carrying sack Point A -> Bridge -> Platform 2 empty floor
+    // Walking carrying sack Point A -> Bridge -> Platform 2 sunken sand bay
     const t = (w1Cycle - 1.5) / 5.5;
     w1FacingLeft = false;
     w1Carrying = true;
     w1Pos = getW1InterpolatedPos(t);
   } else if (w1Cycle < 8.5) {
-    // Keeping/depositing grain sack at Platform 2
-    w1Pos = { x: 53.0, y: 49.5 };
+    // Keeping/depositing grain sack at Platform 2 sunken sand bay
+    w1Pos = { x: 68.0, y: 39.5 };
     w1FacingLeft = false;
     w1Carrying = false;
   } else if (w1Cycle < 14.0) {
-    // Walking back empty-handed Platform 2 -> Bridge -> Point A
+    // Walking back empty-handed Platform 2 sunken sand bay -> Bridge -> Point A
     const t = (w1Cycle - 8.5) / 5.5;
     w1FacingLeft = true;
     w1Carrying = false;
@@ -1041,46 +1095,46 @@ export default function IndusValleyGameScreen() {
     isCarrying: w1Carrying,
   };
 
-  // Worker 2: Straight path on solid flat brick platform 1 deck (NEVER on sacks):
-  // Point A (Flat dirt deck beside sack pile at 26.5%, 53.0%) <-> Point B (Flat deck beside baskets at 33.0%, 57.0%)
-  // Total cycle: 14s, staggered by 4s
-  const w2Cycle = (carrierTime + 4) % 14;
-  let w2Pos = { x: 26.5, y: 53.0 };
-  let w2FacingLeft = false;
+  // Worker 2: Ground Porter in Lower Dirt Yard (Fix: stays strictly grounded on dirt road, never flies onto arch wall, never goes past cart):
+  // Point A (Cart front/shafts where sacks are unloaded: 53.5%, 96.5%) <-> Point B (Open dirt ground staging: 38.0%, 97.5%)
+  // Total cycle: 14s, staggered by 5s
+  const w2Cycle = (carrierTime + 5) % 14;
+  let w2Pos = { x: 53.5, y: 96.5 };
+  let w2FacingLeft = true;
   let w2Carrying = true;
 
   if (w2Cycle < 1.5) {
-    // Lifting/picking up grain sack at Point A
-    w2Pos = { x: 26.5, y: 53.0 };
-    w2FacingLeft = false;
+    // Lifting/picking up grain sack at cart front Point A
+    w2Pos = { x: 53.5, y: 96.5 };
+    w2FacingLeft = true;
     w2Carrying = true;
   } else if (w2Cycle < 6.5) {
-    // Walking carrying sack across flat platform deck
+    // Walking carrying sack across open dirt ground towards Point B (maintaining ground physics, y >= 96.5)
     const t = (w2Cycle - 1.5) / 5.0;
-    w2FacingLeft = false;
+    w2FacingLeft = true;
     w2Carrying = true;
     w2Pos = {
-      x: 26.5 + t * (33.0 - 26.5),
-      y: 53.0 + t * (57.0 - 53.0),
+      x: 53.5 - t * (53.5 - 38.0),
+      y: 96.5 + t * (97.5 - 96.5),
     };
   } else if (w2Cycle < 8.0) {
-    // Keeping/depositing grain sack at Point B
-    w2Pos = { x: 33.0, y: 57.0 };
-    w2FacingLeft = false;
-    w2Carrying = false;
-  } else if (w2Cycle < 13.0) {
-    // Walking back empty-handed Point B -> Point A
-    const t = (w2Cycle - 8.0) / 5.0;
+    // Keeping/depositing grain sack on open dirt ground at Point B
+    w2Pos = { x: 38.0, y: 97.5 };
     w2FacingLeft = true;
     w2Carrying = false;
+  } else if (w2Cycle < 13.0) {
+    // Walking back empty-handed across open dirt ground from Point B to cart Point A
+    const t = (w2Cycle - 8.0) / 5.0;
+    w2FacingLeft = false;
+    w2Carrying = false;
     w2Pos = {
-      x: 33.0 - t * (33.0 - 26.5),
-      y: 57.0 - t * (57.0 - 53.0),
+      x: 38.0 + t * (53.5 - 38.0),
+      y: 97.5 - t * (97.5 - 96.5),
     };
   } else {
-    // Resetting at Point A to start next sack
-    w2Pos = { x: 26.5, y: 53.0 };
-    w2FacingLeft = false;
+    // Resetting at cart front Point A to start next sack
+    w2Pos = { x: 53.5, y: 96.5 };
+    w2FacingLeft = true;
     w2Carrying = false;
   }
 
@@ -1133,42 +1187,47 @@ export default function IndusValleyGameScreen() {
   const showDepositedSack3 = w3Cycle >= 6.5 && w3Cycle <= 13.5;
   const granaryWorker3Pos = { x: w3Pos.x, y: w3Pos.y, facingLeft: w3FacingLeft, isCarrying: w3Carrying };
 
-  // Worker 4: Platform 3 Deck (Kept safely on the solid deck, never flying off the edge):
-  // Point A (68.5%, 46.5%) -> Point B (65.0%, 46.5%)
-  const w4Cycle = (carrierTime + 6) % 12;
-  let w4Pos = { x: 68.5, y: 46.5 };
-  let w4FacingLeft = true;
+  // Worker 4: Upper Roof Flat Sand Terrace (Image 2 fix: grounded strictly on yellow sand floor, never on front brick railing):
+  // Point A (Flat sand floor beside basket/jars: 67.0%, 32.2%) <-> Point B (Flat sand floor deposit area: 79.5%, 32.6%)
+  const w4Cycle = (carrierTime + 6) % 14;
+  let w4Pos = { x: 67.0, y: 32.2 };
+  let w4FacingLeft = false;
   let w4Carrying = true;
   if (w4Cycle < 1.5) {
-    w4Pos = { x: 68.5, y: 46.5 };
-    w4FacingLeft = true;
+    // Picking up sack at Point A
+    w4Pos = { x: 67.0, y: 32.2 };
+    w4FacingLeft = false;
     w4Carrying = true;
-  } else if (w4Cycle < 5.5) {
-    const t = (w4Cycle - 1.5) / 4.0;
-    w4FacingLeft = true;
+  } else if (w4Cycle < 6.5) {
+    // Walking carrying sack across flat sand floor towards Point B
+    const t = (w4Cycle - 1.5) / 5.0;
+    w4FacingLeft = false;
     w4Carrying = true;
     w4Pos = {
-      x: 68.5 - t * (68.5 - 65.0),
-      y: 46.5,
+      x: 67.0 + t * (79.5 - 67.0),
+      y: 32.2 + t * (32.6 - 32.2),
     };
-  } else if (w4Cycle < 7.0) {
-    w4Pos = { x: 65.0, y: 46.5 };
-    w4FacingLeft = true;
-    w4Carrying = false;
-  } else if (w4Cycle < 11.0) {
-    const t = (w4Cycle - 7.0) / 4.0;
+  } else if (w4Cycle < 8.0) {
+    // Depositing sack on sand floor at Point B
+    w4Pos = { x: 79.5, y: 32.6 };
     w4FacingLeft = false;
     w4Carrying = false;
-    w4Pos = {
-      x: 65.0 + t * (68.5 - 65.0),
-      y: 46.5,
-    };
-  } else {
-    w4Pos = { x: 68.5, y: 46.5 };
+  } else if (w4Cycle < 13.0) {
+    // Walking empty-handed back to Point A
+    const t = (w4Cycle - 8.0) / 5.0;
     w4FacingLeft = true;
     w4Carrying = false;
+    w4Pos = {
+      x: 79.5 - t * (79.5 - 67.0),
+      y: 32.6 - t * (32.6 - 32.2),
+    };
+  } else {
+    // Resetting at Point A
+    w4Pos = { x: 67.0, y: 32.2 };
+    w4FacingLeft = false;
+    w4Carrying = false;
   }
-  const showDepositedSack4 = w4Cycle >= 5.5 && w4Cycle <= 11.5;
+  const showDepositedSack4 = w4Cycle >= 6.5 && w4Cycle <= 13.5;
   const granaryWorker4Pos = { x: w4Pos.x, y: w4Pos.y, facingLeft: w4FacingLeft, isCarrying: w4Carrying };
 
   // Worker 6: Central Hall Aisle (Walking from back to front along the open dirt floor as in Image 4):
@@ -1247,44 +1306,6 @@ export default function IndusValleyGameScreen() {
   const showGroundSack1 = gp1Cycle >= 5.5 && gp1Cycle <= 11.5;
   const groundWorker1Pos = { x: gp1Pos.x, y: gp1Pos.y, facingLeft: gp1FacingLeft, isCarrying: gp1Carrying };
 
-  // Ground Porter 2: Unloading from Cart 4 to Red Dot beside brick corner jars (Image 1):
-  // Point A (Cart 4: 57.5%, 95.5%) -> Point B (Red Dot: 62.5%, 85.0%)
-  const gp2Cycle = (carrierTime + 7) % 13;
-  let gp2Pos = { x: 57.5, y: 95.5 };
-  let gp2FacingLeft = false;
-  let gp2Carrying = true;
-  if (gp2Cycle < 1.5) {
-    gp2Pos = { x: 57.5, y: 95.5 };
-    gp2FacingLeft = false;
-    gp2Carrying = true;
-  } else if (gp2Cycle < 6.0) {
-    const t = (gp2Cycle - 1.5) / 4.5;
-    gp2FacingLeft = false;
-    gp2Carrying = true;
-    gp2Pos = {
-      x: 57.5 + t * (62.5 - 57.5),
-      y: 95.5 - t * (95.5 - 85.0),
-    };
-  } else if (gp2Cycle < 7.5) {
-    gp2Pos = { x: 62.5, y: 85.0 };
-    gp2FacingLeft = false;
-    gp2Carrying = false;
-  } else if (gp2Cycle < 12.0) {
-    const t = (gp2Cycle - 7.5) / 4.5;
-    gp2FacingLeft = true;
-    gp2Carrying = false;
-    gp2Pos = {
-      x: 62.5 - t * (62.5 - 57.5),
-      y: 85.0 + t * (95.5 - 85.0),
-    };
-  } else {
-    gp2Pos = { x: 57.5, y: 95.5 };
-    gp2FacingLeft = false;
-    gp2Carrying = false;
-  }
-  const showGroundSack2 = gp2Cycle >= 6.0 && gp2Cycle <= 12.5;
-  const groundWorker2Pos = { x: gp2Pos.x, y: gp2Pos.y, facingLeft: gp2FacingLeft, isCarrying: gp2Carrying };
-
   const isNearAnyGranaryWorker =
     scene === "granary_avenue" &&
     (Math.hypot(playerPos.x - granaryWorker1Pos.x, playerPos.y - granaryWorker1Pos.y) <= 8.0 ||
@@ -1292,8 +1313,7 @@ export default function IndusValleyGameScreen() {
      Math.hypot(playerPos.x - granaryWorker3Pos.x, playerPos.y - granaryWorker3Pos.y) <= 8.0 ||
      Math.hypot(playerPos.x - granaryWorker4Pos.x, playerPos.y - granaryWorker4Pos.y) <= 8.0 ||
      Math.hypot(playerPos.x - granaryWorker6Pos.x, playerPos.y - granaryWorker6Pos.y) <= 8.0 ||
-     Math.hypot(playerPos.x - groundWorker1Pos.x, playerPos.y - groundWorker1Pos.y) <= 8.0 ||
-     Math.hypot(playerPos.x - groundWorker2Pos.x, playerPos.y - groundWorker2Pos.y) <= 8.0);
+     Math.hypot(playerPos.x - groundWorker1Pos.x, playerPos.y - groundWorker1Pos.y) <= 8.0);
 
   const isNearAnyGrainCart =
     scene === "granary_avenue" &&
@@ -2350,7 +2370,7 @@ export default function IndusValleyGameScreen() {
                 </span>
               </div>
               <img
-                src={`/sprite-pedestrian-walk-${carrierFrame}.png?v=2`}
+                src={`/sprite-pedestrian-walk-${guy2State.isWalking ? carrierFrame : 1}.png?v=2`}
                 alt="Drain Inspector Walking"
                 className="h-[96px] sm:h-[108px] md:h-[118px] w-auto object-contain block select-none"
               />
@@ -3198,42 +3218,6 @@ export default function IndusValleyGameScreen() {
           </div>
         )}
 
-        {/* Ground Porter 2 (Carrying sacks from Cart 4 to Red Dot beside brick corner jars) */}
-        {scene === "granary_avenue" && (
-          <div
-            className="absolute z-14 pointer-events-none select-none"
-            style={{ left: `${groundWorker2Pos.x}%`, top: `${groundWorker2Pos.y}%` }}
-          >
-            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform duration-100">
-              <img
-                src={
-                  groundWorker2Pos.isCarrying
-                    ? `/sprite-grain-carrier-${grainCarrierWalkFrame}.png`
-                    : `/sprite-grain-carrier-empty-${grainCarrierWalkFrame}.png`
-                }
-                alt="Ground Porter 2"
-                className={`h-20 sm:h-22 md:h-[84px] w-auto object-contain block select-none drop-shadow-[0_4px_8px_rgba(0,0,0,0.3)] transition-transform duration-150 ${
-                  groundWorker2Pos.facingLeft ? "-scale-x-100" : "scale-x-100"
-                }`}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Deposited Ground Sack 2 at Red Dot beside brick corner jars (Image 1) */}
-        {scene === "granary_avenue" && showGroundSack2 && (
-          <div
-            className="absolute z-13 pointer-events-none select-none transition-opacity duration-300"
-            style={{ left: "62.8%", top: "85.2%" }}
-          >
-            <img
-              src="/sprite-grain-sack.png"
-              alt="Deposited Ground Sack 2"
-              className="h-7 sm:h-8 md:h-[30px] w-auto object-contain block select-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)] transform -translate-x-1/2 -translate-y-full"
-            />
-          </div>
-        )}
-
         {/* Stage 1.7: Harappan Merchants Conversing in Dirt Yard (Clear of ladder & ramp on solid ground) */}
         {scene === "granary_avenue" && (
           <div
@@ -3421,10 +3405,10 @@ export default function IndusValleyGameScreen() {
           </div>
         )}
 
-        {/* Stage 1.7: Grain Porter 4 (Platform 3 Deck: moving backwards right-to-left) */}
+        {/* Stage 1.7: Grain Porter 4 (Upper Roof Flat Sand Terrace: user's marked RED area in Image 2) */}
         {scene === "granary_avenue" && (
           <div
-            className="absolute z-12 pointer-events-none select-none"
+            className="absolute z-9 pointer-events-none select-none"
             style={{ left: `${granaryWorker4Pos.x}%`, top: `${granaryWorker4Pos.y}%` }}
           >
             <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform duration-100">
@@ -3435,7 +3419,7 @@ export default function IndusValleyGameScreen() {
                     : `/sprite-grain-carrier-empty-${grainCarrierWalkFrame}.png`
                 }
                 alt="Grain Porter 4"
-                className={`h-18 sm:h-20 md:h-[76px] w-auto object-contain block select-none drop-shadow-[0_4px_8px_rgba(0,0,0,0.3)] transition-transform duration-150 ${
+                className={`h-12 sm:h-14 md:h-[54px] w-auto object-contain block select-none drop-shadow-[0_4px_8px_rgba(0,0,0,0.3)] transition-transform duration-150 ${
                   granaryWorker4Pos.facingLeft ? "-scale-x-100" : "scale-x-100"
                 }`}
               />
@@ -3443,16 +3427,16 @@ export default function IndusValleyGameScreen() {
           </div>
         )}
 
-        {/* Deposited Sack on Platform 3 */}
+        {/* Deposited Sack on Upper Roof Flat Sand Terrace */}
         {scene === "granary_avenue" && showDepositedSack4 && (
           <div
-            className="absolute z-11 pointer-events-none select-none transition-opacity duration-300"
-            style={{ left: "65.0%", top: "46.5%" }}
+            className="absolute z-9 pointer-events-none select-none transition-opacity duration-300"
+            style={{ left: "80.5%", top: "33.2%" }}
           >
             <img
               src="/sprite-grain-sack.png"
               alt="Deposited Grain Bag 4"
-              className="h-6 sm:h-7 md:h-[26px] w-auto object-contain block select-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)] transform -translate-x-1/2 -translate-y-full"
+              className="h-4 sm:h-5 md:h-[18px] w-auto object-contain block select-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)] transform -translate-x-1/2 -translate-y-full"
             />
           </div>
         )}
