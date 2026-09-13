@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { Suspense } from "react";
 import { soundFx } from "../../../services/soundService";
 import { playNarration, stopNarration } from "../../../services/narratorService";
 import { playCharacterDialogue, stopCharacterDialogue } from "../../../services/characterVoiceService";
@@ -436,8 +437,10 @@ function getGreatBathPotterState(elapsedTime: number) {
   return { x, y, opacity, facingLeft, scale };
 }
 
-export default function IndusValleyGameScreen() {
+function IndusValleyGameComponent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
   const [isLoading, setIsLoading] = useState(true);
 
   // HUD & Session Control States (Matching Image 2)
@@ -449,7 +452,17 @@ export default function IndusValleyGameScreen() {
 
   // Core Progression State
   const [stage, setStage] = useState<IndusStage>(INITIAL_INDUS_STATE.stage);
-  const [scene, setScene] = useState<IndusSceneType>(INITIAL_INDUS_STATE.scene);
+  const urlScene = searchParams.get("scene") as IndusSceneType | null;
+  const [scene, setScene] = useState<IndusSceneType>(urlScene || INITIAL_INDUS_STATE.scene);
+
+  // Sync scene state to URL query parameter
+  useEffect(() => {
+    const currentParams = new URLSearchParams(Array.from(searchParams.entries()));
+    if (currentParams.get("scene") !== scene) {
+      currentParams.set("scene", scene);
+      router.replace(`${pathname}?${currentParams.toString()}`, { scroll: false });
+    }
+  }, [scene, pathname, router, searchParams]);
   const [playerPos, setPlayerPos] = useState(INITIAL_INDUS_STATE.playerPos);
   const [facingLeft, setFacingLeft] = useState(false);
   const [isWalking, setIsWalking] = useState(false);
@@ -5267,5 +5280,13 @@ export default function IndusValleyGameScreen() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function IndusValleyGameScreen() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#140f0b] text-[#f7eedf] flex items-center justify-center font-serif text-2xl tracking-widest uppercase">Entering Indus Valley...</div>}>
+      <IndusValleyGameComponent />
+    </Suspense>
   );
 }
