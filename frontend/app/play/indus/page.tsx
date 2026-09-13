@@ -173,6 +173,65 @@ function getTwoWayPatrolPosition(
   }
 }
 
+// Stage 1.5: Municipal Drain Inspector / Water Carrier Route (User's red line route)
+// Walks full straight along the right avenue from bottom (74.0, 98.0) to top (88.5, 36.0),
+// disappears at the end, stays disappeared for 6 seconds, then restarts from the start point.
+function getRightAvenuePatrolState(elapsedTime: number) {
+  const pointA = { x: 74.0, y: 98.0 }; // Start point: bottom of right avenue
+  const pointB = { x: 88.5, y: 36.0 }; // End point: top of right avenue
+  const walkDuration = 15.0; // Duration of straight walk up avenue
+  const disappearDuration = 6.0; // Exactly 6 seconds disappeared before restarting
+  const totalCycle = walkDuration + disappearDuration; // 21.0s total cycle
+  const t = ((elapsedTime % totalCycle) + totalCycle) % totalCycle;
+
+  let x: number;
+  let y: number;
+  let facingLeft: boolean = false;
+  let isWalking: boolean;
+  let opacity: number;
+  let isInside: boolean = false;
+
+  if (t < walkDuration) {
+    // 1. Walking straight UP along the avenue (A -> B)
+    const prog = t / walkDuration;
+    x = pointA.x + (pointB.x - pointA.x) * prog;
+    y = pointA.y + (pointB.y - pointA.y) * prog;
+    facingLeft = false;
+    isWalking = true;
+
+    // Smooth fade-in at start point and fade-out as reaching top before disappearing
+    if (t < 0.6) {
+      opacity = Math.min(1, t / 0.6);
+    } else if (t > walkDuration - 0.8) {
+      opacity = Math.max(0, (walkDuration - t) / 0.8);
+    } else {
+      opacity = 1;
+    }
+  } else {
+    // 2. Disappeared at the end for 6 seconds, waiting to restart from start point
+    x = pointA.x;
+    y = pointA.y;
+    facingLeft = false;
+    isWalking = false;
+    opacity = 0;
+    isInside = true; // Disable clicks/hover interactions while disappeared
+  }
+
+  // Perspective depth scaling along the avenue
+  const scale = 0.65 + (y / 100) * 0.35;
+
+  return {
+    x,
+    y,
+    scale,
+    facingLeft,
+    isWalking,
+    opacity,
+    isInside,
+    filter: "none",
+  };
+}
+
 interface BoatPatrolState {
   x: number;
   y: number;
@@ -261,6 +320,120 @@ function getBoatPatrolPosition(
   const rockingAngle = Math.sin(elapsedTime * 1.8) * 2.2;
 
   return { x, y, scale, facingLeft, isSailing, rockingAngle, bobbingY };
+}
+
+// Stage 2: Great Bath Potter Gate-to-Gate Animation
+// 1. Walks up left ramp, enters the FIRST GATE (left gate) and DISAPPEARS into the dark portal.
+// 2. Then, EMERGES from the SECOND GATE (right gate) and walks down the right ramp.
+// 3. Loops continuously with realistic timing.
+// NEVER walks on walls, lintels, rooftops, or across the front wall. Strictly grounded on brick ramps.
+function getGreatBathPotterState(elapsedTime: number) {
+  // First Gate (left) waypoints:
+  const p1Bottom = { x: 2.0, y: 101.5 };
+  const p1Lower = { x: 7.5, y: 96.5 };
+  const p1Mid = { x: 12.5, y: 91.5 };
+  const p1Upper = { x: 16.5, y: 87.0 };
+  const p1Door = { x: 19.8, y: 83.5 };
+  const p1Inside = { x: 20.2, y: 81.5 };
+
+  // Second Gate (right) waypoints:
+  const p2Inside = { x: 80.0, y: 81.5 };
+  const p2Door = { x: 80.5, y: 83.5 };
+  const p2Upper = { x: 83.5, y: 87.0 };
+  const p2Mid = { x: 87.5, y: 91.5 };
+  const p2Lower = { x: 92.5, y: 96.5 };
+  const p2Bottom = { x: 98.0, y: 101.5 };
+
+  const loopPeriod = 19.0;
+  const t = ((elapsedTime % loopPeriod) + loopPeriod) % loopPeriod;
+
+  let x = p1Bottom.x;
+  let y = p1Bottom.y;
+  let opacity = 1.0;
+  let facingLeft = false;
+
+  if (t < 6.5) {
+    // 1. Walking up left ramp towards the FIRST GATE
+    const segT = t / 6.5;
+    facingLeft = false;
+    opacity = 1.0;
+    if (segT < 0.20) {
+      const u = segT / 0.20;
+      x = p1Bottom.x + u * (p1Lower.x - p1Bottom.x);
+      y = p1Bottom.y + u * (p1Lower.y - p1Bottom.y);
+    } else if (segT < 0.50) {
+      const u = (segT - 0.20) / 0.30;
+      x = p1Lower.x + u * (p1Mid.x - p1Lower.x);
+      y = p1Lower.y + u * (p1Mid.y - p1Lower.y);
+    } else if (segT < 0.80) {
+      const u = (segT - 0.50) / 0.30;
+      x = p1Mid.x + u * (p1Upper.x - p1Mid.x);
+      y = p1Mid.y + u * (p1Upper.y - p1Mid.y);
+    } else {
+      const u = (segT - 0.80) / 0.20;
+      x = p1Upper.x + u * (p1Door.x - p1Upper.x);
+      y = p1Upper.y + u * (p1Door.y - p1Upper.y);
+    }
+  } else if (t < 8.0) {
+    // 2. ENTERS the first gate and DISAPPEARS into dark portal
+    const segT = (t - 6.5) / 1.5;
+    facingLeft = false;
+    x = p1Door.x + segT * (p1Inside.x - p1Door.x);
+    y = p1Door.y + segT * (p1Inside.y - p1Door.y);
+    opacity = Math.max(0, 1.0 - segT * 1.5);
+  } else if (t < 10.0) {
+    // 3. Inside citadel passage / completely disappeared
+    x = p1Inside.x;
+    y = p1Inside.y;
+    opacity = 0;
+    facingLeft = false;
+  } else if (t < 11.5) {
+    // 4. EMERGES from the SECOND GATE doorway onto right ramp
+    const segT = (t - 10.0) / 1.5;
+    facingLeft = false;
+    x = p2Inside.x + segT * (p2Door.x - p2Inside.x);
+    y = p2Inside.y + segT * (p2Door.y - p2Inside.y);
+    opacity = Math.min(1.0, segT * 1.5);
+  } else if (t < 17.5) {
+    // 5. Walking down right ramp away from the second gate
+    const segT = (t - 11.5) / 6.0;
+    facingLeft = false;
+    opacity = 1.0;
+    if (segT < 0.20) {
+      const u = segT / 0.20;
+      x = p2Door.x + u * (p2Upper.x - p2Door.x);
+      y = p2Door.y + u * (p2Upper.y - p2Door.y);
+    } else if (segT < 0.50) {
+      const u = (segT - 0.20) / 0.30;
+      x = p2Upper.x + u * (p2Mid.x - p2Upper.x);
+      y = p2Upper.y + u * (p2Mid.y - p2Upper.y);
+    } else if (segT < 0.80) {
+      const u = (segT - 0.50) / 0.30;
+      x = p2Mid.x + u * (p2Lower.x - p2Mid.x);
+      y = p2Mid.y + u * (p2Lower.y - p2Mid.y);
+    } else {
+      const u = (segT - 0.80) / 0.20;
+      x = p2Lower.x + u * (p2Bottom.x - p2Lower.x);
+      y = p2Lower.y + u * (p2Bottom.y - p2Lower.y);
+    }
+  } else if (t < 18.5) {
+    // 6. Fades out at the end of the road
+    const segT = (t - 17.5) / 1.0;
+    x = p2Bottom.x;
+    y = p2Bottom.y;
+    opacity = Math.max(0, 1.0 - segT);
+    facingLeft = false;
+  } else {
+    // 7. Brief pause offscreen before restarting from the first gate
+    x = p1Bottom.x;
+    y = p1Bottom.y;
+    opacity = 0;
+    facingLeft = false;
+  }
+
+  // Perspective scaling (reduced by 10% per user request: "reduce the size of person by 10 % it is too big")
+  const scale = (0.95 + (y / 100) * 0.38) * 0.90;
+  return { x, y, opacity, facingLeft, scale };
 }
 
 export default function IndusValleyGameScreen() {
@@ -354,6 +527,7 @@ export default function IndusValleyGameScreen() {
   const [rooftopFrame, setRooftopFrame] = useState<1 | 2>(1);
   const [boatRowFrame, setBoatRowFrame] = useState<1 | 2>(1);
   const [grainWorkerFrame, setGrainWorkerFrame] = useState<1 | 2 | 3>(1);
+  const [batherFrame, setBatherFrame] = useState<1 | 2>(1);
 
   // Scene Configuration
   const currentSceneConfig = INDUS_SCENE_CONFIGS[scene] || INDUS_SCENE_CONFIGS.lower_town_gate;
@@ -560,13 +734,13 @@ export default function IndusValleyGameScreen() {
     playerPos.y >= 58.0 &&
     playerPos.y <= 74.0;
 
-  // Stage 1.5: Residential Grid -> Enter Courtyard Doorway (at avenue doorway x: 48%, y: 60%)
+  // Stage 1.5: Residential Grid -> Enter Courtyard Doorway (Image 4 doorway on avenue right side: x: ~80%, y: ~78%)
   const isNearHouseDoorway =
     scene === "residential_grid" &&
-    playerPos.x >= 42.0 &&
-    playerPos.x <= 54.0 &&
-    playerPos.y >= 52.0 &&
-    playerPos.y <= 66.0;
+    playerPos.x >= 70.0 &&
+    playerPos.x <= 88.0 &&
+    playerPos.y >= 66.0 &&
+    playerPos.y <= 86.0;
 
   // Stage 1.55: Central Domestic Courtyard -> Exit back to Street Grid (at bottom entrance)
   const isNearCourtyardExit =
@@ -773,26 +947,36 @@ export default function IndusValleyGameScreen() {
     playerPos.y >= 60.0 &&
     playerPos.y <= 76.0;
 
-  // Stage 1.7: Granary Bullock Cart Grain Unloader in Right Dirt Yard (Worker at cart at x: 84.5%, y: 86.5%)
+  // Stage 1.7: Granary Bullock Cart Grain Unloader in Right Dirt Yard (Worker at cart at x: 89.0%, y: 79.0%)
   const isNearGrainCartWorker =
     scene === "granary_avenue" &&
-    playerPos.x >= 78.0 &&
-    playerPos.x <= 88.0 &&
-    playerPos.y >= 78.0 &&
-    playerPos.y <= 92.0;
+    playerPos.x >= 82.0 &&
+    playerPos.x <= 96.0 &&
+    playerPos.y >= 72.0 &&
+    playerPos.y <= 86.0;
 
-  // Stage 1.7: Harappan Merchants Conversing in Dirt Yard in front of ladder (x: 75.5%, y: 88.0%)
+  // Stage 1.7: Harappan Merchants Conversing in Dirt Yard in front of ladder (x: 70.5%, y: 84.0%)
   const isNearGranaryArtisans =
     scene === "granary_avenue" &&
-    playerPos.x >= 70.0 &&
-    playerPos.x <= 82.0 &&
-    playerPos.y >= 80.0 &&
-    playerPos.y <= 92.0;
+    playerPos.x >= 65.0 &&
+    playerPos.x <= 76.0 &&
+    playerPos.y >= 78.0 &&
+    playerPos.y <= 90.0;
 
-  // Stage 2 -> Return to The Great Granary (at bottom entrance)
+  // Stage 2 -> Return to The Great Granary (specifically at bottom central archway, never blocking the passage)
   const isNearGreatBathGranaryReturn =
     scene === "great_bath_citadel" &&
-    playerPos.y >= 80.0;
+    playerPos.y >= 88.0 &&
+    playerPos.x >= 42.0 &&
+    playerPos.x <= 58.0;
+
+  // Stage 2: Great Bath Potter walking along Image 2 red area route (from left end, through gateway/passage, to right end and exiting)
+  const greatBathPotterState = getGreatBathPotterState(carrierTime);
+  const isNearGreatBathPotter =
+    scene === "great_bath_citadel" &&
+    greatBathPotterState.opacity > 0.25 &&
+    Math.hypot(playerPos.x - greatBathPotterState.x, playerPos.y - greatBathPotterState.y) <= 8.5;
+
 
   // Person 1: Foreground Rooftop Lookout (Grounded on flat terrace floor, never touching rails)
   const roof1PointA = { x: 16.5, y: 56.5 };
@@ -825,42 +1009,317 @@ export default function IndusValleyGameScreen() {
   ];
   const guy1State = getPathPosition(guy1Waypoints, 17.5, 4.0, carrierTime);
 
-  // Right Lane Water Carrier Route (Image 2: straight up right avenue and turns into doorway, 13.8s walk + 3s pause inside)
-  const guy2Waypoints = [
-    { x: 74.0, y: 98.0 },
-    { x: 83.5, y: 56.0 },
-    { x: 88.5, y: 56.0 },
-  ];
-  const guy2State = getPathPosition(guy2Waypoints, 13.8, 3.0, carrierTime);
+  // Right Lane Water Carrier Route (Straight along user's red line between bottom of avenue and cargo inspector)
+  const guy2State = getRightAvenuePatrolState(carrierTime);
 
-  // Stage 1.7: Animated Granary Porters (Carrying grain sacks across the hall from corner to corner)
+  const isNearResidentialWaterCarrier1 =
+    scene === "residential_grid" &&
+    guy1State.opacity > 0.25 &&
+    Math.hypot(playerPos.x - guy1State.x, playerPos.y - guy1State.y) <= 10.0;
+
+  const isNearResidentialWaterCarrier2 =
+    scene === "residential_grid" &&
+    guy2State.opacity > 0.25 &&
+    Math.hypot(playerPos.x - guy2State.x, playerPos.y - guy2State.y) <= 10.0;
+
+  // Stage 1.7: Animated Granary Porters (Lifting grain sacks, walking on solid land/ramps, keeping sacks, and walking back empty)
   const grainCarrierWalkFrame = ((carrierFrame - 1) % 3) + 1;
-  // Worker 1: Along back aisle from (32.0%, 39.0%) to (73.0%, 34.0%)
-  const gPhase1 = (carrierTime % 18) / 18;
-  const gT1 = gPhase1 < 0.5 ? gPhase1 / 0.5 : (1.0 - gPhase1) / 0.5;
+
+  // Worker 1: 4-point path following user's red marked route into Platform 2 sunken sand/grain bay (clear of all pots):
+  // P0: Hall floor in front of reserve (34.0, 36.5)
+  // P1: Wooden plank bridge head (44.0, 37.0)
+  // P2: Entering sunken sand bay walkway (56.0, 38.0)
+  // P3: Platform 2 sunken sand bay deposit point (68.0, 39.5)
+  const getW1InterpolatedPos = (normT: number) => {
+    if (normT <= 0.35) {
+      const segT = normT / 0.35;
+      return {
+        x: 34.0 + segT * (44.0 - 34.0),
+        y: 36.5 + segT * (37.0 - 36.5),
+      };
+    } else if (normT <= 0.65) {
+      const segT = (normT - 0.35) / 0.30;
+      return {
+        x: 44.0 + segT * (56.0 - 44.0),
+        y: 37.0 + segT * (38.0 - 37.0),
+      };
+    } else {
+      const segT = (normT - 0.65) / 0.35;
+      return {
+        x: 56.0 + segT * (68.0 - 56.0),
+        y: 38.0 + segT * (39.5 - 38.0),
+      };
+    }
+  };
+
+  const w1Cycle = carrierTime % 16;
+  let w1Pos = { x: 34.0, y: 36.5 };
+  let w1FacingLeft = false;
+  let w1Carrying = true;
+
+  if (w1Cycle < 1.5) {
+    // Lifting/picking up grain sack at Point A
+    w1Pos = { x: 34.0, y: 36.5 };
+    w1FacingLeft = false;
+    w1Carrying = true;
+  } else if (w1Cycle < 7.0) {
+    // Walking carrying sack Point A -> Bridge -> Platform 2 sunken sand bay
+    const t = (w1Cycle - 1.5) / 5.5;
+    w1FacingLeft = false;
+    w1Carrying = true;
+    w1Pos = getW1InterpolatedPos(t);
+  } else if (w1Cycle < 8.5) {
+    // Keeping/depositing grain sack at Platform 2 sunken sand bay
+    w1Pos = { x: 68.0, y: 39.5 };
+    w1FacingLeft = false;
+    w1Carrying = false;
+  } else if (w1Cycle < 14.0) {
+    // Walking back empty-handed Platform 2 sunken sand bay -> Bridge -> Point A
+    const t = (w1Cycle - 8.5) / 5.5;
+    w1FacingLeft = true;
+    w1Carrying = false;
+    w1Pos = getW1InterpolatedPos(1.0 - t);
+  } else {
+    // Resetting at Point A to start next sack
+    w1Pos = { x: 34.0, y: 36.5 };
+    w1FacingLeft = false;
+    w1Carrying = false;
+  }
+
+  const showDepositedSack1 = w1Cycle >= 7.0 && w1Cycle <= 15.5;
+
   const granaryWorker1Pos = {
-    x: 32.0 + gT1 * 41.0,
-    y: 39.0 - gT1 * 5.0,
-    facingLeft: gPhase1 >= 0.5,
+    x: w1Pos.x,
+    y: w1Pos.y,
+    facingLeft: w1FacingLeft,
+    isCarrying: w1Carrying,
   };
 
-  // Worker 2: Along parallel forward plank walkway from (35.0%, 41.5%) to (75.0%, 36.5%)
-  // Staggered by 9s and offset vertically by 2.5% so they never overlap
-  const gPhase2 = ((carrierTime + 9) % 20) / 20;
-  const gT2 = gPhase2 < 0.5 ? gPhase2 / 0.5 : (1.0 - gPhase2) / 0.5;
+  // Worker 2: Ground Porter in Lower Dirt Yard (Fix: stays strictly grounded on dirt road, never flies onto arch wall, never goes past cart):
+  // Point A (Cart front/shafts where sacks are unloaded: 53.5%, 96.5%) <-> Point B (Open dirt ground staging: 38.0%, 97.5%)
+  // Total cycle: 14s, staggered by 5s
+  const w2Cycle = (carrierTime + 5) % 14;
+  let w2Pos = { x: 53.5, y: 96.5 };
+  let w2FacingLeft = true;
+  let w2Carrying = true;
+
+  if (w2Cycle < 1.5) {
+    // Lifting/picking up grain sack at cart front Point A
+    w2Pos = { x: 53.5, y: 96.5 };
+    w2FacingLeft = true;
+    w2Carrying = true;
+  } else if (w2Cycle < 6.5) {
+    // Walking carrying sack across open dirt ground towards Point B (maintaining ground physics, y >= 96.5)
+    const t = (w2Cycle - 1.5) / 5.0;
+    w2FacingLeft = true;
+    w2Carrying = true;
+    w2Pos = {
+      x: 53.5 - t * (53.5 - 38.0),
+      y: 96.5 + t * (97.5 - 96.5),
+    };
+  } else if (w2Cycle < 8.0) {
+    // Keeping/depositing grain sack on open dirt ground at Point B
+    w2Pos = { x: 38.0, y: 97.5 };
+    w2FacingLeft = true;
+    w2Carrying = false;
+  } else if (w2Cycle < 13.0) {
+    // Walking back empty-handed across open dirt ground from Point B to cart Point A
+    const t = (w2Cycle - 8.0) / 5.0;
+    w2FacingLeft = false;
+    w2Carrying = false;
+    w2Pos = {
+      x: 38.0 + t * (53.5 - 38.0),
+      y: 97.5 - t * (97.5 - 96.5),
+    };
+  } else {
+    // Resetting at cart front Point A to start next sack
+    w2Pos = { x: 53.5, y: 96.5 };
+    w2FacingLeft = true;
+    w2Carrying = false;
+  }
+
+  const showDepositedSack2 = w2Cycle >= 6.5 && w2Cycle <= 13.5;
+
   const granaryWorker2Pos = {
-    x: 35.0 + gT2 * 40.0,
-    y: 41.5 - gT2 * 5.0,
-    facingLeft: gPhase2 >= 0.5,
+    x: w2Pos.x,
+    y: w2Pos.y,
+    facingLeft: w2FacingLeft,
+    isCarrying: w2Carrying,
   };
 
-  const isNearGranaryPorter1 =
-    scene === "granary_avenue" &&
-    Math.hypot(playerPos.x - granaryWorker1Pos.x, playerPos.y - granaryWorker1Pos.y) <= 8.0;
 
-  const isNearGranaryPorter2 =
+
+  // Worker 3: Back Colonnade Hall (Walking towards left side/westward as in Image 3):
+  // Point A (56.0%, 30.0%) -> Point B (43.0%, 31.5%)
+  const w3Cycle = (carrierTime + 2) % 15;
+  let w3Pos = { x: 56.0, y: 30.0 };
+  let w3FacingLeft = true;
+  let w3Carrying = true;
+  if (w3Cycle < 1.5) {
+    w3Pos = { x: 56.0, y: 30.0 };
+    w3FacingLeft = true;
+    w3Carrying = true;
+  } else if (w3Cycle < 6.5) {
+    const t = (w3Cycle - 1.5) / 5.0;
+    w3FacingLeft = true;
+    w3Carrying = true;
+    w3Pos = {
+      x: 56.0 - t * (56.0 - 43.0),
+      y: 30.0 + t * (31.5 - 30.0),
+    };
+  } else if (w3Cycle < 8.0) {
+    w3Pos = { x: 43.0, y: 31.5 };
+    w3FacingLeft = true;
+    w3Carrying = false;
+  } else if (w3Cycle < 13.0) {
+    const t = (w3Cycle - 8.0) / 5.0;
+    w3FacingLeft = false;
+    w3Carrying = false;
+    w3Pos = {
+      x: 43.0 + t * (56.0 - 43.0),
+      y: 31.5 - t * (31.5 - 30.0),
+    };
+  } else {
+    w3Pos = { x: 56.0, y: 30.0 };
+    w3FacingLeft = true;
+    w3Carrying = false;
+  }
+  const showDepositedSack3 = w3Cycle >= 6.5 && w3Cycle <= 13.5;
+  const granaryWorker3Pos = { x: w3Pos.x, y: w3Pos.y, facingLeft: w3FacingLeft, isCarrying: w3Carrying };
+
+  // Worker 4: Upper Roof Flat Sand Terrace (Image 2 fix: grounded strictly on yellow sand floor, never on front brick railing):
+  // Point A (Flat sand floor beside basket/jars: 67.0%, 32.2%) <-> Point B (Flat sand floor deposit area: 79.5%, 32.6%)
+  const w4Cycle = (carrierTime + 6) % 14;
+  let w4Pos = { x: 67.0, y: 32.2 };
+  let w4FacingLeft = false;
+  let w4Carrying = true;
+  if (w4Cycle < 1.5) {
+    // Picking up sack at Point A
+    w4Pos = { x: 67.0, y: 32.2 };
+    w4FacingLeft = false;
+    w4Carrying = true;
+  } else if (w4Cycle < 6.5) {
+    // Walking carrying sack across flat sand floor towards Point B
+    const t = (w4Cycle - 1.5) / 5.0;
+    w4FacingLeft = false;
+    w4Carrying = true;
+    w4Pos = {
+      x: 67.0 + t * (79.5 - 67.0),
+      y: 32.2 + t * (32.6 - 32.2),
+    };
+  } else if (w4Cycle < 8.0) {
+    // Depositing sack on sand floor at Point B
+    w4Pos = { x: 79.5, y: 32.6 };
+    w4FacingLeft = false;
+    w4Carrying = false;
+  } else if (w4Cycle < 13.0) {
+    // Walking empty-handed back to Point A
+    const t = (w4Cycle - 8.0) / 5.0;
+    w4FacingLeft = true;
+    w4Carrying = false;
+    w4Pos = {
+      x: 79.5 - t * (79.5 - 67.0),
+      y: 32.6 - t * (32.6 - 32.2),
+    };
+  } else {
+    // Resetting at Point A
+    w4Pos = { x: 67.0, y: 32.2 };
+    w4FacingLeft = false;
+    w4Carrying = false;
+  }
+  const showDepositedSack4 = w4Cycle >= 6.5 && w4Cycle <= 13.5;
+  const granaryWorker4Pos = { x: w4Pos.x, y: w4Pos.y, facingLeft: w4FacingLeft, isCarrying: w4Carrying };
+
+  // Worker 6: Central Hall Aisle (Walking from back to front along the open dirt floor as in Image 4):
+  // Point A (Back: 29.0%, 42.0%) -> Point B (Front: 40.0%, 48.5%)
+  const w6Cycle = (carrierTime + 8) % 14;
+  let w6Pos = { x: 29.0, y: 42.0 };
+  let w6FacingLeft = false;
+  let w6Carrying = true;
+  if (w6Cycle < 1.5) {
+    w6Pos = { x: 29.0, y: 42.0 };
+    w6FacingLeft = false;
+    w6Carrying = true;
+  } else if (w6Cycle < 6.5) {
+    const t = (w6Cycle - 1.5) / 5.0;
+    w6FacingLeft = false;
+    w6Carrying = true;
+    w6Pos = {
+      x: 29.0 + t * (40.0 - 29.0),
+      y: 42.0 + t * (48.5 - 42.0),
+    };
+  } else if (w6Cycle < 8.0) {
+    w6Pos = { x: 40.0, y: 48.5 };
+    w6FacingLeft = false;
+    w6Carrying = false;
+  } else if (w6Cycle < 13.0) {
+    const t = (w6Cycle - 8.0) / 5.0;
+    w6FacingLeft = true;
+    w6Carrying = false;
+    w6Pos = {
+      x: 40.0 - t * (40.0 - 29.0),
+      y: 48.5 - t * (48.5 - 42.0),
+    };
+  } else {
+    w6Pos = { x: 29.0, y: 42.0 };
+    w6FacingLeft = false;
+    w6Carrying = false;
+  }
+  const showDepositedSack6 = w6Cycle >= 6.5 && w6Cycle <= 13.5;
+  const granaryWorker6Pos = { x: w6Pos.x, y: w6Pos.y, facingLeft: w6FacingLeft, isCarrying: w6Carrying };
+
+  // Ground Porter 1: Unloading from Cart 1 to Ramp Staging
+  // Point A (82.0%, 72.0%) -> Point B (86.0%, 76.0%)
+  const gp1Cycle = (carrierTime + 3) % 12;
+  let gp1Pos = { x: 82.0, y: 72.0 };
+  let gp1FacingLeft = false;
+  let gp1Carrying = true;
+  if (gp1Cycle < 1.5) {
+    gp1Pos = { x: 82.0, y: 72.0 };
+    gp1FacingLeft = false;
+    gp1Carrying = true;
+  } else if (gp1Cycle < 5.5) {
+    const t = (gp1Cycle - 1.5) / 4.0;
+    gp1FacingLeft = false;
+    gp1Carrying = true;
+    gp1Pos = {
+      x: 82.0 + t * (86.0 - 82.0),
+      y: 72.0 + t * (76.0 - 72.0),
+    };
+  } else if (gp1Cycle < 7.0) {
+    gp1Pos = { x: 86.0, y: 76.0 };
+    gp1FacingLeft = false;
+    gp1Carrying = false;
+  } else if (gp1Cycle < 11.0) {
+    const t = (gp1Cycle - 7.0) / 4.0;
+    gp1FacingLeft = true;
+    gp1Carrying = false;
+    gp1Pos = {
+      x: 86.0 - t * (86.0 - 82.0),
+      y: 76.0 - t * (76.0 - 72.0),
+    };
+  } else {
+    gp1Pos = { x: 82.0, y: 72.0 };
+    gp1FacingLeft = false;
+    gp1Carrying = false;
+  }
+  const showGroundSack1 = gp1Cycle >= 5.5 && gp1Cycle <= 11.5;
+  const groundWorker1Pos = { x: gp1Pos.x, y: gp1Pos.y, facingLeft: gp1FacingLeft, isCarrying: gp1Carrying };
+
+  const isNearAnyGranaryWorker =
     scene === "granary_avenue" &&
-    Math.hypot(playerPos.x - granaryWorker2Pos.x, playerPos.y - granaryWorker2Pos.y) <= 8.0;
+    (Math.hypot(playerPos.x - granaryWorker1Pos.x, playerPos.y - granaryWorker1Pos.y) <= 8.0 ||
+     Math.hypot(playerPos.x - granaryWorker2Pos.x, playerPos.y - granaryWorker2Pos.y) <= 8.0 ||
+     Math.hypot(playerPos.x - granaryWorker3Pos.x, playerPos.y - granaryWorker3Pos.y) <= 8.0 ||
+     Math.hypot(playerPos.x - granaryWorker4Pos.x, playerPos.y - granaryWorker4Pos.y) <= 8.0 ||
+     Math.hypot(playerPos.x - granaryWorker6Pos.x, playerPos.y - granaryWorker6Pos.y) <= 8.0 ||
+     Math.hypot(playerPos.x - groundWorker1Pos.x, playerPos.y - groundWorker1Pos.y) <= 8.0);
+
+  const isNearAnyGrainCart =
+    scene === "granary_avenue" &&
+    ((playerPos.x >= 76.0 && playerPos.x <= 87.0 && playerPos.y >= 66.0 && playerPos.y <= 77.0) ||
+     (playerPos.x >= 83.0 && playerPos.x <= 95.0 && playerPos.y >= 73.0 && playerPos.y <= 85.0) ||
+     (playerPos.x >= 51.0 && playerPos.x <= 63.0 && playerPos.y >= 89.0 && playerPos.y <= 99.0));
 
   // Stage 1.5: Road Pedestrian / Water Carrier (Walking along left paved avenue)
   const isNearRoadPedestrian =
@@ -957,15 +1416,21 @@ export default function IndusValleyGameScreen() {
     if (
       scene !== "residential_grid" &&
       scene !== "lower_town_gate" &&
-      scene !== "granary_avenue"
+      scene !== "granary_avenue" &&
+      scene !== "great_bath_citadel"
     )
       return;
 
-    // Cycle walk animation frames (1 -> 2 -> 3 -> 4 for carriers, 1 -> 2 for rooftop)
+    // Cycle walk animation frames (1 -> 2 -> 3 -> 4 for carriers and potter, 1 -> 2 for rooftop)
     const frameInterval = setInterval(() => {
       setCarrierFrame((prev) => (prev % 4) + 1);
       setRooftopFrame((prev) => (prev === 1 ? 2 : 1));
     }, 200);
+
+    // Cycle bather animation frames in Great Bath (1 -> 2)
+    const batherInterval = setInterval(() => {
+      setBatherFrame((prev) => (prev === 1 ? 2 : 1));
+    }, 1200);
 
     // Cycle rowing stroke animation frames for Egyptian sailor (1 -> 2)
     const boatInterval = setInterval(() => {
@@ -1000,6 +1465,7 @@ export default function IndusValleyGameScreen() {
 
     return () => {
       clearInterval(frameInterval);
+      clearInterval(batherInterval);
       clearInterval(boatInterval);
       clearInterval(talkInterval);
       clearInterval(grainWorkerInterval);
@@ -1214,12 +1680,12 @@ export default function IndusValleyGameScreen() {
             text: "We haul sacks of freshly threshed barley and emmer wheat from the river quays up these wooden ramps! Notice how the platforms are raised above the ground—warm, dry air circulates continuously through the brick vents to prevent rot.",
           });
           soundFx.playSelect();
-        } else if (isNearGrainCartWorker) {
+        } else if (isNearAnyGrainCart) {
           setActiveCitizenDialogue({
             name: "Dhanu the Granary Worker",
             title: "Bullock Cart Grain Handler • Mohenjo-daro Granary",
             icon: "",
-            text: "Hup! Another wooden cart loaded with winter barley has arrived from the fertile alluvial fields along the Indus river. We carefully unload each heavy sack and storage pot down to the staging ground, ready to be weighed and hauled up the wooden ramp to the ventilated loading platforms!",
+            text: "Hup! Another wooden cart loaded with winter barley has arrived from the fertile alluvial fields along the Indus river. We carefully unload each heavy sack down to the staging ground, ready to be weighed and hauled up the wooden ramp to the ventilated loading platforms!",
           });
           soundFx.playSelect();
         } else if (isNearGranaryArtisans) {
@@ -1238,12 +1704,12 @@ export default function IndusValleyGameScreen() {
             text: "Every basket entering these rectangular bays is measured against standard chert cube weights. Centralized storage ensures that even during drought years or unpredictable Indus river floods, the civic granary guarantees food security for the entire population.",
           });
           soundFx.playSelect();
-        } else if (isNearGranaryPorter1 || isNearGranaryPorter2) {
+        } else if (isNearAnyGranaryWorker) {
           setActiveCitizenDialogue({
             name: "Harappan Grain Porter",
             title: "Granary Reserve Carrier • Mohenjo-daro",
             icon: "",
-            text: "Step aside, friend! We are hauling sacks of harvested barley and emmer wheat from the cool storage chambers in the west corner across to the distribution loading bays. The subterranean air ducts below keep the grain dry and fresh through every season!",
+            text: "Step aside, friend! We are hauling sacks of harvested barley and emmer wheat between the storage bays and distribution loading platforms. The subterranean air ducts below keep the grain dry and fresh through every season!",
           });
           soundFx.playSelect();
         } else if (isNearGranaryAirDucts) {
@@ -1256,6 +1722,15 @@ export default function IndusValleyGameScreen() {
           setShowHouseModal(true);
         } else if (isNearGreatBathBasin) {
           setShowDrainagePuzzleModal(true);
+
+        } else if (isNearGreatBathPotter) {
+          setActiveCitizenDialogue({
+            name: "Harappan Master Potter",
+            title: "Terracotta Artisan & Vessel Carrier • Mohenjo-daro",
+            icon: "",
+            text: "I transport wheel-thrown terracotta water jars, ritual lotas, and storage amphorae from the artisan kilns into the Great Bath complex. Standardized pottery ensures pure ritual storage for the sacred bathing ablutions!",
+          });
+          soundFx.playSelect();
         } else if (isNearSealBench) {
           setShowSealPuzzleModal(true);
         } else if (isNearPriestKing) {
@@ -1326,6 +1801,7 @@ export default function IndusValleyGameScreen() {
     showInteriorBathModal,
     showInteriorQuernModal,
     showGranaryDuctsModal,
+    showGranaryPlatformsModal,
     showCourtyardToiletModal,
     showCourtyardWellModal,
     showCourtyardStaircaseModal,
@@ -1339,7 +1815,10 @@ export default function IndusValleyGameScreen() {
     isNearForeignTraders,
     isNearEgyptianSailor,
     isNearRooftopCitizen,
+    isNearRooftopLookout,
     isNearRoadPedestrian,
+    isNearResidentialWaterCarrier1,
+    isNearResidentialWaterCarrier2,
     isNearCourtyardResident,
     isNearResidentialDrains,
     isNearResidentialHouse,
@@ -1372,12 +1851,12 @@ export default function IndusValleyGameScreen() {
     isNearGranaryAirDucts,
     isNearGranaryPlatforms,
     isNearGranaryWorker,
-    isNearGranaryPorter1,
-    isNearGranaryPorter2,
-    isNearGrainCartWorker,
+    isNearAnyGranaryWorker,
+    isNearAnyGrainCart,
     isNearGranaryArtisans,
     isNearGranaryScribe,
     isNearGreatBathBasin,
+    isNearGreatBathPotter,
     isNearGreatBathGranaryReturn,
     isNearSealBench,
     isNearPriestKing,
@@ -1891,7 +2370,7 @@ export default function IndusValleyGameScreen() {
                 </span>
               </div>
               <img
-                src={`/sprite-pedestrian-walk-${carrierFrame}.png?v=2`}
+                src={`/sprite-pedestrian-walk-${guy2State.isWalking ? carrierFrame : 1}.png?v=2`}
                 alt="Drain Inspector Walking"
                 className="h-[96px] sm:h-[108px] md:h-[118px] w-auto object-contain block select-none"
               />
@@ -2613,24 +3092,24 @@ export default function IndusValleyGameScreen() {
           </div>
         )}
 
-        {/* Stage 1.7: Granary Worker Unloading Grains from Bullock Cart */}
+        {/* Stage 1.7: Granary Worker Unloading Grains from Bullock Cart 1 (At Ramp Base) */}
         {scene === "granary_avenue" && (
           <div
             className="absolute z-13 pointer-events-auto cursor-pointer select-none group"
-            style={{ left: "84.5%", top: "86.5%" }}
+            style={{ left: "81.5%", top: "71.0%" }}
             onClick={() => {
               setActiveCitizenDialogue({
                 name: "Dhanu the Granary Worker",
                 title: "Bullock Cart Grain Handler • Mohenjo-daro Granary",
                 icon: "",
-                text: "Hup! Another wooden cart loaded with winter barley has arrived from the fertile alluvial fields along the Indus river. We carefully unload each heavy sack and storage pot down to the staging ground, ready to be weighed and hauled up the wooden ramp to the ventilated loading platforms!",
+                text: "Hup! Another wooden cart loaded with winter barley has arrived from the fertile alluvial fields along the Indus river. We carefully unload each heavy sack down to the staging ground, ready to be weighed and hauled up the wooden ramp to the ventilated loading platforms!",
               });
               soundFx.playSelect();
             }}
           >
             <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform duration-200 group-hover:scale-105">
               <div className="absolute bottom-full mb-1 flex flex-col items-center pointer-events-none">
-                {isNearGrainCartWorker && (
+                {isNearAnyGrainCart && (
                   <div className="mb-1 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded text-[10px] font-serif shadow-lg animate-bounce whitespace-nowrap pointer-events-auto">
                     <span className="text-[#d8a86a] font-bold mr-1">[G]</span>
                     <span>Speak with Grain Unloader</span>
@@ -2638,26 +3117,112 @@ export default function IndusValleyGameScreen() {
                 )}
                 <span
                   className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow whitespace-nowrap transition-opacity duration-200 ${
-                    isNearGrainCartWorker ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                    isNearAnyGrainCart ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                   }`}
                 >
                   Unloading Grain Cart
                 </span>
               </div>
               <img
-                src={`/sprite-grain-cart-${grainWorkerFrame}.png?v=2`}
+                src={`/sprite-grain-cart-${grainWorkerFrame}.png?v=4`}
                 alt="Harappan Laborer Unloading Grains from Cart"
-                className="h-32 sm:h-36 md:h-40 w-auto object-contain block select-none drop-shadow-[0_6px_12px_rgba(0,0,0,0.35)]"
+                className="h-18 sm:h-20 md:h-[78px] w-auto object-contain block select-none drop-shadow-[0_4px_8px_rgba(0,0,0,0.35)]"
               />
             </div>
           </div>
         )}
 
-        {/* Stage 1.7: Harappan Merchants Conversing in Dirt Yard beside Ramp (Boy & Girl Talking) */}
+        {/* Stage 1.7: Grain Cart 3 (Far Right Sunlit Yard) */}
+        {scene === "granary_avenue" && (
+          <div
+            className="absolute z-13 pointer-events-auto cursor-pointer select-none group"
+            style={{ left: "89.0%", top: "79.0%" }}
+            onClick={() => {
+              setActiveCitizenDialogue({
+                name: "Civic Grain Carter",
+                title: "Municipal Grain Delivery • Mohenjo-daro",
+                icon: "",
+                text: "Barley sacks unloaded for the civic distribution guild! Porters will haul these sacks across to the weighing stations.",
+              });
+              soundFx.playSelect();
+            }}
+          >
+            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform duration-200 group-hover:scale-105">
+              <img
+                src={`/sprite-grain-cart-${grainWorkerFrame}.png?v=4`}
+                alt="Unloading Grain Cart 3"
+                className="h-18 sm:h-20 md:h-[78px] w-auto object-contain block select-none drop-shadow-[0_4px_8px_rgba(0,0,0,0.35)] -scale-x-100"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Stage 1.7: Grain Cart 4 (Lower Central Dirt Avenue) */}
+        {scene === "granary_avenue" && (
+          <div
+            className="absolute z-14 pointer-events-auto cursor-pointer select-none group"
+            style={{ left: "57.0%", top: "96.0%" }}
+            onClick={() => {
+              setActiveCitizenDialogue({
+                name: "Alluvial Grain Carrier",
+                title: "Rural Harvest Team • Indus Basin",
+                icon: "",
+                text: "Freshly winnowed grain brought directly from the eastern alluvial farms. We are storing these sacks in the cool arched ground-level depots!",
+              });
+              soundFx.playSelect();
+            }}
+          >
+            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform duration-200 group-hover:scale-105">
+              <img
+                src={`/sprite-grain-cart-${grainWorkerFrame}.png?v=4`}
+                alt="Unloading Grain Cart 4"
+                className="h-20 sm:h-22 md:h-[88px] w-auto object-contain block select-none drop-shadow-[0_4px_8px_rgba(0,0,0,0.35)]"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Ground Porter 1 (Carrying sacks from Cart 1 to Ramp Staging) */}
+        {scene === "granary_avenue" && (
+          <div
+            className="absolute z-13 pointer-events-none select-none"
+            style={{ left: `${groundWorker1Pos.x}%`, top: `${groundWorker1Pos.y}%` }}
+          >
+            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform duration-100">
+              <img
+                src={
+                  groundWorker1Pos.isCarrying
+                    ? `/sprite-grain-carrier-${grainCarrierWalkFrame}.png`
+                    : `/sprite-grain-carrier-empty-${grainCarrierWalkFrame}.png`
+                }
+                alt="Ground Porter 1"
+                className={`h-18 sm:h-20 md:h-[78px] w-auto object-contain block select-none drop-shadow-[0_4px_8px_rgba(0,0,0,0.3)] transition-transform duration-150 ${
+                  groundWorker1Pos.facingLeft ? "-scale-x-100" : "scale-x-100"
+                }`}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Deposited Ground Sack 1 at Ramp Staging */}
+        {scene === "granary_avenue" && showGroundSack1 && (
+          <div
+            className="absolute z-12 pointer-events-none select-none transition-opacity duration-300"
+            style={{ left: "86.8%", top: "76.2%" }}
+          >
+            <img
+              src="/sprite-grain-sack.png"
+              alt="Deposited Ground Sack 1"
+              className="h-6 sm:h-7 md:h-[28px] w-auto object-contain block select-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)] transform -translate-x-1/2 -translate-y-full"
+            />
+          </div>
+        )}
+
+        {/* Stage 1.7: Harappan Merchants Conversing in Dirt Yard (Clear of ladder & ramp on solid ground) */}
         {scene === "granary_avenue" && (
           <div
             className="absolute z-12 pointer-events-auto cursor-pointer select-none group"
-            style={{ left: "75.5%", top: "88.0%" }}
+            style={{ left: "70.5%", top: "84.0%" }}
             onClick={() => {
               setActiveCitizenDialogue({
                 name: "Harappan Merchants (Weaver & Grain Overseer)",
@@ -2687,13 +3252,13 @@ export default function IndusValleyGameScreen() {
               <img
                 src={`/sprite-artisans-talk-${talkingArtisansFrame}.png?v=2`}
                 alt="Harappan Merchants Conversing"
-                className="h-20 sm:h-24 md:h-28 w-auto object-contain block select-none drop-shadow-[0_4px_8px_rgba(0,0,0,0.3)]"
+                className="h-16 sm:h-18 md:h-[75px] w-auto object-contain block select-none drop-shadow-[0_3px_6px_rgba(0,0,0,0.3)]"
               />
             </div>
           </div>
         )}
 
-        {/* Stage 1.7: Grain Porter 1 (Upper hall aisle from corner to corner) */}
+        {/* Stage 1.7: Grain Porter 1 (Midground Hall to Platform 2 on solid floor & ramp: carries grain, deposits, returns empty) */}
         {scene === "granary_avenue" && (
           <div
             className="absolute z-11 pointer-events-auto cursor-pointer select-none group"
@@ -2706,14 +3271,14 @@ export default function IndusValleyGameScreen() {
                 name: "Harappan Grain Porter",
                 title: "Granary Reserve Carrier • Mohenjo-daro",
                 icon: "",
-                text: "Step aside, friend! We are hauling sacks of harvested barley and emmer wheat from the cool storage chambers in the west corner across to the distribution loading bays. The subterranean air ducts below keep the grain dry and fresh through every season!",
+                text: "Step aside, friend! We are hauling sacks of harvested barley and emmer wheat from the cool storage chambers across to the distribution loading bays. The subterranean air ducts below keep the grain dry and fresh through every season!",
               });
               soundFx.playSelect();
             }}
           >
             <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform duration-100 group-hover:scale-105">
               <div className="absolute bottom-full mb-1 flex flex-col items-center pointer-events-none">
-                {isNearGranaryPorter1 && (
+                {isNearAnyGranaryWorker && (
                   <div className="mb-0.5 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2 py-0.5 rounded text-[9px] font-serif shadow animate-bounce whitespace-nowrap pointer-events-auto">
                     <span className="text-[#d8a86a] font-bold mr-1">[G]</span>
                     <span>Speak with Porter</span>
@@ -2721,16 +3286,20 @@ export default function IndusValleyGameScreen() {
                 )}
                 <span
                   className={`text-[9px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-1.5 py-0.5 rounded border border-[#d8a86a]/50 shadow whitespace-nowrap transition-opacity duration-200 ${
-                    isNearGranaryPorter1 ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                    isNearAnyGranaryWorker ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                   }`}
                 >
                   Grain Porter
                 </span>
               </div>
               <img
-                src={`/sprite-grain-carrier-${grainCarrierWalkFrame}.png`}
+                src={
+                  granaryWorker1Pos.isCarrying
+                    ? `/sprite-grain-carrier-${grainCarrierWalkFrame}.png`
+                    : `/sprite-grain-carrier-empty-${grainCarrierWalkFrame}.png`
+                }
                 alt="Grain Porter carrying sack"
-                className={`h-14 sm:h-16 md:h-[62px] w-auto object-contain block select-none drop-shadow-[0_4px_8px_rgba(0,0,0,0.3)] transition-transform duration-150 ${
+                className={`h-18 sm:h-20 md:h-[78px] w-auto object-contain block select-none drop-shadow-[0_4px_8px_rgba(0,0,0,0.3)] transition-transform duration-150 ${
                   granaryWorker1Pos.facingLeft ? "-scale-x-100" : "scale-x-100"
                 }`}
               />
@@ -2738,7 +3307,7 @@ export default function IndusValleyGameScreen() {
           </div>
         )}
 
-        {/* Stage 1.7: Grain Porter 2 (Parallel platform runway, offset so no overlap) */}
+        {/* Stage 1.7: Grain Porter 2 (Foreground Platform 1 solid flat deck: carries grain, deposits, returns empty) */}
         {scene === "granary_avenue" && (
           <div
             className="absolute z-12 pointer-events-auto cursor-pointer select-none group"
@@ -2751,35 +3320,160 @@ export default function IndusValleyGameScreen() {
                 name: "Harappan Grain Porter",
                 title: "Granary Reserve Carrier • Mohenjo-daro",
                 icon: "",
-                text: "Step aside, friend! We are hauling sacks of harvested barley and emmer wheat from the cool storage chambers in the west corner across to the distribution loading bays. The subterranean air ducts below keep the grain dry and fresh through every season!",
+                text: "Step aside, friend! We are hauling sacks of harvested barley and emmer wheat from the cool storage chambers across to the distribution loading bays. The subterranean air ducts below keep the grain dry and fresh through every season!",
               });
               soundFx.playSelect();
             }}
           >
             <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform duration-100 group-hover:scale-105">
-              <div className="absolute bottom-full mb-1 flex flex-col items-center pointer-events-none">
-                {isNearGranaryPorter2 && (
-                  <div className="mb-0.5 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2 py-0.5 rounded text-[9px] font-serif shadow animate-bounce whitespace-nowrap pointer-events-auto">
-                    <span className="text-[#d8a86a] font-bold mr-1">[G]</span>
-                    <span>Speak with Porter</span>
-                  </div>
-                )}
-                <span
-                  className={`text-[9px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-1.5 py-0.5 rounded border border-[#d8a86a]/50 shadow whitespace-nowrap transition-opacity duration-200 ${
-                    isNearGranaryPorter2 ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                  }`}
-                >
-                  Grain Porter
-                </span>
-              </div>
               <img
-                src={`/sprite-grain-carrier-${grainCarrierWalkFrame}.png`}
+                src={
+                  granaryWorker2Pos.isCarrying
+                    ? `/sprite-grain-carrier-${grainCarrierWalkFrame}.png`
+                    : `/sprite-grain-carrier-empty-${grainCarrierWalkFrame}.png`
+                }
                 alt="Grain Porter carrying sack"
-                className={`h-14 sm:h-16 md:h-[62px] w-auto object-contain block select-none drop-shadow-[0_4px_8px_rgba(0,0,0,0.3)] transition-transform duration-150 ${
+                className={`h-20 sm:h-22 md:h-[84px] w-auto object-contain block select-none drop-shadow-[0_4px_8px_rgba(0,0,0,0.3)] transition-transform duration-150 ${
                   granaryWorker2Pos.facingLeft ? "-scale-x-100" : "scale-x-100"
                 }`}
               />
             </div>
+          </div>
+        )}
+
+        {/* Stage 1.7: Deposited Grain Bag on Platform 2 (appears when Worker 1 deposits grain) */}
+        {scene === "granary_avenue" && showDepositedSack1 && (
+          <div
+            className="absolute z-10 pointer-events-none select-none transition-opacity duration-300"
+            style={{ left: "55.5%", top: "49.8%" }}
+          >
+            <img
+              src="/sprite-grain-sack.png"
+              alt="Deposited Grain Bag on Platform 2"
+              className="h-6 sm:h-7 md:h-[28px] w-auto object-contain block select-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)] transform -translate-x-1/2 -translate-y-full"
+            />
+          </div>
+        )}
+
+        {/* Stage 1.7: Deposited Grain Bag on Platform 1 (appears when Worker 2 deposits grain) */}
+        {scene === "granary_avenue" && showDepositedSack2 && (
+          <div
+            className="absolute z-11 pointer-events-none select-none transition-opacity duration-300"
+            style={{ left: "34.5%", top: "57.5%" }}
+          >
+            <img
+              src="/sprite-grain-sack.png"
+              alt="Deposited Grain Bag on Platform 1"
+              className="h-7 sm:h-8 md:h-[32px] w-auto object-contain block select-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)] transform -translate-x-1/2 -translate-y-full"
+            />
+          </div>
+        )}
+
+        {/* Stage 1.7: Grain Porter 3 (Back Colonnade Hall: moving backwards right-to-left) */}
+        {scene === "granary_avenue" && (
+          <div
+            className="absolute z-10 pointer-events-none select-none"
+            style={{ left: `${granaryWorker3Pos.x}%`, top: `${granaryWorker3Pos.y}%` }}
+          >
+            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform duration-100">
+              <img
+                src={
+                  granaryWorker3Pos.isCarrying
+                    ? `/sprite-grain-carrier-${grainCarrierWalkFrame}.png`
+                    : `/sprite-grain-carrier-empty-${grainCarrierWalkFrame}.png`
+                }
+                alt="Grain Porter 3"
+                className={`h-15 sm:h-17 md:h-[68px] w-auto object-contain block select-none drop-shadow-[0_4px_8px_rgba(0,0,0,0.3)] transition-transform duration-150 ${
+                  granaryWorker3Pos.facingLeft ? "-scale-x-100" : "scale-x-100"
+                }`}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Deposited Sack on Back Colonnade */}
+        {scene === "granary_avenue" && showDepositedSack3 && (
+          <div
+            className="absolute z-9 pointer-events-none select-none transition-opacity duration-300"
+            style={{ left: "43.0%", top: "31.5%" }}
+          >
+            <img
+              src="/sprite-grain-sack.png"
+              alt="Deposited Grain Bag 3"
+              className="h-5 sm:h-6 md:h-[24px] w-auto object-contain block select-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)] transform -translate-x-1/2 -translate-y-full"
+            />
+          </div>
+        )}
+
+        {/* Stage 1.7: Grain Porter 4 (Upper Roof Flat Sand Terrace: user's marked RED area in Image 2) */}
+        {scene === "granary_avenue" && (
+          <div
+            className="absolute z-9 pointer-events-none select-none"
+            style={{ left: `${granaryWorker4Pos.x}%`, top: `${granaryWorker4Pos.y}%` }}
+          >
+            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform duration-100">
+              <img
+                src={
+                  granaryWorker4Pos.isCarrying
+                    ? `/sprite-grain-carrier-${grainCarrierWalkFrame}.png`
+                    : `/sprite-grain-carrier-empty-${grainCarrierWalkFrame}.png`
+                }
+                alt="Grain Porter 4"
+                className={`h-12 sm:h-14 md:h-[54px] w-auto object-contain block select-none drop-shadow-[0_4px_8px_rgba(0,0,0,0.3)] transition-transform duration-150 ${
+                  granaryWorker4Pos.facingLeft ? "-scale-x-100" : "scale-x-100"
+                }`}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Deposited Sack on Upper Roof Flat Sand Terrace */}
+        {scene === "granary_avenue" && showDepositedSack4 && (
+          <div
+            className="absolute z-9 pointer-events-none select-none transition-opacity duration-300"
+            style={{ left: "80.5%", top: "33.2%" }}
+          >
+            <img
+              src="/sprite-grain-sack.png"
+              alt="Deposited Grain Bag 4"
+              className="h-4 sm:h-5 md:h-[18px] w-auto object-contain block select-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)] transform -translate-x-1/2 -translate-y-full"
+            />
+          </div>
+        )}
+
+        {/* Stage 1.7: Grain Porter 6 (Central Hall Aisle: walking from back to front along dirt floor as in Image 4) */}
+        {scene === "granary_avenue" && (
+          <div
+            className="absolute z-11 pointer-events-none select-none"
+            style={{ left: `${granaryWorker6Pos.x}%`, top: `${granaryWorker6Pos.y}%` }}
+          >
+            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform duration-100">
+              <img
+                src={
+                  granaryWorker6Pos.isCarrying
+                    ? `/sprite-grain-carrier-${grainCarrierWalkFrame}.png`
+                    : `/sprite-grain-carrier-empty-${grainCarrierWalkFrame}.png`
+                }
+                alt="Grain Porter 6"
+                className={`h-16 sm:h-18 md:h-[70px] w-auto object-contain block select-none drop-shadow-[0_4px_8px_rgba(0,0,0,0.3)] transition-transform duration-150 ${
+                  granaryWorker6Pos.facingLeft ? "-scale-x-100" : "scale-x-100"
+                }`}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Deposited Sack on Central Hall Aisle */}
+        {scene === "granary_avenue" && showDepositedSack6 && (
+          <div
+            className="absolute z-10 pointer-events-none select-none transition-opacity duration-300"
+            style={{ left: "40.5%", top: "48.5%" }}
+          >
+            <img
+              src="/sprite-grain-sack.png"
+              alt="Deposited Grain Bag 6"
+              className="h-5 sm:h-6 md:h-[25px] w-auto object-contain block select-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)] transform -translate-x-1/2 -translate-y-full"
+            />
           </div>
         )}
 
@@ -2836,11 +3530,66 @@ export default function IndusValleyGameScreen() {
           </div>
         )}
 
-        {/* Stage 2: Return to The Great Granary */}
+        {/* Stage 2: Animated Potter entering Image 2 gate door and exiting Image 3 courtyard door (increased size, walking on ground) */}
         {scene === "great_bath_citadel" && (
           <div
+            className="absolute pointer-events-auto cursor-pointer select-none group transition-opacity duration-300"
+            style={{
+              left: `${greatBathPotterState.x}%`,
+              top: `${greatBathPotterState.y}%`,
+              opacity: greatBathPotterState.opacity,
+              transform: `scale(${greatBathPotterState.scale})`,
+              transformOrigin: "bottom center",
+              zIndex: Math.floor(greatBathPotterState.y) + 5,
+            }}
+            onClick={() => {
+              setActiveCitizenDialogue({
+                name: "Harappan Master Potter",
+                title: "Terracotta Artisan & Vessel Carrier • Mohenjo-daro",
+                icon: "",
+                text: "I transport wheel-thrown terracotta water jars, ritual lotas, and storage amphorae from the artisan kilns through the citadel gate into the Great Bath complex. Standardized pottery ensures pure ritual storage for the sacred bathing ablutions!",
+              });
+              soundFx.playSelect();
+            }}
+          >
+            <div
+              className={`relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform duration-200 ${
+                greatBathPotterState.facingLeft ? "-scale-x-100" : "scale-x-100"
+              }`}
+            >
+              <div
+                className={`absolute bottom-full mb-1 flex flex-col items-center pointer-events-none ${
+                  greatBathPotterState.facingLeft ? "-scale-x-100" : ""
+                }`}
+              >
+                {isNearGreatBathPotter && (
+                  <div className="mb-1 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded text-[11px] font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap pointer-events-auto">
+                    <span className="text-[#d8a86a] font-bold">[G]</span>
+                    <span>Speak with Potter</span>
+                  </div>
+                )}
+                <span
+                  className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/90 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow whitespace-nowrap transition-opacity duration-200 ${
+                    isNearGreatBathPotter ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  Master Potter
+                </span>
+              </div>
+              <img
+                src={`/sprite-pedestrian-walk-${carrierFrame}.png?v=2`}
+                alt="Harappan Master Potter"
+                className="h-[86px] sm:h-[94px] md:h-[100px] w-auto object-contain block select-none drop-shadow-[0_5px_12px_rgba(0,0,0,0.45)]"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Stage 2: Return to The Great Granary */}
+        {scene === "great_bath_citadel" && isNearGreatBathGranaryReturn && (
+          <div
             className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
-            style={{ left: "50%", top: "84%" }}
+            style={{ left: "50%", top: "92%" }}
             onClick={() => triggerTransition("granary_avenue", { x: 72.0, y: 52.0 })}
           >
             <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1 rounded-lg text-xs font-serif shadow-md whitespace-nowrap animate-bounce group-hover:bg-[#251d16] transition-colors">
