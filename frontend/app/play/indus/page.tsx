@@ -1446,6 +1446,15 @@ export default function IndusValleyGameScreen() {
     playerPos.x >= 78.0 &&
     playerPos.y <= 38.0;
 
+  // Stage 3: Harappa Toy Street Way to enter the Toy Workshop Interior
+  const isNearWorkshopEntrance =
+    scene === "steatite_seal_workshop" &&
+    playerPos.x >= 36.0 &&
+    playerPos.x <= 48.0 &&
+    playerPos.y >= 40.0 &&
+    playerPos.y <= 56.0;
+
+
   // Stage 4: Priest-King
   const isNearPriestKing =
     scene === "priest_king_citadel" &&
@@ -1453,6 +1462,44 @@ export default function IndusValleyGameScreen() {
     playerPos.x <= 62.0 &&
     playerPos.y >= 52.0 &&
     playerPos.y <= 72.0;
+
+  // Stage 4: Workshop Interior Way to Go Back to Toy Street
+  const isNearWorkshopExit =
+    scene === "priest_king_citadel" &&
+    playerPos.y >= 85.0;
+
+  // Stage 3 -> Carnelian Bead Quarter
+  const isNearBeadQuarterEntrance =
+    scene === "steatite_seal_workshop" &&
+    playerPos.x >= 85.0 &&
+    playerPos.y >= 45.0;
+
+  const isNearBeadQuarterExit =
+    scene === "carnelian_bead_quarter" &&
+    playerPos.x <= 25.0;
+
+  // Stage 2 -> Drainage Culvert
+  const isNearDrainageEntrance =
+    scene === "great_bath_citadel" &&
+    playerPos.x >= 35.0 &&
+    playerPos.x <= 65.0 &&
+    playerPos.y >= 40.0 &&
+    playerPos.y <= 55.0;
+
+  const isNearDrainageExit =
+    scene === "drainage_culvert" &&
+    playerPos.y >= 80.0;
+
+  // Carnelian Bead Quarter -> Closing Reflection
+  const isNearSunsetReflection =
+    scene === "carnelian_bead_quarter" &&
+    playerPos.x >= 85.0;
+
+  const isNearSunsetExit =
+    scene === "closing_reflection" &&
+    playerPos.y >= 80.0;
+
+
 
   // 5. Scene Transitions (Normal fast transition for internal rooms and avenues, 600ms)
   const triggerTransition = (
@@ -1629,6 +1676,18 @@ export default function IndusValleyGameScreen() {
         } else if (isNearCitadelStairs) {
           triggerTransition("priest_king_citadel", { x: 50.0, y: 80.0 }, 4);
           return;
+        } else if (isNearWorkshopEntrance) {
+          triggerTransition("priest_king_citadel", { x: 50.0, y: 80.0 }, 4);
+          return;
+        } else if (isNearBeadQuarterEntrance) {
+          triggerTransition("carnelian_bead_quarter", { x: 30.0, y: 70.0 });
+          return;
+        } else if (isNearDrainageEntrance) {
+          triggerTransition("drainage_culvert", { x: 50.0, y: 50.0 });
+          return;
+        } else if (isNearSunsetReflection) {
+          triggerTransition("closing_reflection", { x: 50.0, y: 60.0 });
+          return;
         }
       }
 
@@ -1639,6 +1698,18 @@ export default function IndusValleyGameScreen() {
           return;
         } else if (isNearCaravanRoadReturn) {
           triggerTransition("great_bath_citadel", { x: 68.0, y: 32.0 }, 2, 600);
+          return;
+        } else if (isNearWorkshopExit) {
+          triggerTransition("steatite_seal_workshop", { x: 50.0, y: 65.0 }, 3, 600);
+          return;
+        } else if (isNearBeadQuarterExit) {
+          triggerTransition("steatite_seal_workshop", { x: 80.0, y: 60.0 });
+          return;
+        } else if (isNearDrainageExit) {
+          triggerTransition("great_bath_citadel", { x: 50.0, y: 65.0 });
+          return;
+        } else if (isNearSunsetExit) {
+          triggerTransition("carnelian_bead_quarter", { x: 80.0, y: 60.0 });
           return;
         } else if (isInsideCourtyardToilet) {
           // Exit latrine room to corridor outside
@@ -1974,6 +2045,14 @@ export default function IndusValleyGameScreen() {
     isNearGranaryExit,
     isNearArtisanQuarterExit,
     isNearCitadelStairs,
+    isNearWorkshopEntrance,
+    isNearWorkshopExit,
+    isNearBeadQuarterEntrance,
+    isNearBeadQuarterExit,
+    isNearDrainageEntrance,
+    isNearDrainageExit,
+    isNearSunsetReflection,
+    isNearSunsetExit,
     hasFirstRelicChertWeight,
     isDrainagePuzzleSolved,
     isSealPuzzleSolved,
@@ -3882,6 +3961,26 @@ export default function IndusValleyGameScreen() {
           </div>
         )}
 
+        {/* Harappa Toy Workshop: Entrance from the Street */}
+        {scene === "steatite_seal_workshop" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "42%", top: "50%" }}
+            onClick={() => triggerTransition("priest_king_citadel", { x: 50.0, y: 80.0 }, 4, 600)}
+          >
+            {isNearWorkshopEntrance ? (
+              <div className="bg-[#1b1510]/95 border-2 border-[#52a45a] text-[#baf1be] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-xl animate-bounce whitespace-nowrap group-hover:bg-[#251d16] transition-colors flex items-center gap-1.5">
+                <span className="text-[#d8a86a] font-bold">▲ [E]</span>
+                <span>Enter Toy Workshop</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>Toy Workshop Entrance</span>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Stage 4: Priest-King Hotspot */}
         {scene === "priest_king_citadel" && (
           <div
@@ -3902,6 +4001,143 @@ export default function IndusValleyGameScreen() {
             <span className="text-[10px] font-serif font-bold text-[#fdfaf3] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#6b533a] mt-1">
               The Priest-King
             </span>
+          </div>
+        )}
+
+        {/* Harappa Toy Workshop Interior: Exit back to Market Street */}
+        {scene === "priest_king_citadel" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "50%", top: "92%" }}
+            onClick={() => triggerTransition("steatite_seal_workshop", { x: 50.0, y: 65.0 }, 3, 600)}
+          >
+            {isNearWorkshopExit ? (
+              <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-xl animate-bounce whitespace-nowrap group-hover:bg-[#251d16] transition-colors flex items-center gap-1.5">
+                <span className="text-[#d8a86a] font-bold">▼ [F]</span>
+                <span>Return to Toy Market Street</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>Exit Workshop (Back to Street)</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* --- CARNELIAN BEAD QUARTER ENDPOINTS --- */}
+        {scene === "steatite_seal_workshop" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "92%", top: "60%" }}
+            onClick={() => triggerTransition("carnelian_bead_quarter", { x: 30.0, y: 70.0 }, 3, 600)}
+          >
+            {isNearBeadQuarterEntrance ? (
+              <div className="bg-[#1b1510]/95 border-2 border-[#52a45a] text-[#baf1be] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-xl animate-bounce whitespace-nowrap group-hover:bg-[#251d16] transition-colors flex items-center gap-1.5">
+                <span className="text-[#d8a86a] font-bold">► [E]</span>
+                <span>To Carnelian Bead Quarter</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>Carnelian Bead Quarter</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {scene === "carnelian_bead_quarter" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "8%", top: "60%" }}
+            onClick={() => triggerTransition("steatite_seal_workshop", { x: 80.0, y: 60.0 }, 3, 600)}
+          >
+            {isNearBeadQuarterExit ? (
+              <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-xl animate-bounce whitespace-nowrap group-hover:bg-[#251d16] transition-colors flex items-center gap-1.5">
+                <span className="text-[#d8a86a] font-bold">◄ [F]</span>
+                <span>Return to Artisan Street</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>Back to Artisan Street</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* --- DRAINAGE CULVERT ENDPOINTS --- */}
+        {scene === "great_bath_citadel" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "50%", top: "45%" }}
+            onClick={() => triggerTransition("drainage_culvert", { x: 50.0, y: 50.0 }, 2, 600)}
+          >
+            {isNearDrainageEntrance ? (
+              <div className="bg-[#1b1510]/95 border-2 border-[#52a45a] text-[#baf1be] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-xl animate-bounce whitespace-nowrap group-hover:bg-[#251d16] transition-colors flex items-center gap-1.5">
+                <span className="text-[#d8a86a] font-bold">▲ [E]</span>
+                <span>Enter Drainage Culvert</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>Drainage Culvert</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {scene === "drainage_culvert" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "50%", top: "90%" }}
+            onClick={() => triggerTransition("great_bath_citadel", { x: 50.0, y: 65.0 }, 2, 600)}
+          >
+            {isNearDrainageExit ? (
+              <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-xl animate-bounce whitespace-nowrap group-hover:bg-[#251d16] transition-colors flex items-center gap-1.5">
+                <span className="text-[#d8a86a] font-bold">▼ [F]</span>
+                <span>Return to Great Bath</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>Exit Culvert</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* --- CLOSING REFLECTION ENDPOINTS --- */}
+        {scene === "carnelian_bead_quarter" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "92%", top: "60%" }}
+            onClick={() => triggerTransition("closing_reflection", { x: 50.0, y: 60.0 }, 4, 600)}
+          >
+            {isNearSunsetReflection ? (
+              <div className="bg-[#1b1510]/95 border-2 border-[#52a45a] text-[#baf1be] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-xl animate-bounce whitespace-nowrap group-hover:bg-[#251d16] transition-colors flex items-center gap-1.5">
+                <span className="text-[#d8a86a] font-bold">► [E]</span>
+                <span>Conclude Journey</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>Closing Reflection</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {scene === "closing_reflection" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "50%", top: "90%" }}
+            onClick={() => triggerTransition("carnelian_bead_quarter", { x: 80.0, y: 60.0 }, 3, 600)}
+          >
+            {isNearSunsetExit ? (
+              <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-xl animate-bounce whitespace-nowrap group-hover:bg-[#251d16] transition-colors flex items-center gap-1.5">
+                <span className="text-[#d8a86a] font-bold">▼ [F]</span>
+                <span>Return to City</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>Return to City</span>
+              </div>
+            )}
           </div>
         )}
 
