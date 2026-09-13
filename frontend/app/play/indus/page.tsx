@@ -455,6 +455,33 @@ export default function IndusValleyGameScreen() {
   const [isWalking, setIsWalking] = useState(false);
   const [walkPhase, setWalkPhase] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isLoadingToHarappa, setIsLoadingToHarappa] = useState(false);
+  const [harappaTravelProgress, setHarappaTravelProgress] = useState(0);
+
+  // Travel Audio for Harappa Journey Loading Screen (Bullock Cart sound effect)
+  const bullockSoundRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      bullockSoundRef.current = new Audio("/bullock_cart_travel.mp3");
+      bullockSoundRef.current.volume = 0.75;
+      bullockSoundRef.current.loop = true;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isLoadingToHarappa) {
+      if (bullockSoundRef.current && !isSoundMuted) {
+        bullockSoundRef.current.currentTime = 0;
+        bullockSoundRef.current.play().catch(() => {});
+      }
+    } else {
+      if (bullockSoundRef.current) {
+        bullockSoundRef.current.pause();
+        bullockSoundRef.current.currentTime = 0;
+      }
+    }
+  }, [isLoadingToHarappa, isSoundMuted]);
 
   // Stage 1: Lower Town & Granary
   const [hasMetCityOverseer, setHasMetCityOverseer] = useState(INITIAL_INDUS_STATE.hasMetCityOverseer);
@@ -482,6 +509,7 @@ export default function IndusValleyGameScreen() {
   const [showCourtyardStaircaseModal, setShowCourtyardStaircaseModal] = useState(false);
   const [hasInspectedCourtyardToilet, setHasInspectedCourtyardToilet] = useState(false);
   const [lastCourtyardDoor, setLastCourtyardDoor] = useState<"left" | "right">("right");
+  const [courtyardReturnScene, setCourtyardReturnScene] = useState<"residential_grid" | "great_bath_citadel">("residential_grid");
 
   // Stage 1.6: House Interior
   const [showInteriorStaircaseModal, setShowInteriorStaircaseModal] = useState(false);
@@ -970,6 +998,33 @@ export default function IndusValleyGameScreen() {
     playerPos.x >= 42.0 &&
     playerPos.x <= 58.0;
 
+  // Stage 2: Great Bath Citadel -> Upper Gate Doorway to The Caravan Road of the Harappan (press E to go to Harappan location)
+  const isNearGreatBathHarappanGate =
+    scene === "great_bath_citadel" &&
+    playerPos.x >= 60.0 &&
+    playerPos.x <= 76.0 &&
+    playerPos.y >= 26.0 &&
+    playerPos.y <= 38.0;
+
+  // Caravan Road: Single Bullock Cart Hotspot (Post-noon Harappa Road)
+  const isNearCaravanCart =
+    scene === "caravan_road" &&
+    playerPos.x >= 32.0 &&
+    playerPos.x <= 58.0 &&
+    playerPos.y >= 54.0 &&
+    playerPos.y <= 78.0;
+
+  // Caravan Road: Enter Harappa City Gates (Forward passage to Stage 3)
+  const isNearCaravanRoadHarappaGate =
+    scene === "caravan_road" &&
+    playerPos.x >= 76.0 &&
+    playerPos.y <= 34.0;
+
+  // Caravan Road: Southbound return to The Great Bath / Mohenjo-daro
+  const isNearCaravanRoadReturn =
+    scene === "caravan_road" &&
+    playerPos.y >= 86.0;
+
   // Stage 2: Great Bath Potter walking along Image 2 red area route (from left end, through gateway/passage, to right end and exiting)
   const greatBathPotterState = getGreatBathPotterState(carrierTime);
   const isNearGreatBathPotter =
@@ -1373,19 +1428,23 @@ export default function IndusValleyGameScreen() {
     isDrainagePuzzleSolved &&
     playerPos.x >= 75.0;
 
-  // Stage 3: Seal Carving Bench
+  // Stage 3: Harappan Terracotta Toy Workshop Counter & Stalls (Foreground Left)
   const isNearSealBench =
     scene === "steatite_seal_workshop" &&
-    playerPos.x >= 35.0 &&
-    playerPos.x <= 65.0 &&
-    playerPos.y >= 52.0 &&
-    playerPos.y <= 75.0;
+    playerPos.x <= 36.0 &&
+    playerPos.y >= 58.0;
 
-  // Stage 3 -> Stage 4 Citadel stairs
+  // Stage 3: Harappa Toy Street Way to Go Back to Caravan Road (Upper Left Archway)
+  const isNearHarappaExitArchway =
+    scene === "steatite_seal_workshop" &&
+    playerPos.x <= 25.0 &&
+    playerPos.y <= 45.0;
+
+  // Stage 3 -> Stage 4 Citadel stairs (Upper Right Avenue)
   const isNearCitadelStairs =
     scene === "steatite_seal_workshop" &&
-    isSealPuzzleSolved &&
-    playerPos.y <= 52.0;
+    playerPos.x >= 78.0 &&
+    playerPos.y <= 38.0;
 
   // Stage 4: Priest-King
   const isNearPriestKing =
@@ -1395,11 +1454,12 @@ export default function IndusValleyGameScreen() {
     playerPos.y >= 52.0 &&
     playerPos.y <= 72.0;
 
-  // 5. Scene Transitions
+  // 5. Scene Transitions (Normal fast transition for internal rooms and avenues, 600ms)
   const triggerTransition = (
     nextScene: IndusSceneType,
     nextPos: { x: number; y: number },
-    nextStage?: IndusStage
+    nextStage?: IndusStage,
+    durationMs: number = 600
   ) => {
     setIsTransitioning(true);
     soundFx.playSelect();
@@ -1408,7 +1468,27 @@ export default function IndusValleyGameScreen() {
       setPlayerPos(nextPos);
       if (nextStage) setStage(nextStage);
       setIsTransitioning(false);
-    }, 600);
+    }, durationMs);
+  };
+
+  // Dedicated 8-Second Bullock Cart Journey from Mohenjo-daro to Harappa with Animated Progress
+  const startHarappaTravelTransition = () => {
+    setIsLoadingToHarappa(true);
+    setHarappaTravelProgress(0);
+    soundFx.playSelect();
+    const duration = 8000;
+    const startTime = Date.now();
+    const timer = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(Math.round((elapsed / duration) * 100), 100);
+      setHarappaTravelProgress(progress);
+      if (elapsed >= duration) {
+        clearInterval(timer);
+        setScene("caravan_road");
+        setPlayerPos({ x: 45.0, y: 84.0 });
+        setIsLoadingToHarappa(false);
+      }
+    }, 50);
   };
 
   // 5.5. Animated Entities Engine (Water carriers, rooftop citizens, Egyptian boat, granary unloader & talking artisans)
@@ -1507,7 +1587,14 @@ export default function IndusValleyGameScreen() {
 
       // Enter key: [E] or [e] (Per user requirement: "for entering anywhere E")
       if (e.key === "e" || e.key === "E") {
-        if (isNearHouseDoorway) {
+        if (isNearGreatBathHarappanGate) {
+          startHarappaTravelTransition();
+          return;
+        } else if (isNearCaravanRoadHarappaGate) {
+          triggerTransition("steatite_seal_workshop", { x: 20.0, y: 38.0 }, 3, 600);
+          return;
+        } else if (isNearHouseDoorway) {
+          setCourtyardReturnScene("residential_grid");
           triggerTransition("house_courtyard", { x: 50.0, y: 72.0 });
           return;
         } else if (isNearCourtyardToiletDoor) {
@@ -1547,7 +1634,13 @@ export default function IndusValleyGameScreen() {
 
       // Exit key: [F] or [f] (Per user requirement: "exiting F")
       if (e.key === "f" || e.key === "F") {
-        if (isInsideCourtyardToilet) {
+        if (isNearHarappaExitArchway) {
+          triggerTransition("caravan_road", { x: 80.0, y: 32.0 }, undefined, 600);
+          return;
+        } else if (isNearCaravanRoadReturn) {
+          triggerTransition("great_bath_citadel", { x: 68.0, y: 32.0 }, 2, 600);
+          return;
+        } else if (isInsideCourtyardToilet) {
           // Exit latrine room to corridor outside
           setPlayerPos({ x: 38.0, y: 58.0 });
           soundFx.playSelect();
@@ -1557,8 +1650,12 @@ export default function IndusValleyGameScreen() {
           soundFx.playSelect();
           return;
         } else if (isNearCourtyardRightExitDoor || isNearCourtyardExit) {
-          // Exit from courtyard to street grid directly from this doorway (as requested)
-          triggerTransition("residential_grid", { x: 48.0, y: 60.0 });
+          // Exit from courtyard back to Great Bath or street grid depending on entry point
+          if (courtyardReturnScene === "great_bath_citadel") {
+            triggerTransition("great_bath_citadel", { x: 68.0, y: 32.0 });
+          } else {
+            triggerTransition("residential_grid", isNearCourtyardRightExitDoor ? { x: 48.0, y: 60.0 } : { x: 80.0, y: 38.0 });
+          }
           return;
         } else if (isNearHouseExit) {
           // Exit from ground floor interior back to courtyard
@@ -1582,7 +1679,15 @@ export default function IndusValleyGameScreen() {
 
       // Inspect key: [G] or [g] (Per user requirement: "for all the inspect part keep G")
       if (e.key === "g" || e.key === "G") {
-        if (isNearCourtyardToilet) {
+        if (isNearCaravanCart) {
+          setActiveCitizenDialogue({
+            name: "Harappan Bullock Cart",
+            title: "Traditional Indus Valley Freight Transport",
+            icon: "",
+            text: "A solid-wheeled wooden ox cart harnessed to a pair of humped zebu oxen, laden with terracotta storage jars, woven grain sacks, and trade goods along the post-noon highway to Harappa.",
+          });
+          soundFx.playSelect();
+        } else if (isNearCourtyardToilet) {
           setShowCourtyardToiletModal(true);
         } else if (isNearCourtyardBath) {
           setShowInteriorBathModal(true);
@@ -1858,7 +1963,13 @@ export default function IndusValleyGameScreen() {
     isNearGreatBathBasin,
     isNearGreatBathPotter,
     isNearGreatBathGranaryReturn,
+    isNearGreatBathHarappanGate,
+    isNearCaravanCart,
+    isNearCaravanRoadHarappaGate,
+    isNearCaravanRoadReturn,
+    courtyardReturnScene,
     isNearSealBench,
+    isNearHarappaExitArchway,
     isNearPriestKing,
     isNearGranaryExit,
     isNearArtisanQuarterExit,
@@ -2527,14 +2638,21 @@ export default function IndusValleyGameScreen() {
         {/* Stage 1.55: Central Domestic Courtyard Canvas Scene       */}
         {/* ========================================================= */}
 
-        {/* Stage 1.55: House Courtyard -> Exit to Street Grid Trigger */}
+        {/* Stage 1.55: House Courtyard -> Exit to Street Grid / Great Bath Trigger */}
         {scene === "house_courtyard" && isNearCourtyardExit && (
           <div
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
             style={{ left: "50%", top: "86%" }}
+            onClick={() => {
+              if (courtyardReturnScene === "great_bath_citadel") {
+                triggerTransition("great_bath_citadel", { x: 68.0, y: 32.0 });
+              } else {
+                triggerTransition("residential_grid", { x: 80.0, y: 38.0 });
+              }
+            }}
           >
-            <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1 rounded-lg text-xs font-serif shadow-md whitespace-nowrap animate-bounce">
-              <span>▼ [F] Exit to Street Grid</span>
+            <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1 rounded-lg text-xs font-serif shadow-md whitespace-nowrap animate-bounce group-hover:bg-[#251d16] transition-colors">
+              <span>▼ [F] {courtyardReturnScene === "great_bath_citadel" ? "Exit to The Great Bath" : "Exit to Street Grid"}</span>
             </div>
           </div>
         )}
@@ -2571,15 +2689,21 @@ export default function IndusValleyGameScreen() {
           </div>
         )}
 
-        {/* Stage 1.55: House Courtyard -> Doorway to Street Grid Exit (Right door - as requested) */}
+        {/* Stage 1.55: House Courtyard -> Doorway to Exit (Right door - Street Grid or Great Bath) */}
         {scene === "house_courtyard" && isNearCourtyardRightExitDoor && (
           <div
             className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
             style={{ left: "68%", top: "34%" }}
-            onClick={() => triggerTransition("residential_grid", { x: 48.0, y: 60.0 })}
+            onClick={() => {
+              if (courtyardReturnScene === "great_bath_citadel") {
+                triggerTransition("great_bath_citadel", { x: 68.0, y: 32.0 });
+              } else {
+                triggerTransition("residential_grid", { x: 48.0, y: 60.0 });
+              }
+            }}
           >
             <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-md whitespace-nowrap animate-bounce group-hover:bg-[#251d16] transition-colors">
-              <span>▼ [F] Exit to Street Grid</span>
+              <span>▼ [F] {courtyardReturnScene === "great_bath_citadel" ? "Exit to The Great Bath" : "Exit to Street Grid"}</span>
             </div>
           </div>
         )}
@@ -3598,42 +3722,163 @@ export default function IndusValleyGameScreen() {
           </div>
         )}
 
-        {/* Stage 3: Seal Carver Bench Hotspot */}
+        {/* Stage 2: Great Bath Citadel -> Upper Gate Doorway to The Caravan Road of the Harappan */}
+        {scene === "great_bath_citadel" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "68%", top: "26%" }}
+            onClick={() => {
+              startHarappaTravelTransition();
+            }}
+          >
+            {isNearGreatBathHarappanGate ? (
+              <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-xl animate-bounce whitespace-nowrap group-hover:bg-[#251d16] transition-colors flex items-center gap-1.5">
+                <span className="text-[#d8a86a] font-bold">▲ [E]</span>
+                <span>Travel to Harappa</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>Highway to Harappa</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* THE CARAVAN ROAD TO HARAPPA (SCENE INTERACTIONS)          */}
+        {/* ========================================================= */}
+
+        {/* Caravan Road: Single Zebu Bullock Cart on the Ancient Trade Highway */}
+        {scene === "caravan_road" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-15"
+            style={{ left: "45%", top: "66%" }}
+            onClick={() => {
+              setActiveCitizenDialogue({
+                name: "Harappan Bullock Cart",
+                title: "Traditional Indus Valley Freight Transport",
+                icon: "",
+                text: "A solid-wheeled wooden ox cart harnessed to a pair of humped zebu oxen, laden with terracotta storage jars, woven grain sacks, and trade goods along the post-noon highway to Harappa.",
+              });
+              soundFx.playSelect();
+            }}
+          >
+            {isNearCaravanCart && (
+              <div className="mb-2 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
+                <span className="text-[#d8a86a] font-bold">[G]</span>
+                <span>Inspect Bullock Cart</span>
+              </div>
+            )}
+            <div className="px-2.5 py-0.5 rounded bg-[#16110c]/85 border border-[#d8a86a]/60 text-[#f7eedf] text-[10px] font-serif font-bold shadow-md">
+              Zebu Bullock Cart
+            </div>
+          </div>
+        )}
+
+        {/* Caravan Road: Enter Harappa City Gates (Forward passage to Stage 3) */}
+        {scene === "caravan_road" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "85%", top: "23%" }}
+            onClick={() => triggerTransition("steatite_seal_workshop", { x: 20.0, y: 38.0 }, 3, 600)}
+          >
+            {isNearCaravanRoadHarappaGate ? (
+              <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-xl animate-bounce whitespace-nowrap group-hover:bg-[#251d16] transition-colors flex items-center gap-1.5">
+                <span className="text-[#d8a86a] font-bold">► [E]</span>
+                <span>Enter Harappa City Gates (Stage 3)</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>Harappa City Gates</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Caravan Road: Southbound return to The Great Bath */}
+        {scene === "caravan_road" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "15%", top: "92%" }}
+            onClick={() => triggerTransition("great_bath_citadel", { x: 68.0, y: 32.0 }, 2, 600)}
+          >
+            {isNearCaravanRoadReturn ? (
+              <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-xl animate-bounce whitespace-nowrap group-hover:bg-[#251d16] transition-colors flex items-center gap-1.5">
+                <span className="text-[#d8a86a] font-bold">▼ [F]</span>
+                <span>Return to The Great Bath</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>Return South toward Mohenjo-daro</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Stage 3: Harappan Terracotta Toy Workshop & Stalls */}
         {scene === "steatite_seal_workshop" && (
           <div
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
-            style={{ left: "50%", top: "65%" }}
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-15"
+            style={{ left: "18%", top: "72%" }}
+            onClick={() => {
+              setActiveCitizenDialogue({
+                name: "Harappan Toy Craftsman",
+                title: "Master Artisan of Clay Figurines & Wheeled Toys • Harappa",
+                icon: "",
+                text: "Welcome to Harappa's toy workshop! Along this street, we hand-craft solid-wheeled toy bullock carts, whistling terracotta birds, climbing monkeys, and humped zebu oxen from fine river clay. Standardized toys and artisan goods travel across the entire Indus valley!",
+              });
+              soundFx.playSelect();
+            }}
           >
             {isNearSealBench && (
               <div className="mb-2 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
                 <span className="text-[#d8a86a] font-bold">[G]</span>
-                <span>
-                  {isSealPuzzleSolved
-                    ? "Examine Master Unicorn Seal"
-                    : "Carve & Align Steatite Unicorn Seal"}
-                </span>
+                <span>Inspect Terracotta Toy Stalls</span>
               </div>
             )}
-            <div className="w-14 h-14 bg-[#2d2218]/90 border-2 border-[#d8a86a] rounded-2xl flex items-center justify-center shadow-lg">
-              <svg className="w-7 h-7 text-[#d8a86a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
+            <div className="px-2.5 py-0.5 rounded bg-[#16110c]/85 border border-[#d8a86a]/60 text-[#f7eedf] text-[10px] font-serif font-bold shadow-md">
+              Terracotta Toy Workshop
             </div>
-            <span className="text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#54412e] mt-1">
-              Seal Carver&apos;s Bench
-            </span>
           </div>
         )}
 
-        {/* Stage 3: North Stairs to Citadel Platform */}
-        {scene === "steatite_seal_workshop" && isSealPuzzleSolved && (
+        {/* Harappa Toy Workshop: Archway Way to Go Back to Caravan Road */}
+        {scene === "steatite_seal_workshop" && (
           <div
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
-            style={{ left: "50%", top: "50%" }}
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "14%", top: "28%" }}
+            onClick={() => triggerTransition("caravan_road", { x: 80.0, y: 32.0 }, undefined, 600)}
           >
-            <div className="mb-1 bg-[#1b1510]/90 border-2 border-[#52a45a] text-[#baf1be] px-3 py-1 rounded-lg text-xs font-serif shadow-md animate-pulse whitespace-nowrap">
-              <span>▲ [E] Ascend Citadel to The Priest-King (Stage 4)</span>
-            </div>
+            {isNearHarappaExitArchway ? (
+              <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-xl animate-bounce whitespace-nowrap group-hover:bg-[#251d16] transition-colors flex items-center gap-1.5">
+                <span className="text-[#d8a86a] font-bold">◄ [F]</span>
+                <span>Return to Caravan Road</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>Exit Archway (Back to Caravan Road)</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Stage 3: Avenue to Citadel Platform */}
+        {scene === "steatite_seal_workshop" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "88%", top: "22%" }}
+            onClick={() => triggerTransition("priest_king_citadel", { x: 50.0, y: 80.0 }, 4, 600)}
+          >
+            {isNearCitadelStairs ? (
+              <div className="bg-[#1b1510]/95 border-2 border-[#52a45a] text-[#baf1be] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-xl animate-bounce whitespace-nowrap group-hover:bg-[#251d16] transition-colors flex items-center gap-1.5">
+                <span className="text-[#d8a86a] font-bold">▲ [E]</span>
+                <span>Ascend to Citadel Platform (Stage 4)</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>Citadel Platform</span>
+              </div>
+            )}
           </div>
         )}
 
@@ -3685,6 +3930,64 @@ export default function IndusValleyGameScreen() {
         </div>
       </div>
 
+      {/* ========================================================= */}
+      {/* INDUS VALLEY TRAVEL LOADING SCREEN (BULLOCK CART)         */}
+      {/* ========================================================= */}
+      {isLoadingToHarappa && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#18110a] text-white transition-opacity duration-300 overflow-hidden select-none animate-fade-in">
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: 'url("/bg-indus-travel-loading.jpg")' }}
+          />
+          {/* Subtle warm atmospheric vignette */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#150e08]/90 via-black/20 to-[#150e08]/70" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#150e08]/40 via-transparent to-[#150e08]/40" />
+
+          {/* Top Travel Banner: LOADING TO HARAPPA */}
+          <div className="absolute top-6 px-7 py-2.5 rounded-2xl bg-[#1b120a]/92 border-2 border-[#d8a86a] text-[#f7eedf] shadow-2xl flex items-center gap-3 backdrop-blur-md">
+            <span className="inline-block w-3 h-3 rounded-full bg-amber-400 animate-ping" />
+            <div className="flex flex-col items-center">
+              <span className="tracking-widest font-serif font-black text-sm sm:text-base text-amber-300 uppercase drop-shadow">
+                LOADING TO HARAPPA
+              </span>
+              <span className="text-[10px] sm:text-[11px] text-[#eed7ba] font-serif tracking-wider">
+                Traveling by Zebu Bullock Cart • Ancient Trade Route c. 2500 BCE
+              </span>
+            </div>
+          </div>
+
+          {/* Bottom Historical Note & Animated Progress Bar */}
+          <div className="absolute bottom-6 w-full max-w-xl mx-4 p-4 rounded-xl bg-[#1b120a]/92 border border-[#d8a86a]/80 text-center shadow-2xl backdrop-blur-md flex flex-col items-center gap-3">
+            {/* Travel stage status & percentage */}
+            <div className="w-full flex items-center justify-between text-xs font-serif text-[#f7eedf] px-1">
+              <span className="text-[#d8a86a] font-semibold flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                {harappaTravelProgress < 25 && "Preparing the Zebu Bullock Caravan..."}
+                {harappaTravelProgress >= 25 && harappaTravelProgress < 55 && "Rolling along the ancient northern trade highway..."}
+                {harappaTravelProgress >= 55 && harappaTravelProgress < 85 && "Approaching the monumental brick ramparts of Harappa..."}
+                {harappaTravelProgress >= 85 && "Entering Harappa's ancient artisan quarters..."}
+              </span>
+              <span className="font-mono text-amber-300 font-bold text-sm drop-shadow">{harappaTravelProgress}%</span>
+            </div>
+
+            {/* Custom animated progress bar */}
+            <div className="w-full h-3.5 bg-[#2d1e12] rounded-full overflow-hidden border border-[#d8a86a]/60 shadow-inner relative p-0.5">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-amber-600 via-[#d8a86a] to-amber-300 transition-all duration-75 relative overflow-hidden shadow-lg"
+                style={{ width: `${harappaTravelProgress}%` }}
+              >
+                {/* Glowing traveling head */}
+                <div className="absolute right-0 top-0 bottom-0 w-3 bg-white/80 rounded-full blur-[2px] animate-pulse" />
+              </div>
+            </div>
+
+            <p className="text-[11px] sm:text-xs text-[#eed7ba] font-serif leading-relaxed">
+              Solid-wheeled wooden bullock carts pulled by humped zebu oxen were the essential freight and passenger transport of the Indus Civilization, journeying between Mohenjo-daro and Harappa.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* --- HUD OVERLAY (Exact Image 2 Style) --- */}
       <IndusHUD
         stage={stage}
@@ -3696,7 +3999,7 @@ export default function IndusValleyGameScreen() {
         totalJournal={5}
         onOpenJournal={() => setIsJournalOpen(true)}
         onResetCampaign={() => setShowRestartConfirmModal(true)}
-        isTransitioning={isTransitioning}
+        isTransitioning={isTransitioning || isLoadingToHarappa}
         elapsedSeconds={elapsedSeconds}
         isTimerVisible={isTimerVisible}
         onToggleTimer={() => setIsTimerVisible((prev) => !prev)}
