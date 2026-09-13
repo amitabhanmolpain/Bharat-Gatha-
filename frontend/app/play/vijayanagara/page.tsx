@@ -104,6 +104,7 @@ export default function VijayanagaraGameScreen() {
   const [showBlessingCutscene, setShowBlessingCutscene] = useState(false);
   const [showStage1VictoryModal, setShowStage1VictoryModal] = useState(false);
   const [showCoracleNotice, setShowCoracleNotice] = useState(false);
+  const [hasTriggeredCoracleNotice, setHasTriggeredCoracleNotice] = useState(false);
 
   // Stage 2 Modals
   const [showGemAssessorDialogue, setShowGemAssessorDialogue] = useState(false);
@@ -818,8 +819,6 @@ export default function VijayanagaraGameScreen() {
             if (!unlockedJournalEntries.includes("hampi_bazaar_trade")) {
               setUnlockedJournalEntries((prev) => [...prev, "hampi_bazaar_trade"]);
             }
-          } else {
-            setShowCoracleNotice(true);
           }
         }
 
@@ -1142,6 +1141,22 @@ export default function VijayanagaraGameScreen() {
     unlockedJournalEntries,
     checkWalkablePosition,
   ]);
+
+  // Oracle Ferry Proximity Trigger
+  useEffect(() => {
+    if (isNearCoracle && !hasVidyaranyaBlessing) {
+      if (!hasTriggeredCoracleNotice) {
+        stopAllCharacterVoice();
+        setShowCoracleNotice(true);
+        setHasTriggeredCoracleNotice(true);
+      }
+    } else if (!isNearCoracle) {
+      if (hasTriggeredCoracleNotice) {
+        setShowCoracleNotice(false);
+        setHasTriggeredCoracleNotice(false);
+      }
+    }
+  }, [isNearCoracle, hasVidyaranyaBlessing, hasTriggeredCoracleNotice]);
 
   // Stage 1 Handler
   const handleChowkaBaraComplete = (won: boolean, attempts: number) => {
@@ -3095,43 +3110,14 @@ export default function VijayanagaraGameScreen() {
 
         {/* --- CORACLE FERRY INSPECTION MODAL (STAGE 1 LOCKED STATE) --- */}
         {showCoracleNotice && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-            <div className="relative w-full max-w-md bg-[#1e1b18] text-[#f6ede0] rounded-2xl border-4 border-[#1b4d52] p-6 shadow-[0_0_40px_rgba(0,0,0,0.95)] text-center">
-              <div className="w-14 h-14 mx-auto mb-3 rounded-full bg-[#233538] border-2 border-[#1b4d52] flex items-center justify-center text-3xl">
-                🛶
-              </div>
-              <h3 className="text-lg font-serif font-bold text-[#f6ede0] mb-2">
-                Tungabhadra Coracle Ferry
-              </h3>
-              <p className="text-xs font-serif text-[#d6c7b2] mb-6 leading-relaxed">
-                Ancient circular wicker boats bound with waterproof leather glide across the rocky
-                river rapids. Receive Sage Vidyaranya&apos;s blessing in Stage 1 to cross over to Hampi Bazaar!
-              </p>
-              <div className="flex gap-2 justify-center">
-                <button
-                  onClick={() => {
-                    setShowCoracleNotice(false);
-                    triggerTransition(
-                      "anegundi_river_crossing",
-                      { x: 50.0, y: 82.0 },
-                      "Coracle River Journey: Tungabhadra Waters",
-                      "Gliding along the calm emerald currents beneath towering granite crags.",
-                      "coracle"
-                    );
-                  }}
-                  className="bg-gradient-to-r from-[#1b4d52] to-[#286b72] hover:from-[#286b72] hover:to-[#368b94] text-white font-serif font-bold px-4 py-2 rounded-xl text-xs transition-all cursor-pointer shadow-md"
-                >
-                  Test Coracle Float
-                </button>
-                <button
-                  onClick={() => setShowCoracleNotice(false)}
-                  className="bg-[#2b2520] hover:bg-[#3d3329] border border-[#5a4d3f] text-[#f6ede0] font-serif px-4 py-2 rounded-xl text-xs transition-all cursor-pointer"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
+          <DialoguePanel
+            characterName="Oracle Ferry"
+            characterTitle="Travel Requirement"
+            dialogueText="You need the shell to row the boat to the Hampi Market."
+            isSpeaking={false}
+            showInput={false}
+            onClose={() => setShowCoracleNotice(false)}
+          />
         )}
 
         {/* --- JOLLY BHAI DIALOGUE MODAL --- */}
