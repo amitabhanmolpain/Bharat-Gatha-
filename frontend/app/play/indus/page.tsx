@@ -455,6 +455,33 @@ export default function IndusValleyGameScreen() {
   const [isWalking, setIsWalking] = useState(false);
   const [walkPhase, setWalkPhase] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isLoadingToHarappa, setIsLoadingToHarappa] = useState(false);
+  const [harappaTravelProgress, setHarappaTravelProgress] = useState(0);
+
+  // Travel Audio for Harappa Journey Loading Screen (Bullock Cart sound effect)
+  const bullockSoundRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      bullockSoundRef.current = new Audio("/bullock_cart_travel.mp3");
+      bullockSoundRef.current.volume = 0.75;
+      bullockSoundRef.current.loop = true;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isLoadingToHarappa) {
+      if (bullockSoundRef.current && !isSoundMuted) {
+        bullockSoundRef.current.currentTime = 0;
+        bullockSoundRef.current.play().catch(() => {});
+      }
+    } else {
+      if (bullockSoundRef.current) {
+        bullockSoundRef.current.pause();
+        bullockSoundRef.current.currentTime = 0;
+      }
+    }
+  }, [isLoadingToHarappa, isSoundMuted]);
 
   // Stage 1: Lower Town & Granary
   const [hasMetCityOverseer, setHasMetCityOverseer] = useState(INITIAL_INDUS_STATE.hasMetCityOverseer);
@@ -482,6 +509,7 @@ export default function IndusValleyGameScreen() {
   const [showCourtyardStaircaseModal, setShowCourtyardStaircaseModal] = useState(false);
   const [hasInspectedCourtyardToilet, setHasInspectedCourtyardToilet] = useState(false);
   const [lastCourtyardDoor, setLastCourtyardDoor] = useState<"left" | "right">("right");
+  const [courtyardReturnScene, setCourtyardReturnScene] = useState<"residential_grid" | "great_bath_citadel">("residential_grid");
 
   // Stage 1.6: House Interior
   const [showInteriorStaircaseModal, setShowInteriorStaircaseModal] = useState(false);
@@ -970,6 +998,33 @@ export default function IndusValleyGameScreen() {
     playerPos.x >= 42.0 &&
     playerPos.x <= 58.0;
 
+  // Stage 2: Great Bath Citadel -> Upper Gate Doorway to The Caravan Road of the Harappan (press E to go to Harappan location)
+  const isNearGreatBathHarappanGate =
+    scene === "great_bath_citadel" &&
+    playerPos.x >= 60.0 &&
+    playerPos.x <= 76.0 &&
+    playerPos.y >= 26.0 &&
+    playerPos.y <= 38.0;
+
+  // Caravan Road: Single Bullock Cart Hotspot (Post-noon Harappa Road)
+  const isNearCaravanCart =
+    scene === "caravan_road" &&
+    playerPos.x >= 32.0 &&
+    playerPos.x <= 58.0 &&
+    playerPos.y >= 54.0 &&
+    playerPos.y <= 78.0;
+
+  // Caravan Road: Enter Harappa City Gates (Forward passage to Stage 3)
+  const isNearCaravanRoadHarappaGate =
+    scene === "caravan_road" &&
+    playerPos.x >= 76.0 &&
+    playerPos.y <= 34.0;
+
+  // Caravan Road: Southbound return to The Great Bath / Mohenjo-daro
+  const isNearCaravanRoadReturn =
+    scene === "caravan_road" &&
+    playerPos.y >= 86.0;
+
   // Stage 2: Great Bath Potter walking along Image 2 red area route (from left end, through gateway/passage, to right end and exiting)
   const greatBathPotterState = getGreatBathPotterState(carrierTime);
   const isNearGreatBathPotter =
@@ -1373,19 +1428,32 @@ export default function IndusValleyGameScreen() {
     isDrainagePuzzleSolved &&
     playerPos.x >= 75.0;
 
-  // Stage 3: Seal Carving Bench
+  // Stage 3: Harappan Terracotta Toy Workshop Counter & Stalls (Foreground Left)
   const isNearSealBench =
     scene === "steatite_seal_workshop" &&
-    playerPos.x >= 35.0 &&
-    playerPos.x <= 65.0 &&
-    playerPos.y >= 52.0 &&
-    playerPos.y <= 75.0;
+    playerPos.x <= 36.0 &&
+    playerPos.y >= 58.0;
 
-  // Stage 3 -> Stage 4 Citadel stairs
+  // Stage 3: Harappa Toy Street Way to Go Back to Caravan Road (Upper Left Archway)
+  const isNearHarappaExitArchway =
+    scene === "steatite_seal_workshop" &&
+    playerPos.x <= 25.0 &&
+    playerPos.y <= 45.0;
+
+  // Stage 3 -> Stage 4 Citadel stairs (Upper Right Avenue)
   const isNearCitadelStairs =
     scene === "steatite_seal_workshop" &&
-    isSealPuzzleSolved &&
-    playerPos.y <= 52.0;
+    playerPos.x >= 78.0 &&
+    playerPos.y <= 38.0;
+
+  // Stage 3: Harappa Toy Street Way to enter the Toy Workshop Interior
+  const isNearWorkshopEntrance =
+    scene === "steatite_seal_workshop" &&
+    playerPos.x >= 36.0 &&
+    playerPos.x <= 48.0 &&
+    playerPos.y >= 40.0 &&
+    playerPos.y <= 56.0;
+
 
   // Stage 4: Priest-King
   const isNearPriestKing =
@@ -1395,11 +1463,50 @@ export default function IndusValleyGameScreen() {
     playerPos.y >= 52.0 &&
     playerPos.y <= 72.0;
 
-  // 5. Scene Transitions
+  // Stage 4: Workshop Interior Way to Go Back to Toy Street
+  const isNearWorkshopExit =
+    scene === "priest_king_citadel" &&
+    playerPos.y >= 85.0;
+
+  // Stage 3 -> Carnelian Bead Quarter
+  const isNearBeadQuarterEntrance =
+    scene === "steatite_seal_workshop" &&
+    playerPos.x >= 85.0 &&
+    playerPos.y >= 45.0;
+
+  const isNearBeadQuarterExit =
+    scene === "carnelian_bead_quarter" &&
+    playerPos.x <= 25.0;
+
+  // Stage 2 -> Drainage Culvert
+  const isNearDrainageEntrance =
+    scene === "great_bath_citadel" &&
+    playerPos.x >= 35.0 &&
+    playerPos.x <= 65.0 &&
+    playerPos.y >= 40.0 &&
+    playerPos.y <= 55.0;
+
+  const isNearDrainageExit =
+    scene === "drainage_culvert" &&
+    playerPos.y >= 80.0;
+
+  // Carnelian Bead Quarter -> Closing Reflection
+  const isNearSunsetReflection =
+    scene === "carnelian_bead_quarter" &&
+    playerPos.x >= 85.0;
+
+  const isNearSunsetExit =
+    scene === "closing_reflection" &&
+    playerPos.y >= 80.0;
+
+
+
+  // 5. Scene Transitions (Normal fast transition for internal rooms and avenues, 600ms)
   const triggerTransition = (
     nextScene: IndusSceneType,
     nextPos: { x: number; y: number },
-    nextStage?: IndusStage
+    nextStage?: IndusStage,
+    durationMs: number = 600
   ) => {
     setIsTransitioning(true);
     soundFx.playSelect();
@@ -1408,7 +1515,27 @@ export default function IndusValleyGameScreen() {
       setPlayerPos(nextPos);
       if (nextStage) setStage(nextStage);
       setIsTransitioning(false);
-    }, 600);
+    }, durationMs);
+  };
+
+  // Dedicated 8-Second Bullock Cart Journey from Mohenjo-daro to Harappa with Animated Progress
+  const startHarappaTravelTransition = () => {
+    setIsLoadingToHarappa(true);
+    setHarappaTravelProgress(0);
+    soundFx.playSelect();
+    const duration = 8000;
+    const startTime = Date.now();
+    const timer = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(Math.round((elapsed / duration) * 100), 100);
+      setHarappaTravelProgress(progress);
+      if (elapsed >= duration) {
+        clearInterval(timer);
+        setScene("caravan_road");
+        setPlayerPos({ x: 45.0, y: 84.0 });
+        setIsLoadingToHarappa(false);
+      }
+    }, 50);
   };
 
   // 5.5. Animated Entities Engine (Water carriers, rooftop citizens, Egyptian boat, granary unloader & talking artisans)
@@ -1507,7 +1634,14 @@ export default function IndusValleyGameScreen() {
 
       // Enter key: [E] or [e] (Per user requirement: "for entering anywhere E")
       if (e.key === "e" || e.key === "E") {
-        if (isNearHouseDoorway) {
+        if (isNearGreatBathHarappanGate) {
+          startHarappaTravelTransition();
+          return;
+        } else if (isNearCaravanRoadHarappaGate) {
+          triggerTransition("steatite_seal_workshop", { x: 20.0, y: 38.0 }, 3, 600);
+          return;
+        } else if (isNearHouseDoorway) {
+          setCourtyardReturnScene("residential_grid");
           triggerTransition("house_courtyard", { x: 50.0, y: 72.0 });
           return;
         } else if (isNearCourtyardToiletDoor) {
@@ -1542,12 +1676,42 @@ export default function IndusValleyGameScreen() {
         } else if (isNearCitadelStairs) {
           triggerTransition("priest_king_citadel", { x: 50.0, y: 80.0 }, 4);
           return;
+        } else if (isNearWorkshopEntrance) {
+          triggerTransition("priest_king_citadel", { x: 50.0, y: 80.0 }, 4);
+          return;
+        } else if (isNearBeadQuarterEntrance) {
+          triggerTransition("carnelian_bead_quarter", { x: 30.0, y: 70.0 });
+          return;
+        } else if (isNearDrainageEntrance) {
+          triggerTransition("drainage_culvert", { x: 50.0, y: 50.0 });
+          return;
+        } else if (isNearSunsetReflection) {
+          triggerTransition("closing_reflection", { x: 50.0, y: 60.0 });
+          return;
         }
       }
 
       // Exit key: [F] or [f] (Per user requirement: "exiting F")
       if (e.key === "f" || e.key === "F") {
-        if (isInsideCourtyardToilet) {
+        if (isNearHarappaExitArchway) {
+          triggerTransition("caravan_road", { x: 80.0, y: 32.0 }, undefined, 600);
+          return;
+        } else if (isNearCaravanRoadReturn) {
+          triggerTransition("great_bath_citadel", { x: 68.0, y: 32.0 }, 2, 600);
+          return;
+        } else if (isNearWorkshopExit) {
+          triggerTransition("steatite_seal_workshop", { x: 50.0, y: 65.0 }, 3, 600);
+          return;
+        } else if (isNearBeadQuarterExit) {
+          triggerTransition("steatite_seal_workshop", { x: 80.0, y: 60.0 });
+          return;
+        } else if (isNearDrainageExit) {
+          triggerTransition("great_bath_citadel", { x: 50.0, y: 65.0 });
+          return;
+        } else if (isNearSunsetExit) {
+          triggerTransition("carnelian_bead_quarter", { x: 80.0, y: 60.0 });
+          return;
+        } else if (isInsideCourtyardToilet) {
           // Exit latrine room to corridor outside
           setPlayerPos({ x: 38.0, y: 58.0 });
           soundFx.playSelect();
@@ -1557,8 +1721,12 @@ export default function IndusValleyGameScreen() {
           soundFx.playSelect();
           return;
         } else if (isNearCourtyardRightExitDoor || isNearCourtyardExit) {
-          // Exit from courtyard to street grid directly from this doorway (as requested)
-          triggerTransition("residential_grid", { x: 48.0, y: 60.0 });
+          // Exit from courtyard back to Great Bath or street grid depending on entry point
+          if (courtyardReturnScene === "great_bath_citadel") {
+            triggerTransition("great_bath_citadel", { x: 68.0, y: 32.0 });
+          } else {
+            triggerTransition("residential_grid", isNearCourtyardRightExitDoor ? { x: 48.0, y: 60.0 } : { x: 80.0, y: 38.0 });
+          }
           return;
         } else if (isNearHouseExit) {
           // Exit from ground floor interior back to courtyard
@@ -1582,7 +1750,15 @@ export default function IndusValleyGameScreen() {
 
       // Inspect key: [G] or [g] (Per user requirement: "for all the inspect part keep G")
       if (e.key === "g" || e.key === "G") {
-        if (isNearCourtyardToilet) {
+        if (isNearCaravanCart) {
+          setActiveCitizenDialogue({
+            name: "Harappan Bullock Cart",
+            title: "Traditional Indus Valley Freight Transport",
+            icon: "",
+            text: "A solid-wheeled wooden ox cart harnessed to a pair of humped zebu oxen, laden with terracotta storage jars, woven grain sacks, and trade goods along the post-noon highway to Harappa.",
+          });
+          soundFx.playSelect();
+        } else if (isNearCourtyardToilet) {
           setShowCourtyardToiletModal(true);
         } else if (isNearCourtyardBath) {
           setShowInteriorBathModal(true);
@@ -1858,11 +2034,25 @@ export default function IndusValleyGameScreen() {
     isNearGreatBathBasin,
     isNearGreatBathPotter,
     isNearGreatBathGranaryReturn,
+    isNearGreatBathHarappanGate,
+    isNearCaravanCart,
+    isNearCaravanRoadHarappaGate,
+    isNearCaravanRoadReturn,
+    courtyardReturnScene,
     isNearSealBench,
+    isNearHarappaExitArchway,
     isNearPriestKing,
     isNearGranaryExit,
     isNearArtisanQuarterExit,
     isNearCitadelStairs,
+    isNearWorkshopEntrance,
+    isNearWorkshopExit,
+    isNearBeadQuarterEntrance,
+    isNearBeadQuarterExit,
+    isNearDrainageEntrance,
+    isNearDrainageExit,
+    isNearSunsetReflection,
+    isNearSunsetExit,
     hasFirstRelicChertWeight,
     isDrainagePuzzleSolved,
     isSealPuzzleSolved,
@@ -1961,7 +2151,7 @@ export default function IndusValleyGameScreen() {
             <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform group-hover:scale-105">
               {isNearOverseer && (
                 <div className="mb-1.5 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                  <span className="text-[#d8a86a] font-bold">[G]</span>
+                  <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
                   <span>Speak with Dock Official</span>
                 </div>
               )}
@@ -1990,7 +2180,7 @@ export default function IndusValleyGameScreen() {
             <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform group-hover:scale-105">
               {isNearForeignTraders && (
                 <div className="mb-1.5 bg-[#1b1510]/95 border-2 border-[#38bdf8] text-[#f0f9ff] px-2.5 py-0.5 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                  <span className="text-[#38bdf8] font-bold">[G]</span>
+                  <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
                   <span>Inspect Foreign Trader</span>
                 </div>
               )}
@@ -2050,7 +2240,7 @@ export default function IndusValleyGameScreen() {
               >
                 {isNearEgyptianSailor && (
                   <div className="mb-1 bg-[#1b1510]/95 border-2 border-[#38bdf8] text-[#f0f9ff] px-2.5 py-0.5 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap pointer-events-auto">
-                    <span className="text-[#38bdf8] font-bold">[G]</span>
+                    <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
                     <span>Hail Egyptian Sailor</span>
                   </div>
                 )}
@@ -2081,7 +2271,7 @@ export default function IndusValleyGameScreen() {
             className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
             style={{ left: "71.5%", top: "31%" }}
           >
-            <div className="bg-[#1b1510]/95 border-2 border-[#52a45a] text-[#baf1be] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-md animate-bounce whitespace-nowrap">
+            <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
               <span>▲ [E] Enter City Gate to Residential Grid</span>
             </div>
           </div>
@@ -2226,7 +2416,7 @@ export default function IndusValleyGameScreen() {
               >
                 {isNearRoadPedestrian && (
                   <div className="mb-1 bg-[#1b1510]/95 border border-[#38bdf8] text-[#f0f9ff] px-2.5 py-0.5 rounded text-[11px] font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap pointer-events-auto">
-                    <span className="text-[#38bdf8] font-bold">[G]</span>
+                    <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
                     <span>Greet Water Carrier</span>
                   </div>
                 )}
@@ -2265,7 +2455,7 @@ export default function IndusValleyGameScreen() {
               <div className="absolute bottom-full mb-1 flex flex-col items-center pointer-events-none">
                 {isNearCourtyardResident && (
                   <div className="mb-1 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded text-[11px] font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap pointer-events-auto">
-                    <span className="text-[#d8a86a] font-bold">[G]</span>
+                    <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
                     <span>Speak with Courtyard Resident</span>
                   </div>
                 )}
@@ -2357,7 +2547,7 @@ export default function IndusValleyGameScreen() {
               >
                 {isNearDrainInspector && (
                   <div className="mb-1 bg-[#1b1510]/95 border border-[#38bdf8] text-[#f0f9ff] px-2.5 py-0.5 rounded text-[11px] font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap pointer-events-auto">
-                    <span className="text-[#38bdf8] font-bold">[G]</span>
+                    <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
                     <span>Speak with Drain Inspector</span>
                   </div>
                 )}
@@ -2397,7 +2587,7 @@ export default function IndusValleyGameScreen() {
               <div className="absolute bottom-full mb-1 flex flex-col items-center pointer-events-none">
                 {isNearArtisans && (
                   <div className="mb-1 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded text-[11px] font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap pointer-events-auto">
-                    <span className="text-[#d8a86a] font-bold">[G]</span>
+                    <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
                     <span>Speak with Artisans</span>
                   </div>
                 )}
@@ -2428,7 +2618,7 @@ export default function IndusValleyGameScreen() {
           >
             {isNearResidentialDrains && !isNearRoadPedestrian && (
               <div className="mb-1 bg-[#1b1510]/95 border-2 border-[#38bdf8] text-[#f0f9ff] px-2.5 py-0.5 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap">
-                <span className="text-[#38bdf8] font-bold">[G]</span>
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
                 <span>Inspect Covered Drain</span>
               </div>
             )}
@@ -2454,7 +2644,7 @@ export default function IndusValleyGameScreen() {
           >
             {isNearResidentialHouse && !isNearCourtyardResident && (
               <div className="mb-1 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap">
-                <span className="text-[#d8a86a] font-bold">[G]</span>
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
                 <span>Inspect Brick Residence</span>
               </div>
             )}
@@ -2478,7 +2668,7 @@ export default function IndusValleyGameScreen() {
             style={{ left: "48%", top: "54%" }}
           >
             {isNearHouseDoorway && (
-              <div className="bg-[#1b1510]/95 border-2 border-[#52a45a] text-[#baf1be] px-3 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce whitespace-nowrap">
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
                 <span>▲ [E] Enter Central Courtyard</span>
               </div>
             )}
@@ -2493,7 +2683,7 @@ export default function IndusValleyGameScreen() {
             onClick={() => triggerTransition("granary_avenue", { x: 26.0, y: 78.0 })}
           >
             {isNearResidentialGranaryForward ? (
-              <div className="bg-[#1b1510]/95 border-2 border-[#52a45a] text-[#baf1be] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-lg animate-bounce whitespace-nowrap group-hover:bg-[#251d16] transition-colors">
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
                 <span>▲ [E] To The Great Granary</span>
               </div>
             ) : (
@@ -2512,7 +2702,7 @@ export default function IndusValleyGameScreen() {
             onClick={() => triggerTransition("lower_town_gate", { x: 71.5, y: 41.0 })}
           >
             {isNearResidentialGhatReturn ? (
-              <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-md whitespace-nowrap animate-bounce group-hover:bg-[#251d16] transition-colors">
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
                 <span>▼ [F] To River Ghat</span>
               </div>
             ) : (
@@ -2527,14 +2717,21 @@ export default function IndusValleyGameScreen() {
         {/* Stage 1.55: Central Domestic Courtyard Canvas Scene       */}
         {/* ========================================================= */}
 
-        {/* Stage 1.55: House Courtyard -> Exit to Street Grid Trigger */}
+        {/* Stage 1.55: House Courtyard -> Exit to Street Grid / Great Bath Trigger */}
         {scene === "house_courtyard" && isNearCourtyardExit && (
           <div
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
             style={{ left: "50%", top: "86%" }}
+            onClick={() => {
+              if (courtyardReturnScene === "great_bath_citadel") {
+                triggerTransition("great_bath_citadel", { x: 68.0, y: 32.0 });
+              } else {
+                triggerTransition("residential_grid", { x: 80.0, y: 38.0 });
+              }
+            }}
           >
-            <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1 rounded-lg text-xs font-serif shadow-md whitespace-nowrap animate-bounce">
-              <span>▼ [F] Exit to Street Grid</span>
+            <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+              <span>▼ [F] {courtyardReturnScene === "great_bath_citadel" ? "Exit to The Great Bath" : "Exit to Street Grid"}</span>
             </div>
           </div>
         )}
@@ -2549,7 +2746,7 @@ export default function IndusValleyGameScreen() {
               soundFx.playSelect();
             }}
           >
-            <div className="bg-[#1b1510]/95 border-2 border-[#52a45a] text-[#baf1be] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-lg animate-bounce whitespace-nowrap group-hover:bg-[#251d16] transition-colors">
+            <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
               <span>▲ [E] Enter Latrine Room</span>
             </div>
           </div>
@@ -2565,21 +2762,27 @@ export default function IndusValleyGameScreen() {
               soundFx.playSelect();
             }}
           >
-            <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-md whitespace-nowrap animate-pulse group-hover:bg-[#251d16] transition-colors">
+            <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
               <span>▼ [F] Exit to Courtyard</span>
             </div>
           </div>
         )}
 
-        {/* Stage 1.55: House Courtyard -> Doorway to Street Grid Exit (Right door - as requested) */}
+        {/* Stage 1.55: House Courtyard -> Doorway to Exit (Right door - Street Grid or Great Bath) */}
         {scene === "house_courtyard" && isNearCourtyardRightExitDoor && (
           <div
             className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
             style={{ left: "68%", top: "34%" }}
-            onClick={() => triggerTransition("residential_grid", { x: 48.0, y: 60.0 })}
+            onClick={() => {
+              if (courtyardReturnScene === "great_bath_citadel") {
+                triggerTransition("great_bath_citadel", { x: 68.0, y: 32.0 });
+              } else {
+                triggerTransition("residential_grid", { x: 48.0, y: 60.0 });
+              }
+            }}
           >
-            <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-md whitespace-nowrap animate-bounce group-hover:bg-[#251d16] transition-colors">
-              <span>▼ [F] Exit to Street Grid</span>
+            <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+              <span>▼ [F] {courtyardReturnScene === "great_bath_citadel" ? "Exit to The Great Bath" : "Exit to Street Grid"}</span>
             </div>
           </div>
         )}
@@ -2591,7 +2794,7 @@ export default function IndusValleyGameScreen() {
             style={{ left: "36%", top: "32%" }}
             onClick={() => triggerTransition("house_interior", { x: 50.0, y: 80.0 })}
           >
-            <div className="bg-[#1b1510]/95 border-2 border-[#52a45a] text-[#baf1be] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-lg animate-bounce whitespace-nowrap group-hover:bg-[#251d16] transition-colors">
+            <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
               <span>▲ [E] Enter Interior Room</span>
             </div>
           </div>
@@ -2603,7 +2806,7 @@ export default function IndusValleyGameScreen() {
             className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
             style={{ left: "58%", top: "74%" }}
           >
-            <div className="bg-[#1b1510]/95 border-2 border-[#52a45a] text-[#baf1be] px-3 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce whitespace-nowrap">
+            <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
               <span>▲ [E] Enter Bath Room</span>
             </div>
           </div>
@@ -2615,7 +2818,7 @@ export default function IndusValleyGameScreen() {
             className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
             style={{ left: "70%", top: "72%" }}
           >
-            <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1 rounded-lg text-xs font-serif shadow-md whitespace-nowrap animate-pulse">
+            <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
               <span>▼ [F] Exit to Courtyard</span>
             </div>
           </div>
@@ -2628,7 +2831,7 @@ export default function IndusValleyGameScreen() {
             style={{ left: "51%", top: "28%" }}
             onClick={() => triggerTransition("house_second_floor", { x: 50.0, y: 64.0 })}
           >
-            <div className="bg-[#1b1510]/95 border-2 border-[#52a45a] text-[#baf1be] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-lg animate-bounce whitespace-nowrap group-hover:bg-[#251d16] transition-colors">
+            <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
               <span>▲ [E] Enter Second Floor</span>
             </div>
           </div>
@@ -2643,7 +2846,7 @@ export default function IndusValleyGameScreen() {
           >
             {isNearCourtyardToilet && (
               <div className="mb-1.5 bg-[#1b1510]/95 border-2 border-[#38bdf8] text-[#f0f9ff] px-2.5 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                <span className="text-[#38bdf8] font-bold">[G]</span>
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
                 <span>Inspect Enclosed Brick Latrine</span>
               </div>
             )}
@@ -2669,7 +2872,7 @@ export default function IndusValleyGameScreen() {
           >
             {isNearCourtyardBath && (
               <div className="mb-1.5 bg-[#1b1510]/95 border-2 border-[#38bdf8] text-[#f0f9ff] px-2.5 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                <span className="text-[#38bdf8] font-bold">[G]</span>
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
                 <span>Inspect Private Bath with Water</span>
               </div>
             )}
@@ -2695,7 +2898,7 @@ export default function IndusValleyGameScreen() {
           >
             {isNearCourtyardWell && (
               <div className="mb-1.5 bg-[#1b1510]/95 border-2 border-[#38bdf8] text-[#f0f9ff] px-2.5 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                <span className="text-[#38bdf8] font-bold">[G]</span>
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
                 <span>Inspect Household Well</span>
               </div>
             )}
@@ -2721,7 +2924,7 @@ export default function IndusValleyGameScreen() {
           >
             {isNearCourtyardStaircase && (
               <div className="mb-1.5 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-2.5 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                <span className="text-[#d8a86a] font-bold">[G]</span>
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
                 <span>Inspect Staircase to Upper Story</span>
               </div>
             )}
@@ -2754,7 +2957,7 @@ export default function IndusValleyGameScreen() {
               triggerTransition("house_courtyard", returnPos);
             }}
           >
-            <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-md whitespace-nowrap animate-bounce group-hover:bg-[#251d16] transition-colors">
+            <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
               <span>▼ [F] Exit to Courtyard</span>
             </div>
           </div>
@@ -2769,7 +2972,7 @@ export default function IndusValleyGameScreen() {
           >
             {isNearInteriorStaircase && (
               <div className="mb-1.5 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-2.5 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                <span className="text-[#d8a86a] font-bold">[G]</span>
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
                 <span>Inspect Brick Staircase</span>
               </div>
             )}
@@ -2795,7 +2998,7 @@ export default function IndusValleyGameScreen() {
           >
             {isNearInteriorCharpoy && (
               <div className="mb-1.5 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-2.5 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                <span className="text-[#d8a86a] font-bold">[G]</span>
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
                 <span>Inspect Woven Charpoy Bed</span>
               </div>
             )}
@@ -2821,7 +3024,7 @@ export default function IndusValleyGameScreen() {
           >
             {isNearInteriorQuern && (
               <div className="mb-1.5 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-2.5 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                <span className="text-[#d8a86a] font-bold">[G]</span>
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
                 <span>Inspect Saddle Quern & Grain Jars</span>
               </div>
             )}
@@ -2849,7 +3052,7 @@ export default function IndusValleyGameScreen() {
             style={{ left: "50%", top: "72%" }}
             onClick={() => triggerTransition("house_courtyard", { x: 55.0, y: 26.0 })}
           >
-            <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-md whitespace-nowrap animate-bounce group-hover:bg-[#251d16] transition-colors">
+            <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
               <span>▼ [F] Descend to Courtyard</span>
             </div>
           </div>
@@ -2872,7 +3075,7 @@ export default function IndusValleyGameScreen() {
           >
             {isNearSecondFloorGallery && (
               <div className="mb-1.5 bg-[#1b1510]/95 border-2 border-[#38bdf8] text-[#f0f9ff] px-2.5 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                <span className="text-[#38bdf8] font-bold">[G]</span>
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
                 <span>Inspect Mohenjo-daro Avenue & Covered Drain</span>
               </div>
             )}
@@ -2899,7 +3102,7 @@ export default function IndusValleyGameScreen() {
           >
             {isNearSecondFloorCharpoy && (
               <div className="mb-1.5 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-2.5 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                <span className="text-[#d8a86a] font-bold">[G]</span>
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
                 <span>Inspect Rooftop Charpoy Bed</span>
               </div>
             )}
@@ -2925,7 +3128,7 @@ export default function IndusValleyGameScreen() {
           >
             {isNearSecondFloorStorage && (
               <div className="mb-1.5 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-2.5 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                <span className="text-[#d8a86a] font-bold">[G]</span>
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
                 <span>Inspect Rooftop Grain Jars & Quern</span>
               </div>
             )}
@@ -2953,7 +3156,7 @@ export default function IndusValleyGameScreen() {
             style={{ left: "20%", top: "84%" }}
             onClick={() => triggerTransition("residential_grid", { x: 76.0, y: 38.0 })}
           >
-            <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1.5 rounded-lg text-xs font-serif shadow-md whitespace-nowrap animate-bounce group-hover:bg-[#251d16] transition-colors">
+            <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
               <span>▼ [F] Return to Residential Grid</span>
             </div>
           </div>
@@ -2966,7 +3169,7 @@ export default function IndusValleyGameScreen() {
             style={{ left: "76%", top: "48%" }}
             onClick={() => triggerTransition("great_bath_citadel", { x: 50.0, y: 82.0 }, 2)}
           >
-            <div className="bg-[#1b1510]/95 border-2 border-[#52a45a] text-[#baf1be] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-lg animate-pulse whitespace-nowrap group-hover:bg-[#251d16] transition-colors">
+            <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
               <span>▲ [E] Ascend to The Great Bath (Stage 2)</span>
             </div>
           </div>
@@ -2989,7 +3192,7 @@ export default function IndusValleyGameScreen() {
           >
             {isNearGranaryWorker && (
               <div className="mb-1.5 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-2.5 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                <span className="text-[#d8a86a] font-bold">[G]</span>
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
                 <span>Inspect Grain Sacks & Baskets</span>
               </div>
             )}
@@ -3023,7 +3226,7 @@ export default function IndusValleyGameScreen() {
           >
             {isNearGranaryScribe && (
               <div className="mb-1.5 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-2.5 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                <span className="text-[#d8a86a] font-bold">[G]</span>
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
                 <span>Inspect Metrology Station</span>
               </div>
             )}
@@ -3049,7 +3252,7 @@ export default function IndusValleyGameScreen() {
           >
             {isNearGranaryAirDucts && (
               <div className="mb-1.5 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-2.5 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                <span className="text-[#d8a86a] font-bold">[G]</span>
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
                 <span>Inspect Raised Brick Air Ducts</span>
               </div>
             )}
@@ -3075,7 +3278,7 @@ export default function IndusValleyGameScreen() {
           >
             {isNearGranaryPlatforms && (
               <div className="mb-1.5 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-2.5 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                <span className="text-[#d8a86a] font-bold">[G]</span>
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
                 <span>Examine Grain Loading Bays</span>
               </div>
             )}
@@ -3497,8 +3700,8 @@ export default function IndusValleyGameScreen() {
             }}
           >
             {isNearGreatBathBasin && (
-              <div className="mb-2 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                <span className="text-[#d8a86a] font-bold">[G]</span>
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
                 <span>
                   {isDrainagePuzzleSolved
                     ? "Inspect Restored Hydraulic Basin"
@@ -3564,7 +3767,7 @@ export default function IndusValleyGameScreen() {
               >
                 {isNearGreatBathPotter && (
                   <div className="mb-1 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded text-[11px] font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap pointer-events-auto">
-                    <span className="text-[#d8a86a] font-bold">[G]</span>
+                    <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
                     <span>Speak with Potter</span>
                   </div>
                 )}
@@ -3592,48 +3795,189 @@ export default function IndusValleyGameScreen() {
             style={{ left: "50%", top: "92%" }}
             onClick={() => triggerTransition("granary_avenue", { x: 72.0, y: 52.0 })}
           >
-            <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1 rounded-lg text-xs font-serif shadow-md whitespace-nowrap animate-bounce group-hover:bg-[#251d16] transition-colors">
+            <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
               <span>▼ [F] Return to The Great Granary</span>
             </div>
           </div>
         )}
 
-        {/* Stage 3: Seal Carver Bench Hotspot */}
-        {scene === "steatite_seal_workshop" && (
+        {/* Stage 2: Great Bath Citadel -> Upper Gate Doorway to The Caravan Road of the Harappan */}
+        {scene === "great_bath_citadel" && (
           <div
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
-            style={{ left: "50%", top: "65%" }}
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "68%", top: "26%" }}
+            onClick={() => {
+              startHarappaTravelTransition();
+            }}
           >
-            {isNearSealBench && (
-              <div className="mb-2 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                <span className="text-[#d8a86a] font-bold">[G]</span>
-                <span>
-                  {isSealPuzzleSolved
-                    ? "Examine Master Unicorn Seal"
-                    : "Carve & Align Steatite Unicorn Seal"}
-                </span>
+            {isNearGreatBathHarappanGate ? (
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">E</div>
+                <span>Travel to Harappa</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>Highway to Harappa</span>
               </div>
             )}
-            <div className="w-14 h-14 bg-[#2d2218]/90 border-2 border-[#d8a86a] rounded-2xl flex items-center justify-center shadow-lg">
-              <svg className="w-7 h-7 text-[#d8a86a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-            </div>
-            <span className="text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#54412e] mt-1">
-              Seal Carver&apos;s Bench
-            </span>
           </div>
         )}
 
-        {/* Stage 3: North Stairs to Citadel Platform */}
-        {scene === "steatite_seal_workshop" && isSealPuzzleSolved && (
+        {/* ========================================================= */}
+        {/* THE CARAVAN ROAD TO HARAPPA (SCENE INTERACTIONS)          */}
+        {/* ========================================================= */}
+
+        {/* Caravan Road: Single Zebu Bullock Cart on the Ancient Trade Highway */}
+        {scene === "caravan_road" && (
           <div
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
-            style={{ left: "50%", top: "50%" }}
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-15"
+            style={{ left: "45%", top: "66%" }}
+            onClick={() => {
+              setActiveCitizenDialogue({
+                name: "Harappan Bullock Cart",
+                title: "Traditional Indus Valley Freight Transport",
+                icon: "",
+                text: "A solid-wheeled wooden ox cart harnessed to a pair of humped zebu oxen, laden with terracotta storage jars, woven grain sacks, and trade goods along the post-noon highway to Harappa.",
+              });
+              soundFx.playSelect();
+            }}
           >
-            <div className="mb-1 bg-[#1b1510]/90 border-2 border-[#52a45a] text-[#baf1be] px-3 py-1 rounded-lg text-xs font-serif shadow-md animate-pulse whitespace-nowrap">
-              <span>▲ [E] Ascend Citadel to The Priest-King (Stage 4)</span>
+            {isNearCaravanCart && (
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
+                <span>Inspect Bullock Cart</span>
+              </div>
+            )}
+            <div className="px-2.5 py-0.5 rounded bg-[#16110c]/85 border border-[#d8a86a]/60 text-[#f7eedf] text-[10px] font-serif font-bold shadow-md">
+              Zebu Bullock Cart
             </div>
+          </div>
+        )}
+
+        {/* Caravan Road: Enter Harappa City Gates (Forward passage to Stage 3) */}
+        {scene === "caravan_road" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "85%", top: "23%" }}
+            onClick={() => triggerTransition("steatite_seal_workshop", { x: 20.0, y: 38.0 }, 3, 600)}
+          >
+            {isNearCaravanRoadHarappaGate ? (
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">E</div>
+                <span>Enter Harappa City Gates (Stage 3)</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>Harappa City Gates</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Caravan Road: Southbound return to The Great Bath */}
+        {scene === "caravan_road" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "15%", top: "92%" }}
+            onClick={() => triggerTransition("great_bath_citadel", { x: 68.0, y: 32.0 }, 2, 600)}
+          >
+            {isNearCaravanRoadReturn ? (
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">F</div>
+                <span>Return to The Great Bath</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>Return South toward Mohenjo-daro</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Stage 3: Harappan Terracotta Toy Workshop & Stalls */}
+        {scene === "steatite_seal_workshop" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-15"
+            style={{ left: "18%", top: "72%" }}
+            onClick={() => {
+              setActiveCitizenDialogue({
+                name: "Harappan Toy Craftsman",
+                title: "Master Artisan of Clay Figurines & Wheeled Toys • Harappa",
+                icon: "",
+                text: "Welcome to Harappa's toy workshop! Along this street, we hand-craft solid-wheeled toy bullock carts, whistling terracotta birds, climbing monkeys, and humped zebu oxen from fine river clay. Standardized toys and artisan goods travel across the entire Indus valley!",
+              });
+              soundFx.playSelect();
+            }}
+          >
+            {isNearSealBench && (
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
+                <span>Inspect Terracotta Toy Stalls</span>
+              </div>
+            )}
+            <div className="px-2.5 py-0.5 rounded bg-[#16110c]/85 border border-[#d8a86a]/60 text-[#f7eedf] text-[10px] font-serif font-bold shadow-md">
+              Terracotta Toy Workshop
+            </div>
+          </div>
+        )}
+
+        {/* Harappa Toy Workshop: Archway Way to Go Back to Caravan Road */}
+        {scene === "steatite_seal_workshop" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "14%", top: "28%" }}
+            onClick={() => triggerTransition("caravan_road", { x: 80.0, y: 32.0 }, undefined, 600)}
+          >
+            {isNearHarappaExitArchway ? (
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">F</div>
+                <span>Return to Caravan Road</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>Exit Archway (Back to Caravan Road)</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Stage 3: Avenue to Citadel Platform */}
+        {scene === "steatite_seal_workshop" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "88%", top: "22%" }}
+            onClick={() => triggerTransition("priest_king_citadel", { x: 50.0, y: 80.0 }, 4, 600)}
+          >
+            {isNearCitadelStairs ? (
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">E</div>
+                <span>Ascend to Citadel Platform (Stage 4)</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>Citadel Platform</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Harappa Toy Workshop: Entrance from the Street */}
+        {scene === "steatite_seal_workshop" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "42%", top: "50%" }}
+            onClick={() => triggerTransition("priest_king_citadel", { x: 50.0, y: 80.0 }, 4, 600)}
+          >
+            {isNearWorkshopEntrance ? (
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">E</div>
+                <span>Enter Toy Workshop</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>Toy Workshop Entrance</span>
+              </div>
+            )}
           </div>
         )}
 
@@ -3644,8 +3988,8 @@ export default function IndusValleyGameScreen() {
             style={{ left: "52%", top: "62%" }}
           >
             {isNearPriestKing && (
-              <div className="mb-2 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                <span className="text-[#d8a86a] font-bold">[G]</span>
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
                 <span>Speak with The Priest-King</span>
               </div>
             )}
@@ -3657,6 +4001,143 @@ export default function IndusValleyGameScreen() {
             <span className="text-[10px] font-serif font-bold text-[#fdfaf3] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#6b533a] mt-1">
               The Priest-King
             </span>
+          </div>
+        )}
+
+        {/* Harappa Toy Workshop Interior: Exit back to Market Street */}
+        {scene === "priest_king_citadel" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "50%", top: "92%" }}
+            onClick={() => triggerTransition("steatite_seal_workshop", { x: 50.0, y: 65.0 }, 3, 600)}
+          >
+            {isNearWorkshopExit ? (
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">F</div>
+                <span>Return to Toy Market Street</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>Exit Workshop (Back to Street)</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* --- CARNELIAN BEAD QUARTER ENDPOINTS --- */}
+        {scene === "steatite_seal_workshop" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "92%", top: "60%" }}
+            onClick={() => triggerTransition("carnelian_bead_quarter", { x: 30.0, y: 70.0 }, 3, 600)}
+          >
+            {isNearBeadQuarterEntrance ? (
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">E</div>
+                <span>To Carnelian Bead Quarter</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>Carnelian Bead Quarter</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {scene === "carnelian_bead_quarter" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "8%", top: "60%" }}
+            onClick={() => triggerTransition("steatite_seal_workshop", { x: 80.0, y: 60.0 }, 3, 600)}
+          >
+            {isNearBeadQuarterExit ? (
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">F</div>
+                <span>Return to Artisan Street</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>Back to Artisan Street</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* --- DRAINAGE CULVERT ENDPOINTS --- */}
+        {scene === "great_bath_citadel" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "50%", top: "45%" }}
+            onClick={() => triggerTransition("drainage_culvert", { x: 50.0, y: 50.0 }, 2, 600)}
+          >
+            {isNearDrainageEntrance ? (
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">E</div>
+                <span>Enter Drainage Culvert</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>Drainage Culvert</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {scene === "drainage_culvert" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "50%", top: "90%" }}
+            onClick={() => triggerTransition("great_bath_citadel", { x: 50.0, y: 65.0 }, 2, 600)}
+          >
+            {isNearDrainageExit ? (
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">F</div>
+                <span>Return to Great Bath</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>Exit Culvert</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* --- CLOSING REFLECTION ENDPOINTS --- */}
+        {scene === "carnelian_bead_quarter" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "92%", top: "60%" }}
+            onClick={() => triggerTransition("closing_reflection", { x: 50.0, y: 60.0 }, 4, 600)}
+          >
+            {isNearSunsetReflection ? (
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">E</div>
+                <span>Conclude Journey</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>Closing Reflection</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {scene === "closing_reflection" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "50%", top: "90%" }}
+            onClick={() => triggerTransition("carnelian_bead_quarter", { x: 80.0, y: 60.0 }, 3, 600)}
+          >
+            {isNearSunsetExit ? (
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">F</div>
+                <span>Return to City</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>Return to City</span>
+              </div>
+            )}
           </div>
         )}
 
@@ -3685,6 +4166,64 @@ export default function IndusValleyGameScreen() {
         </div>
       </div>
 
+      {/* ========================================================= */}
+      {/* INDUS VALLEY TRAVEL LOADING SCREEN (BULLOCK CART)         */}
+      {/* ========================================================= */}
+      {isLoadingToHarappa && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#18110a] text-white transition-opacity duration-300 overflow-hidden select-none animate-fade-in">
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: 'url("/bg-indus-travel-loading.jpg")' }}
+          />
+          {/* Subtle warm atmospheric vignette */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#150e08]/90 via-black/20 to-[#150e08]/70" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#150e08]/40 via-transparent to-[#150e08]/40" />
+
+          {/* Top Travel Banner: LOADING TO HARAPPA */}
+          <div className="absolute top-6 px-7 py-2.5 rounded-2xl bg-[#1b120a]/92 border-2 border-[#d8a86a] text-[#f7eedf] shadow-2xl flex items-center gap-3 backdrop-blur-md">
+            <span className="inline-block w-3 h-3 rounded-full bg-amber-400 animate-ping" />
+            <div className="flex flex-col items-center">
+              <span className="tracking-widest font-serif font-black text-sm sm:text-base text-amber-300 uppercase drop-shadow">
+                LOADING TO HARAPPA
+              </span>
+              <span className="text-[10px] sm:text-[11px] text-[#eed7ba] font-serif tracking-wider">
+                Traveling by Zebu Bullock Cart • Ancient Trade Route c. 2500 BCE
+              </span>
+            </div>
+          </div>
+
+          {/* Bottom Historical Note & Animated Progress Bar */}
+          <div className="absolute bottom-6 w-full max-w-xl mx-4 p-4 rounded-xl bg-[#1b120a]/92 border border-[#d8a86a]/80 text-center shadow-2xl backdrop-blur-md flex flex-col items-center gap-3">
+            {/* Travel stage status & percentage */}
+            <div className="w-full flex items-center justify-between text-xs font-serif text-[#f7eedf] px-1">
+              <span className="text-[#d8a86a] font-semibold flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                {harappaTravelProgress < 25 && "Preparing the Zebu Bullock Caravan..."}
+                {harappaTravelProgress >= 25 && harappaTravelProgress < 55 && "Rolling along the ancient northern trade highway..."}
+                {harappaTravelProgress >= 55 && harappaTravelProgress < 85 && "Approaching the monumental brick ramparts of Harappa..."}
+                {harappaTravelProgress >= 85 && "Entering Harappa's ancient artisan quarters..."}
+              </span>
+              <span className="font-mono text-amber-300 font-bold text-sm drop-shadow">{harappaTravelProgress}%</span>
+            </div>
+
+            {/* Custom animated progress bar */}
+            <div className="w-full h-3.5 bg-[#2d1e12] rounded-full overflow-hidden border border-[#d8a86a]/60 shadow-inner relative p-0.5">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-amber-600 via-[#d8a86a] to-amber-300 transition-all duration-75 relative overflow-hidden shadow-lg"
+                style={{ width: `${harappaTravelProgress}%` }}
+              >
+                {/* Glowing traveling head */}
+                <div className="absolute right-0 top-0 bottom-0 w-3 bg-white/80 rounded-full blur-[2px] animate-pulse" />
+              </div>
+            </div>
+
+            <p className="text-[11px] sm:text-xs text-[#eed7ba] font-serif leading-relaxed">
+              Solid-wheeled wooden bullock carts pulled by humped zebu oxen were the essential freight and passenger transport of the Indus Civilization, journeying between Mohenjo-daro and Harappa.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* --- HUD OVERLAY (Exact Image 2 Style) --- */}
       <IndusHUD
         stage={stage}
@@ -3696,7 +4235,7 @@ export default function IndusValleyGameScreen() {
         totalJournal={5}
         onOpenJournal={() => setIsJournalOpen(true)}
         onResetCampaign={() => setShowRestartConfirmModal(true)}
-        isTransitioning={isTransitioning}
+        isTransitioning={isTransitioning || isLoadingToHarappa}
         elapsedSeconds={elapsedSeconds}
         isTimerVisible={isTimerVisible}
         onToggleTimer={() => setIsTimerVisible((prev) => !prev)}
@@ -3736,50 +4275,43 @@ export default function IndusValleyGameScreen() {
 
       {/* --- STAGE 1 OVERSEER DIALOGUE MODAL --- */}
       {showOverseerDialogue && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
-          <div className="relative w-full max-w-xl bg-[#1c1611] text-[#f4ebd9] rounded-2xl border-4 border-[#c29357] p-6 shadow-[0_0_50px_rgba(194,147,87,0.35)] max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b-2 border-[#54412e] mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-[#2e2319] border-2 border-[#c29357] flex items-center justify-center shadow-inner">
-                  <svg className="w-6 h-6 text-[#c29357]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <div>
-                  <div className="text-[10px] font-mono text-[#c29357] uppercase tracking-widest">
-                    Chief Architect of the Lower Town • Mohenjo-daro
-                  </div>
-                  <h3 className="text-xl font-serif font-bold text-[#fdfaf3]">
-                    Overseer Somnath
-                  </h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="relative w-full max-w-2xl bg-[#fffdf5] text-black rounded-2xl border-[4px] border-black p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] max-h-[90vh] overflow-y-auto">
+            <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b-[3px] border-black mb-5 gap-4">
+              <div className="flex flex-col">
+                <h3 className="text-3xl font-black tracking-wide uppercase">
+                  Overseer Somnath
+                </h3>
+                <div className="text-[11px] font-bold text-gray-700 uppercase tracking-widest mt-1">
+                  Chief Architect of the Lower Town · Mohenjo-daro
                 </div>
               </div>
-
-              <button
-                onClick={() => setShowOverseerDialogue(false)}
-                className="text-[#a4917b] hover:text-[#fdfaf3] text-sm bg-[#2e2319] hover:bg-[#423223] border border-[#6b533a] px-3 py-1.5 rounded-lg transition-all cursor-pointer"
-              >
-                ✕ Close
-              </button>
+              <div className="flex items-center gap-3 self-end md:self-auto">
+                <button
+                  onClick={() => setShowOverseerDialogue(false)}
+                  className="bg-white border-[3px] border-black rounded-xl px-4 py-2 text-sm font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2 hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer"
+                >
+                  Esc · leave
+                </button>
+              </div>
             </div>
 
-            <div className="p-4 rounded-xl bg-[#281f16] border border-[#4d3a28] text-sm font-serif leading-relaxed text-[#eedbbf] mb-5 space-y-2">
-              <p className="font-bold text-[#d8a86a]">
+            <div className="bg-white border-[2px] border-gray-300 rounded-xl p-5 mb-5 text-sm font-bold leading-relaxed shadow-sm space-y-3">
+              <p>
                 &ldquo;Welcome, traveler, to the riverside ghat of Mohenjo-daro on the great Indus river!&rdquo;
               </p>
-              <p className="text-xs text-[#c9b7a1]">
+              <p className="text-gray-600">
                 &ldquo;All cargo arriving on these riverboats must be inspected here at our raised checkpoint platform. Notice how our city walls and avenues cross at exact ninety-degree angles. Every baked brick in this city adheres to the sacred ratio: 1 thickness to 2 width to 4 length. Under this law of proportion, our foundations endure seasonal inundations without buckling.&rdquo;
               </p>
-              <p className="text-xs text-[#d8a86a] italic">
+              <p className="italic text-gray-800">
                 &ldquo;Take this polished chert cube. Our binary balance weights are recognized in every market from Gujarat to ancient Mesopotamia. The city gate behind me is now open to Mohenjo-daro&apos;s residential grid!&rdquo;
               </p>
             </div>
 
-            <div className="flex items-center justify-between pt-3 border-t border-[#3e2e1f]">
-              <span className="text-[10px] font-mono text-[#a8947d]">
+            <div className="flex flex-col gap-3">
+              <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">
                 Relic I: Polished Chert Binary Weight Secured
-              </span>
-
+              </div>
               <button
                 type="button"
                 onClick={() => {
@@ -3793,9 +4325,9 @@ export default function IndusValleyGameScreen() {
                     { speaker: "ratan", pace: 0.88, language_code: "en-IN" }
                   );
                 }}
-                className="bg-gradient-to-r from-[#9e733b] to-[#d8a86a] hover:from-[#b58545] hover:to-[#eec085] text-[#140f0b] font-serif font-bold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md"
+                className="w-full text-left bg-white border-[3px] border-black rounded-xl px-5 py-4 text-sm font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer flex items-center"
               >
-                Accept Chert Weight & Open City Gate ▲
+                <span className="text-[#c85a17] mr-3 text-lg">1.</span> Accept Chert Weight & Open City Gate
               </button>
             </div>
           </div>
@@ -4552,46 +5084,40 @@ export default function IndusValleyGameScreen() {
           </div>
         </div>
       )}
+
       {activeCitizenDialogue && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
-          <div className="relative w-full max-w-md bg-[#1c1611] text-[#f4ebd9] rounded-2xl border-4 border-[#d8a86a] p-5 shadow-[0_0_40px_rgba(216,168,106,0.3)]">
-            <div className="flex items-center justify-between pb-3 border-b-2 border-[#4d3a28] mb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-xl bg-[#2e2319] border border-[#d8a86a] flex items-center justify-center shadow-inner">
-                  {activeCitizenDialogue.icon ? (
-                    <span className="text-2xl">{activeCitizenDialogue.icon}</span>
-                  ) : (
-                    <svg className="w-6 h-6 text-[#d8a86a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                  )}
-                </div>
-                <div>
-                  <div className="text-[9px] font-mono text-[#d8a86a] uppercase tracking-wider">
-                    {activeCitizenDialogue.title}
-                  </div>
-                  <h3 className="text-lg font-serif font-bold text-[#fdfaf3]">
-                    {activeCitizenDialogue.name}
-                  </h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="relative w-full max-w-2xl bg-[#fffdf5] text-black rounded-2xl border-[4px] border-black p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+            <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b-[3px] border-black mb-5 gap-4">
+              <div className="flex flex-col">
+                <h3 className="text-3xl font-black tracking-wide uppercase">
+                  {activeCitizenDialogue.name}
+                </h3>
+                <div className="text-[11px] font-bold text-gray-700 uppercase tracking-widest mt-1">
+                  {activeCitizenDialogue.title}
                 </div>
               </div>
-              <button
-                onClick={() => setActiveCitizenDialogue(null)}
-                className="text-[#a4917b] hover:text-[#fdfaf3] text-sm bg-[#2e2319] hover:bg-[#423223] border border-[#6b533a] px-2.5 py-1 rounded-lg transition-all cursor-pointer"
-              >
-                ✕
-              </button>
+              <div className="flex items-center gap-3 self-end md:self-auto">
+                <button
+                  onClick={() => setActiveCitizenDialogue(null)}
+                  className="bg-white border-[3px] border-black rounded-xl px-4 py-2 text-sm font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2 hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer"
+                >
+                  Esc · leave
+                </button>
+              </div>
             </div>
-            <p className="p-3.5 rounded-xl bg-[#281f16] border border-[#4d3a28] text-xs font-serif leading-relaxed text-[#eedbbf] mb-4">
+
+            <div className="bg-white border-[2px] border-gray-300 rounded-xl p-5 mb-5 text-sm font-bold leading-relaxed shadow-sm">
               &ldquo;{activeCitizenDialogue.text}&rdquo;
-            </p>
-            <div className="flex justify-end">
+            </div>
+
+            <div className="flex flex-col gap-3">
               <button
                 type="button"
                 onClick={() => setActiveCitizenDialogue(null)}
-                className="bg-gradient-to-r from-[#9e733b] to-[#d8a86a] hover:from-[#b58545] hover:to-[#eec085] text-[#140f0b] font-serif font-bold px-4 py-2 rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md"
+                className="w-full text-left bg-white border-[3px] border-black rounded-xl px-5 py-4 text-sm font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer flex items-center"
               >
-                Continue Exploring
+                <span className="text-[#c85a17] mr-3 text-lg">1.</span> Continue Exploring
               </button>
             </div>
           </div>
@@ -4600,56 +5126,49 @@ export default function IndusValleyGameScreen() {
 
       {/* --- STAGE 4 PRIEST-KING DIALOGUE MODAL --- */}
       {showPriestKingDialogue && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
-          <div className="relative w-full max-w-xl bg-[#1c1611] text-[#f4ebd9] rounded-2xl border-4 border-[#c29357] p-6 shadow-[0_0_50px_rgba(194,147,87,0.35)] max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b-2 border-[#54412e] mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-[#2e2319] border-2 border-[#c29357] flex items-center justify-center shadow-inner">
-                  <svg className="w-6 h-6 text-[#c29357]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                </div>
-                <div>
-                  <div className="text-[10px] font-mono text-[#c29357] uppercase tracking-widest">
-                    Spiritual Dignitary of the Citadel • Mohenjo-daro
-                  </div>
-                  <h3 className="text-xl font-serif font-bold text-[#fdfaf3]">
-                    The Priest-King
-                  </h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="relative w-full max-w-2xl bg-[#fffdf5] text-black rounded-2xl border-[4px] border-black p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] max-h-[90vh] overflow-y-auto">
+            <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b-[3px] border-black mb-5 gap-4">
+              <div className="flex flex-col">
+                <h3 className="text-3xl font-black tracking-wide uppercase">
+                  The Priest-King
+                </h3>
+                <div className="text-[11px] font-bold text-gray-700 uppercase tracking-widest mt-1">
+                  Spiritual Dignitary of the Citadel · Mohenjo-daro
                 </div>
               </div>
-
-              <button
-                onClick={() => setShowPriestKingDialogue(false)}
-                className="text-[#a4917b] hover:text-[#fdfaf3] text-sm bg-[#2e2319] hover:bg-[#423223] border border-[#6b533a] px-3 py-1.5 rounded-lg transition-all cursor-pointer"
-              >
-                ✕ Close
-              </button>
+              <div className="flex items-center gap-3 self-end md:self-auto">
+                <button
+                  onClick={() => setShowPriestKingDialogue(false)}
+                  className="bg-white border-[3px] border-black rounded-xl px-4 py-2 text-sm font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2 hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer"
+                >
+                  Esc · leave
+                </button>
+              </div>
             </div>
 
-            <div className="p-4 rounded-xl bg-[#281f16] border border-[#4d3a28] text-sm font-serif leading-relaxed text-[#eedbbf] mb-5 space-y-2">
-              <p className="font-bold text-[#d8a86a]">
+            <div className="bg-white border-[2px] border-gray-300 rounded-xl p-5 mb-5 text-sm font-bold leading-relaxed shadow-sm space-y-3">
+              <p>
                 &ldquo;You have traced the full lifeblood of our civilisation, seeker.&rdquo;
               </p>
-              <p className="text-xs text-[#c9b7a1]">
+              <p className="text-gray-600">
                 &ldquo;You began in the quiet streets of the Lower Town where standard bricks form peaceful homes. You purified the waters of the Great Bath using bitumen culverts. You aligned the Unicorn seal that brands our ships sailing to Meluhha.&rdquo;
               </p>
-              <p className="text-xs text-[#eedbbf] italic">
-                &ldquo;Unlike realms built upon conquest, our civilization stands on civic harmony, craftsmanship, and hydraulic mastery. Accept this lost-wax cast Bronze Dancing Girl — the immortal embodiment of Harappan artistic spirit.&rdquo;
+              <p className="italic text-gray-800">
+                &ldquo;Unlike realms built upon conquest, our civilization stands on civic harmony, craftsmanship, and hydraulic mastery. Accept this lost-wax cast Bronze Dancing Girl - the immortal embodiment of Harappan artistic spirit.&rdquo;
               </p>
             </div>
 
-            <div className="flex items-center justify-between pt-3 border-t border-[#3e2e1f]">
-              <span className="text-[10px] font-mono text-[#a8947d]">
-                Supreme Cultural Relic • Bronze Dancing Girl (cire perdue)
-              </span>
-
+            <div className="flex flex-col gap-3">
+              <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">
+                Supreme Cultural Relic: Bronze Dancing Girl (cire perdue)
+              </div>
               <button
                 type="button"
                 onClick={handlePriestKingBlessing}
-                className="bg-gradient-to-r from-[#9e733b] to-[#d8a86a] hover:from-[#b58545] hover:to-[#eec085] text-[#140f0b] font-serif font-bold px-6 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md"
+                className="w-full text-left bg-white border-[3px] border-black rounded-xl px-5 py-4 text-sm font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer flex items-center"
               >
-                Receive Bronze Dancing Girl
+                <span className="text-[#c85a17] mr-3 text-lg">1.</span> Receive Bronze Dancing Girl
               </button>
             </div>
           </div>

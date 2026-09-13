@@ -65,10 +65,13 @@ export default function IndusHUD({
       case "great_bath_citadel":
       case "drainage_culvert":
         return "INDUS VALLEY - THE GREAT BATH (MOHENJO-DARO)";
+      case "caravan_road":
+        return "INDUS VALLEY - THE CARAVAN ROAD TO HARAPPA (c. 2500 BCE)";
       case "steatite_seal_workshop":
       case "carnelian_bead_quarter":
-        return "INDUS VALLEY - STEATITE SEAL WORKSHOP (HARAPPA)";
+        return "INDUS VALLEY - TOY MARKET STREET (HARAPPA)";
       case "priest_king_citadel":
+        return "INDUS VALLEY - TOY MAKING WORKSHOP (HARAPPA)";
       case "closing_reflection":
         return "INDUS VALLEY - CITADEL PLATFORM (MOHENJO-DARO)";
       default:
@@ -93,12 +96,13 @@ export default function IndusHUD({
       case "great_bath_citadel":
       case "drainage_culvert":
         return "The Great Bath";
+      case "caravan_road":
+        return "Caravan Road";
       case "steatite_seal_workshop":
       case "carnelian_bead_quarter":
-        return "Seal Workshop";
+        return "Toy Market Street";
       case "priest_king_citadel":
-      case "closing_reflection":
-        return "Citadel Platform";
+        return "Toy Studio";
       default:
         return "Mohenjo-daro";
     }
