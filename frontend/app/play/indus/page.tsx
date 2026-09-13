@@ -34,6 +34,235 @@ const triggerIndusNarration = (
   playNarration(text, options);
 };
 
+interface PathWaypoint {
+  x: number;
+  y: number;
+}
+
+interface PathState {
+  x: number;
+  y: number;
+  opacity: number;
+  isInside: boolean;
+  facingLeft: boolean;
+  scale: number;
+  filter: string;
+}
+
+function getPathPosition(
+  waypoints: PathWaypoint[],
+  walkDuration: number,
+  pauseDuration: number,
+  elapsedTime: number
+): PathState {
+  const totalCycle = walkDuration + pauseDuration;
+  const cycleTime = elapsedTime % totalCycle;
+
+  // If in pause duration (inside house/building):
+  if (cycleTime >= walkDuration) {
+    const last = waypoints[waypoints.length - 1];
+    return {
+      x: last.x,
+      y: last.y,
+      opacity: 0,
+      isInside: true,
+      facingLeft: false,
+      scale: 0.75,
+      filter: "brightness(0.5)",
+    };
+  }
+
+  // Door entering transition in the last 1.2 seconds:
+  const timeLeft = walkDuration - cycleTime;
+  let scale = 1;
+  let opacity = 1;
+  let filter = "none";
+
+  if (timeLeft < 1.2) {
+    const t = 1 - timeLeft / 1.2; // 0 (start entering doorway) to 1 (fully inside)
+    scale = 1 - t * 0.28; // smooth perspective shrink into the doorway
+    filter = `brightness(${Math.max(0.4, 1 - t * 0.6)})`; // enters indoor shadow
+    if (timeLeft < 0.4) {
+      opacity = Math.max(0, timeLeft / 0.4); // cleanly vanishes into the interior
+    }
+  }
+
+  // Compute total path distance
+  const dists: number[] = [];
+  let totalDist = 0;
+  for (let i = 0; i < waypoints.length - 1; i++) {
+    const d = Math.hypot(
+      waypoints[i + 1].x - waypoints[i].x,
+      waypoints[i + 1].y - waypoints[i].y
+    );
+    dists.push(d);
+    totalDist += d;
+  }
+
+  const currentDist = (cycleTime / walkDuration) * totalDist;
+  let acc = 0;
+  for (let i = 0; i < dists.length; i++) {
+    if (acc + dists[i] >= currentDist || i === dists.length - 1) {
+      const segT = dists[i] > 0 ? (currentDist - acc) / dists[i] : 0;
+      const x = waypoints[i].x + (waypoints[i + 1].x - waypoints[i].x) * segT;
+      const y = waypoints[i].y + (waypoints[i + 1].y - waypoints[i].y) * segT;
+      const dx = waypoints[i + 1].x - waypoints[i].x;
+      // Facing left if moving towards negative x, facing right if moving towards positive x
+      const facingLeft = dx < 0;
+      return { x, y, opacity, isInside: false, facingLeft, scale, filter };
+    }
+    acc += dists[i];
+  }
+
+  const first = waypoints[0];
+  return { x: first.x, y: first.y, opacity: 1, isInside: false, facingLeft: false, scale: 1, filter: "none" };
+}
+
+interface TwoWayPatrolState {
+  x: number;
+  y: number;
+  isWalking: boolean;
+  facingLeft: boolean;
+}
+
+function getTwoWayPatrolPosition(
+  pointA: { x: number; y: number },
+  pointB: { x: number; y: number },
+  walkDuration: number,
+  stayDuration: number,
+  elapsedTime: number
+): TwoWayPatrolState {
+  const halfCycle = walkDuration + stayDuration;
+  const totalCycle = halfCycle * 2;
+  const t = ((elapsedTime % totalCycle) + totalCycle) % totalCycle;
+
+  if (t < walkDuration) {
+    // Walking A -> B
+    const prog = t / walkDuration;
+    return {
+      x: pointA.x + (pointB.x - pointA.x) * prog,
+      y: pointA.y + (pointB.y - pointA.y) * prog,
+      isWalking: true,
+      facingLeft: pointB.x < pointA.x,
+    };
+  } else if (t < halfCycle) {
+    // Paused at B for stayDuration (keep facing B direction)
+    return {
+      x: pointB.x,
+      y: pointB.y,
+      isWalking: false,
+      facingLeft: pointB.x < pointA.x,
+    };
+  } else if (t < halfCycle + walkDuration) {
+    // Walking back B -> A
+    const prog = (t - halfCycle) / walkDuration;
+    return {
+      x: pointB.x + (pointA.x - pointB.x) * prog,
+      y: pointB.y + (pointA.y - pointB.y) * prog,
+      isWalking: true,
+      facingLeft: pointA.x < pointB.x,
+    };
+  } else {
+    // Paused at A for stayDuration (keep facing A direction)
+    return {
+      x: pointA.x,
+      y: pointA.y,
+      isWalking: false,
+      facingLeft: pointA.x < pointB.x,
+    };
+  }
+}
+
+interface BoatPatrolState {
+  x: number;
+  y: number;
+  scale: number;
+  facingLeft: boolean;
+  isSailing: boolean;
+  rockingAngle: number;
+  bobbingY: number;
+}
+
+function getBoatPatrolPosition(
+  waypoints: { x: number; y: number }[],
+  downstreamDuration: number,
+  upstreamDuration: number,
+  stayDuration: number,
+  elapsedTime: number
+): BoatPatrolState {
+  const dists: number[] = [];
+  let totalDist = 0;
+  for (let i = 0; i < waypoints.length - 1; i++) {
+    const d = Math.hypot(
+      waypoints[i + 1].x - waypoints[i].x,
+      waypoints[i + 1].y - waypoints[i].y
+    );
+    dists.push(d);
+    totalDist += d;
+  }
+
+  const cycleTime = downstreamDuration + stayDuration + upstreamDuration + stayDuration;
+  const t = ((elapsedTime % cycleTime) + cycleTime) % cycleTime;
+
+  let x = waypoints[0].x;
+  let y = waypoints[0].y;
+  let facingLeft = false;
+  let isSailing = false;
+
+  if (t < downstreamDuration) {
+    // Sailing downstream (with Indus current)
+    isSailing = true;
+    const currentDist = (t / downstreamDuration) * totalDist;
+    let acc = 0;
+    for (let i = 0; i < dists.length; i++) {
+      if (acc + dists[i] >= currentDist || i === dists.length - 1) {
+        const segT = dists[i] > 0 ? (currentDist - acc) / dists[i] : 0;
+        x = waypoints[i].x + (waypoints[i + 1].x - waypoints[i].x) * segT;
+        y = waypoints[i].y + (waypoints[i + 1].y - waypoints[i].y) * segT;
+        facingLeft = waypoints[i + 1].x < waypoints[i].x;
+        break;
+      }
+      acc += dists[i];
+    }
+  } else if (t < downstreamDuration + stayDuration) {
+    // Paused at downstream delta
+    const last = waypoints[waypoints.length - 1];
+    x = last.x;
+    y = last.y;
+    facingLeft = true;
+    isSailing = false;
+  } else if (t < downstreamDuration + stayDuration + upstreamDuration) {
+    // Sailing upstream (against Indus current)
+    isSailing = true;
+    const progress = (t - (downstreamDuration + stayDuration)) / upstreamDuration;
+    const currentDist = (1 - progress) * totalDist;
+    let acc = 0;
+    for (let i = 0; i < dists.length; i++) {
+      if (acc + dists[i] >= currentDist || i === dists.length - 1) {
+        const segT = dists[i] > 0 ? (currentDist - acc) / dists[i] : 0;
+        x = waypoints[i].x + (waypoints[i + 1].x - waypoints[i].x) * segT;
+        y = waypoints[i].y + (waypoints[i + 1].y - waypoints[i].y) * segT;
+        facingLeft = !(waypoints[i + 1].x < waypoints[i].x);
+        break;
+      }
+      acc += dists[i];
+    }
+  } else {
+    // Paused at upstream horizon
+    x = waypoints[0].x;
+    y = waypoints[0].y;
+    facingLeft = false;
+    isSailing = false;
+  }
+
+  // Perspective scale along the Indus river
+  const scale = 0.46 + Math.max(0, Math.min(1.0, y / 100)) * 0.70;
+  const bobbingY = Math.sin(elapsedTime * 2.8) * 3.5;
+  const rockingAngle = Math.sin(elapsedTime * 1.8) * 2.2;
+
+  return { x, y, scale, facingLeft, isSailing, rockingAngle, bobbingY };
+}
+
 export default function IndusValleyGameScreen() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
@@ -117,6 +346,14 @@ export default function IndusValleyGameScreen() {
     INITIAL_INDUS_STATE.unlockedJournalEntries
   );
   const [isJournalOpen, setIsJournalOpen] = useState(false);
+
+  // Stage 1.5: Animated walking Water Carriers (Image 1 & 2 routes with 4-frame walk cycle)
+  const [carrierTime, setCarrierTime] = useState(0);
+  const [carrierFrame, setCarrierFrame] = useState(1); // 1 to 4
+  const [talkingArtisansFrame, setTalkingArtisansFrame] = useState<1 | 2>(1);
+  const [rooftopFrame, setRooftopFrame] = useState<1 | 2>(1);
+  const [boatRowFrame, setBoatRowFrame] = useState<1 | 2>(1);
+  const [grainWorkerFrame, setGrainWorkerFrame] = useState<1 | 2 | 3>(1);
 
   // Scene Configuration
   const currentSceneConfig = INDUS_SCENE_CONFIGS[scene] || INDUS_SCENE_CONFIGS.lower_town_gate;
@@ -284,7 +521,21 @@ export default function IndusValleyGameScreen() {
     playerPos.y >= 66.0 &&
     playerPos.y <= 86.0;
 
-  // Stage 1 -> Stage 1.5 City Arch Gateway to Residential Grid (at arch gateway x: 67-76%, y: 32-38%)
+  // Stage 1: Ancient Egyptian Sailor River Boat Route along the Indus River
+  const egyptianBoatWaypoints = [
+    { x: 6.5, y: 16.0 },
+    { x: 5.0, y: 36.0 },
+    { x: 4.8, y: 56.0 },
+    { x: 5.8, y: 76.0 },
+    { x: 3.2, y: 94.0 },
+    { x: 1.0, y: 104.0 },
+  ];
+  const boatState = getBoatPatrolPosition(egyptianBoatWaypoints, 22.0, 26.0, 4.0, carrierTime);
+
+  // Proximity to Egyptian Sailor boat along the riverbank
+  const isNearEgyptianSailor =
+    scene === "lower_town_gate" &&
+    Math.hypot(playerPos.x - boatState.x, playerPos.y - boatState.y) <= 24.0;
   const isNearGranaryExit =
     scene === "lower_town_gate" &&
     hasFirstRelicChertWeight &&
@@ -466,18 +717,17 @@ export default function IndusValleyGameScreen() {
     playerPos.y >= 66.0 &&
     playerPos.y <= 86.0;
 
-  // Stage 1.5: Residential Grid -> The Great Granary (at avenue bottom x: 68%, y: 84%)
+  // Stage 1.5: Residential Grid -> The Great Granary (Moving forward up avenue to top-right)
   const isNearResidentialGranaryForward =
     scene === "residential_grid" &&
-    playerPos.x >= 58.0 &&
-    playerPos.x <= 78.0 &&
-    playerPos.y >= 78.0;
+    playerPos.x >= 68.0 &&
+    playerPos.y <= 44.0;
 
-  // Stage 1.5: Residential Grid -> Return to Ghat Gate (at x: 82%, y: 37%)
+  // Stage 1.5: Residential Grid -> Return to Ghat Gate (at bottom of avenue)
   const isNearResidentialGhatReturn =
     scene === "residential_grid" &&
-    playerPos.x >= 74.0 &&
-    playerPos.y <= 44.0;
+    playerPos.x >= 54.0 &&
+    playerPos.y >= 74.0;
 
   // Stage 1.7: The Great Granary -> Return to Residential Grid (at bottom-left x: 22%, y: 82%)
   const isNearGranaryGridReturn =
@@ -523,26 +773,100 @@ export default function IndusValleyGameScreen() {
     playerPos.y >= 60.0 &&
     playerPos.y <= 76.0;
 
+  // Stage 1.7: Granary Bullock Cart Grain Unloader in Right Dirt Yard (Worker at cart at x: 84.5%, y: 86.5%)
+  const isNearGrainCartWorker =
+    scene === "granary_avenue" &&
+    playerPos.x >= 78.0 &&
+    playerPos.x <= 88.0 &&
+    playerPos.y >= 78.0 &&
+    playerPos.y <= 92.0;
+
+  // Stage 1.7: Harappan Merchants Conversing in Dirt Yard in front of ladder (x: 75.5%, y: 88.0%)
+  const isNearGranaryArtisans =
+    scene === "granary_avenue" &&
+    playerPos.x >= 70.0 &&
+    playerPos.x <= 82.0 &&
+    playerPos.y >= 80.0 &&
+    playerPos.y <= 92.0;
+
   // Stage 2 -> Return to The Great Granary (at bottom entrance)
   const isNearGreatBathGranaryReturn =
     scene === "great_bath_citadel" &&
     playerPos.y >= 80.0;
 
-  // Stage 1.5: Rooftop Resident (at x: 43.5%, y: 41.5%)
+  // Person 1: Foreground Rooftop Lookout (Grounded on flat terrace floor, never touching rails)
+  const roof1PointA = { x: 16.5, y: 56.5 };
+  const roof1PointB = { x: 10.5, y: 59.5 };
+  const roof1State = getTwoWayPatrolPosition(roof1PointA, roof1PointB, 5.0, 6.0, carrierTime);
+
+  // Person 2: Upper Balustrade Resident (Grounded on wooden balustrade terrace floor, never on rails)
+  const roof2PointA = { x: 42.5, y: 43.8 };
+  const roof2PointB = { x: 37.5, y: 41.5 };
+  const roof2State = getTwoWayPatrolPosition(roof2PointA, roof2PointB, 5.5, 6.0, carrierTime + 2.5);
+
+  // Stage 1.5: Rooftop Resident (Upper terrace patrol)
   const isNearRooftopCitizen =
     scene === "residential_grid" &&
-    playerPos.x >= 36.0 &&
-    playerPos.x <= 52.0 &&
-    playerPos.y >= 36.0 &&
-    playerPos.y <= 48.0;
+    Math.hypot(playerPos.x - roof2State.x, playerPos.y - roof2State.y) <= 12.0;
 
-  // Stage 1.5: Road Pedestrian / Water Carrier (at x: 44%, y: 83% on paved avenue)
+  // Stage 1.5: Foreground Rooftop Lookout (Foreground terrace patrol)
+  const isNearRooftopLookout =
+    scene === "residential_grid" &&
+    Math.hypot(playerPos.x - roof1State.x, playerPos.y - roof1State.y) <= 12.0;
+
+  // Left Lane Water Carrier Route (grounded on brick street, walking into upper house doorway, 17.5s walk + 4s pause inside)
+  const guy1Waypoints = [
+    { x: 25.0, y: 96.0 },
+    { x: 35.0, y: 84.0 },
+    { x: 45.0, y: 75.0 },
+    { x: 55.0, y: 65.5 },
+    { x: 63.5, y: 52.0 },
+    { x: 66.8, y: 42.5 },
+  ];
+  const guy1State = getPathPosition(guy1Waypoints, 17.5, 4.0, carrierTime);
+
+  // Right Lane Water Carrier Route (Image 2: straight up right avenue and turns into doorway, 13.8s walk + 3s pause inside)
+  const guy2Waypoints = [
+    { x: 74.0, y: 98.0 },
+    { x: 83.5, y: 56.0 },
+    { x: 88.5, y: 56.0 },
+  ];
+  const guy2State = getPathPosition(guy2Waypoints, 13.8, 3.0, carrierTime);
+
+  // Stage 1.7: Animated Granary Porters (Carrying grain sacks across the hall from corner to corner)
+  const grainCarrierWalkFrame = ((carrierFrame - 1) % 3) + 1;
+  // Worker 1: Along back aisle from (32.0%, 39.0%) to (73.0%, 34.0%)
+  const gPhase1 = (carrierTime % 18) / 18;
+  const gT1 = gPhase1 < 0.5 ? gPhase1 / 0.5 : (1.0 - gPhase1) / 0.5;
+  const granaryWorker1Pos = {
+    x: 32.0 + gT1 * 41.0,
+    y: 39.0 - gT1 * 5.0,
+    facingLeft: gPhase1 >= 0.5,
+  };
+
+  // Worker 2: Along parallel forward plank walkway from (35.0%, 41.5%) to (75.0%, 36.5%)
+  // Staggered by 9s and offset vertically by 2.5% so they never overlap
+  const gPhase2 = ((carrierTime + 9) % 20) / 20;
+  const gT2 = gPhase2 < 0.5 ? gPhase2 / 0.5 : (1.0 - gPhase2) / 0.5;
+  const granaryWorker2Pos = {
+    x: 35.0 + gT2 * 40.0,
+    y: 41.5 - gT2 * 5.0,
+    facingLeft: gPhase2 >= 0.5,
+  };
+
+  const isNearGranaryPorter1 =
+    scene === "granary_avenue" &&
+    Math.hypot(playerPos.x - granaryWorker1Pos.x, playerPos.y - granaryWorker1Pos.y) <= 8.0;
+
+  const isNearGranaryPorter2 =
+    scene === "granary_avenue" &&
+    Math.hypot(playerPos.x - granaryWorker2Pos.x, playerPos.y - granaryWorker2Pos.y) <= 8.0;
+
+  // Stage 1.5: Road Pedestrian / Water Carrier (Walking along left paved avenue)
   const isNearRoadPedestrian =
     scene === "residential_grid" &&
-    playerPos.x >= 36.0 &&
-    playerPos.x <= 54.0 &&
-    playerPos.y >= 74.0 &&
-    playerPos.y <= 92.0;
+    !guy1State.isInside &&
+    Math.hypot(playerPos.x - guy1State.x, playerPos.y - guy1State.y) <= 8.5;
 
   // Stage 1.5: Marked Spot 1 - Cargo Inspector (at x: 87.5%, y: 43.5%)
   const isNearCargoInspector =
@@ -552,37 +876,29 @@ export default function IndusValleyGameScreen() {
     playerPos.y >= 36.0 &&
     playerPos.y <= 52.0;
 
-  // Stage 1.5: Marked Spot 2 - Municipal Drain Inspector (at x: 83%, y: 58%)
+  // Stage 1.5: Marked Spot 2 - Municipal Drain Inspector (Walking along right paved avenue)
   const isNearDrainInspector =
     scene === "residential_grid" &&
-    playerPos.x >= 74.0 &&
-    playerPos.x <= 92.0 &&
-    playerPos.y >= 50.0 &&
-    playerPos.y <= 66.0;
+    !guy2State.isInside &&
+    Math.hypot(playerPos.x - guy2State.x, playerPos.y - guy2State.y) <= 8.5;
 
-  // Stage 1.5: Marked Spot 3 - Cotton Weaver (at x: 78.5%, y: 72%)
-  const isNearCottonWeaver =
+  // Stage 1.5: Marked Spot 3 & 4 - Harappan Artisans Conversing (Courtyard at x: 87.5%, y: 93.5%)
+  const isNearArtisans =
     scene === "residential_grid" &&
-    playerPos.x >= 70.0 &&
-    playerPos.x <= 88.0 &&
-    playerPos.y >= 64.0 &&
-    playerPos.y <= 80.0;
-
-  // Stage 1.5: Marked Spot 4 - Master Potter (at x: 91%, y: 93%)
-  const isNearMasterPotter =
-    scene === "residential_grid" &&
-    playerPos.x >= 80.0 &&
+    playerPos.x >= 76.0 &&
     playerPos.x <= 98.0 &&
-    playerPos.y >= 84.0 &&
+    playerPos.y >= 78.0 &&
     playerPos.y <= 99.0;
+  const isNearCottonWeaver = isNearArtisans;
+  const isNearMasterPotter = isNearArtisans;
 
-  // Stage 1.5: Courtyard Resident (at x: 33.5%, y: 57.5%)
+  // Stage 1.5: Courtyard Resident (Grounded inside courtyard stone floor at x: 31%, y: 61.8%)
   const isNearCourtyardResident =
     scene === "residential_grid" &&
-    playerPos.x >= 28.0 &&
-    playerPos.x <= 39.0 &&
-    playerPos.y >= 52.0 &&
-    playerPos.y <= 64.0;
+    playerPos.x >= 24.0 &&
+    playerPos.x <= 38.0 &&
+    playerPos.y >= 54.0 &&
+    playerPos.y <= 68.0;
 
   // Stage 2: Great Bath sunken basin
   const isNearGreatBathBasin =
@@ -635,6 +951,61 @@ export default function IndusValleyGameScreen() {
       setIsTransitioning(false);
     }, 600);
   };
+
+  // 5.5. Animated Entities Engine (Water carriers, rooftop citizens, Egyptian boat, granary unloader & talking artisans)
+  useEffect(() => {
+    if (
+      scene !== "residential_grid" &&
+      scene !== "lower_town_gate" &&
+      scene !== "granary_avenue"
+    )
+      return;
+
+    // Cycle walk animation frames (1 -> 2 -> 3 -> 4 for carriers, 1 -> 2 for rooftop)
+    const frameInterval = setInterval(() => {
+      setCarrierFrame((prev) => (prev % 4) + 1);
+      setRooftopFrame((prev) => (prev === 1 ? 2 : 1));
+    }, 200);
+
+    // Cycle rowing stroke animation frames for Egyptian sailor (1 -> 2)
+    const boatInterval = setInterval(() => {
+      setBoatRowFrame((prev) => (prev === 1 ? 2 : 1));
+    }, 600);
+
+    // Cycle talking animation frames between woman and man (1 -> 2)
+    const talkInterval = setInterval(() => {
+      setTalkingArtisansFrame((prev) => (prev === 1 ? 2 : 1));
+    }, 1400);
+
+    // Cycle grain unloading animation frames (3 -> 2 -> 1 -> 2 -> 3)
+    const grainSequence: (1 | 2 | 3)[] = [3, 2, 1, 2];
+    let grainSeqIdx = 0;
+    const grainWorkerInterval = setInterval(() => {
+      grainSeqIdx = (grainSeqIdx + 1) % grainSequence.length;
+      setGrainWorkerFrame(grainSequence[grainSeqIdx]);
+    }, 750);
+
+    // Continuous smooth game time loop for walking and river routes
+    let lastTime = performance.now();
+    let animId: number;
+
+    const moveLoop = (now: number) => {
+      const dt = Math.min((now - lastTime) / 1000, 0.1);
+      lastTime = now;
+      setCarrierTime((prev) => prev + dt);
+      animId = requestAnimationFrame(moveLoop);
+    };
+
+    animId = requestAnimationFrame(moveLoop);
+
+    return () => {
+      clearInterval(frameInterval);
+      clearInterval(boatInterval);
+      clearInterval(talkInterval);
+      clearInterval(grainWorkerInterval);
+      cancelAnimationFrame(animId);
+    };
+  }, [scene]);
 
   // 6. Keyboard Movement Engine
   useEffect(() => {
@@ -735,7 +1106,7 @@ export default function IndusValleyGameScreen() {
           triggerTransition("lower_town_gate", { x: 71.5, y: 41.0 });
           return;
         } else if (isNearGranaryGridReturn) {
-          triggerTransition("residential_grid", { x: 68.0, y: 78.0 });
+          triggerTransition("residential_grid", { x: 76.0, y: 38.0 });
           return;
         } else if (isNearGreatBathGranaryReturn) {
           triggerTransition("granary_avenue", { x: 72.0, y: 52.0 });
@@ -771,12 +1142,28 @@ export default function IndusValleyGameScreen() {
           setShowOverseerDialogue(true);
         } else if (isNearForeignTraders) {
           setShowForeignTradersModal(true);
+        } else if (isNearEgyptianSailor) {
+          setActiveCitizenDialogue({
+            name: "Kheti the Egyptian Sailor",
+            title: "Nile River Navigator & Trade Envoy • 2500 BCE",
+            icon: "",
+            text: "Greetings from the lands of Kemet (Ancient Egypt)! Our royal cedarwood and reed barques sail the Red Sea from the shores of Punt to the Arabian Gulf and across the ocean to your great city of Meluhha on the Indus. We trade Egyptian linen, gold, and fine faience beads in exchange for your prized Indus carnelian, lapis lazuli, and fragrant timber!",
+          });
+          soundFx.playSelect();
         } else if (isNearRooftopCitizen) {
           setActiveCitizenDialogue({
             name: "Harappan Rooftop Resident",
             title: "Citizen of the Upper Terraces • Mohenjo-daro",
             icon: "",
             text: "From atop our baked-brick roofs, you can see how our streets cross at perfect cardinal angles! When the summer sun sets over the Indus, our families gather on these cool flat terraces to spin cotton and catch the river breeze.",
+          });
+          soundFx.playSelect();
+        } else if (isNearRooftopLookout) {
+          setActiveCitizenDialogue({
+            name: "Harappan Lookout",
+            title: "Lower Town Watcher • Mohenjo-daro",
+            icon: "",
+            text: "I watch the sunrise over the eastern wall! Look along the street below—the covered drains carry every drop of wastewater away safely under the stone slabs. No other city on earth has such engineering.",
           });
           soundFx.playSelect();
         } else if (isNearRoadPedestrian) {
@@ -803,20 +1190,12 @@ export default function IndusValleyGameScreen() {
             text: "I inspect this sediment silt-trap. Every week, municipal crews lift the stone inspection slabs to scoop out sediment, ensuring our covered drainage channels flow freely towards the city perimeter.",
           });
           soundFx.playSelect();
-        } else if (isNearCottonWeaver) {
+        } else if (isNearArtisans) {
           setActiveCitizenDialogue({
-            name: "Harappan Cotton Weaver",
-            title: "Textile Artisan • Mohenjo-daro",
+            name: "Harappan Artisans (Weaver & Potter)",
+            title: "Craft Guild • Mohenjo-daro Artisan Quarter",
             icon: "",
-            text: "Our dyed cotton textiles are prized from Dilmun to ancient Ur! We spin fine threads using standardized terracotta spindle whorls right here along the sunny avenues.",
-          });
-          soundFx.playSelect();
-        } else if (isNearMasterPotter) {
-          setActiveCitizenDialogue({
-            name: "Harappan Master Potter",
-            title: "Terracotta Artisan • Mohenjo-daro",
-            icon: "",
-            text: "These large storage amphorae are wheel-thrown from fine Indus alluvial clay. Coated with lustrous red slip and painted with black geometric motifs, they keep grain, sesame oil, and clean well-water cool in the summer heat.",
+            text: "We are preparing goods for the maritime trade caravans! The weaver spins fine dyed cotton textiles using standardized terracotta whorls, while the master potter crafts wheel-thrown storage amphorae and glazed beads. Together, our artisan quarter supplies exports from Dilmun to ancient Mesopotamia!",
           });
           soundFx.playSelect();
         } else if (isNearCourtyardResident) {
@@ -835,12 +1214,36 @@ export default function IndusValleyGameScreen() {
             text: "We haul sacks of freshly threshed barley and emmer wheat from the river quays up these wooden ramps! Notice how the platforms are raised above the ground—warm, dry air circulates continuously through the brick vents to prevent rot.",
           });
           soundFx.playSelect();
+        } else if (isNearGrainCartWorker) {
+          setActiveCitizenDialogue({
+            name: "Dhanu the Granary Worker",
+            title: "Bullock Cart Grain Handler • Mohenjo-daro Granary",
+            icon: "",
+            text: "Hup! Another wooden cart loaded with winter barley has arrived from the fertile alluvial fields along the Indus river. We carefully unload each heavy sack and storage pot down to the staging ground, ready to be weighed and hauled up the wooden ramp to the ventilated loading platforms!",
+          });
+          soundFx.playSelect();
+        } else if (isNearGranaryArtisans) {
+          setActiveCitizenDialogue({
+            name: "Harappan Merchants (Weaver & Grain Overseer)",
+            title: "Civic Distribution Guild • Mohenjo-daro",
+            icon: "",
+            text: "We are verifying the grain tallies for the city's craftspeople and municipal workers! Standardized binary chert weights ensure that every family and artisan receives their exact monthly ration of barley and sesame seeds directly from the state granary.",
+          });
+          soundFx.playSelect();
         } else if (isNearGranaryScribe) {
           setActiveCitizenDialogue({
             name: "Granary Metrology Scribe",
             title: "Civic Grain Overseer • Mohenjo-daro",
             icon: "",
             text: "Every basket entering these rectangular bays is measured against standard chert cube weights. Centralized storage ensures that even during drought years or unpredictable Indus river floods, the civic granary guarantees food security for the entire population.",
+          });
+          soundFx.playSelect();
+        } else if (isNearGranaryPorter1 || isNearGranaryPorter2) {
+          setActiveCitizenDialogue({
+            name: "Harappan Grain Porter",
+            title: "Granary Reserve Carrier • Mohenjo-daro",
+            icon: "",
+            text: "Step aside, friend! We are hauling sacks of harvested barley and emmer wheat from the cool storage chambers in the west corner across to the distribution loading bays. The subterranean air ducts below keep the grain dry and fresh through every season!",
           });
           soundFx.playSelect();
         } else if (isNearGranaryAirDucts) {
@@ -934,6 +1337,7 @@ export default function IndusValleyGameScreen() {
     showVictoryModal,
     isNearOverseer,
     isNearForeignTraders,
+    isNearEgyptianSailor,
     isNearRooftopCitizen,
     isNearRoadPedestrian,
     isNearCourtyardResident,
@@ -968,6 +1372,10 @@ export default function IndusValleyGameScreen() {
     isNearGranaryAirDucts,
     isNearGranaryPlatforms,
     isNearGranaryWorker,
+    isNearGranaryPorter1,
+    isNearGranaryPorter2,
+    isNearGrainCartWorker,
+    isNearGranaryArtisans,
     isNearGranaryScribe,
     isNearGreatBathBasin,
     isNearGreatBathGranaryReturn,
@@ -1084,7 +1492,7 @@ export default function IndusValleyGameScreen() {
                 Dock Official Somnath
               </span>
               <img
-                src="/sprite-indus-official.png?v=3"
+                src="/sprite-indus-official.png?v=4"
                 alt="Dock Official Somnath"
                 className="h-24 sm:h-[108px] md:h-[122px] w-auto object-contain block select-none"
               />
@@ -1121,6 +1529,73 @@ export default function IndusValleyGameScreen() {
           </div>
         )}
 
+        {/* Stage 1: Ancient Egyptian Sailor River Boat Sailing along the Indus River */}
+        {scene === "lower_town_gate" && (
+          <div
+            className="absolute z-12 pointer-events-auto cursor-pointer select-none group transition-opacity duration-300"
+            style={{
+              left: `${boatState.x}%`,
+              top: `${boatState.y}%`,
+            }}
+            onClick={() => {
+              setActiveCitizenDialogue({
+                name: "Kheti the Egyptian Sailor",
+                title: "Nile River Navigator & Trade Envoy • 2500 BCE",
+                icon: "",
+                text: "Greetings from the lands of Kemet (Ancient Egypt)! Our royal cedarwood and reed barques sail the Red Sea from the shores of Punt to the Arabian Gulf and across the ocean to your great city of Meluhha on the Indus. We trade Egyptian linen, gold, and fine faience beads in exchange for your prized Indus carnelian, lapis lazuli, and fragrant timber!",
+              });
+              soundFx.playSelect();
+            }}
+          >
+            {/* Water wake ripple under boat */}
+            <div
+              className="absolute left-1/2 bottom-2 -translate-x-1/2 w-28 h-6 bg-cyan-200/25 rounded-[100%] blur-[2px] pointer-events-none animate-pulse"
+              style={{
+                transform: `translateX(-50%) scale(${boatState.scale * 1.15})`,
+              }}
+            />
+
+            <div
+              className="relative flex flex-col items-center transition-transform duration-200 group-hover:scale-105"
+              style={{
+                transform: `translate(-50%, -85%) translateY(${boatState.bobbingY}px) rotate(${boatState.rockingAngle}deg) scale(${boatState.scale}) ${
+                  boatState.facingLeft ? "scale-x-100" : "-scale-x-100"
+                }`,
+                transformOrigin: "bottom center",
+              }}
+            >
+              <div
+                className={`absolute bottom-full mb-1 flex flex-col items-center pointer-events-none ${
+                  boatState.facingLeft ? "scale-x-100" : "-scale-x-100"
+                }`}
+              >
+                {isNearEgyptianSailor && (
+                  <div className="mb-1 bg-[#1b1510]/95 border-2 border-[#38bdf8] text-[#f0f9ff] px-2.5 py-0.5 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap pointer-events-auto">
+                    <span className="text-[#38bdf8] font-bold">[G]</span>
+                    <span>Hail Egyptian Sailor</span>
+                  </div>
+                )}
+                <span
+                  className={`text-[10px] font-serif font-bold text-[#f0f9ff] bg-[#0c1a24]/90 px-2 py-0.5 rounded border border-[#38bdf8]/60 shadow-md whitespace-nowrap transition-opacity duration-200 ${
+                    isNearEgyptianSailor ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  Egyptian River Boat
+                </span>
+              </div>
+              <img
+                src={
+                  boatState.isSailing
+                    ? `/sprite-egyptian-boat-${boatRowFrame}.png?v=2`
+                    : "/sprite-egyptian-boat-1.png?v=2"
+                }
+                alt="Ancient Egyptian Sailor in River Boat"
+                className="h-28 sm:h-32 md:h-36 w-auto object-contain block select-none drop-shadow-[0_8px_14px_rgba(0,0,0,0.4)]"
+              />
+            </div>
+          </div>
+        )}
+
         {/* Stage 1: Mohenjo-daro City Gateway Trigger to Residential Grid */}
         {scene === "lower_town_gate" && hasFirstRelicChertWeight && isNearGranaryExit && (
           <div
@@ -1133,11 +1608,11 @@ export default function IndusValleyGameScreen() {
           </div>
         )}
 
-        {/* Stage 1.5: Rooftop Citizen on Upper House Terrace */}
+        {/* Stage 1.5: Rooftop Citizen on Upper House Terrace (Patrolling to left corner, staying 6s, walking back) */}
         {scene === "residential_grid" && (
           <div
             className="absolute z-12 pointer-events-auto cursor-pointer select-none group"
-            style={{ left: "43.5%", top: "41.5%" }}
+            style={{ left: `${roof2State.x}%`, top: `${roof2State.y}%` }}
             onClick={() =>
               setActiveCitizenDialogue({
                 name: "Harappan Rooftop Resident",
@@ -1147,32 +1622,48 @@ export default function IndusValleyGameScreen() {
               })
             }
           >
-            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform group-hover:scale-105">
-              {isNearRooftopCitizen && (
-                <div className="mb-1.5 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2 py-0.5 rounded text-[10px] font-serif shadow-lg animate-bounce whitespace-nowrap">
-                  <span className="text-[#d8a86a] font-bold mr-1">[G]</span>
-                  <span>Greet Rooftop Resident</span>
-                </div>
-              )}
-              <span className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow mb-1 whitespace-nowrap transition-opacity duration-200 ${
-                isNearRooftopCitizen ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-              }`}>
-                Rooftop Citizen
-              </span>
+            <div
+              className={`relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform duration-200 group-hover:scale-105 ${
+                roof2State.facingLeft ? "-scale-x-100" : "scale-x-100"
+              }`}
+            >
+              <div
+                className={`absolute bottom-full mb-1 flex flex-col items-center pointer-events-none ${
+                  roof2State.facingLeft ? "-scale-x-100" : "scale-x-100"
+                }`}
+              >
+                {isNearRooftopCitizen && (
+                  <div className="mb-1 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded text-[10px] font-serif shadow-lg animate-bounce whitespace-nowrap pointer-events-auto">
+                    <span className="text-[#d8a86a] font-bold mr-1">[G]</span>
+                    <span>Greet Rooftop Resident</span>
+                  </div>
+                )}
+                <span
+                  className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow whitespace-nowrap transition-opacity duration-200 ${
+                    isNearRooftopCitizen ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  Rooftop Citizen
+                </span>
+              </div>
               <img
-                src="/sprite-indus-rooftop.png?v=3"
+                src={
+                  roof2State.isWalking
+                    ? `/sprite-rooftop-walk-${rooftopFrame}.png?v=2`
+                    : "/sprite-indus-rooftop.png?v=3"
+                }
                 alt="Harappan Rooftop Resident"
-                className="h-[68px] sm:h-[75px] md:h-[88px] w-auto object-contain block select-none"
+                className="h-[68px] sm:h-[75px] md:h-[84px] w-auto object-contain block select-none"
               />
             </div>
           </div>
         )}
 
-        {/* Stage 1.5: Foreground Rooftop Lookout */}
+        {/* Stage 1.5: Foreground Rooftop Lookout (Patrolling foreground terrace to front corner, staying 6s, walking back) */}
         {scene === "residential_grid" && (
           <div
             className="absolute z-14 pointer-events-auto cursor-pointer select-none group"
-            style={{ left: "10.5%", top: "52%" }}
+            style={{ left: `${roof1State.x}%`, top: `${roof1State.y}%` }}
             onClick={() =>
               setActiveCitizenDialogue({
                 name: "Harappan Lookout",
@@ -1182,59 +1673,106 @@ export default function IndusValleyGameScreen() {
               })
             }
           >
-            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform group-hover:scale-105 -scale-x-100">
-              <span className="text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow mb-1 whitespace-nowrap -scale-x-100 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                Terrace Watcher
-              </span>
+            <div
+              className={`relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform duration-200 group-hover:scale-105 ${
+                roof1State.facingLeft ? "-scale-x-100" : "scale-x-100"
+              }`}
+            >
+              <div
+                className={`absolute bottom-full mb-1 flex flex-col items-center pointer-events-none ${
+                  roof1State.facingLeft ? "-scale-x-100" : "scale-x-100"
+                }`}
+              >
+                {isNearRooftopLookout && (
+                  <div className="mb-1 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded text-[10px] font-serif shadow-lg animate-bounce whitespace-nowrap pointer-events-auto">
+                    <span className="text-[#d8a86a] font-bold mr-1">[G]</span>
+                    <span>Greet Terrace Watcher</span>
+                  </div>
+                )}
+                <span
+                  className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow whitespace-nowrap transition-opacity duration-200 ${
+                    isNearRooftopLookout ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  Terrace Watcher
+                </span>
+              </div>
               <img
-                src="/sprite-indus-rooftop.png?v=3"
+                src={
+                  roof1State.isWalking
+                    ? `/sprite-rooftop-walk-${rooftopFrame}.png?v=2`
+                    : "/sprite-indus-rooftop.png?v=3"
+                }
                 alt="Harappan Terrace Lookout"
-                className="h-[82px] sm:h-[95px] md:h-[109px] w-auto object-contain block select-none"
+                className="h-[75px] sm:h-[84px] md:h-[95px] w-auto object-contain block select-none"
               />
             </div>
           </div>
         )}
 
-        {/* Stage 1.5: Road Townsman / Water Carrier (Standing firmly on the paved avenue in front of the house doorway) */}
+        {/* Stage 1.5: Road Townsman / Water Carrier (Animated along Image 1 red line route) */}
         {scene === "residential_grid" && (
           <div
-            className="absolute z-15 pointer-events-auto cursor-pointer select-none group"
-            style={{ left: "44%", top: "83%" }}
-            onClick={() =>
+            className="absolute z-15 select-none group transition-opacity duration-300"
+            style={{
+              left: `${guy1State.x}%`,
+              top: `${guy1State.y}%`,
+              opacity: guy1State.opacity,
+              filter: guy1State.filter,
+              transform: `scale(${guy1State.scale})`,
+              transformOrigin: "bottom center",
+              pointerEvents: guy1State.isInside ? "none" : "auto",
+              cursor: guy1State.isInside ? "default" : "pointer",
+            }}
+            onClick={() => {
+              if (guy1State.isInside) return;
               setActiveCitizenDialogue({
                 name: "Harappan Water Carrier",
                 title: "Neighborhood Municipal Worker • Mohenjo-daro",
                 icon: "",
-                text: "I carry cool water from our neighborhood brick well. Notice that our streets have covered drains on both sides with sediment traps. No waste ever pools in our lanes—our city stays cleaner than any kingdom in Sumer or Dilmun!",
-              })
-            }
+                text: "I carry cool water from our neighborhood brick well into the residential houses! Notice that our streets have covered drains on both sides with sediment traps. No waste ever pools in our lanes—our city stays cleaner than any kingdom in Sumer or Dilmun!",
+              });
+            }}
           >
-            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform group-hover:scale-105">
-              {isNearRoadPedestrian && (
-                <div className="mb-1.5 bg-[#1b1510]/95 border border-[#38bdf8] text-[#f0f9ff] px-2.5 py-0.5 rounded text-[11px] font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap">
-                  <span className="text-[#38bdf8] font-bold">[G]</span>
-                  <span>Greet Water Carrier</span>
-                </div>
-              )}
-              <span className={`text-[10px] font-serif font-bold text-[#f0f9ff] bg-[#0c1a24]/90 px-2 py-0.5 rounded border border-[#38bdf8]/50 shadow mb-1 whitespace-nowrap transition-opacity duration-200 ${
-                isNearRoadPedestrian ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-              }`}>
-                Water Carrier
-              </span>
+            <div
+              className={`relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform duration-200 ${
+                guy1State.facingLeft ? "-scale-x-100" : "scale-x-100"
+              }`}
+            >
+              {/* Floating badges positioned above the head without affecting ground anchoring */}
+              <div
+                className={`absolute bottom-full mb-1 flex flex-col items-center pointer-events-none ${
+                  guy1State.facingLeft ? "-scale-x-100" : ""
+                }`}
+              >
+                {isNearRoadPedestrian && (
+                  <div className="mb-1 bg-[#1b1510]/95 border border-[#38bdf8] text-[#f0f9ff] px-2.5 py-0.5 rounded text-[11px] font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap pointer-events-auto">
+                    <span className="text-[#38bdf8] font-bold">[G]</span>
+                    <span>Greet Water Carrier</span>
+                  </div>
+                )}
+                <span
+                  className={`text-[10px] font-serif font-bold text-[#f0f9ff] bg-[#0c1a24]/90 px-2 py-0.5 rounded border border-[#38bdf8]/50 shadow whitespace-nowrap transition-opacity duration-200 ${
+                    isNearRoadPedestrian ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  Water Carrier
+                </span>
+              </div>
               <img
-                src="/sprite-indus-pedestrian.png?v=3"
-                alt="Harappan Water Carrier"
-                className="h-24 sm:h-[108px] md:h-[122px] w-auto object-contain block select-none"
+                src={`/sprite-pedestrian-walk-${carrierFrame}.png?v=2`}
+                alt="Harappan Water Carrier Walking"
+                className="h-[96px] sm:h-[108px] md:h-[118px] w-auto object-contain block select-none"
               />
             </div>
           </div>
         )}
 
-        {/* Stage 1.5: Courtyard Resident Woman (Inside the Courtyard) */}
+        {/* Stage 1.5: Courtyard Resident Woman (Grounded on courtyard stone floor at x: 31%, y: 61.8%) */}
         {scene === "residential_grid" && (
           <div
             className="absolute z-13 pointer-events-auto cursor-pointer select-none group"
-            style={{ left: "33.5%", top: "57.5%" }}
+            style={{ left: "31.0%", top: "61.8%" }}
             onClick={() =>
               setActiveCitizenDialogue({
                 name: "Harappan Courtyard Inhabitant",
@@ -1244,22 +1782,26 @@ export default function IndusValleyGameScreen() {
               })
             }
           >
-            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform group-hover:scale-105">
-              {isNearCourtyardResident && (
-                <div className="mb-1.5 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded text-[11px] font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap">
-                  <span className="text-[#d8a86a] font-bold">[G]</span>
-                  <span>Speak with Courtyard Resident</span>
-                </div>
-              )}
-              <span className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow mb-1 whitespace-nowrap transition-opacity duration-200 ${
-                isNearCourtyardResident ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-              }`}>
-                Courtyard Resident
-              </span>
+            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform duration-200 group-hover:scale-105">
+              <div className="absolute bottom-full mb-1 flex flex-col items-center pointer-events-none">
+                {isNearCourtyardResident && (
+                  <div className="mb-1 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded text-[11px] font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap pointer-events-auto">
+                    <span className="text-[#d8a86a] font-bold">[G]</span>
+                    <span>Speak with Courtyard Resident</span>
+                  </div>
+                )}
+                <span
+                  className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow whitespace-nowrap transition-opacity duration-200 ${
+                    isNearCourtyardResident ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  Courtyard Resident
+                </span>
+              </div>
               <img
                 src="/sprite-indus-courtyard.png?v=3"
                 alt="Harappan Courtyard Resident"
-                className="h-[82px] sm:h-[95px] md:h-[109px] w-auto object-contain block select-none"
+                className="h-[68px] sm:h-[75px] md:h-[84px] w-auto object-contain block select-none"
               />
             </div>
           </div>
@@ -1292,7 +1834,7 @@ export default function IndusValleyGameScreen() {
                 Cargo Inspector
               </span>
               <img
-                src="/sprite-indus-official.png?v=3"
+                src="/sprite-indus-official.png?v=4"
                 alt="Cargo Inspector"
                 className="h-[68px] sm:h-[75px] md:h-[84px] w-auto object-contain block select-none"
               />
@@ -1300,106 +1842,99 @@ export default function IndusValleyGameScreen() {
           </div>
         )}
 
-        {/* Stage 1.5: Marked Spot 2 - Municipal Drain Inspector (Mid-right avenue beside culvert bridge) */}
+        {/* Stage 1.5: Marked Spot 2 - Municipal Drain Inspector (Animated along Image 2 red line route) */}
         {scene === "residential_grid" && (
           <div
-            className="absolute z-14 pointer-events-auto cursor-pointer select-none group"
-            style={{ left: "83%", top: "58%" }}
-            onClick={() =>
+            className="absolute z-14 select-none group transition-opacity duration-300"
+            style={{
+              left: `${guy2State.x}%`,
+              top: `${guy2State.y}%`,
+              opacity: guy2State.opacity,
+              filter: guy2State.filter,
+              transform: `scale(${guy2State.scale})`,
+              transformOrigin: "bottom center",
+              pointerEvents: guy2State.isInside ? "none" : "auto",
+              cursor: guy2State.isInside ? "default" : "pointer",
+            }}
+            onClick={() => {
+              if (guy2State.isInside) return;
               setActiveCitizenDialogue({
                 name: "Municipal Drain Inspector",
                 title: "Civic Sanitation Surveyor • Mohenjo-daro",
                 icon: "",
-                text: "I inspect this sediment silt-trap. Every week, municipal crews lift the stone inspection slabs to scoop out sediment, ensuring our covered drainage channels flow freely towards the city perimeter.",
-              })
-            }
+                text: "I inspect this sediment silt-trap and deliver fresh water to the east wing quarters. Every week, municipal crews lift the stone inspection slabs to scoop out sediment, ensuring our covered drainage channels flow freely towards the city perimeter.",
+              });
+            }}
           >
-            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform group-hover:scale-105">
-              {isNearDrainInspector && (
-                <div className="mb-1.5 bg-[#1b1510]/95 border border-[#38bdf8] text-[#f0f9ff] px-2.5 py-0.5 rounded text-[11px] font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap">
-                  <span className="text-[#38bdf8] font-bold">[G]</span>
-                  <span>Speak with Drain Inspector</span>
-                </div>
-              )}
-              <span className={`text-[10px] font-serif font-bold text-[#f0f9ff] bg-[#0c1a24]/90 px-2 py-0.5 rounded border border-[#38bdf8]/50 shadow mb-1 whitespace-nowrap transition-opacity duration-200 ${
-                isNearDrainInspector ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-              }`}>
-                Drain Inspector
-              </span>
+            <div
+              className={`relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform duration-200 ${
+                guy2State.facingLeft ? "-scale-x-100" : "scale-x-100"
+              }`}
+            >
+              <div
+                className={`absolute bottom-full mb-1 flex flex-col items-center pointer-events-none ${
+                  guy2State.facingLeft ? "-scale-x-100" : ""
+                }`}
+              >
+                {isNearDrainInspector && (
+                  <div className="mb-1 bg-[#1b1510]/95 border border-[#38bdf8] text-[#f0f9ff] px-2.5 py-0.5 rounded text-[11px] font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap pointer-events-auto">
+                    <span className="text-[#38bdf8] font-bold">[G]</span>
+                    <span>Speak with Drain Inspector</span>
+                  </div>
+                )}
+                <span
+                  className={`text-[10px] font-serif font-bold text-[#f0f9ff] bg-[#0c1a24]/90 px-2 py-0.5 rounded border border-[#38bdf8]/50 shadow whitespace-nowrap transition-opacity duration-200 ${
+                    isNearDrainInspector ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  Drain Inspector
+                </span>
+              </div>
               <img
-                src="/sprite-indus-pedestrian.png?v=3"
-                alt="Drain Inspector"
-                className="h-[82px] sm:h-[95px] md:h-[109px] w-auto object-contain block select-none"
+                src={`/sprite-pedestrian-walk-${carrierFrame}.png?v=2`}
+                alt="Drain Inspector Walking"
+                className="h-[96px] sm:h-[108px] md:h-[118px] w-auto object-contain block select-none"
               />
             </div>
           </div>
         )}
 
-        {/* Stage 1.5: Marked Spot 3 - Harappan Cotton Weaver (Lower-mid right avenue) */}
-        {scene === "residential_grid" && (
-          <div
-            className="absolute z-14 pointer-events-auto cursor-pointer select-none group"
-            style={{ left: "78.5%", top: "72%" }}
-            onClick={() =>
-              setActiveCitizenDialogue({
-                name: "Harappan Cotton Weaver",
-                title: "Textile Artisan • Mohenjo-daro",
-                icon: "",
-                text: "Our dyed cotton textiles are prized from Dilmun to ancient Ur! We spin fine threads using standardized terracotta spindle whorls right here along the sunny avenues.",
-              })
-            }
-          >
-            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform group-hover:scale-105">
-              {isNearCottonWeaver && (
-                <div className="mb-1.5 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded text-[11px] font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap">
-                  <span className="text-[#d8a86a] font-bold">[G]</span>
-                  <span>Speak with Cotton Weaver</span>
-                </div>
-              )}
-              <span className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow mb-1 whitespace-nowrap transition-opacity duration-200 ${
-                isNearCottonWeaver ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-              }`}>
-                Cotton Weaver
-              </span>
-              <img
-                src="/sprite-indus-courtyard.png?v=3"
-                alt="Cotton Weaver"
-                className="h-[88px] sm:h-[102px] md:h-[116px] w-auto object-contain block select-none"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Stage 1.5: Marked Spot 4 - Master Potter (Bottom-right corner in front of doorway and pottery amphorae) */}
+        {/* Stage 1.5: Harappan Artisans Conversing (Cotton Weaver & Master Potter down on courtyard ground) */}
         {scene === "residential_grid" && (
           <div
             className="absolute z-16 pointer-events-auto cursor-pointer select-none group"
-            style={{ left: "91%", top: "93%" }}
+            style={{ left: "87.5%", top: "93.5%" }}
             onClick={() =>
               setActiveCitizenDialogue({
-                name: "Harappan Master Potter",
-                title: "Terracotta Artisan • Mohenjo-daro",
+                name: "Harappan Artisans (Weaver & Potter)",
+                title: "Craft Guild • Mohenjo-daro Artisan Quarter",
                 icon: "",
-                text: "These large storage amphorae are wheel-thrown from fine Indus alluvial clay. Coated with lustrous red slip and painted with black geometric motifs, they keep grain, sesame oil, and clean well-water cool in the summer heat.",
+                text: "We are coordinating our shipment for the maritime trade caravans! The weaver spins fine dyed cotton textiles using standardized terracotta whorls, while the master potter crafts wheel-thrown storage amphorae and glazed beads. Together, our artisan quarter supplies exports from Dilmun to ancient Mesopotamia!",
               })
             }
           >
-            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform group-hover:scale-105">
-              {isNearMasterPotter && (
-                <div className="mb-1.5 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded text-[11px] font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap">
-                  <span className="text-[#d8a86a] font-bold">[G]</span>
-                  <span>Speak with Master Potter</span>
-                </div>
-              )}
-              <span className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow mb-1 whitespace-nowrap transition-opacity duration-200 ${
-                isNearMasterPotter ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-              }`}>
-                Master Potter
-              </span>
+            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform duration-200 group-hover:scale-105">
+              {/* Floating interaction badges above head without affecting ground anchoring */}
+              <div className="absolute bottom-full mb-1 flex flex-col items-center pointer-events-none">
+                {isNearArtisans && (
+                  <div className="mb-1 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded text-[11px] font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap pointer-events-auto">
+                    <span className="text-[#d8a86a] font-bold">[G]</span>
+                    <span>Speak with Artisans</span>
+                  </div>
+                )}
+                <span
+                  className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow whitespace-nowrap transition-opacity duration-200 ${
+                    isNearArtisans ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  Weaver & Potter in Conversation
+                </span>
+              </div>
+
               <img
-                src="/sprite-indus-trader.png?v=3"
-                alt="Master Potter"
-                className="h-24 sm:h-[108px] md:h-[122px] w-auto object-contain block select-none"
+                src={`/sprite-artisans-talk-${talkingArtisansFrame}.png?v=2`}
+                alt="Harappan Artisans Conversing"
+                className="h-[102px] sm:h-[114px] md:h-[126px] w-auto object-contain block select-none"
               />
             </div>
           </div>
@@ -1471,27 +2006,41 @@ export default function IndusValleyGameScreen() {
           </div>
         )}
 
-        {/* Stage 1.5: Residential Grid -> The Great Granary (Front Avenue) */}
+        {/* Stage 1.5: Residential Grid -> The Great Granary (Moving forward up avenue to top-right) */}
         {scene === "residential_grid" && (
           <div
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
-            style={{ left: "68%", top: "84%" }}
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "80%", top: "34%" }}
+            onClick={() => triggerTransition("granary_avenue", { x: 26.0, y: 78.0 })}
           >
-            <div className="bg-[#1b1510]/95 border-2 border-[#52a45a] text-[#baf1be] px-3 py-1 rounded-lg text-xs font-serif shadow-md animate-pulse whitespace-nowrap">
-              <span>▲ [E] To The Great Granary</span>
-            </div>
+            {isNearResidentialGranaryForward ? (
+              <div className="bg-[#1b1510]/95 border-2 border-[#52a45a] text-[#baf1be] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-lg animate-bounce whitespace-nowrap group-hover:bg-[#251d16] transition-colors">
+                <span>▲ [E] To The Great Granary</span>
+              </div>
+            ) : (
+              <div className="bg-[#1b1510]/80 border border-[#52a45a]/60 text-[#baf1be]/80 px-2 py-0.5 rounded text-[11px] font-serif whitespace-nowrap">
+                <span>To The Great Granary</span>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Stage 1.5: Residential Grid -> Return to Ghat Gate */}
+        {/* Stage 1.5: Residential Grid -> Return to Ghat Gate (At bottom of avenue) */}
         {scene === "residential_grid" && (
           <div
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
-            style={{ left: "82%", top: "37%" }}
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "68%", top: "84%" }}
+            onClick={() => triggerTransition("lower_town_gate", { x: 71.5, y: 41.0 })}
           >
-            <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-2.5 py-1 rounded-lg text-[11px] font-serif shadow-md whitespace-nowrap">
-              <span>▼ [F] To River Ghat</span>
-            </div>
+            {isNearResidentialGhatReturn ? (
+              <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-md whitespace-nowrap animate-bounce group-hover:bg-[#251d16] transition-colors">
+                <span>▼ [F] To River Ghat</span>
+              </div>
+            ) : (
+              <div className="bg-[#1b1510]/80 border border-[#d8a86a]/60 text-[#f7eedf]/80 px-2 py-0.5 rounded text-[11px] font-serif whitespace-nowrap">
+                <span>To River Ghat</span>
+              </div>
+            )}
           </div>
         )}
 
@@ -1921,10 +2470,11 @@ export default function IndusValleyGameScreen() {
         {/* Stage 1.7: Return to Residential Grid Trigger */}
         {scene === "granary_avenue" && (
           <div
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
             style={{ left: "20%", top: "84%" }}
+            onClick={() => triggerTransition("residential_grid", { x: 76.0, y: 38.0 })}
           >
-            <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-2.5 py-1 rounded-lg text-[11px] font-serif shadow-md whitespace-nowrap">
+            <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1.5 rounded-lg text-xs font-serif shadow-md whitespace-nowrap animate-bounce group-hover:bg-[#251d16] transition-colors">
               <span>▼ [F] Return to Residential Grid</span>
             </div>
           </div>
@@ -1933,82 +2483,81 @@ export default function IndusValleyGameScreen() {
         {/* Stage 1.7: Ascend to Citadel & Great Bath Trigger */}
         {scene === "granary_avenue" && (
           <div
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
             style={{ left: "76%", top: "48%" }}
+            onClick={() => triggerTransition("great_bath_citadel", { x: 50.0, y: 82.0 }, 2)}
           >
-            <div className="bg-[#1b1510]/95 border-2 border-[#52a45a] text-[#baf1be] px-3 py-1 rounded-lg text-xs font-serif shadow-md animate-pulse whitespace-nowrap">
+            <div className="bg-[#1b1510]/95 border-2 border-[#52a45a] text-[#baf1be] px-3.5 py-1.5 rounded-lg text-xs font-serif shadow-lg animate-pulse whitespace-nowrap group-hover:bg-[#251d16] transition-colors">
               <span>▲ [E] Ascend to The Great Bath (Stage 2)</span>
             </div>
           </div>
         )}
 
-        {/* Stage 1.7: Granary Laborer / Sack Carrier NPC */}
+        {/* Stage 1.7: Granary Grain Reserves & Baskets Hotspot */}
         {scene === "granary_avenue" && (
           <div
-            className="absolute z-14 pointer-events-auto cursor-pointer select-none group"
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-12"
             style={{ left: "34%", top: "62%" }}
-            onClick={() =>
+            onClick={() => {
               setActiveCitizenDialogue({
-                name: "Harappan Granary Laborer",
-                title: "Grain Carrier • Mohenjo-daro Granary",
+                name: "Harappan Granary Grain Reserves",
+                title: "Barley & Emmer Wheat Storage • Mohenjo-daro",
                 icon: "",
-                text: "We haul sacks of freshly threshed barley and emmer wheat from the river quays up these wooden ramps! Notice how the platforms are raised above the ground—warm, dry air circulates continuously through the brick vents to prevent rot.",
-              })
-            }
+                text: "Heaps of freshly threshed barley and emmer wheat fill these woven reed baskets and burlap sacks! Notice how the brick platforms are elevated above the ground—warm, dry air circulates continuously through the subterranean vents to prevent rot and pest infestation.",
+              });
+              soundFx.playSelect();
+            }}
           >
-            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform group-hover:scale-105">
-              {isNearGranaryWorker && (
-                <div className="mb-1.5 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded text-[10px] font-serif shadow-lg animate-bounce whitespace-nowrap">
-                  <span className="text-[#d8a86a] font-bold mr-1">[G]</span>
-                  <span>Speak with Laborer</span>
-                </div>
-              )}
-              <span className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow mb-1 whitespace-nowrap transition-opacity duration-200 ${
-                isNearGranaryWorker ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-              }`}>
-                Granary Laborer
-              </span>
-              <img
-                src="/sprite-indus-watercarrier.png?v=2"
-                alt="Granary Laborer"
-                className="h-24 sm:h-[108px] md:h-[122px] w-auto object-contain block select-none"
-              />
+            {isNearGranaryWorker && (
+              <div className="mb-1.5 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-2.5 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
+                <span className="text-[#d8a86a] font-bold">[G]</span>
+                <span>Inspect Grain Sacks & Baskets</span>
+              </div>
+            )}
+            <div className="w-10 h-10 rounded-xl bg-[#281c14]/90 border-2 border-[#d8a86a] flex items-center justify-center shadow-lg group-hover:border-[#eedbbf] transition-all">
+              <svg className="w-5 h-5 text-[#d8a86a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
             </div>
+            <span className={`text-[9px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/90 px-1.5 py-0.5 rounded border border-[#d8a86a]/60 shadow-md mt-0.5 whitespace-nowrap transition-opacity duration-200 ${
+              isNearGranaryWorker ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            }`}>
+              Grain Sacks & Reserves
+            </span>
           </div>
         )}
 
-        {/* Stage 1.7: Granary Metrology Scribe NPC */}
+        {/* Stage 1.7: Granary Metrology Station Hotspot */}
         {scene === "granary_avenue" && (
           <div
-            className="absolute z-14 pointer-events-auto cursor-pointer select-none group"
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-12"
             style={{ left: "74%", top: "66%" }}
-            onClick={() =>
+            onClick={() => {
               setActiveCitizenDialogue({
-                name: "Granary Metrology Scribe",
-                title: "Civic Grain Overseer • Mohenjo-daro",
+                name: "Granary Metrology Station",
+                title: "Standardized Chert Weights & Grain Registry",
                 icon: "",
-                text: "Every basket entering these rectangular bays is measured against standard chert cube weights. Centralized storage ensures that even during drought years or unpredictable Indus river floods, the civic granary guarantees food security for the entire population.",
-              })
-            }
+                text: "Every basket entering these rectangular bays is measured against standard binary chert cube weights. Centralized storage ensures that even during drought years or unpredictable Indus river floods, the civic granary guarantees food security for the entire population.",
+              });
+              soundFx.playSelect();
+            }}
           >
-            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform group-hover:scale-105">
-              {isNearGranaryScribe && (
-                <div className="mb-1.5 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded text-[10px] font-serif shadow-lg animate-bounce whitespace-nowrap">
-                  <span className="text-[#d8a86a] font-bold mr-1">[G]</span>
-                  <span>Speak with Grain Scribe</span>
-                </div>
-              )}
-              <span className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow mb-1 whitespace-nowrap transition-opacity duration-200 ${
-                isNearGranaryScribe ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-              }`}>
-                Granary Scribe
-              </span>
-              <img
-                src="/sprite-indus-official.png?v=1"
-                alt="Granary Scribe"
-                className="h-24 sm:h-[108px] md:h-[122px] w-auto object-contain block select-none"
-              />
+            {isNearGranaryScribe && (
+              <div className="mb-1.5 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-2.5 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
+                <span className="text-[#d8a86a] font-bold">[G]</span>
+                <span>Inspect Metrology Station</span>
+              </div>
+            )}
+            <div className="w-10 h-10 rounded-xl bg-[#281c14]/90 border-2 border-[#d8a86a] flex items-center justify-center shadow-lg group-hover:border-[#eedbbf] transition-all">
+              <svg className="w-5 h-5 text-[#d8a86a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
             </div>
+            <span className={`text-[9px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/90 px-1.5 py-0.5 rounded border border-[#d8a86a]/60 shadow-md mt-0.5 whitespace-nowrap transition-opacity duration-200 ${
+              isNearGranaryScribe ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            }`}>
+              Metrology Registry
+            </span>
           </div>
         )}
 
@@ -2064,11 +2613,194 @@ export default function IndusValleyGameScreen() {
           </div>
         )}
 
+        {/* Stage 1.7: Granary Worker Unloading Grains from Bullock Cart */}
+        {scene === "granary_avenue" && (
+          <div
+            className="absolute z-13 pointer-events-auto cursor-pointer select-none group"
+            style={{ left: "84.5%", top: "86.5%" }}
+            onClick={() => {
+              setActiveCitizenDialogue({
+                name: "Dhanu the Granary Worker",
+                title: "Bullock Cart Grain Handler • Mohenjo-daro Granary",
+                icon: "",
+                text: "Hup! Another wooden cart loaded with winter barley has arrived from the fertile alluvial fields along the Indus river. We carefully unload each heavy sack and storage pot down to the staging ground, ready to be weighed and hauled up the wooden ramp to the ventilated loading platforms!",
+              });
+              soundFx.playSelect();
+            }}
+          >
+            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform duration-200 group-hover:scale-105">
+              <div className="absolute bottom-full mb-1 flex flex-col items-center pointer-events-none">
+                {isNearGrainCartWorker && (
+                  <div className="mb-1 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded text-[10px] font-serif shadow-lg animate-bounce whitespace-nowrap pointer-events-auto">
+                    <span className="text-[#d8a86a] font-bold mr-1">[G]</span>
+                    <span>Speak with Grain Unloader</span>
+                  </div>
+                )}
+                <span
+                  className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow whitespace-nowrap transition-opacity duration-200 ${
+                    isNearGrainCartWorker ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  Unloading Grain Cart
+                </span>
+              </div>
+              <img
+                src={`/sprite-grain-cart-${grainWorkerFrame}.png?v=2`}
+                alt="Harappan Laborer Unloading Grains from Cart"
+                className="h-32 sm:h-36 md:h-40 w-auto object-contain block select-none drop-shadow-[0_6px_12px_rgba(0,0,0,0.35)]"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Stage 1.7: Harappan Merchants Conversing in Dirt Yard beside Ramp (Boy & Girl Talking) */}
+        {scene === "granary_avenue" && (
+          <div
+            className="absolute z-12 pointer-events-auto cursor-pointer select-none group"
+            style={{ left: "75.5%", top: "88.0%" }}
+            onClick={() => {
+              setActiveCitizenDialogue({
+                name: "Harappan Merchants (Weaver & Grain Overseer)",
+                title: "Civic Distribution Guild • Mohenjo-daro",
+                icon: "",
+                text: "We are verifying the grain tallies for the city's craftspeople and municipal workers! Standardized binary chert weights ensure that every family and artisan receives their exact monthly ration of barley and sesame seeds directly from the state granary.",
+              });
+              soundFx.playSelect();
+            }}
+          >
+            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform duration-200 group-hover:scale-105">
+              <div className="absolute bottom-full mb-1 flex flex-col items-center pointer-events-none">
+                {isNearGranaryArtisans && (
+                  <div className="mb-1 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded text-[10px] font-serif shadow-lg animate-bounce whitespace-nowrap pointer-events-auto">
+                    <span className="text-[#d8a86a] font-bold mr-1">[G]</span>
+                    <span>Speak with Grain Merchants</span>
+                  </div>
+                )}
+                <span
+                  className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow whitespace-nowrap transition-opacity duration-200 ${
+                    isNearGranaryArtisans ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  Grain Merchants
+                </span>
+              </div>
+              <img
+                src={`/sprite-artisans-talk-${talkingArtisansFrame}.png?v=2`}
+                alt="Harappan Merchants Conversing"
+                className="h-20 sm:h-24 md:h-28 w-auto object-contain block select-none drop-shadow-[0_4px_8px_rgba(0,0,0,0.3)]"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Stage 1.7: Grain Porter 1 (Upper hall aisle from corner to corner) */}
+        {scene === "granary_avenue" && (
+          <div
+            className="absolute z-11 pointer-events-auto cursor-pointer select-none group"
+            style={{
+              left: `${granaryWorker1Pos.x}%`,
+              top: `${granaryWorker1Pos.y}%`,
+            }}
+            onClick={() => {
+              setActiveCitizenDialogue({
+                name: "Harappan Grain Porter",
+                title: "Granary Reserve Carrier • Mohenjo-daro",
+                icon: "",
+                text: "Step aside, friend! We are hauling sacks of harvested barley and emmer wheat from the cool storage chambers in the west corner across to the distribution loading bays. The subterranean air ducts below keep the grain dry and fresh through every season!",
+              });
+              soundFx.playSelect();
+            }}
+          >
+            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform duration-100 group-hover:scale-105">
+              <div className="absolute bottom-full mb-1 flex flex-col items-center pointer-events-none">
+                {isNearGranaryPorter1 && (
+                  <div className="mb-0.5 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2 py-0.5 rounded text-[9px] font-serif shadow animate-bounce whitespace-nowrap pointer-events-auto">
+                    <span className="text-[#d8a86a] font-bold mr-1">[G]</span>
+                    <span>Speak with Porter</span>
+                  </div>
+                )}
+                <span
+                  className={`text-[9px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-1.5 py-0.5 rounded border border-[#d8a86a]/50 shadow whitespace-nowrap transition-opacity duration-200 ${
+                    isNearGranaryPorter1 ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  Grain Porter
+                </span>
+              </div>
+              <img
+                src={`/sprite-grain-carrier-${grainCarrierWalkFrame}.png`}
+                alt="Grain Porter carrying sack"
+                className={`h-14 sm:h-16 md:h-[62px] w-auto object-contain block select-none drop-shadow-[0_4px_8px_rgba(0,0,0,0.3)] transition-transform duration-150 ${
+                  granaryWorker1Pos.facingLeft ? "-scale-x-100" : "scale-x-100"
+                }`}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Stage 1.7: Grain Porter 2 (Parallel platform runway, offset so no overlap) */}
+        {scene === "granary_avenue" && (
+          <div
+            className="absolute z-12 pointer-events-auto cursor-pointer select-none group"
+            style={{
+              left: `${granaryWorker2Pos.x}%`,
+              top: `${granaryWorker2Pos.y}%`,
+            }}
+            onClick={() => {
+              setActiveCitizenDialogue({
+                name: "Harappan Grain Porter",
+                title: "Granary Reserve Carrier • Mohenjo-daro",
+                icon: "",
+                text: "Step aside, friend! We are hauling sacks of harvested barley and emmer wheat from the cool storage chambers in the west corner across to the distribution loading bays. The subterranean air ducts below keep the grain dry and fresh through every season!",
+              });
+              soundFx.playSelect();
+            }}
+          >
+            <div className="relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform duration-100 group-hover:scale-105">
+              <div className="absolute bottom-full mb-1 flex flex-col items-center pointer-events-none">
+                {isNearGranaryPorter2 && (
+                  <div className="mb-0.5 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2 py-0.5 rounded text-[9px] font-serif shadow animate-bounce whitespace-nowrap pointer-events-auto">
+                    <span className="text-[#d8a86a] font-bold mr-1">[G]</span>
+                    <span>Speak with Porter</span>
+                  </div>
+                )}
+                <span
+                  className={`text-[9px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-1.5 py-0.5 rounded border border-[#d8a86a]/50 shadow whitespace-nowrap transition-opacity duration-200 ${
+                    isNearGranaryPorter2 ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  Grain Porter
+                </span>
+              </div>
+              <img
+                src={`/sprite-grain-carrier-${grainCarrierWalkFrame}.png`}
+                alt="Grain Porter carrying sack"
+                className={`h-14 sm:h-16 md:h-[62px] w-auto object-contain block select-none drop-shadow-[0_4px_8px_rgba(0,0,0,0.3)] transition-transform duration-150 ${
+                  granaryWorker2Pos.facingLeft ? "-scale-x-100" : "scale-x-100"
+                }`}
+              />
+            </div>
+          </div>
+        )}
+
         {/* Stage 2: Great Bath Hotspot */}
         {scene === "great_bath_citadel" && (
           <div
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
-            style={{ left: "50%", top: "65%" }}
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-12"
+            style={{ left: "52%", top: "54%" }}
+            onClick={() => {
+              if (isDrainagePuzzleSolved) {
+                setActiveCitizenDialogue({
+                  name: "The Great Bath of Mohenjo-daro",
+                  title: "Ritual Purification Basin",
+                  icon: "",
+                  text: "The monumental Great Bath pool measures approximately 12 by 7 meters with a depth of 2.4 meters. Lined with natural bitumen waterproofing and gypsum mortar between finely dressed bricks, it served as the sacred bathing sanctum of the ancient metropolis.",
+                });
+                soundFx.playSelect();
+              } else {
+                setShowDrainagePuzzleModal(true);
+              }
+            }}
           >
             {isNearGreatBathBasin && (
               <div className="mb-2 bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1 rounded-lg text-xs font-serif shadow-lg animate-bounce flex items-center gap-1.5 whitespace-nowrap">
@@ -2080,12 +2812,12 @@ export default function IndusValleyGameScreen() {
                 </span>
               </div>
             )}
-            <div className="w-14 h-14 bg-[#231b14]/90 border-2 border-[#5dbcd2] rounded-2xl flex items-center justify-center shadow-lg animate-pulse">
+            <div className="w-14 h-14 bg-[#231b14]/90 border-2 border-[#5dbcd2] rounded-2xl flex items-center justify-center shadow-lg group-hover:border-[#eedbbf] transition-all">
               <svg className="w-7 h-7 text-[#5dbcd2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
               </svg>
             </div>
-            <span className="text-[10px] font-serif font-bold text-[#e6f7fa] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#376b75] mt-1">
+            <span className="text-[10px] font-serif font-bold text-[#e6f7fa] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#376b75] mt-1 shadow-md">
               The Great Bath
             </span>
           </div>
@@ -2094,10 +2826,11 @@ export default function IndusValleyGameScreen() {
         {/* Stage 2: East Colonnade to Artisan Quarter */}
         {scene === "great_bath_citadel" && isDrainagePuzzleSolved && (
           <div
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
-            style={{ left: "80%", top: "68%" }}
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "82%", top: "52%" }}
+            onClick={() => triggerTransition("steatite_seal_workshop", { x: 25.0, y: 72.0 }, 3)}
           >
-            <div className="mb-1 bg-[#1b1510]/90 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1 rounded-lg text-xs font-serif shadow-md animate-pulse whitespace-nowrap">
+            <div className="mb-1 bg-[#1b1510]/90 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1 rounded-lg text-xs font-serif shadow-md animate-pulse whitespace-nowrap group-hover:bg-[#251d16] transition-colors">
               <span>► [E] Enter Steatite Artisan Quarter (Stage 3)</span>
             </div>
           </div>
@@ -2106,10 +2839,11 @@ export default function IndusValleyGameScreen() {
         {/* Stage 2: Return to The Great Granary */}
         {scene === "great_bath_citadel" && (
           <div
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
-            style={{ left: "50%", top: "86%" }}
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "50%", top: "84%" }}
+            onClick={() => triggerTransition("granary_avenue", { x: 72.0, y: 52.0 })}
           >
-            <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-2.5 py-1 rounded-lg text-[11px] font-serif shadow-md whitespace-nowrap">
+            <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1 rounded-lg text-xs font-serif shadow-md whitespace-nowrap animate-bounce group-hover:bg-[#251d16] transition-colors">
               <span>▼ [F] Return to The Great Granary</span>
             </div>
           </div>
