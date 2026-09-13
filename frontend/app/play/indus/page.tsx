@@ -263,6 +263,120 @@ function getBoatPatrolPosition(
   return { x, y, scale, facingLeft, isSailing, rockingAngle, bobbingY };
 }
 
+// Stage 2: Great Bath Potter Gate-to-Gate Animation
+// 1. Walks up left ramp, enters the FIRST GATE (left gate) and DISAPPEARS into the dark portal.
+// 2. Then, EMERGES from the SECOND GATE (right gate) and walks down the right ramp.
+// 3. Loops continuously with realistic timing.
+// NEVER walks on walls, lintels, rooftops, or across the front wall. Strictly grounded on brick ramps.
+function getGreatBathPotterState(elapsedTime: number) {
+  // First Gate (left) waypoints:
+  const p1Bottom = { x: 2.0, y: 101.5 };
+  const p1Lower = { x: 7.5, y: 96.5 };
+  const p1Mid = { x: 12.5, y: 91.5 };
+  const p1Upper = { x: 16.5, y: 87.0 };
+  const p1Door = { x: 19.8, y: 83.5 };
+  const p1Inside = { x: 20.2, y: 81.5 };
+
+  // Second Gate (right) waypoints:
+  const p2Inside = { x: 80.0, y: 81.5 };
+  const p2Door = { x: 80.5, y: 83.5 };
+  const p2Upper = { x: 83.5, y: 87.0 };
+  const p2Mid = { x: 87.5, y: 91.5 };
+  const p2Lower = { x: 92.5, y: 96.5 };
+  const p2Bottom = { x: 98.0, y: 101.5 };
+
+  const loopPeriod = 19.0;
+  const t = ((elapsedTime % loopPeriod) + loopPeriod) % loopPeriod;
+
+  let x = p1Bottom.x;
+  let y = p1Bottom.y;
+  let opacity = 1.0;
+  let facingLeft = false;
+
+  if (t < 6.5) {
+    // 1. Walking up left ramp towards the FIRST GATE
+    const segT = t / 6.5;
+    facingLeft = false;
+    opacity = 1.0;
+    if (segT < 0.20) {
+      const u = segT / 0.20;
+      x = p1Bottom.x + u * (p1Lower.x - p1Bottom.x);
+      y = p1Bottom.y + u * (p1Lower.y - p1Bottom.y);
+    } else if (segT < 0.50) {
+      const u = (segT - 0.20) / 0.30;
+      x = p1Lower.x + u * (p1Mid.x - p1Lower.x);
+      y = p1Lower.y + u * (p1Mid.y - p1Lower.y);
+    } else if (segT < 0.80) {
+      const u = (segT - 0.50) / 0.30;
+      x = p1Mid.x + u * (p1Upper.x - p1Mid.x);
+      y = p1Mid.y + u * (p1Upper.y - p1Mid.y);
+    } else {
+      const u = (segT - 0.80) / 0.20;
+      x = p1Upper.x + u * (p1Door.x - p1Upper.x);
+      y = p1Upper.y + u * (p1Door.y - p1Upper.y);
+    }
+  } else if (t < 8.0) {
+    // 2. ENTERS the first gate and DISAPPEARS into dark portal
+    const segT = (t - 6.5) / 1.5;
+    facingLeft = false;
+    x = p1Door.x + segT * (p1Inside.x - p1Door.x);
+    y = p1Door.y + segT * (p1Inside.y - p1Door.y);
+    opacity = Math.max(0, 1.0 - segT * 1.5);
+  } else if (t < 10.0) {
+    // 3. Inside citadel passage / completely disappeared
+    x = p1Inside.x;
+    y = p1Inside.y;
+    opacity = 0;
+    facingLeft = false;
+  } else if (t < 11.5) {
+    // 4. EMERGES from the SECOND GATE doorway onto right ramp
+    const segT = (t - 10.0) / 1.5;
+    facingLeft = false;
+    x = p2Inside.x + segT * (p2Door.x - p2Inside.x);
+    y = p2Inside.y + segT * (p2Door.y - p2Inside.y);
+    opacity = Math.min(1.0, segT * 1.5);
+  } else if (t < 17.5) {
+    // 5. Walking down right ramp away from the second gate
+    const segT = (t - 11.5) / 6.0;
+    facingLeft = false;
+    opacity = 1.0;
+    if (segT < 0.20) {
+      const u = segT / 0.20;
+      x = p2Door.x + u * (p2Upper.x - p2Door.x);
+      y = p2Door.y + u * (p2Upper.y - p2Door.y);
+    } else if (segT < 0.50) {
+      const u = (segT - 0.20) / 0.30;
+      x = p2Upper.x + u * (p2Mid.x - p2Upper.x);
+      y = p2Upper.y + u * (p2Mid.y - p2Upper.y);
+    } else if (segT < 0.80) {
+      const u = (segT - 0.50) / 0.30;
+      x = p2Mid.x + u * (p2Lower.x - p2Mid.x);
+      y = p2Mid.y + u * (p2Lower.y - p2Mid.y);
+    } else {
+      const u = (segT - 0.80) / 0.20;
+      x = p2Lower.x + u * (p2Bottom.x - p2Lower.x);
+      y = p2Lower.y + u * (p2Bottom.y - p2Lower.y);
+    }
+  } else if (t < 18.5) {
+    // 6. Fades out at the end of the road
+    const segT = (t - 17.5) / 1.0;
+    x = p2Bottom.x;
+    y = p2Bottom.y;
+    opacity = Math.max(0, 1.0 - segT);
+    facingLeft = false;
+  } else {
+    // 7. Brief pause offscreen before restarting from the first gate
+    x = p1Bottom.x;
+    y = p1Bottom.y;
+    opacity = 0;
+    facingLeft = false;
+  }
+
+  // Perspective scaling (reduced by 10% per user request: "reduce the size of person by 10 % it is too big")
+  const scale = (0.95 + (y / 100) * 0.38) * 0.90;
+  return { x, y, opacity, facingLeft, scale };
+}
+
 export default function IndusValleyGameScreen() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
@@ -354,6 +468,7 @@ export default function IndusValleyGameScreen() {
   const [rooftopFrame, setRooftopFrame] = useState<1 | 2>(1);
   const [boatRowFrame, setBoatRowFrame] = useState<1 | 2>(1);
   const [grainWorkerFrame, setGrainWorkerFrame] = useState<1 | 2 | 3>(1);
+  const [batherFrame, setBatherFrame] = useState<1 | 2>(1);
 
   // Scene Configuration
   const currentSceneConfig = INDUS_SCENE_CONFIGS[scene] || INDUS_SCENE_CONFIGS.lower_town_gate;
@@ -789,10 +904,20 @@ export default function IndusValleyGameScreen() {
     playerPos.y >= 78.0 &&
     playerPos.y <= 90.0;
 
-  // Stage 2 -> Return to The Great Granary (at bottom entrance)
+  // Stage 2 -> Return to The Great Granary (specifically at bottom central archway, never blocking the passage)
   const isNearGreatBathGranaryReturn =
     scene === "great_bath_citadel" &&
-    playerPos.y >= 80.0;
+    playerPos.y >= 88.0 &&
+    playerPos.x >= 42.0 &&
+    playerPos.x <= 58.0;
+
+  // Stage 2: Great Bath Potter walking along Image 2 red area route (from left end, through gateway/passage, to right end and exiting)
+  const greatBathPotterState = getGreatBathPotterState(carrierTime);
+  const isNearGreatBathPotter =
+    scene === "great_bath_citadel" &&
+    greatBathPotterState.opacity > 0.25 &&
+    Math.hypot(playerPos.x - greatBathPotterState.x, playerPos.y - greatBathPotterState.y) <= 8.5;
+
 
   // Person 1: Foreground Rooftop Lookout (Grounded on flat terrace floor, never touching rails)
   const roof1PointA = { x: 16.5, y: 56.5 };
@@ -832,6 +957,16 @@ export default function IndusValleyGameScreen() {
     { x: 88.5, y: 56.0 },
   ];
   const guy2State = getPathPosition(guy2Waypoints, 13.8, 3.0, carrierTime);
+
+  const isNearResidentialWaterCarrier1 =
+    scene === "residential_grid" &&
+    guy1State.opacity > 0.25 &&
+    Math.hypot(playerPos.x - guy1State.x, playerPos.y - guy1State.y) <= 10.0;
+
+  const isNearResidentialWaterCarrier2 =
+    scene === "residential_grid" &&
+    guy2State.opacity > 0.25 &&
+    Math.hypot(playerPos.x - guy2State.x, playerPos.y - guy2State.y) <= 10.0;
 
   // Stage 1.7: Animated Granary Porters (Lifting grain sacks, walking on solid land/ramps, keeping sacks, and walking back empty)
   const grainCarrierWalkFrame = ((carrierFrame - 1) % 3) + 1;
@@ -1261,15 +1396,21 @@ export default function IndusValleyGameScreen() {
     if (
       scene !== "residential_grid" &&
       scene !== "lower_town_gate" &&
-      scene !== "granary_avenue"
+      scene !== "granary_avenue" &&
+      scene !== "great_bath_citadel"
     )
       return;
 
-    // Cycle walk animation frames (1 -> 2 -> 3 -> 4 for carriers, 1 -> 2 for rooftop)
+    // Cycle walk animation frames (1 -> 2 -> 3 -> 4 for carriers and potter, 1 -> 2 for rooftop)
     const frameInterval = setInterval(() => {
       setCarrierFrame((prev) => (prev % 4) + 1);
       setRooftopFrame((prev) => (prev === 1 ? 2 : 1));
     }, 200);
+
+    // Cycle bather animation frames in Great Bath (1 -> 2)
+    const batherInterval = setInterval(() => {
+      setBatherFrame((prev) => (prev === 1 ? 2 : 1));
+    }, 1200);
 
     // Cycle rowing stroke animation frames for Egyptian sailor (1 -> 2)
     const boatInterval = setInterval(() => {
@@ -1304,6 +1445,7 @@ export default function IndusValleyGameScreen() {
 
     return () => {
       clearInterval(frameInterval);
+      clearInterval(batherInterval);
       clearInterval(boatInterval);
       clearInterval(talkInterval);
       clearInterval(grainWorkerInterval);
@@ -1560,6 +1702,15 @@ export default function IndusValleyGameScreen() {
           setShowHouseModal(true);
         } else if (isNearGreatBathBasin) {
           setShowDrainagePuzzleModal(true);
+
+        } else if (isNearGreatBathPotter) {
+          setActiveCitizenDialogue({
+            name: "Harappan Master Potter",
+            title: "Terracotta Artisan & Vessel Carrier • Mohenjo-daro",
+            icon: "",
+            text: "I transport wheel-thrown terracotta water jars, ritual lotas, and storage amphorae from the artisan kilns into the Great Bath complex. Standardized pottery ensures pure ritual storage for the sacred bathing ablutions!",
+          });
+          soundFx.playSelect();
         } else if (isNearSealBench) {
           setShowSealPuzzleModal(true);
         } else if (isNearPriestKing) {
@@ -1630,6 +1781,7 @@ export default function IndusValleyGameScreen() {
     showInteriorBathModal,
     showInteriorQuernModal,
     showGranaryDuctsModal,
+    showGranaryPlatformsModal,
     showCourtyardToiletModal,
     showCourtyardWellModal,
     showCourtyardStaircaseModal,
@@ -1643,7 +1795,10 @@ export default function IndusValleyGameScreen() {
     isNearForeignTraders,
     isNearEgyptianSailor,
     isNearRooftopCitizen,
+    isNearRooftopLookout,
     isNearRoadPedestrian,
+    isNearResidentialWaterCarrier1,
+    isNearResidentialWaterCarrier2,
     isNearCourtyardResident,
     isNearResidentialDrains,
     isNearResidentialHouse,
@@ -1681,6 +1836,7 @@ export default function IndusValleyGameScreen() {
     isNearGranaryArtisans,
     isNearGranaryScribe,
     isNearGreatBathBasin,
+    isNearGreatBathPotter,
     isNearGreatBathGranaryReturn,
     isNearSealBench,
     isNearPriestKing,
@@ -3390,11 +3546,66 @@ export default function IndusValleyGameScreen() {
           </div>
         )}
 
-        {/* Stage 2: Return to The Great Granary */}
+        {/* Stage 2: Animated Potter entering Image 2 gate door and exiting Image 3 courtyard door (increased size, walking on ground) */}
         {scene === "great_bath_citadel" && (
           <div
+            className="absolute pointer-events-auto cursor-pointer select-none group transition-opacity duration-300"
+            style={{
+              left: `${greatBathPotterState.x}%`,
+              top: `${greatBathPotterState.y}%`,
+              opacity: greatBathPotterState.opacity,
+              transform: `scale(${greatBathPotterState.scale})`,
+              transformOrigin: "bottom center",
+              zIndex: Math.floor(greatBathPotterState.y) + 5,
+            }}
+            onClick={() => {
+              setActiveCitizenDialogue({
+                name: "Harappan Master Potter",
+                title: "Terracotta Artisan & Vessel Carrier • Mohenjo-daro",
+                icon: "",
+                text: "I transport wheel-thrown terracotta water jars, ritual lotas, and storage amphorae from the artisan kilns through the citadel gate into the Great Bath complex. Standardized pottery ensures pure ritual storage for the sacred bathing ablutions!",
+              });
+              soundFx.playSelect();
+            }}
+          >
+            <div
+              className={`relative flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform duration-200 ${
+                greatBathPotterState.facingLeft ? "-scale-x-100" : "scale-x-100"
+              }`}
+            >
+              <div
+                className={`absolute bottom-full mb-1 flex flex-col items-center pointer-events-none ${
+                  greatBathPotterState.facingLeft ? "-scale-x-100" : ""
+                }`}
+              >
+                {isNearGreatBathPotter && (
+                  <div className="mb-1 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded text-[11px] font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap pointer-events-auto">
+                    <span className="text-[#d8a86a] font-bold">[G]</span>
+                    <span>Speak with Potter</span>
+                  </div>
+                )}
+                <span
+                  className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/90 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow whitespace-nowrap transition-opacity duration-200 ${
+                    isNearGreatBathPotter ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  Master Potter
+                </span>
+              </div>
+              <img
+                src={`/sprite-pedestrian-walk-${carrierFrame}.png?v=2`}
+                alt="Harappan Master Potter"
+                className="h-[86px] sm:h-[94px] md:h-[100px] w-auto object-contain block select-none drop-shadow-[0_5px_12px_rgba(0,0,0,0.45)]"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Stage 2: Return to The Great Granary */}
+        {scene === "great_bath_citadel" && isNearGreatBathGranaryReturn && (
+          <div
             className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
-            style={{ left: "50%", top: "84%" }}
+            style={{ left: "50%", top: "92%" }}
             onClick={() => triggerTransition("granary_avenue", { x: 72.0, y: 52.0 })}
           >
             <div className="bg-[#1b1510]/95 border-2 border-[#d8a86a] text-[#f7eedf] px-3 py-1 rounded-lg text-xs font-serif shadow-md whitespace-nowrap animate-bounce group-hover:bg-[#251d16] transition-colors">
