@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { playNarration, stopNarration } from "../../../services/narratorService";
-import { playCharacterDialogue, stopCharacterDialogue, stopAllCharacterVoice } from "../../../services/characterVoiceService";
+import { playCharacterDialogue, stopAllCharacterVoice } from "../../../services/characterVoiceService";
 import Link from "next/link";
 import {
   VijayanagaraStage,
@@ -187,6 +187,14 @@ export default function VijayanagaraGameScreen() {
       }, 0);
       return () => clearTimeout(timer);
     }
+  }, []);
+
+  // --- GLOBAL UNMOUNT AUDIO CLEANUP ---
+  useEffect(() => {
+    return () => {
+      stopNarration();
+      stopAllCharacterVoice();
+    };
   }, []);
 
   // Intro narration for Vijayanagara Empire (Stage 1: 1336 AD)
@@ -376,6 +384,16 @@ export default function VijayanagaraGameScreen() {
   // --- RESET HANDLER ---
   const handleResetCampaign = () => {
     if (window.confirm("Are you sure you want to restart your Vijayanagara Empire journey from Anegundi?")) {
+      // Audio Cleanup
+      stopNarration();
+      stopAllCharacterVoice();
+
+      // Reset Narration Refs to allow them to play again
+      hasPlayedIntroNarrationRef.current = false;
+      hasPlayedStage2NarrationRef.current = false;
+      hasPlayedStage3NarrationRef.current = false;
+      hasPlayedStage4NarrationRef.current = false;
+
       localStorage.removeItem(VIJAYANAGARA_STORAGE_KEY);
       setStage(INITIAL_VIJAYANAGARA_STATE.stage);
       setScene(INITIAL_VIJAYANAGARA_STATE.scene);

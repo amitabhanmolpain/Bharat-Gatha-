@@ -116,6 +116,7 @@ export default function VijayanagaraHUD({
             onClick={onResetCampaign}
             disabled={isTransitioning}
             tabIndex={isTransitioning ? -1 : 0}
+            aria-label="Reset Vijayanagara Campaign Progress"
             className="flex items-center justify-center bg-[#1a1714]/90 hover:bg-[#381a17] border-2 border-[#5a4d3f] hover:border-[#c86446] text-[#a89985] hover:text-[#fca5a5] p-2.5 rounded-xl shadow-[3px_3px_0_0_rgba(0,0,0,0.8)] active:translate-y-0.5 transition-all cursor-pointer text-xs disabled:pointer-events-none disabled:opacity-40 group"
             title="Reset Vijayanagara Campaign Progress"
           >

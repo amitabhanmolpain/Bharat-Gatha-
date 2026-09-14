@@ -93,7 +93,7 @@ const ICON_MAP: Record<GameIconType, React.ComponentType<LucideProps>> = {
   temple: Landmark,
   music: Music,
   archery: Shield,
-  courtyard: RotateCcw,
+  courtyard: Landmark,
   sunset: Sunset,
   keeper: Layers,
   search: Search,
