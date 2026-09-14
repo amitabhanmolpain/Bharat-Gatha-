@@ -1586,15 +1586,16 @@ function IndusValleyGameComponent() {
   // Stage 4: Dholavira Outer Fort Gateway -> Inner Water Harvesting City
   const isNearDholaviraCityGate =
     scene === "dholavira_reservoirs" &&
-    playerPos.x >= 20.0 &&
-    playerPos.x <= 35.0 &&
-    playerPos.y >= 35.0 &&
-    playerPos.y <= 55.0;
+    playerPos.x >= 18.0 &&
+    playerPos.x <= 40.0 &&
+    playerPos.y >= 30.0 &&
+    playerPos.y <= 62.0;
 
   // Stage 4: Dholavira Inner Water Harvesting City -> Exit to Outer Fort Ramparts
   const isNearDholaviraInnerExit =
     scene === "dholavira_city_interior" &&
-    playerPos.y >= 84.0;
+    ((playerPos.x >= 18.0 && playerPos.x <= 40.0 && playerPos.y >= 30.0 && playerPos.y <= 62.0) ||
+      playerPos.y >= 80.0);
 
   // Stage 3 -> Carnelian Bead Quarter
   const isNearBeadQuarterEntrance =
@@ -4600,7 +4601,27 @@ function IndusValleyGameComponent() {
           </div>
         )}
 
-        {/* Dholavira Inner City Exit -> Back to Outer Fort Ramparts & Docks */}
+        {/* Dholavira Inner City Gateway Exit: Return to Outer Fort Ramparts & Docks */}
+        {scene === "dholavira_city_interior" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "28%", top: "44%" }}
+            onClick={() => triggerTransition("dholavira_reservoirs", { x: 27.0, y: 46.0 }, 4, 600)}
+          >
+            {isNearDholaviraInnerExit ? (
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">F</div>
+                <span>Return to Fort Ramparts & Docks</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>Exit Gateway (To Fort Ramparts)</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Dholavira Inner City Bottom Exit */}
         {scene === "dholavira_city_interior" && (
           <div
             className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
