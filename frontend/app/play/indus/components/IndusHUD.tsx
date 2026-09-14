@@ -78,6 +78,8 @@ export default function IndusHUD({
         return "INDUS VALLEY - DHOLAVIRA WATER RESERVOIRS (c. 2500 BCE)";
       case "dholavira_city_interior":
         return "INDUS VALLEY - DHOLAVIRA MIDDLE TOWN & BEAD WORKSHOP (c. 1900 BCE)";
+      case "dholavira_stadium":
+        return "INDUS VALLEY - DHOLAVIRA STADIUM & SIGNBOARD (c. 1900 BCE)";
       case "closing_reflection":
         return "INDUS VALLEY - SINDHU RIVER SUNSET (c. 2500 BCE)";
       default:
@@ -115,6 +117,8 @@ export default function IndusHUD({
         return "Dholavira Fort";
       case "dholavira_city_interior":
         return "Bead Workshop";
+      case "dholavira_stadium":
+        return "Dholavira Stadium";
       default:
         return "Mohenjo-daro";
     }

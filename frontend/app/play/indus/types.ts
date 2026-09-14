@@ -24,6 +24,7 @@ export type IndusSceneType =
   | "citadel_interior"
   | "dholavira_reservoirs"
   | "dholavira_city_interior"
+  | "dholavira_stadium"
   | "closing_reflection";
 
 export type IndusJournalCategory =

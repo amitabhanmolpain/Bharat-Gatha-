@@ -1597,6 +1597,23 @@ function IndusValleyGameComponent() {
     ((playerPos.x >= 18.0 && playerPos.x <= 40.0 && playerPos.y >= 30.0 && playerPos.y <= 62.0) ||
       playerPos.y >= 80.0);
 
+  // Stage 4: Dholavira Stadium & Signboard Passage
+  const isNearDholaviraStadiumPassage =
+    scene === "dholavira_city_interior" &&
+    playerPos.x >= 75.0 &&
+    playerPos.y >= 35.0 &&
+    playerPos.y <= 65.0;
+
+  const isNearDholaviraSignboard =
+    scene === "dholavira_stadium" &&
+    playerPos.x <= 35.0 &&
+    playerPos.y >= 50.0 &&
+    playerPos.y <= 85.0;
+
+  const isNearDholaviraStadiumExit =
+    scene === "dholavira_stadium" &&
+    playerPos.y >= 84.0;
+
   // Stage 3 -> Carnelian Bead Quarter
   const isNearBeadQuarterEntrance =
     scene === "steatite_seal_workshop" &&
@@ -1875,6 +1892,12 @@ function IndusValleyGameComponent() {
         } else if (isNearDholaviraInnerExit) {
           triggerTransition("dholavira_reservoirs", { x: 27.0, y: 46.0 }, 4, 600);
           return;
+        } else if (isNearDholaviraStadiumPassage) {
+          triggerTransition("dholavira_stadium", { x: 50.0, y: 78.0 }, 4, 600);
+          return;
+        } else if (isNearDholaviraStadiumExit) {
+          triggerTransition("dholavira_city_interior", { x: 75.0, y: 50.0 }, 4, 600);
+          return;
         }
       }
 
@@ -1882,6 +1905,12 @@ function IndusValleyGameComponent() {
       if (e.key === "f" || e.key === "F") {
         if (isNearHarappaExitArchway) {
           triggerTransition("caravan_road", { x: 80.0, y: 32.0 }, undefined, 600);
+          return;
+        } else if (isNearDholaviraStadiumPassage) {
+          triggerTransition("dholavira_stadium", { x: 50.0, y: 78.0 }, 4, 600);
+          return;
+        } else if (isNearDholaviraStadiumExit) {
+          triggerTransition("dholavira_city_interior", { x: 75.0, y: 50.0 }, 4, 600);
           return;
         } else if (isNearDholaviraCityGate) {
           triggerTransition("dholavira_city_interior", { x: 50.0, y: 80.0 }, 4, 600);
@@ -2171,6 +2200,14 @@ function IndusValleyGameComponent() {
           setShowSealPuzzleModal(true);
         } else if (isNearPriestKingAltar) {
           setShowPriestKingDialogue(true);
+        } else if (isNearDholaviraSignboard) {
+          setActiveCitizenDialogue({
+            name: "The Dholavira Signboard (10 Indus Symbols)",
+            title: "World's Oldest Municipal Signboard • Dholavira Citadel (c. 1900 BCE)",
+            icon: "",
+            text: "You stand before the legendary Dholavira Signboard! Ten large white gypsum steatite Indus script symbols were originally mounted into a wooden board above the citadel gateway, serving as ancient public signage for all citizens entering the ceremonial grounds.",
+          });
+          soundFx.playSelect();
         }
       };
     };
@@ -4636,6 +4673,74 @@ function IndusValleyGameComponent() {
             ) : (
               <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
                 <span>Exit to Fort Ramparts</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Dholavira Middle Town: Passage to Dholavira Ceremonial Stadium & Signboard */}
+        {scene === "dholavira_city_interior" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "88%", top: "50%" }}
+            onClick={() => triggerTransition("dholavira_stadium", { x: 50.0, y: 78.0 }, 4, 600)}
+          >
+            {isNearDholaviraStadiumPassage ? (
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">F</div>
+                <span>🏟️ Enter Ceremonial Stadium & Signboard</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>🏟️ Passage to Stadium & Signboard</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Dholavira Stadium: Famous 10-Symbol Indus Signboard Hotspot */}
+        {scene === "dholavira_stadium" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "18%", top: "65%" }}
+            onClick={() => {
+              setActiveCitizenDialogue({
+                name: "The Dholavira Signboard (10 Indus Symbols)",
+                title: "World's Oldest Municipal Signboard • Dholavira Citadel (c. 1900 BCE)",
+                icon: "",
+                text: "You stand before the legendary Dholavira Signboard! Ten large white gypsum steatite Indus script symbols were originally mounted into a wooden board above the citadel gateway, serving as ancient public signage for all citizens entering the ceremonial grounds.",
+              });
+              soundFx.playSelect();
+            }}
+          >
+            {isNearDholaviraSignboard ? (
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
+                <span>📜 Examine 10-Symbol Dholavira Signboard</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>📜 Dholavira Inscription Signboard</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Dholavira Stadium Exit -> Return to Middle Town Craft Quarter */}
+        {scene === "dholavira_stadium" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "50%", top: "92%" }}
+            onClick={() => triggerTransition("dholavira_city_interior", { x: 75.0, y: 50.0 }, 4, 600)}
+          >
+            {isNearDholaviraStadiumExit ? (
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">F</div>
+                <span>Return to Middle Town Craft Quarter</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>Exit Stadium (To Craft Quarter)</span>
               </div>
             )}
           </div>

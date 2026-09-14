@@ -204,6 +204,17 @@ export const INDUS_SCENE_CONFIGS: Record<IndusSceneType, IndusSceneMeta> = {
     minY: 20.0,
     maxY: 94.0,
   },
+  dholavira_stadium: {
+    title: "Dholavira • Ceremonial Stadium & Ancient Signboard",
+    era: "Bronze Age • c. 1900 BCE",
+    subtitle: "Stepped Spectator Terraces, 10-Symbol Signboard & Fading Dusk Sky",
+    backgroundImage: "/bg-indus-dholavira-stadium.jpg",
+    defaultObjective: "Explore Dholavira's vast ceremonial stadium, inspect the famous ten-symbol Indus Signboard, and examine the stone seal artifacts.",
+    minX: 4.0,
+    maxX: 96.0,
+    minY: 20.0,
+    maxY: 94.0,
+  },
   closing_reflection: {
     title: "Sunset over the Sindhu River",
     era: "Bronze Age • c. 2500 BCE",
