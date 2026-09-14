@@ -47,8 +47,8 @@ export const INDUS_SCENE_CONFIGS: Record<IndusSceneType, IndusSceneMeta> = {
     defaultObjective: "Explore the cardinal grid avenue, inspect standardized brick houses, and examine the covered street drainage network.",
     minX: 20.0,
     maxX: 88.0,
-    minY: 36.0,
-    maxY: 86.0,
+    minY: 20.0,
+    maxY: 96.0,
   },
   house_courtyard: {
     title: "Harappan Domestic Courtyard",

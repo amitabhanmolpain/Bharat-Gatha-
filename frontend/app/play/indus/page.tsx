@@ -939,11 +939,17 @@ function IndusValleyGameComponent() {
     playerPos.x >= 68.0 &&
     playerPos.y <= 44.0;
 
-  // Stage 1.5: Residential Grid -> Return to Ghat Gate (at bottom of avenue)
+  // Stage 1.5: Residential Grid -> Return to Ghat Gate or Toy Market Street (at bottom of avenue)
   const isNearResidentialGhatReturn =
     scene === "residential_grid" &&
-    playerPos.x >= 54.0 &&
     playerPos.y >= 74.0;
+
+  // Stage 3: Harappan Cemetery Archway Gate (At top of central avenue)
+  const isNearCemeteryGate =
+    scene === "residential_grid" &&
+    playerPos.x >= 44.0 &&
+    playerPos.x <= 72.0 &&
+    playerPos.y <= 34.0;
 
   // Stage 1.7: The Great Granary -> Return to Residential Grid (at bottom-left x: 22%, y: 82%)
   const isNearGranaryGridReturn =
@@ -1773,7 +1779,11 @@ function IndusValleyGameComponent() {
           triggerTransition("house_courtyard", { x: 51.0, y: 28.0 });
           return;
         } else if (isNearResidentialGhatReturn) {
-          triggerTransition("lower_town_gate", { x: 71.5, y: 41.0 });
+          if (stage >= 3) {
+            triggerTransition("steatite_seal_workshop", { x: 60.0, y: 55.0 }, 3, 600);
+          } else {
+            triggerTransition("lower_town_gate", { x: 71.5, y: 41.0 });
+          }
           return;
         } else if (isNearGranaryGridReturn) {
           triggerTransition("residential_grid", { x: 76.0, y: 38.0 });
@@ -1874,6 +1884,14 @@ function IndusValleyGameComponent() {
             title: "Craft Guild • Mohenjo-daro Artisan Quarter",
             icon: "",
             text: "We are preparing goods for the maritime trade caravans! The weaver spins fine dyed cotton textiles using standardized terracotta whorls, while the master potter crafts wheel-thrown storage amphorae and glazed beads. Together, our artisan quarter supplies exports from Dilmun to ancient Mesopotamia!",
+          });
+          soundFx.playSelect();
+        } else if (isNearCemeteryGate) {
+          setActiveCitizenDialogue({
+            name: "Harappan Cemetery Gate",
+            title: "Ancient Sacred Burial Grounds • Harappa",
+            icon: "",
+            text: "You stand before the ancient Harappan cemetery archway! Beyond this gateway lie the earthen burial mounds, lined graves, and terracotta funerary urns where ancient Harappan families laid their ancestors to rest with honored pottery offerings.",
           });
           soundFx.playSelect();
         } else if (isNearTalkingCitizens) {
@@ -2786,20 +2804,53 @@ function IndusValleyGameComponent() {
           </div>
         )}
 
-        {/* Stage 1.5: Residential Grid -> Return to Ghat Gate (At bottom of avenue) */}
+        {/* Stage 1.5 & Stage 3: Residential Grid -> Return to Ghat Gate or Toy Market Street */}
         {scene === "residential_grid" && (
           <div
             className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
-            style={{ left: "68%", top: "84%" }}
-            onClick={() => triggerTransition("lower_town_gate", { x: 71.5, y: 41.0 })}
+            style={{ left: "58%", top: "90%" }}
+            onClick={() => {
+              if (stage >= 3) {
+                triggerTransition("steatite_seal_workshop", { x: 60.0, y: 55.0 }, 3, 600);
+              } else {
+                triggerTransition("lower_town_gate", { x: 71.5, y: 41.0 });
+              }
+            }}
           >
             {isNearResidentialGhatReturn ? (
               <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
-                <span>▼ [F] To River Ghat</span>
+                <span>▼ [F] {stage >= 3 ? "To Toy Market Street" : "To River Ghat"}</span>
               </div>
             ) : (
               <div className="bg-[#1b1510]/80 border border-[#d8a86a]/60 text-[#f7eedf]/80 px-2 py-0.5 rounded text-[11px] font-serif whitespace-nowrap">
-                <span>To River Ghat</span>
+                <span>{stage >= 3 ? "To Toy Market Street" : "To River Ghat"}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Stage 3: Harappan Cemetery Archway Gate */}
+        {scene === "residential_grid" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "58%", top: "24%" }}
+            onClick={() =>
+              setActiveCitizenDialogue({
+                name: "Harappan Cemetery Gate",
+                title: "Ancient Sacred Burial Grounds • Harappa",
+                icon: "",
+                text: "You stand before the ancient Harappan cemetery archway! Beyond this gateway lie the earthen burial mounds, lined graves, and terracotta funerary urns where ancient Harappan families laid their ancestors to rest with honored pottery offerings.",
+              })
+            }
+          >
+            {isNearCemeteryGate ? (
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
+                <span>🪦 Inspect Cemetery Gateway</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>🪦 Cemetery Gateway</span>
               </div>
             )}
           </div>
