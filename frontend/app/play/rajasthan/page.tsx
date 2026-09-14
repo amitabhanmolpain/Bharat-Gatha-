@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Timer, AlertTriangle, RotateCcw } from "lucide-react";
 import DialoguePanel from "../../components/DialoguePanel";
 import ChauparGame from "./components/ChauparGame";
+import VijayStambhCarvingSystem from "./components/VijayStambhCarvingSystem";
+import BadalMahalLampGame from "./components/BadalMahalLampGame";
 import { playCharacterDialogue, stopCharacterDialogue } from "../../../services/characterVoiceService";
 import { playNarration, stopNarration } from "../../../services/narratorService";
 import { soundFx } from "../../../services/soundService";
@@ -139,9 +141,11 @@ export default function RajasthanGameScreen() {
   // --- RESTART CONFIRMATION STATE ---
   const [showRestartConfirmModal, setShowRestartConfirmModal] = useState(false);
 
-  // --- BUZURG CHACHA DIALOGUE TRACKING (PLAYS INTRO EXACTLY ONCE) ---
+  // --- BUZURG CHACHA & VIJAY STAMBH DIALOGUE TRACKING ---
   const [hasPlayedChachaIntro, setHasPlayedChachaIntro] = useState(false);
   const hasPlayedChachaIntroRef = useRef(false);
+  const hasPlayedVijayStambhIntroRef = useRef(false);
+  const hasPlayedBadalMahalIntroRef = useRef(false);
 
   const triggerBuzurgChachaDialogue = (isAutoIntro: boolean = false) => {
     if (!hasPlayedChachaIntroRef.current) {
@@ -325,6 +329,36 @@ export default function RajasthanGameScreen() {
         chachaTimerRef.current = null;
       }
     };
+  }, [scene]);
+
+  // Auto-play Jolly Bhai canonical intro dialogue when entering vijay_stambh_interior (exactly once)
+  useEffect(() => {
+    if (scene === "vijay_stambh_interior" && !hasPlayedVijayStambhIntroRef.current) {
+      hasPlayedVijayStambhIntroRef.current = true;
+      setTimeout(() => {
+        setJollySpeechText("Mere aaka, some secrets are hiding in these stones… use the Shilpa Drishti and see what the eyes cannot.");
+        setJollyStatusBadge("glowing");
+        setJollyOptions([
+          { id: 99, text: "I will examine the stones with Shilpa Drishti." }
+        ]);
+        setShowJollyDialogue(true);
+      }, 400);
+    }
+  }, [scene]);
+
+  // Auto-play Jolly Bhai intro dialogue when entering badal_mahal_interior (exactly once)
+  useEffect(() => {
+    if (scene === "badal_mahal_interior" && !hasPlayedBadalMahalIntroRef.current) {
+      hasPlayedBadalMahalIntroRef.current = true;
+      setTimeout(() => {
+        setJollySpeechText("Mere aaka, these royal lamps have gone dark. Light all three and bring Badal Mahal back to life!");
+        setJollyStatusBadge("glowing");
+        setJollyOptions([
+          { id: 99, text: "I will light the 3 royal lamps!" }
+        ]);
+        setShowJollyDialogue(true);
+      }, 400);
+    }
   }, [scene]);
 
   const [showChauparGame, setShowChauparGame] = useState(false);
@@ -1381,7 +1415,7 @@ export default function RajasthanGameScreen() {
           state.setIsTransitioning(true);
           setTimeout(() => {
             state.setScene("vijay_stambh_interior");
-            state.setPlayerPos({ x: 50.0, y: 88.0 });
+            state.setPlayerPos({ x: 50.0, y: 70.0 });
             state.setIsTransitioning(false);
           }, 400);
         } else if (state.isNearJauharPath) {
@@ -1856,6 +1890,21 @@ export default function RajasthanGameScreen() {
               setTimeout(() => {
                 state.setScene("jauhar_passage");
                 state.setPlayerPos({ x: 20.0, y: 80.0 });
+                state.setIsTransitioning(false);
+              }, 400);
+            }
+            return { x: nextX, y: nextY };
+          }
+          // --- STAGE 1: VIJAY STAMBH INTERIOR ---
+          else if (state.scene === "vijay_stambh_interior") {
+            const minX = 12.0, maxX = 88.0, minY = 54.0, maxY = 86.0;
+            const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
+            const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
+            if (nextY >= 85.0 && nextX >= 40.0 && nextX <= 60.0) {
+              state.setIsTransitioning(true);
+              setTimeout(() => {
+                state.setScene("vijay_stambh");
+                state.setPlayerPos({ x: 40.0, y: 76.0 });
                 state.setIsTransitioning(false);
               }, 400);
             }
@@ -2359,7 +2408,7 @@ export default function RajasthanGameScreen() {
       case "vijay_stambh":
         return "Gaze upon the majestic Vijay Stambh. Press E to go inside, or walk to the right path towards the Passage of Broken Walls.";
       case "vijay_stambh_interior":
-        return "Explore the carved sandstone chamber of Vijay Stambh. Press F to exit outside to the plaza.";
+        return "Explore the carved sandstone chamber of Vijay Stambh. Walk near architectural carvings and press E to inspect with Shilpa Drishti (शिल्प दृष्टि).";
       case "jauhar_passage":
         return "Traverse the Passage of Broken Walls. Move straight ahead towards the archway to enter Jauhar Kund.";
       case "jauhar_kund":
@@ -2377,7 +2426,7 @@ export default function RajasthanGameScreen() {
       case "badal_mahal_courtyard":
         return "Enter Badal Mahal Courtyard and press E to go inside the Palace of Clouds.";
       case "badal_mahal_interior":
-        return "Explore the regal chambers of Badal Mahal. Ascend the interior stairs to the top terrace.";
+        return "Explore Badal Mahal. Walk near unlit wall lamps and press [E] to light all 3 royal diyas!";
       case "badal_mahal_terrace":
         return "Stand atop Badal Mahal terrace. Walk to the Royal Elephant and press E to travel to Kuldhara Ghost Village (Stage 3).";
       case "kuldhara_gate":
@@ -2927,11 +2976,55 @@ export default function RajasthanGameScreen() {
         </div>
       )}
 
-      {isNearVijayStambhDoor && !showVijayStambhModal && (
-        <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce cursor-pointer pointer-events-auto" onClick={() => setShowVijayStambhModal(true)}>
+      {isNearVijayStambhDoor && (
+        <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce cursor-pointer pointer-events-auto" onClick={() => { setScene("vijay_stambh_interior"); setPlayerPos({ x: 50.0, y: 78.0 }); }}>
           <span className="bg-amber-400 border border-black rounded px-1.5 text-[11px]">E</span>
           Enter Vijay Stambh (Tower of Victory)
         </div>
+      )}
+
+      {/* --- VIJAY STAMBH: THE SCULPTOR'S TESTAMENT SINGLE-SCREEN PUZZLE SYSTEM --- */}
+      {scene === "vijay_stambh_interior" && (
+        <VijayStambhCarvingSystem
+          playerPos={playerPos}
+          onTriggerJollySpeech={(text, badge = "normal") => {
+            setJollySpeechText(text);
+            setJollyStatusBadge(badge);
+            setJollyOptions([
+              { id: 99, text: "Understood, Jolly Bhai!" }
+            ]);
+            setShowJollyDialogue(true);
+          }}
+          onPuzzleSolved={() => {
+            // Unlocks progression or campaign completion
+          }}
+          onExitInterior={() => {
+            setIsTransitioning(true);
+            setTimeout(() => {
+              setScene("vijay_stambh");
+              setPlayerPos({ x: 40.0, y: 76.0 });
+              setIsTransitioning(false);
+            }, 400);
+          }}
+        />
+      )}
+
+      {/* --- BADAL MAHAL: LIGHT THE 3 LAMPS MINI-GAME --- */}
+      {scene === "badal_mahal_interior" && (
+        <BadalMahalLampGame
+          playerPos={playerPos}
+          onTriggerJollySpeech={(text, badge = "normal") => {
+            setJollySpeechText(text);
+            setJollyStatusBadge(badge);
+            setJollyOptions([
+              { id: 99, text: "Understood, Jolly Bhai!" }
+            ]);
+            setShowJollyDialogue(true);
+          }}
+          onGameComplete={() => {
+            // Completed 3 lamps
+          }}
+        />
       )}
 
       {isNearCamel && (
