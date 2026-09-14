@@ -973,11 +973,11 @@ function IndusValleyGameComponent() {
     playerPos.y >= 45.0 &&
     playerPos.y <= 68.0;
 
-  // Stage 3: Cemetery R37 Excavated Rectangular Grave Hotspot
+  // Stage 3: Cemetery R37 Excavated Rectangular Grave Hotspot (Open pit marked with black line: x: ~22%, y: ~56%)
   const isNearExcavatedGrave =
     scene === "harappa_cemetery" &&
-    playerPos.x >= 48.0 &&
-    playerPos.x <= 64.0 &&
+    playerPos.x >= 12.0 &&
+    playerPos.x <= 34.0 &&
     playerPos.y >= 45.0 &&
     playerPos.y <= 68.0;
 
@@ -2993,11 +2993,11 @@ function IndusValleyGameComponent() {
           </div>
         )}
 
-        {/* Hotspot 2: Deceased Harappan Person & Excavated Grave R37 */}
+        {/* Hotspot 2: Deceased Harappan Body in the Open Grave Pit (Marked with black scribbled line: x: 22.8%, y: 55.8%) */}
         {scene === "harappa_cemetery" && (
           <div
             className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-15"
-            style={{ left: "51.8%", top: "78.2%" }}
+            style={{ left: "22.8%", top: "55.8%" }}
             onClick={() =>
               setActiveCitizenDialogue({
                 name: "Excavated Rectangular Grave R37",
@@ -3016,16 +3016,16 @@ function IndusValleyGameComponent() {
             <img
               src="/sprite-indus-deceased.png"
               alt="Deceased Harappan in Grave"
-              className="h-[68px] sm:h-[80px] md:h-[92px] w-auto object-contain block select-none rounded opacity-95 pointer-events-auto"
+              className="h-[45px] sm:h-[52px] md:h-[60px] w-auto object-contain block select-none opacity-90 mix-blend-multiply pointer-events-auto"
             />
           </div>
         )}
 
-        {/* Hotspot 3: Animated Crying Harappan Mourner sitting on ground by the grave */}
+        {/* Hotspot 3: Animated Crying Harappan Mourner sitting on ground beside the grave (x: 14.5%, y: 56.5%) */}
         {scene === "harappa_cemetery" && (
           <div
             className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-16"
-            style={{ left: "44.0%", top: "79.0%" }}
+            style={{ left: "14.5%", top: "56.5%" }}
             onClick={() =>
               setActiveCitizenDialogue({
                 name: "Grieving Harappan Family Member",
@@ -3035,7 +3035,7 @@ function IndusValleyGameComponent() {
               })
             }
           >
-            {isNearSolemnElder && (
+            {isNearExcavatedGrave && (
               <div className="mb-1 bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
                 <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
                 <span>Console Crying Mourner</span>
@@ -3044,7 +3044,7 @@ function IndusValleyGameComponent() {
             <img
               src={`/sprite-indus-mourner-${mournerFrame}.png`}
               alt="Animated Crying Harappan Mourner"
-              className="h-[74px] sm:h-[86px] md:h-[96px] w-auto object-contain block select-none transition-transform duration-200 group-hover:scale-105"
+              className="h-[60px] sm:h-[68px] md:h-[78px] w-auto object-contain block select-none transition-transform duration-200 group-hover:scale-105 mix-blend-multiply"
             />
           </div>
         )}
