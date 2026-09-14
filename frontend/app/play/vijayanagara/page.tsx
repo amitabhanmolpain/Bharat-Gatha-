@@ -2637,7 +2637,10 @@ export default function VijayanagaraGameScreen() {
                   }}
                   className="bg-gradient-to-r from-[#8b6528] to-[#d4a359] hover:from-[#a07430] hover:to-[#e5b56a] text-[#141210] font-serif font-bold px-6 py-2.5 rounded-xl shadow-md transition-all cursor-pointer text-xs uppercase tracking-wider"
                 >
-                  {isStage1Complete ? "Replay Chowka Bara Match 🎲" : "Play Chowka Bara Match 🎲"}
+                  <div className="flex items-center gap-1.5 justify-center">
+                    {isStage1Complete ? "Replay Chowka Bara Match" : "Play Chowka Bara Match"}
+                    <GameIcon name="dice" size={14} className="text-[#d4a359]" />
+                  </div>
                 </button>
               </div>
             </div>

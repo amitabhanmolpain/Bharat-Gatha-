@@ -6,6 +6,7 @@ import {
   BookOpen,
   Landmark,
   RotateCcw,
+  RotateCw,
   Keyboard,
   Mountain,
   Sailboat,
@@ -25,6 +26,13 @@ import {
   Play,
   Square,
   X,
+  Crown,
+  Dice5,
+  Tent,
+  Swords,
+  CircleDot,
+  Target,
+  Bookmark,
   LucideProps,
 } from "lucide-react";
 
@@ -53,7 +61,15 @@ export type GameIconType =
   | "volume_x"
   | "play"
   | "stop"
-  | "close";
+  | "close"
+  | "crown"
+  | "dice"
+  | "tent"
+  | "swords"
+  | "wheel"
+  | "target"
+  | "bookmark"
+  | "rotate_cw";
 
 interface GameIconProps extends Omit<LucideProps, "ref"> {
   name: GameIconType;
@@ -87,6 +103,14 @@ const ICON_MAP: Record<GameIconType, React.ComponentType<LucideProps>> = {
   play: Play,
   stop: Square,
   close: X,
+  crown: Crown,
+  dice: Dice5,
+  tent: Tent,
+  swords: Swords,
+  wheel: CircleDot,
+  target: Target,
+  bookmark: Bookmark,
+  rotate_cw: RotateCw,
 };
 
 export default function GameIcon({

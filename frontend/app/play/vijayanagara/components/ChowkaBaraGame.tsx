@@ -493,7 +493,10 @@ export default function ChowkaBaraGame({
                 : "bg-[#222e20] text-[#71856c] border border-[#31422f] cursor-not-allowed"
             }`}
           >
-            {isRolling ? "Casting Shells..." : currentTurn === "player" ? "Cast Cowrie Shells 🎲" : "Sage's Turn..."}
+            <div className="flex items-center gap-1.5 justify-center">
+              {isRolling ? "Casting Shells..." : currentTurn === "player" ? "Cast Cowrie Shells" : "Sage's Turn..."}
+              {!isRolling && currentTurn === "player" && <GameIcon name="dice" size={14} />}
+            </div>
           </button>
         ) : (
           <div className="flex gap-2">
