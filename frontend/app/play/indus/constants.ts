@@ -185,9 +185,9 @@ export const INDUS_SCENE_CONFIGS: Record<IndusSceneType, IndusSceneMeta> = {
   dholavira_reservoirs: {
     title: "Dholavira • Water Reservoirs & Dressed-Stone Fort",
     era: "Bronze Age • c. 2500 BCE",
-    subtitle: "Step-Well Reservoirs, Stone Sluices & River Docks",
+    subtitle: "Step-Well Reservoirs, Broad Stone Staircase & Sunset River Docks",
     backgroundImage: "/bg-indus-dholavira.jpg",
-    defaultObjective: "Explore the ancient water reservoirs of Dholavira, inspect the stone masonry sluice gates, and examine the Harappan lapidary docks.",
+    defaultObjective: "Explore the ancient water reservoirs of Dholavira at golden sunset, inspect the monumental stone staircase, and examine the Harappan lapidary docks.",
     minX: 4.0,
     maxX: 96.0,
     minY: 25.0,
