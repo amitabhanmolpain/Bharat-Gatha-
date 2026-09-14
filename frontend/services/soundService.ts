@@ -386,6 +386,100 @@ class SoundEffectsService {
       });
     } catch (e) {}
   }
+
+  /**
+   * Physically Modeled Vittala Temple Stone Pillar Sound
+   * Since licensed original recordings are unavailable, this uses additive synthesis
+   * to replicate the inharmonic partials, transient strike, and granite damping 
+   * characteristics of the actual Hampi musical pillars based on acoustic references.
+   */
+  public playStonePillar(baseFreq: number) {
+    if (this.isMuted) return;
+    
+    const play = async () => {
+      try {
+        console.log(`[VITTALA AUDIO] Clicked pillar: frequency ${baseFreq}Hz`);
+        const ctx = this.getContext();
+        if (!ctx) {
+          console.error("[VITTALA AUDIO ERROR] Web Audio API not supported or context missing");
+          return;
+        }
+
+        if (ctx.state === "suspended") {
+          console.log("[VITTALA AUDIO] AudioContext suspended, attempting to resume...");
+          await ctx.resume();
+        }
+        
+        console.log(`[VITTALA AUDIO] AudioContext state: ${ctx.state}`);
+        const now = ctx.currentTime;
+        console.log(`[VITTALA AUDIO] Playback starting at currentTime: ${now}`);
+
+        // The transient "strike" (stone on stone/wood on stone)
+        const noiseBufferSize = Math.floor(ctx.sampleRate * 0.05);
+        if (noiseBufferSize > 0) {
+          const noiseBuffer = ctx.createBuffer(1, noiseBufferSize, ctx.sampleRate);
+          const output = noiseBuffer.getChannelData(0);
+          for (let i = 0; i < noiseBufferSize; i++) {
+            output[i] = Math.random() * 2 - 1;
+          }
+          const noiseSource = ctx.createBufferSource();
+          noiseSource.buffer = noiseBuffer;
+          const noiseFilter = ctx.createBiquadFilter();
+          noiseFilter.type = "bandpass";
+          noiseFilter.frequency.value = 4000;
+          noiseFilter.Q.value = 1.0;
+          const noiseGain = ctx.createGain();
+          
+          noiseGain.gain.setValueAtTime(0, now);
+          noiseGain.gain.linearRampToValueAtTime(0.5, now + 0.005);
+          noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+          
+          noiseSource.connect(noiseFilter);
+          noiseFilter.connect(noiseGain);
+          noiseGain.connect(ctx.destination);
+          noiseSource.start(now);
+        }
+
+        // Inharmonic partial ratios for a stiff vibrating bar (granite column approximation)
+        const partials = [
+          { ratio: 1.000, gain: 1.0, decay: 2.5 },
+          { ratio: 2.756, gain: 0.6, decay: 1.8 },
+          { ratio: 5.404, gain: 0.4, decay: 1.2 },
+          { ratio: 8.933, gain: 0.2, decay: 0.8 },
+          { ratio: 13.34, gain: 0.1, decay: 0.4 }
+        ];
+
+        partials.forEach((partial, index) => {
+          const osc = ctx.createOscillator();
+          const pGain = ctx.createGain();
+          
+          // Slight detune for that imperfect acoustic feel
+          const detune = (Math.random() - 0.5) * 4; // +/- 2 cents
+          osc.type = "sine";
+          osc.frequency.value = baseFreq * partial.ratio;
+          osc.detune.value = detune;
+
+          // Strike attack is immediate, then decays based on the partial's decay constant
+          pGain.gain.setValueAtTime(0, now);
+          pGain.gain.linearRampToValueAtTime(partial.gain * 0.4, now + 0.01);
+          pGain.gain.setTargetAtTime(0, now + 0.01, partial.decay / 3);
+
+          osc.connect(pGain);
+          pGain.connect(ctx.destination);
+          
+          osc.start(now);
+          // Stop oscillator after it has decayed
+          osc.stop(now + partial.decay * 2);
+        });
+        
+        console.log(`[VITTALA AUDIO] Nodes scheduled successfully for freq ${baseFreq}Hz`);
+      } catch (e) {
+        console.error("[VITTALA AUDIO ERROR] Playback failed:", e);
+      }
+    };
+
+    play();
+  }
 }
 
 export const soundFx = new SoundEffectsService();
