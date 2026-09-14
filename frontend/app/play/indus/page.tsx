@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { Suspense } from "react";
 import { soundFx } from "../../../services/soundService";
 import { playNarration, stopNarration } from "../../../services/narratorService";
 import { playCharacterDialogue, stopCharacterDialogue } from "../../../services/characterVoiceService";
@@ -436,8 +437,10 @@ function getGreatBathPotterState(elapsedTime: number) {
   return { x, y, opacity, facingLeft, scale };
 }
 
-export default function IndusValleyGameScreen() {
+function IndusValleyGameComponent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
   const [isLoading, setIsLoading] = useState(true);
 
   // HUD & Session Control States (Matching Image 2)
@@ -449,7 +452,17 @@ export default function IndusValleyGameScreen() {
 
   // Core Progression State
   const [stage, setStage] = useState<IndusStage>(INITIAL_INDUS_STATE.stage);
-  const [scene, setScene] = useState<IndusSceneType>(INITIAL_INDUS_STATE.scene);
+  const urlScene = searchParams.get("scene") as IndusSceneType | null;
+  const [scene, setScene] = useState<IndusSceneType>(urlScene || INITIAL_INDUS_STATE.scene);
+
+  // Sync scene state to URL query parameter
+  useEffect(() => {
+    const currentParams = new URLSearchParams(Array.from(searchParams.entries()));
+    if (currentParams.get("scene") !== scene) {
+      currentParams.set("scene", scene);
+      router.replace(`${pathname}?${currentParams.toString()}`, { scroll: false });
+    }
+  }, [scene, pathname, router, searchParams]);
   const [playerPos, setPlayerPos] = useState(INITIAL_INDUS_STATE.playerPos);
   const [facingLeft, setFacingLeft] = useState(false);
   const [isWalking, setIsWalking] = useState(false);
@@ -457,6 +470,7 @@ export default function IndusValleyGameScreen() {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isLoadingToHarappa, setIsLoadingToHarappa] = useState(false);
   const [harappaTravelProgress, setHarappaTravelProgress] = useState(0);
+  const [travelDestinationName, setTravelDestinationName] = useState("HARAPPA");
 
   // Travel Audio for Harappa Journey Loading Screen (Bullock Cart sound effect)
   const bullockSoundRef = useRef<HTMLAudioElement | null>(null);
@@ -1519,9 +1533,15 @@ export default function IndusValleyGameScreen() {
   };
 
   // Dedicated 8-Second Bullock Cart Journey from Mohenjo-daro to Harappa with Animated Progress
-  const startHarappaTravelTransition = () => {
+  const startLongTravelTransition = (
+    targetScene: IndusSceneType,
+    targetPos: { x: number; y: number },
+    targetStage: IndusStage,
+    destinationName: string
+  ) => {
     setIsLoadingToHarappa(true);
     setHarappaTravelProgress(0);
+    setTravelDestinationName(destinationName);
     soundFx.playSelect();
     const duration = 8000;
     const startTime = Date.now();
@@ -1531,8 +1551,9 @@ export default function IndusValleyGameScreen() {
       setHarappaTravelProgress(progress);
       if (elapsed >= duration) {
         clearInterval(timer);
-        setScene("caravan_road");
-        setPlayerPos({ x: 45.0, y: 84.0 });
+        setScene(targetScene);
+        setPlayerPos(targetPos);
+        setStage(targetStage);
         setIsLoadingToHarappa(false);
       }
     }, 50);
@@ -1635,7 +1656,7 @@ export default function IndusValleyGameScreen() {
       // Enter key: [E] or [e] (Per user requirement: "for entering anywhere E")
       if (e.key === "e" || e.key === "E") {
         if (isNearGreatBathHarappanGate) {
-          startHarappaTravelTransition();
+          startLongTravelTransition("caravan_road", { x: 45.0, y: 84.0 }, 2, "HARAPPA");
           return;
         } else if (isNearCaravanRoadHarappaGate) {
           triggerTransition("steatite_seal_workshop", { x: 20.0, y: 38.0 }, 3, 600);
@@ -1697,7 +1718,7 @@ export default function IndusValleyGameScreen() {
           triggerTransition("caravan_road", { x: 80.0, y: 32.0 }, undefined, 600);
           return;
         } else if (isNearCaravanRoadReturn) {
-          triggerTransition("great_bath_citadel", { x: 68.0, y: 32.0 }, 2, 600);
+          startLongTravelTransition("great_bath_citadel", { x: 68.0, y: 32.0 }, 2, "MOHENJO-DARO");
           return;
         } else if (isNearWorkshopExit) {
           triggerTransition("steatite_seal_workshop", { x: 50.0, y: 65.0 }, 3, 600);
@@ -3807,7 +3828,7 @@ export default function IndusValleyGameScreen() {
             className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
             style={{ left: "68%", top: "26%" }}
             onClick={() => {
-              startHarappaTravelTransition();
+              startLongTravelTransition("caravan_road", { x: 45.0, y: 84.0 }, 2, "HARAPPA");
             }}
           >
             {isNearGreatBathHarappanGate ? (
@@ -4179,12 +4200,12 @@ export default function IndusValleyGameScreen() {
           <div className="absolute inset-0 bg-gradient-to-t from-[#150e08]/90 via-black/20 to-[#150e08]/70" />
           <div className="absolute inset-0 bg-gradient-to-r from-[#150e08]/40 via-transparent to-[#150e08]/40" />
 
-          {/* Top Travel Banner: LOADING TO HARAPPA */}
+          {/* Top Travel Banner: LOADING TO {travelDestinationName} */}
           <div className="absolute top-6 px-7 py-2.5 rounded-2xl bg-[#1b120a]/92 border-2 border-[#d8a86a] text-[#f7eedf] shadow-2xl flex items-center gap-3 backdrop-blur-md">
             <span className="inline-block w-3 h-3 rounded-full bg-amber-400 animate-ping" />
             <div className="flex flex-col items-center">
               <span className="tracking-widest font-serif font-black text-sm sm:text-base text-amber-300 uppercase drop-shadow">
-                LOADING TO HARAPPA
+                LOADING TO {travelDestinationName}
               </span>
               <span className="text-[10px] sm:text-[11px] text-[#eed7ba] font-serif tracking-wider">
                 Traveling by Zebu Bullock Cart • Ancient Trade Route c. 2500 BCE
@@ -5267,5 +5288,13 @@ export default function IndusValleyGameScreen() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function IndusValleyGameScreen() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#140f0b] text-[#f7eedf] flex items-center justify-center font-serif text-2xl tracking-widest uppercase">Entering Indus Valley...</div>}>
+      <IndusValleyGameComponent />
+    </Suspense>
   );
 }

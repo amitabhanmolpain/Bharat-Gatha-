@@ -98,7 +98,7 @@ export const INDUS_SCENE_CONFIGS: Record<IndusSceneType, IndusSceneMeta> = {
     title: "The Great Bath of Mohenjo-daro",
     era: "Bronze Age • c. 2500 BCE",
     subtitle: "Hydraulic Engineering of the Citadel",
-    backgroundImage: "/bg-indus-citadel.jpg",
+    backgroundImage: "/bg-indus-great-bath.jpg",
     defaultObjective: "Inspect the sunken pool's bitumen lining and solve the hydraulic drainage culvert puzzle.",
     minX: 6.0,
     maxX: 95.0,
