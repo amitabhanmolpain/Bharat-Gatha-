@@ -2993,11 +2993,11 @@ function IndusValleyGameComponent() {
           </div>
         )}
 
-        {/* Hotspot 2: Deceased Harappan Woman Body inside Open Grave Pit */}
+        {/* Hotspot 2: Deceased Harappan Woman Body inside Open Grave Pit (Positioned directly inside black marked pit area) */}
         {scene === "harappa_cemetery" && (
           <div
             className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-15"
-            style={{ left: "22.5%", top: "56.0%" }}
+            style={{ left: "19.5%", top: "52.8%" }}
             onClick={() =>
               setActiveCitizenDialogue({
                 name: "Excavated Rectangular Grave R37",
@@ -3016,7 +3016,7 @@ function IndusValleyGameComponent() {
             <img
               src="/sprite-indus-deceased.png"
               alt="Deceased Harappan Woman in Grave"
-              className="h-[65px] sm:h-[80px] md:h-[95px] w-auto object-contain block select-none opacity-90 transform -rotate-[24deg] pointer-events-auto"
+              className="h-[88px] sm:h-[105px] md:h-[125px] w-auto object-contain block select-none opacity-90 transform -rotate-[28deg] pointer-events-auto"
             />
           </div>
         )}
