@@ -40,10 +40,10 @@ export const INDUS_SCENE_CONFIGS: Record<IndusSceneType, IndusSceneMeta> = {
     maxY: 86.0,
   },
   residential_grid: {
-    title: "Mohenjo-daro's Residential Grid & Planned Streets",
+    title: "Harappan Residential Area & Planned Grid",
     era: "Bronze Age • c. 2500 BCE",
     subtitle: "Ruler-Straight Grid Planning & Covered Municipal Drains",
-    backgroundImage: "/bg-indus-residential-grid.jpg",
+    backgroundImage: "/bg-indus-residential-area.jpg",
     defaultObjective: "Explore the cardinal grid avenue, inspect standardized brick houses, and examine the covered street drainage network.",
     minX: 20.0,
     maxX: 88.0,

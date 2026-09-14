@@ -1468,6 +1468,15 @@ function IndusValleyGameComponent() {
     playerPos.y >= 40.0 &&
     playerPos.y <= 56.0;
 
+  // Stage 3: Harappa Toy Street Entrance to Residential Area
+  const isNearResidentialAreaEntrance =
+    scene === "steatite_seal_workshop" &&
+    playerPos.x >= 54.0 &&
+    playerPos.x <= 74.0 &&
+    playerPos.y >= 38.0 &&
+    playerPos.y <= 62.0;
+
+
 
   // Stage 4: Priest-King
   const isNearPriestKing =
@@ -1699,6 +1708,9 @@ function IndusValleyGameComponent() {
           return;
         } else if (isNearWorkshopEntrance) {
           triggerTransition("priest_king_citadel", { x: 50.0, y: 80.0 }, 4);
+          return;
+        } else if (isNearResidentialAreaEntrance) {
+          triggerTransition("residential_grid", { x: 50.0, y: 80.0 }, 3, 600);
           return;
         } else if (isNearBeadQuarterEntrance) {
           triggerTransition("carnelian_bead_quarter", { x: 30.0, y: 70.0 });
@@ -2067,6 +2079,7 @@ function IndusValleyGameComponent() {
     isNearArtisanQuarterExit,
     isNearCitadelStairs,
     isNearWorkshopEntrance,
+    isNearResidentialAreaEntrance,
     isNearWorkshopExit,
     isNearBeadQuarterEntrance,
     isNearBeadQuarterExit,
@@ -3997,6 +4010,26 @@ function IndusValleyGameComponent() {
             ) : (
               <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
                 <span>Toy Workshop Entrance</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Harappa Toy Street: Entrance to Harappan Residential Area */}
+        {scene === "steatite_seal_workshop" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "64%", top: "50%" }}
+            onClick={() => triggerTransition("residential_grid", { x: 50.0, y: 80.0 }, 3, 600)}
+          >
+            {isNearResidentialAreaEntrance ? (
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">E</div>
+                <span>✨ Enter Residential Area (Press E)</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>✨ Harappan Residential Area</span>
               </div>
             )}
           </div>
