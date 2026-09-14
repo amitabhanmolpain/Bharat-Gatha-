@@ -76,6 +76,8 @@ export default function IndusHUD({
         return "INDUS VALLEY - CITADEL SANCTUARY HALL (c. 2500 BCE)";
       case "dholavira_reservoirs":
         return "INDUS VALLEY - DHOLAVIRA WATER RESERVOIRS (c. 2500 BCE)";
+      case "dholavira_city_interior":
+        return "INDUS VALLEY - DHOLAVIRA WATER HARVESTING & RESIDENTIAL CITY (c. 2500 BCE)";
       case "closing_reflection":
         return "INDUS VALLEY - SINDHU RIVER SUNSET (c. 2500 BCE)";
       default:
@@ -110,7 +112,9 @@ export default function IndusHUD({
       case "citadel_interior":
         return "Sanctuary Hall";
       case "dholavira_reservoirs":
-        return "Dholavira";
+        return "Dholavira Fort";
+      case "dholavira_city_interior":
+        return "Water Harvesting City";
       default:
         return "Mohenjo-daro";
     }

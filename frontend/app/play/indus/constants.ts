@@ -193,6 +193,17 @@ export const INDUS_SCENE_CONFIGS: Record<IndusSceneType, IndusSceneMeta> = {
     minY: 25.0,
     maxY: 94.0,
   },
+  dholavira_city_interior: {
+    title: "Dholavira • Water Harvesting & Residential City",
+    era: "Bronze Age • c. 2500 BCE",
+    subtitle: "Rock-Cut Reservoirs, Aqueducts & Dressed-Stone Neighborhoods",
+    backgroundImage: "/bg-indus-dholavira-city.jpg",
+    defaultObjective: "Explore Dholavira's massive rock-cut water harvesting reservoirs, inspect the stone aqueduct channels, and explore the residential quarters.",
+    minX: 4.0,
+    maxX: 96.0,
+    minY: 20.0,
+    maxY: 94.0,
+  },
   closing_reflection: {
     title: "Sunset over the Sindhu River",
     era: "Bronze Age • c. 2500 BCE",

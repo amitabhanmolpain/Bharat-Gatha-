@@ -23,6 +23,7 @@ export type IndusSceneType =
   | "priest_king_citadel"
   | "citadel_interior"
   | "dholavira_reservoirs"
+  | "dholavira_city_interior"
   | "closing_reflection";
 
 export type IndusJournalCategory =

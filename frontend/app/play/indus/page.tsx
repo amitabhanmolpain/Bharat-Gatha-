@@ -1583,6 +1583,19 @@ function IndusValleyGameComponent() {
     playerPos.x >= 70.0 &&
     playerPos.y >= 55.0;
 
+  // Stage 4: Dholavira Outer Fort Gateway -> Inner Water Harvesting City
+  const isNearDholaviraCityGate =
+    scene === "dholavira_reservoirs" &&
+    playerPos.x >= 20.0 &&
+    playerPos.x <= 35.0 &&
+    playerPos.y >= 35.0 &&
+    playerPos.y <= 55.0;
+
+  // Stage 4: Dholavira Inner Water Harvesting City -> Exit to Outer Fort Ramparts
+  const isNearDholaviraInnerExit =
+    scene === "dholavira_city_interior" &&
+    playerPos.y >= 84.0;
+
   // Stage 3 -> Carnelian Bead Quarter
   const isNearBeadQuarterEntrance =
     scene === "steatite_seal_workshop" &&
@@ -1855,6 +1868,12 @@ function IndusValleyGameComponent() {
         } else if (isNearDholaviraBoatReturn) {
           startBoatTravelTransition("priest_king_citadel", { x: 20.0, y: 65.0 }, 4, "THE CITADEL MOUND");
           return;
+        } else if (isNearDholaviraCityGate) {
+          triggerTransition("dholavira_city_interior", { x: 50.0, y: 80.0 }, 4, 600);
+          return;
+        } else if (isNearDholaviraInnerExit) {
+          triggerTransition("dholavira_reservoirs", { x: 27.0, y: 46.0 }, 4, 600);
+          return;
         }
       }
 
@@ -1862,6 +1881,12 @@ function IndusValleyGameComponent() {
       if (e.key === "f" || e.key === "F") {
         if (isNearHarappaExitArchway) {
           triggerTransition("caravan_road", { x: 80.0, y: 32.0 }, undefined, 600);
+          return;
+        } else if (isNearDholaviraCityGate) {
+          triggerTransition("dholavira_city_interior", { x: 50.0, y: 80.0 }, 4, 600);
+          return;
+        } else if (isNearDholaviraInnerExit) {
+          triggerTransition("dholavira_reservoirs", { x: 27.0, y: 46.0 }, 4, 600);
           return;
         } else if (isNearRiverBoatDock) {
           startBoatTravelTransition("dholavira_reservoirs", { x: 80.0, y: 75.0 }, 4, "DHOLAVIRA");
@@ -2282,6 +2307,8 @@ function IndusValleyGameComponent() {
     isNearCitadelInteriorExit,
     isNearRiverBoatDock,
     isNearDholaviraBoatReturn,
+    isNearDholaviraCityGate,
+    isNearDholaviraInnerExit,
     isNearGranaryExit,
     isNearArtisanQuarterExit,
     isNearCitadelStairs,
@@ -4548,6 +4575,46 @@ function IndusValleyGameComponent() {
             ) : (
               <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
                 <span>⛵ River Docks (Back to Citadel)</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Dholavira Outer Fort Gateway -> Inner Water Harvesting & Residential City */}
+        {scene === "dholavira_reservoirs" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "27%", top: "42%" }}
+            onClick={() => triggerTransition("dholavira_city_interior", { x: 50.0, y: 80.0 }, 4, 600)}
+          >
+            {isNearDholaviraCityGate ? (
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">F</div>
+                <span>💧 Enter Water Harvesting & Residential City</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>💧 Dholavira City Gateway</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Dholavira Inner City Exit -> Back to Outer Fort Ramparts & Docks */}
+        {scene === "dholavira_city_interior" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "50%", top: "92%" }}
+            onClick={() => triggerTransition("dholavira_reservoirs", { x: 27.0, y: 46.0 }, 4, 600)}
+          >
+            {isNearDholaviraInnerExit ? (
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">F</div>
+                <span>Return to Fort Ramparts & Docks</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>Exit to Fort Ramparts</span>
               </div>
             )}
           </div>
