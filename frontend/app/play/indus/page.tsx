@@ -570,6 +570,7 @@ function IndusValleyGameComponent() {
   const [boatRowFrame, setBoatRowFrame] = useState<1 | 2>(1);
   const [grainWorkerFrame, setGrainWorkerFrame] = useState<1 | 2 | 3>(1);
   const [batherFrame, setBatherFrame] = useState<1 | 2>(1);
+  const [mournerFrame, setMournerFrame] = useState<1 | 2 | 3>(1);
 
   // Scene Configuration
   const currentSceneConfig = INDUS_SCENE_CONFIGS[scene] || INDUS_SCENE_CONFIGS.lower_town_gate;
@@ -679,6 +680,14 @@ function IndusValleyGameComponent() {
     const timer = setInterval(() => {
       setElapsedSeconds((prev) => prev + 1);
     }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Crying mourner 3-frame animation loop (changes frame every 450ms)
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setMournerFrame((prev) => (prev % 3 === 0 ? 1 : ((prev + 1) as 1 | 2 | 3)));
+    }, 450);
     return () => clearInterval(timer);
   }, []);
 
@@ -2984,38 +2993,67 @@ function IndusValleyGameComponent() {
           </div>
         )}
 
-        {/* Hotspot 2: Excavated Rectangular Grave R37 */}
+        {/* Hotspot 2: Deceased Harappan Person & Excavated Grave R37 */}
         {scene === "harappa_cemetery" && (
           <div
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
-            style={{ left: "56%", top: "58%" }}
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-15"
+            style={{ left: "51.8%", top: "78.2%" }}
             onClick={() =>
               setActiveCitizenDialogue({
                 name: "Excavated Rectangular Grave R37",
                 title: "North-South Extended Burial • Cemetery R37",
                 icon: "",
-                text: "Excavations at Cemetery R37 reveal rectangular earthen pits oriented strictly North-South. Bodies were placed extended on their backs with head pointing North, adorned with simple shell bangles, steatite beads, and copper rings.",
+                text: "Excavations at Cemetery R37 reveal rectangular earthen pits oriented strictly North-South. The deceased lies extended on their back with head pointing North, accompanied by domestic pottery vessels and personal shell bangles.",
               })
             }
           >
-            {isNearExcavatedGrave ? (
-              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+            {isNearExcavatedGrave && (
+              <div className="mb-1 bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
                 <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
-                <span>Inspect Excavated Grave</span>
-              </div>
-            ) : (
-              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
-                <span>Excavated Grave R37</span>
+                <span>Inspect Deceased & Grave Offerings</span>
               </div>
             )}
+            <img
+              src="/sprite-indus-deceased.png"
+              alt="Deceased Harappan in Grave"
+              className="h-[68px] sm:h-[80px] md:h-[92px] w-auto object-contain block select-none rounded opacity-95 pointer-events-auto"
+            />
           </div>
         )}
 
-        {/* Hotspot 3: Solemn Harappan Elder */}
+        {/* Hotspot 3: Animated Crying Harappan Mourner sitting on ground by the grave */}
         {scene === "harappa_cemetery" && (
           <div
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
-            style={{ left: "76%", top: "60%" }}
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-16"
+            style={{ left: "44.0%", top: "79.0%" }}
+            onClick={() =>
+              setActiveCitizenDialogue({
+                name: "Grieving Harappan Family Member",
+                title: "Crying Mourner • Cemetery R37",
+                icon: "",
+                text: "My heart aches for my lost kin... We lay them to rest in accordance with ancient Indus traditions, providing painted terracotta jars of clean water and grain so their spirit finds peace.",
+              })
+            }
+          >
+            {isNearSolemnElder && (
+              <div className="mb-1 bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
+                <span>Console Crying Mourner</span>
+              </div>
+            )}
+            <img
+              src={`/sprite-indus-mourner-${mournerFrame}.png`}
+              alt="Animated Crying Harappan Mourner"
+              className="h-[74px] sm:h-[86px] md:h-[96px] w-auto object-contain block select-none transition-transform duration-200 group-hover:scale-105"
+            />
+          </div>
+        )}
+
+        {/* Hotspot 4: Solemn Harappan Elder (Standing properly on ground at right side) */}
+        {scene === "harappa_cemetery" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-full flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-16"
+            style={{ left: "68.0%", top: "74.0%" }}
             onClick={() =>
               setActiveCitizenDialogue({
                 name: "Harappan Solemn Funeral Observer",
@@ -3025,20 +3063,21 @@ function IndusValleyGameComponent() {
               })
             }
           >
-            {isNearSolemnElder ? (
-              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+            {isNearSolemnElder && (
+              <div className="mb-1 bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
                 <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
                 <span>Speak with Solemn Elder</span>
               </div>
-            ) : (
-              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
-                <span>Solemn Observer</span>
-              </div>
             )}
+            <span className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow mb-1 whitespace-nowrap transition-opacity duration-200 ${
+              isNearSolemnElder ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            }`}>
+              Solemn Elder
+            </span>
             <img
               src="/sprite-indus-official.png?v=4"
               alt="Solemn Harappan Elder"
-              className="h-[68px] sm:h-[75px] md:h-[84px] w-auto object-contain block select-none mt-1"
+              className="h-[75px] sm:h-[84px] md:h-[94px] w-auto object-contain block select-none"
             />
           </div>
         )}
