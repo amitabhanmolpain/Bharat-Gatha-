@@ -265,11 +265,14 @@ export default function VijayanagaraGameScreen() {
 
       if (speech) {
         setIsVidyaranyaVoiceActive(true);
-        playNarration(speech, {
-          speaker: "ratan",
-          pace: 0.88,
-          language_code: "en-IN",
-          hideSubtitle: true,
+        // Use the dedicated Indic Parler-TTS character route for Vidyaranya so he gets
+        // his own aged, gravelly South Indian Kannada old-sage accent rather than the
+        // generic narrator voice.  The "vidyaranya" character key maps to the dedicated
+        // voice profile in parler_tts_service.py (slow pace, reverent Indian English).
+        stopAllCharacterVoice();
+        playCharacterDialogue({
+          character: "vidyaranya",
+          text: speech,
           onStart: () => setIsVidyaranyaVoiceActive(true),
           onEnd: () => setIsVidyaranyaVoiceActive(false),
           onError: () => setIsVidyaranyaVoiceActive(false),
@@ -743,7 +746,9 @@ export default function VijayanagaraGameScreen() {
     showChowkaBaraModal ||
     showBlessingCutscene ||
     showStage1VictoryModal ||
-    showCoracleNotice ||
+    // Note: showCoracleNotice is intentionally NOT here — the ferry hint is
+    // a non-blocking informational overlay. Player can still move while it
+    // is displayed, and walking away from the ferry will dismiss it.
     showGemAssessorDialogue ||
     showToymakerDialogue ||
     showToyInspectionModal ||
@@ -819,6 +824,12 @@ export default function VijayanagaraGameScreen() {
             if (!unlockedJournalEntries.includes("hampi_bazaar_trade")) {
               setUnlockedJournalEntries((prev) => [...prev, "hampi_bazaar_trade"]);
             }
+          } else {
+            // Player presses E at the ferry but does not yet have the blessing:
+            // Show (or re-show) the Oracle Ferry requirement notice.
+            stopAllCharacterVoice();
+            setShowCoracleNotice(true);
+            setHasTriggeredCoracleNotice(true);
           }
         }
 
@@ -1143,20 +1154,37 @@ export default function VijayanagaraGameScreen() {
   ]);
 
   // Oracle Ferry Proximity Trigger
+  // - Auto-shows a non-blocking hint when player enters the coracle radius without Vidyaranya's blessing.
+  // - Dismisses the hint when the player walks away (radius exit).
+  // - Also cleans up if the player somehow obtains the blessing while standing at the ferry.
   useEffect(() => {
     if (isNearCoracle && !hasVidyaranyaBlessing) {
+      // Enter zone without blessing — show hint once per approach.
       if (!hasTriggeredCoracleNotice) {
         stopAllCharacterVoice();
         setShowCoracleNotice(true);
         setHasTriggeredCoracleNotice(true);
       }
-    } else if (!isNearCoracle) {
-      if (hasTriggeredCoracleNotice) {
+    } else if (isNearCoracle && hasVidyaranyaBlessing) {
+      // Player is at the ferry AND now has the blessing — close any open hint.
+      if (showCoracleNotice) {
         setShowCoracleNotice(false);
+      }
+      // Reset trigger so the zone can fire again if needed.
+      if (hasTriggeredCoracleNotice) {
+        setHasTriggeredCoracleNotice(false);
+      }
+    } else {
+      // Player has left the interaction radius — dismiss the hint and reset
+      // the trigger guard so the notice can appear again on the next approach.
+      if (showCoracleNotice) {
+        setShowCoracleNotice(false);
+      }
+      if (hasTriggeredCoracleNotice) {
         setHasTriggeredCoracleNotice(false);
       }
     }
-  }, [isNearCoracle, hasVidyaranyaBlessing, hasTriggeredCoracleNotice]);
+  }, [isNearCoracle, hasVidyaranyaBlessing, hasTriggeredCoracleNotice, showCoracleNotice]);
 
   // Stage 1 Handler
   const handleChowkaBaraComplete = (won: boolean, attempts: number) => {
@@ -1298,7 +1326,7 @@ export default function VijayanagaraGameScreen() {
                   <span>
                     {hasVidyaranyaBlessing
                       ? "Cross River to Hampi Bazaar (Stage 2)"
-                      : "Inspect Coracle Ferry"}
+                      : "Oracle Ferry — What is required?"}
                   </span>
                 </div>
               )}
@@ -1306,7 +1334,7 @@ export default function VijayanagaraGameScreen() {
                 <GameIcon name="coracle" size={20} className="text-[#8ec5c8]" />
               </div>
               <span className="text-[10px] font-serif font-bold text-[#f6ede0] bg-[#1a1714]/80 px-2 py-0.5 rounded border border-[#384e50] mt-1">
-                Coracle Ferry
+                Oracle Ferry
               </span>
             </div>
           </>
@@ -2906,7 +2934,7 @@ export default function VijayanagaraGameScreen() {
                 Where It All Began • 1336 AD • +500 Historic XP
               </p>
 
-              <div className="p-4 rounded-xl bg-[#231e1a] border border-[#3d3329] text-xs font-serif text-[#d6c7b2] leading-relaxed mb-6 text-left space-y-2">
+              <div className="p-4 rounded-xl bg-[#231e1a] border border-[#3d3329] text-xs font-serif text-[#d6c7b2] leading-relaxed mb-4 text-left space-y-2">
                 <div className="flex items-center gap-2 text-[#d4a359] font-bold">
                   <span>✦</span>
                   <span>Discovered the Cradle of the Empire at Anegundi</span>
@@ -2925,9 +2953,23 @@ export default function VijayanagaraGameScreen() {
                 </div>
               </div>
 
+              {/* Rowing Tool Reward — awarded on Chowka Bara win, required by Oracle Ferry */}
+              <div className="flex items-center gap-3 px-4 py-2.5 mb-6 rounded-xl bg-[#1a2e20] border border-[#2e6b40] text-left">
+                <span className="text-2xl">🐚</span>
+                <div>
+                  <div className="text-[10px] font-mono text-[#6ee7a0] uppercase tracking-widest mb-0.5">Item Acquired</div>
+                  <div className="text-sm font-serif font-bold text-[#a3f0c0]">Rowing Tool — Cowrie Shell</div>
+                  <div className="text-[10px] font-serif text-[#6ee7a0] opacity-80">Required to row the boat to Hampi Market</div>
+                </div>
+              </div>
+
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <button
                   onClick={() => {
+                    // Guard against double-click — triggerTransition has its own re-entrancy
+                    // guard (isTransitioning) but we also close the modal first
+                    if (isTransitioning) return;
+                    stopAllCharacterVoice();
                     setShowStage1VictoryModal(false);
                     triggerTransition(
                       "hampi_bazaar_entry",
@@ -2941,9 +2983,10 @@ export default function VijayanagaraGameScreen() {
                       setUnlockedJournalEntries((prev) => [...prev, "hampi_bazaar_trade"]);
                     }
                   }}
-                  className="bg-gradient-to-r from-[#8b6528] to-[#d4a359] hover:from-[#a07430] hover:to-[#e5b56a] text-[#141210] font-serif font-bold px-6 py-2.5 rounded-xl shadow-md transition-all text-xs uppercase tracking-wider flex items-center justify-center cursor-pointer"
+                  disabled={isTransitioning}
+                  className="bg-gradient-to-r from-[#8b6528] to-[#d4a359] hover:from-[#a07430] hover:to-[#e5b56a] disabled:opacity-60 disabled:cursor-not-allowed text-[#141210] font-serif font-bold px-6 py-2.5 rounded-xl shadow-md transition-all text-xs uppercase tracking-wider flex items-center justify-center cursor-pointer"
                 >
-                  🛶 Cross to Hampi Bazaar (Stage 2)
+                  {isTransitioning ? "Crossing..." : "🛶 Cross to Hampi Bazaar (Stage 2)"}
                 </button>
                 <Link
                   href="/dashboard"

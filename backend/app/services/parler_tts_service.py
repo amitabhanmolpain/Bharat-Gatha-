@@ -58,6 +58,20 @@ CHARACTER_VOICE_PROFILES = {
         "fallback_pace": 1.12,
         "language_code": "en-IN"
     },
+    "vidyaranya": {
+        "id": "vidyaranya",
+        "name": "Sage Vidyaranya",
+        "role": "14th-Century Sringeri Scholar and Founding Advisor of Vijayanagara",
+        "description": (
+            "A very old, deeply wise Indian male elder speaking slow, deliberate, reverent Indian English. "
+            "His voice is aged and gravelly with a soft South Indian Kannada accent, warm but solemn, "
+            "like a 14th-century Sanskrit scholar who has lived many decades. "
+            "He speaks with gentle authority, long thoughtful pauses, and the serene cadence of an ancient sage."
+        ),
+        "fallback_speaker": "ratan",
+        "fallback_pace": 0.78,
+        "language_code": "en-IN"
+    },
     "chacha": {
         "id": "chacha",
         "name": "Buzurg Chacha",
@@ -128,6 +142,9 @@ def get_character_profile(character_id: str) -> dict:
     key = (character_id or "jolly").lower().strip()
     if "guard" in key or "sentry" in key or "soldier" in key:
         return CHARACTER_VOICE_PROFILES["guard"]
+    # Explicit match for Sage Vidyaranya before the generic elder/sage catch-all
+    if "vidyaranya" in key:
+        return CHARACTER_VOICE_PROFILES["vidyaranya"]
     if "elder" in key or "sage" in key or "priest" in key:
         return CHARACTER_VOICE_PROFILES["elder"]
     if "archaeologist" in key or "scholar" in key or "ananya" in key:
