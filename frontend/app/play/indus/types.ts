@@ -19,9 +19,10 @@ export type IndusSceneType =
   | "carnelian_bead_quarter"
   | "harappa_cemetery"
 
-  // Stage 4: The Citadel Sanctuary & The Priest-King
+  // Stage 4: The Citadel Sanctuary, Dholavira & The Priest-King
   | "priest_king_citadel"
   | "citadel_interior"
+  | "dholavira_reservoirs"
   | "closing_reflection";
 
 export type IndusJournalCategory =

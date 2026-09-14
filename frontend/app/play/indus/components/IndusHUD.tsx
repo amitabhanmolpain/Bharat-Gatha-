@@ -74,6 +74,8 @@ export default function IndusHUD({
         return "INDUS VALLEY - THE CITADEL MOUND (c. 2500 BCE)";
       case "citadel_interior":
         return "INDUS VALLEY - CITADEL SANCTUARY HALL (c. 2500 BCE)";
+      case "dholavira_reservoirs":
+        return "INDUS VALLEY - DHOLAVIRA WATER RESERVOIRS (c. 2500 BCE)";
       case "closing_reflection":
         return "INDUS VALLEY - SINDHU RIVER SUNSET (c. 2500 BCE)";
       default:
@@ -107,6 +109,8 @@ export default function IndusHUD({
         return "Citadel Mound";
       case "citadel_interior":
         return "Sanctuary Hall";
+      case "dholavira_reservoirs":
+        return "Dholavira";
       default:
         return "Mohenjo-daro";
     }

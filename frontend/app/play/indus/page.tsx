@@ -472,6 +472,11 @@ function IndusValleyGameComponent() {
   const [harappaTravelProgress, setHarappaTravelProgress] = useState(0);
   const [travelDestinationName, setTravelDestinationName] = useState("HARAPPA");
 
+  // Boat Voyage Loading Screen to Dholavira
+  const [isLoadingBoatToDholavira, setIsLoadingBoatToDholavira] = useState(false);
+  const [boatTravelProgress, setBoatTravelProgress] = useState(0);
+  const [boatTravelDestinationName, setBoatTravelDestinationName] = useState("DHOLAVIRA");
+
   // Travel Audio for Harappa Journey Loading Screen (Bullock Cart sound effect)
   const bullockSoundRef = useRef<HTMLAudioElement | null>(null);
 
@@ -1565,6 +1570,19 @@ function IndusValleyGameComponent() {
     scene === "citadel_interior" &&
     (playerPos.y >= 82.0 || (playerPos.x >= 75.0 && playerPos.y >= 52.0));
 
+  // Stage 4: River Boat Dock at Citadel Mound -> Dholavira
+  const isNearRiverBoatDock =
+    scene === "priest_king_citadel" &&
+    playerPos.x <= 28.0 &&
+    playerPos.y >= 50.0 &&
+    playerPos.y <= 85.0;
+
+  // Stage 4: Dholavira Riverboat Return -> Citadel Mound
+  const isNearDholaviraBoatReturn =
+    scene === "dholavira_reservoirs" &&
+    playerPos.x >= 70.0 &&
+    playerPos.y >= 55.0;
+
   // Stage 3 -> Carnelian Bead Quarter
   const isNearBeadQuarterEntrance =
     scene === "steatite_seal_workshop" &&
@@ -1638,6 +1656,33 @@ function IndusValleyGameComponent() {
         setPlayerPos(targetPos);
         setStage(targetStage);
         setIsLoadingToHarappa(false);
+      }
+    }, 50);
+  };
+
+  // Dedicated 8-Second Harappan Riverboat Voyage to Dholavira with Animated Progress
+  const startBoatTravelTransition = (
+    targetScene: IndusSceneType,
+    targetPos: { x: number; y: number },
+    targetStage: IndusStage,
+    destinationName: string
+  ) => {
+    setIsLoadingBoatToDholavira(true);
+    setBoatTravelProgress(0);
+    setBoatTravelDestinationName(destinationName);
+    soundFx.playSelect();
+    const duration = 8000;
+    const startTime = Date.now();
+    const timer = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(Math.round((elapsed / duration) * 100), 100);
+      setBoatTravelProgress(progress);
+      if (elapsed >= duration) {
+        clearInterval(timer);
+        setScene(targetScene);
+        setPlayerPos(targetPos);
+        setStage(targetStage);
+        setIsLoadingBoatToDholavira(false);
       }
     }, 50);
   };
@@ -1804,6 +1849,12 @@ function IndusValleyGameComponent() {
         } else if (isNearCitadelDoorway) {
           triggerTransition("citadel_interior", { x: 50.0, y: 78.0 }, 4, 600);
           return;
+        } else if (isNearRiverBoatDock) {
+          startBoatTravelTransition("dholavira_reservoirs", { x: 80.0, y: 75.0 }, 4, "DHOLAVIRA");
+          return;
+        } else if (isNearDholaviraBoatReturn) {
+          startBoatTravelTransition("priest_king_citadel", { x: 20.0, y: 65.0 }, 4, "THE CITADEL MOUND");
+          return;
         }
       }
 
@@ -1811,6 +1862,12 @@ function IndusValleyGameComponent() {
       if (e.key === "f" || e.key === "F") {
         if (isNearHarappaExitArchway) {
           triggerTransition("caravan_road", { x: 80.0, y: 32.0 }, undefined, 600);
+          return;
+        } else if (isNearRiverBoatDock) {
+          startBoatTravelTransition("dholavira_reservoirs", { x: 80.0, y: 75.0 }, 4, "DHOLAVIRA");
+          return;
+        } else if (isNearDholaviraBoatReturn) {
+          startBoatTravelTransition("priest_king_citadel", { x: 20.0, y: 65.0 }, 4, "THE CITADEL MOUND");
           return;
         } else if (isNearCitadelDoorway) {
           triggerTransition("citadel_interior", { x: 50.0, y: 78.0 }, 4, 600);
@@ -2223,6 +2280,8 @@ function IndusValleyGameComponent() {
     isNearCitadelDoorway,
     isNearCitadelMoundExit,
     isNearCitadelInteriorExit,
+    isNearRiverBoatDock,
+    isNearDholaviraBoatReturn,
     isNearGranaryExit,
     isNearArtisanQuarterExit,
     isNearCitadelStairs,
@@ -4454,6 +4513,46 @@ function IndusValleyGameComponent() {
           </div>
         )}
 
+        {/* Outdoor Citadel Mound: Harappan Riverboat Dock to Dholavira */}
+        {scene === "priest_king_citadel" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "14%", top: "66%" }}
+            onClick={() => startBoatTravelTransition("dholavira_reservoirs", { x: 80.0, y: 75.0 }, 4, "DHOLAVIRA")}
+          >
+            {isNearRiverBoatDock ? (
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">F</div>
+                <span>⛵ Board Riverboat to Dholavira</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>⛵ Harappan River Boat Dock</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Dholavira Reservoirs: Board Boat Back to Citadel Mound */}
+        {scene === "dholavira_reservoirs" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "84%", top: "75%" }}
+            onClick={() => startBoatTravelTransition("priest_king_citadel", { x: 20.0, y: 65.0 }, 4, "THE CITADEL MOUND")}
+          >
+            {isNearDholaviraBoatReturn ? (
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">F</div>
+                <span>⛵ Board Riverboat Back to Citadel Mound</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>⛵ River Docks (Back to Citadel)</span>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Citadel Interior: Priest-King Sanctuary Altar */}
         {scene === "citadel_interior" && (
           <div
@@ -4694,6 +4793,64 @@ function IndusValleyGameComponent() {
         </div>
       )}
 
+      {/* ========================================================= */}
+      {/* HARAPPAN BOAT VOYAGE LOADING SCREEN (DHOLAVIRA)          */}
+      {/* ========================================================= */}
+      {isLoadingBoatToDholavira && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#0d161a] text-white transition-opacity duration-300 overflow-hidden select-none animate-fade-in">
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: 'url("/bg-indus-boat-dholavira.jpg")' }}
+          />
+          {/* Warm atmospheric vignette */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0b1317]/90 via-black/30 to-[#0b1317]/70" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0b1317]/50 via-transparent to-[#0b1317]/50" />
+
+          {/* Top Travel Banner: VOYAGING TO {boatTravelDestinationName} */}
+          <div className="absolute top-6 px-7 py-2.5 rounded-2xl bg-[#0f1b21]/92 border-2 border-[#57b2c2] text-[#f7eedf] shadow-2xl flex items-center gap-3 backdrop-blur-md">
+            <span className="inline-block w-3 h-3 rounded-full bg-cyan-400 animate-ping" />
+            <div className="flex flex-col items-center">
+              <span className="tracking-widest font-serif font-black text-sm sm:text-base text-cyan-300 uppercase drop-shadow">
+                VOYAGING TO {boatTravelDestinationName}
+              </span>
+              <span className="text-[10px] sm:text-[11px] text-[#bde3ea] font-serif tracking-wider">
+                Traveling by Harappan Flat-Bottomed Riverboat • Sindhu River Estuary c. 2500 BCE
+              </span>
+            </div>
+          </div>
+
+          {/* Bottom Historical Note & Animated Progress Bar */}
+          <div className="absolute bottom-6 w-full max-w-xl mx-4 p-4 rounded-xl bg-[#0f1b21]/92 border border-[#57b2c2]/80 text-center shadow-2xl backdrop-blur-md flex flex-col items-center gap-3">
+            {/* Travel stage status & percentage */}
+            <div className="w-full flex items-center justify-between text-xs font-serif text-[#f7eedf] px-1">
+              <span className="text-[#57b2c2] font-semibold flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+                {boatTravelProgress < 25 && "Unmooring flat-bottom wooden riverboat..."}
+                {boatTravelProgress >= 25 && boatTravelProgress < 55 && "Navigating down the wide Sindhu river channels..."}
+                {boatTravelProgress >= 55 && boatTravelProgress < 85 && "Approaching the tidal estuaries of Dholavira..."}
+                {boatTravelProgress >= 85 && "Docking at Dholavira's dressed-stone reservoir harbor..."}
+              </span>
+              <span className="font-mono text-cyan-300 font-bold text-sm drop-shadow">{boatTravelProgress}%</span>
+            </div>
+
+            {/* Custom animated progress bar */}
+            <div className="w-full h-3.5 bg-[#12222a] rounded-full overflow-hidden border border-[#57b2c2]/60 shadow-inner relative p-0.5">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-teal-600 via-[#57b2c2] to-cyan-300 transition-all duration-75 relative overflow-hidden shadow-lg"
+                style={{ width: `${boatTravelProgress}%` }}
+              >
+                {/* Glowing traveling head */}
+                <div className="absolute right-0 top-0 bottom-0 w-3 bg-white/80 rounded-full blur-[2px] animate-pulse" />
+              </div>
+            </div>
+
+            <p className="text-[11px] sm:text-xs text-[#bde3ea] font-serif leading-relaxed">
+              Harappan coastal traders navigated flat-bottomed wooden boats down the Indus River channels into the Gulf of Kutch to reach Dholavira — the master city of water reservoirs and glyptic lapidary trade.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* --- HUD OVERLAY (Exact Image 2 Style) --- */}
       <IndusHUD
         stage={stage}
@@ -4705,7 +4862,7 @@ function IndusValleyGameComponent() {
         totalJournal={5}
         onOpenJournal={() => setIsJournalOpen(true)}
         onResetCampaign={() => setShowRestartConfirmModal(true)}
-        isTransitioning={isTransitioning || isLoadingToHarappa}
+        isTransitioning={isTransitioning || isLoadingToHarappa || isLoadingBoatToDholavira}
         elapsedSeconds={elapsedSeconds}
         isTimerVisible={isTimerVisible}
         onToggleTimer={() => setIsTimerVisible((prev) => !prev)}

@@ -182,6 +182,17 @@ export const INDUS_SCENE_CONFIGS: Record<IndusSceneType, IndusSceneMeta> = {
     minY: 35.0,
     maxY: 92.0,
   },
+  dholavira_reservoirs: {
+    title: "Dholavira • Water Reservoirs & Dressed-Stone Fort",
+    era: "Bronze Age • c. 2500 BCE",
+    subtitle: "Step-Well Reservoirs, Stone Sluices & River Docks",
+    backgroundImage: "/bg-indus-dholavira.jpg",
+    defaultObjective: "Explore the ancient water reservoirs of Dholavira, inspect the stone masonry sluice gates, and examine the Harappan lapidary docks.",
+    minX: 4.0,
+    maxX: 96.0,
+    minY: 25.0,
+    maxY: 94.0,
+  },
   closing_reflection: {
     title: "Sunset over the Sindhu River",
     era: "Bronze Age • c. 2500 BCE",
