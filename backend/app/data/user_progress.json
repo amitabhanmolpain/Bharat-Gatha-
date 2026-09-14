@@ -14,6 +14,30 @@
       "companion_rescued",
       "Sheesh Mahal Corridor Clearance"
     ],
-    "total_score": 2500
+    "total_score": 3650
+  },
+  "default_traveller_indus": {
+    "user_id": "default_traveller",
+    "era": "indus",
+    "solved_puzzles": [
+      "great_bath_drainage",
+      "steatite_seal_decryption"
+    ],
+    "prizes_unlocked": [
+      "Corbelled Terracotta Sluice Fragment",
+      "Ekasringa Unicorn Steatite Seal"
+    ],
+    "total_score": 350
+  },
+  "default_traveller_rajasthan": {
+    "user_id": "default_traveller",
+    "era": "rajasthan",
+    "solved_puzzles": [
+      "chaupar"
+    ],
+    "prizes_unlocked": [
+      "Royal Rajput Chaupar Victory"
+    ],
+    "total_score": 100
   }
 }

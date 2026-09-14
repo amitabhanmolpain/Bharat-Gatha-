@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Timer, AlertTriangle, RotateCcw } from "lucide-react";
 import DialoguePanel from "../../components/DialoguePanel";
+import ChauparGame from "./components/ChauparGame";
 import { playCharacterDialogue, stopCharacterDialogue } from "../../../services/characterVoiceService";
 import { playNarration, stopNarration } from "../../../services/narratorService";
 import { soundFx } from "../../../services/soundService";
@@ -854,19 +855,6 @@ export default function RajasthanGameScreen() {
     }
   }, [showKuldharaTimeOutModal]);
 
-  // --- BHANGARH ARTIFACT RECOVERY (Stage 4 - Free Exploration) ---
-  useEffect(() => {
-    if (stage !== 4 || isCampaignComplete) return;
-
-    const allRelicsFound = hasKathputliFragment && hasPaliwalSeal && hasWanderersVerse;
-    if (allRelicsFound) {
-      if (!hasShield) {
-        setHasShield(true);
-        setShowShieldModal(true);
-      }
-    }
-  }, [stage, isCampaignComplete, hasKathputliFragment, hasPaliwalSeal, hasWanderersVerse, hasShield]);
-
   // --- BHANGARH FORT NARRATOR INTRO (SARVAM AI RATAN) ---
   const bhangarhNarratorSentence = "Find the given clue in the Bhangarh Fort: why is the given palace haunted, before the evil spirits attack you!";
 
@@ -906,7 +894,9 @@ export default function RajasthanGameScreen() {
       allRelicsFound ||
       showBhangarhTimeOutModal ||
       showBhangarhNarratorBanner ||
-      showJollyDialogue
+      showJollyDialogue ||
+      showShieldModal ||
+      showGrandCampaignCompleteModal
     ) return;
 
     const interval = setInterval(() => {
@@ -931,6 +921,8 @@ export default function RajasthanGameScreen() {
     showBhangarhTimeOutModal,
     showBhangarhNarratorBanner,
     showJollyDialogue,
+    showShieldModal,
+    showGrandCampaignCompleteModal,
   ]);
 
   // Voice narration when Bhangarh 1-minute challenge timeout occurs (Evil Spirits Attack)
@@ -947,19 +939,39 @@ export default function RajasthanGameScreen() {
     }
   }, [showBhangarhTimeOutModal]);
 
-  // Voice narration when Bhangarh challenge is won (Curse Legend & Royal Shield Revealed)
+  // Voice narration when Bhangarh challenge is won (Curse Legend & Royal Shield Revealed - Screen 1)
   useEffect(() => {
     if (showShieldModal) {
       stopCharacterDialogue();
       stopNarration();
-      const victoryNarration = "You have uncovered the ancient legend of Bhangarh Fort! Princess Ratnavati saw through the dark witchcraft of Tantrik Singhia and threw his enchanted love potion onto a giant boulder. The rock rolled down and crushed the evil tantrik! With his dying breath, Singhia cursed Bhangarh that every roof would collapse and no soul would ever live in peace. Soon after, war and famine devastated the city, leaving its roofless ruins haunted by restless spirits!";
+      const victoryNarration = "Having uncovered all hidden relics, the fateful mystery of why Bhangarh is believed to be haunted is revealed! According to historic folklore, Tantrik Singhia, a master of black magic, was desperately obsessed with the peerless beauty of Princess Ratnavati of Bhangarh. In secret, he enchanted a vial of scented oil with a dark love spell so she would surrender herself to him. Discerning the sinister sorcery, the astute princess cast the vial away onto a massive boulder. The bewitched rock was drawn to the tantrik, rolling down the hill and crushing Singhia beneath its immense weight! With his dying breath, the vengeful sorcerer cursed Bhangarh that every palace roof would crumble, destruction would follow, and no soul would ever live in peace. A year later, a catastrophic battle and the devastating Chalisa Famine of 1783 ruined the township, causing it to be deserted forever. To this day, the legend holds that the roofless palace and desolate walls are haunted by the trapped, restless spirits of the tantrik and fallen townsfolk!";
       playNarration(victoryNarration, {
         speaker: "ratan",
         pace: 0.90,
         language_code: "en-IN",
       });
+      return () => {
+        stopNarration();
+      };
     }
   }, [showShieldModal]);
+
+  // Voice narration when Grand Rajasthan Campaign Complete modal opens (Screen 2)
+  useEffect(() => {
+    if (showGrandCampaignCompleteModal) {
+      stopCharacterDialogue();
+      stopNarration();
+      const campaignCompleteNarration = "Congratulations! You have completed the Rajasthan campaign.";
+      playNarration(campaignCompleteNarration, {
+        speaker: "ratan",
+        pace: 0.90,
+        language_code: "en-IN",
+      });
+      return () => {
+        stopNarration();
+      };
+    }
+  }, [showGrandCampaignCompleteModal]);
 
   // Automatically trigger Royal Shield modal when all 3 clues are discovered
   useEffect(() => {
@@ -991,7 +1003,7 @@ export default function RajasthanGameScreen() {
 
   // --- BHANGARH CLUES AUTOMATIC TOUCH TRIGGERS ---
   useEffect(() => {
-    if (stage !== 4) return;
+    if (stage !== 4 || showShieldModal || showGrandCampaignCompleteModal || isCampaignComplete) return;
 
     // Clue 1: Kathputli Fragment tiny fallen on far-left ground in bhangarh_gate
     if (
@@ -1586,7 +1598,7 @@ export default function RajasthanGameScreen() {
             state.setPlayerPos({ x: 50.0, y: 86.0 });
             state.setIsTransitioning(false);
           }, 400);
-        } else if (state.isNearFinalEvidenceBoard || (state.scene === "palace_ruins" && state.hasKathputliFragment && state.hasPaliwalSeal && state.hasWanderersVerse)) {
+        } else if (state.isNearFinalEvidenceBoard || (state.scene === "palace_ruins" && state.hasKathputliFragment && state.hasPaliwalSeal && state.hasWanderersVerse && state.isCampaignComplete && !state.showShieldModal)) {
           if (typeof state.setShowGrandCampaignCompleteModal === "function") {
             state.setShowGrandCampaignCompleteModal(true);
           } else if (typeof state.setShowFinalEvidenceBoardModal === "function") {
@@ -3428,206 +3440,25 @@ export default function RajasthanGameScreen() {
       )}
 
       {/* --- AUTHENTIC VISUAL CHAUPAR (PACHISI) GAME MODAL --- */}
-      {showChauparGame && (
-        <div className="absolute inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 z-50 pointer-events-auto">
-          <div className="bg-[#fff9ea] border-4 border-amber-950 rounded-3xl p-5 shadow-[16px_16px_0_0_rgba(0,0,0,1)] max-w-xl w-full flex flex-col gap-3.5 animate-in fade-in zoom-in-95 duration-200">
-            {/* Header Bar */}
-            <div className="flex items-center justify-between border-b-2 border-amber-800/40 pb-2.5">
-              <div className="flex items-center gap-2">
-                <span className="text-xl">🎲</span>
-                <div>
-                  <h3 className="font-extrabold text-amber-950 uppercase tracking-widest text-sm leading-tight">
-                    Royal Chaupar (Pachisi) Game
-                  </h3>
-                  <span className="text-[10px] font-serif text-amber-800 font-semibold italic">
-                    Traditional Rajput Board of Kings & Court
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleResetChauparMatch}
-                  className="text-amber-900 hover:bg-amber-200 font-bold text-[11px] px-2.5 py-1 rounded-lg border border-amber-800 cursor-pointer"
-                  title="Reset score and pawns"
-                >
-                  🔄 Reset
-                </button>
-                <button
-                  onClick={handleExitChauparGame}
-                  className="text-amber-950 hover:bg-amber-200 font-bold text-xs px-3 py-1 rounded-lg border-2 border-amber-900 bg-amber-100 cursor-pointer shadow-sm"
-                >
-                  ✕ Exit Game
-                </button>
-              </div>
-            </div>
-
-            {/* Scoreboard Bar */}
-            <div className="grid grid-cols-2 gap-3 bg-gradient-to-r from-amber-100 via-amber-200/70 to-amber-100 border-2 border-amber-900/70 p-2.5 rounded-xl text-center shadow-sm">
-              <div className="flex items-center justify-between px-3 border-r-2 border-amber-800/30">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-yellow-600 via-amber-400 to-yellow-200 border-2 border-amber-950 flex items-center justify-center shadow-sm text-[10px] font-bold">
-                    👑
-                  </div>
-                  <div className="text-left">
-                    <span className="text-[10px] font-black text-amber-900 uppercase block">YOU (Gold Goti)</span>
-                    <span className="text-[11px] font-bold text-amber-950">Track Step {playerPawnPos}/12</span>
-                  </div>
-                </div>
-                <div className="text-2xl font-black text-amber-950">{chauparScore.player}</div>
-              </div>
-
-              <div className="flex items-center justify-between px-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-red-800 via-red-600 to-red-400 border-2 border-amber-950 flex items-center justify-center shadow-sm text-[10px] font-bold text-white">
-                    👳
-                  </div>
-                  <div className="text-left">
-                    <span className="text-[10px] font-black text-red-950 uppercase block">CHACHA (Ruby Goti)</span>
-                    <span className="text-[11px] font-bold text-amber-950">Track Step {chachaPawnPos}/12</span>
-                  </div>
-                </div>
-                <div className="text-2xl font-black text-amber-950">{chauparScore.chacha}</div>
-              </div>
-            </div>
-
-            {/* Visual Chaupar Cross Board (Google Nano Banana Clean Board Image & Exact Grid Pawn Positions) */}
-            <div className="relative w-full h-72 sm:h-80 rounded-2xl overflow-hidden border-4 border-amber-950 shadow-2xl bg-[#1e0e07] flex items-center justify-center">
-              {/* Google Nano Banana Clean 2D Orthogonal Chaupar Board Background */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/chaupar-board.jpg"
-                alt="Traditional Chaupar Board (Nano Banana)"
-                className="w-full h-full object-contain p-1 opacity-95"
-              />
-
-              {/* Central Home (Charkoni) Highlight Ring */}
-              <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                <div className="w-14 h-14 rounded-full border-2 border-yellow-400/90 bg-yellow-500/25 backdrop-blur-[1px] animate-pulse flex items-center justify-center shadow-[0_0_20px_rgba(234,179,8,0.7)]">
-                  <span className="text-[10px] font-serif font-black text-yellow-100 drop-shadow-md uppercase tracking-wider">HOME</span>
-                </div>
-              </div>
-
-              {/* Player's Animated Golden Goti (Pawn) sitting precisely inside grid squares */}
-              <div
-                className={`absolute w-9 h-9 z-30 transition-all duration-700 ease-out transform -translate-x-1/2 -translate-y-1/2 ${isPawnMoving ? "scale-125 -translate-y-3 shadow-[0_12px_24px_rgba(245,158,11,0.9)] animate-pulse" : "scale-100 shadow-md"
-                  }`}
-                style={
-                  playerPawnPos === 0
-                    ? { left: "50%", top: "86%" }
-                    : playerPawnPos === 1
-                      ? { left: "50%", top: "78%" }
-                      : playerPawnPos === 2
-                        ? { left: "50%", top: "70%" }
-                        : playerPawnPos === 3
-                          ? { left: "50%", top: "62%" }
-                          : playerPawnPos === 4
-                            ? { left: "50%", top: "55%" }
-                            : playerPawnPos === 5
-                              ? { left: "50%", top: "48%" }
-                              : playerPawnPos === 6
-                                ? { left: "58%", top: "50%" }
-                                : playerPawnPos === 7
-                                  ? { left: "66%", top: "50%" }
-                                  : playerPawnPos === 8
-                                    ? { left: "74%", top: "50%" }
-                                    : playerPawnPos === 9
-                                      ? { left: "82%", top: "50%" }
-                                      : playerPawnPos === 10
-                                        ? { left: "88%", top: "50%" }
-                                        : playerPawnPos === 11
-                                          ? { left: "94%", top: "50%" }
-                                          : { left: "50%", top: "50%" }
-                }
-              >
-                <div className="relative w-full h-full rounded-t-full rounded-b-md bg-gradient-to-tr from-amber-600 via-yellow-400 to-amber-100 border-2 border-amber-950 shadow-[0_4px_10px_rgba(0,0,0,0.8)] flex items-center justify-center">
-                  <div className="w-3 h-3 rounded-full bg-amber-100 border border-amber-900 shadow-inner flex items-center justify-center text-[9px]">👑</div>
-                </div>
-              </div>
-
-              {/* Chacha's Animated Ruby Goti (Pawn) sitting precisely inside grid squares */}
-              <div
-                className={`absolute w-9 h-9 z-30 transition-all duration-700 ease-out transform -translate-x-1/2 -translate-y-1/2 ${isPawnMoving ? "scale-125 -translate-y-3 shadow-[0_12px_24px_rgba(239,68,68,0.9)] animate-pulse" : "scale-100 shadow-md"
-                  }`}
-                style={
-                  chachaPawnPos === 0
-                    ? { left: "50%", top: "14%" }
-                    : chachaPawnPos === 1
-                      ? { left: "50%", top: "22%" }
-                      : chachaPawnPos === 2
-                        ? { left: "50%", top: "30%" }
-                        : chachaPawnPos === 3
-                          ? { left: "50%", top: "38%" }
-                          : chachaPawnPos === 4
-                            ? { left: "50%", top: "45%" }
-                            : chachaPawnPos === 5
-                              ? { left: "50%", top: "52%" }
-                              : chachaPawnPos === 6
-                                ? { left: "42%", top: "50%" }
-                                : chachaPawnPos === 7
-                                  ? { left: "34%", top: "50%" }
-                                  : chachaPawnPos === 8
-                                    ? { left: "26%", top: "50%" }
-                                    : chachaPawnPos === 9
-                                      ? { left: "18%", top: "50%" }
-                                      : chachaPawnPos === 10
-                                        ? { left: "12%", top: "50%" }
-                                        : chachaPawnPos === 11
-                                          ? { left: "6%", top: "50%" }
-                                          : { left: "50%", top: "50%" }
-                }
-              >
-                <div className="relative w-full h-full rounded-t-full rounded-b-md bg-gradient-to-tr from-red-950 via-red-600 to-red-400 border-2 border-amber-950 shadow-[0_4px_10px_rgba(0,0,0,0.8)] flex items-center justify-center">
-                  <div className="w-3 h-3 rounded-full bg-red-200 border border-red-950 shadow-inner flex items-center justify-center text-[9px] text-white">👳</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Long Wooden Dice (Pasa) Animation Section (Image 2 style) */}
-            <div className="bg-amber-100/90 border-2 border-amber-900/60 p-2.5 rounded-xl flex flex-col items-center gap-2">
-              <span className="text-[10px] font-black text-amber-950 uppercase tracking-wider">
-                LONG WOODEN PASA DICE (ROYAL RAJASTHANI DICE)
-              </span>
-
-              <div className="flex items-center justify-center gap-6">
-                {/* Die 1 */}
-                <div className={`relative w-28 h-10 bg-gradient-to-r from-[#d89e5a] via-[#f5d09b] to-[#c68c47] border-2 border-[#4a2e12] rounded-md shadow-md flex items-center justify-around px-3 transition-all duration-500 transform ${isDiceRolling ? "rotate-45 scale-110 shadow-xl animate-bounce" : "rotate-0"
-                  }`}>
-                  <div className="absolute -left-1.5 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-[#6e431a] rounded-l border-r border-[#4a2e12]"></div>
-                  <div className="absolute -right-1.5 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-[#6e431a] rounded-r border-l border-[#4a2e12]"></div>
-                  {Array.from({ length: diceRoll1 }).map((_, i) => (
-                    <div key={i} className="w-3 h-3 bg-red-700 border border-red-950 rounded-full shadow-inner"></div>
-                  ))}
-                </div>
-
-                {/* Die 2 */}
-                <div className={`relative w-28 h-10 bg-gradient-to-r from-[#d89e5a] via-[#f5d09b] to-[#c68c47] border-2 border-[#4a2e12] rounded-md shadow-md flex items-center justify-around px-3 transition-all duration-500 transform ${isDiceRolling ? "-rotate-45 scale-110 shadow-xl animate-bounce" : "rotate-0"
-                  }`}>
-                  <div className="absolute -left-1.5 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-[#6e431a] rounded-l border-r border-[#4a2e12]"></div>
-                  <div className="absolute -right-1.5 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-[#6e431a] rounded-r border-l border-[#4a2e12]"></div>
-                  {Array.from({ length: diceRoll2 }).map((_, i) => (
-                    <div key={i} className="w-3 h-3 bg-red-700 border border-red-950 rounded-full shadow-inner"></div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Message Box */}
-            <div className="bg-amber-200/70 border border-amber-400 p-2.5 rounded-xl text-center text-xs font-serif font-bold text-amber-950 leading-relaxed shadow-inner">
-              {chauparMessage}
-            </div>
-
-            {/* Roll Action Button */}
-            <button
-              onClick={handleRollDice}
-              disabled={isDiceRolling || isPawnMoving}
-              className="bg-amber-600 hover:bg-amber-700 disabled:bg-gray-400 text-white font-extrabold py-3 px-6 rounded-xl border-3 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-xs uppercase tracking-widest cursor-pointer transition-all active:translate-y-0.5 flex items-center justify-center gap-2"
-            >
-              <span>🎲</span>
-              <span>{isDiceRolling ? "Rolling Wooden Pasa..." : isPawnMoving ? "Moving Goti..." : "Roll Pasa Dice"}</span>
-            </button>
-          </div>
-        </div>
-      )}
+      <ChauparGame
+        isOpen={showChauparGame}
+        onClose={handleExitChauparGame}
+        onComplete={() => {
+          // Buzurg Chacha congratulates player and opens courtyard staircase
+          const chachaWinSpeech = "Shabash, young warrior! You have triumphed in royal Chaupar and proven your wisdom and patience! Ascend the grand staircase to the upper passage and reach the glorious Vijay Stambh!";
+          setChachaSpeechText(chachaWinSpeech);
+          setChachaAudioUrl(undefined);
+          setChachaOptions([
+            { id: 10, text: "Ji Chacha-ji! Heading towards the staircase now." },
+            { id: 11, text: "Thank you for the wonderful Chaupar match, Chacha-ji!" }
+          ]);
+          setShowChachaDialogue(true);
+          playCharacterDialogue({
+            character: "chacha",
+            text: chachaWinSpeech,
+          });
+        }}
+      />
 
       {/* --- ELEPHANT JOURNEY OVERLAY (STAGE 2 -> STAGE 3) --- */}
       {isElephantTravelling && (
@@ -4092,10 +3923,18 @@ export default function RajasthanGameScreen() {
             </div>
 
             <div className="flex gap-4 w-full">
-              <button onClick={() => setShowGrandCampaignCompleteModal(false)} className="flex-1 bg-amber-100 hover:bg-amber-200 text-amber-950 font-bold py-3 px-4 rounded-xl border-2 border-black text-xs uppercase tracking-wider cursor-pointer">
+              <button onClick={() => {
+                stopNarration();
+                stopCharacterDialogue();
+                setShowGrandCampaignCompleteModal(false);
+              }} className="flex-1 bg-amber-100 hover:bg-amber-200 text-amber-950 font-bold py-3 px-4 rounded-xl border-2 border-black text-xs uppercase tracking-wider cursor-pointer">
                 Revisit Bhangarh Fort
               </button>
-              <button onClick={() => router.push("/dashboard")} className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-extrabold py-3 px-4 rounded-xl border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-xs uppercase tracking-wider cursor-pointer">
+              <button onClick={() => {
+                stopNarration();
+                stopCharacterDialogue();
+                router.push("/dashboard");
+              }} className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-extrabold py-3 px-4 rounded-xl border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-xs uppercase tracking-wider cursor-pointer">
                 Return to Dashboard
               </button>
             </div>
@@ -4254,6 +4093,8 @@ export default function RajasthanGameScreen() {
             {/* Golden Action Button */}
             <button
               onClick={() => {
+                stopNarration();
+                stopCharacterDialogue();
                 setShowShieldModal(false);
                 setIsCampaignComplete(true);
                 setShowGrandCampaignCompleteModal(true);

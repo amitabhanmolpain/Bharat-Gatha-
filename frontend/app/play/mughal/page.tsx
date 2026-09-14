@@ -524,9 +524,20 @@ export default function MughalGameScreen() {
     }
   }, [isLoading, scene]);
 
-  // --- INNER RAMP PASSAGE THEME MUSIC & REAL-TIME AUDIO DUCKING ---
+  // --- MUGHAL PALACE THEME MUSIC & REAL-TIME AUDIO DUCKING ---
+  // Plays continuously across the entire journey from the inner ramp passage
+  // through Anguri Bagh courtyard, Diwan-i-Aam, Sheesh Mahal, brown passage, and Khas Mahal.
+  const isMughalFortMusicScene = (s: SceneType) =>
+    s === "passage" ||
+    s === "courtyard" ||
+    s === "interior" ||
+    s === "sheesh_passage" ||
+    s === "sheesh_mahal" ||
+    s === "brown_passage" ||
+    s === "khas_mahal";
+
   // Tracks narrator and character dialogue / TTS playing state.
-  // When speech is active, ducks ramp music to near-inaudible whisper (0.03).
+  // When speech is active, ducks music to near-inaudible whisper (0.03).
   // When speech ends, smoothly restores low ambient volume (0.16).
   useEffect(() => {
     let charPlaying = false;
@@ -535,7 +546,7 @@ export default function MughalGameScreen() {
     const checkSpeech = () => {
       const active = charPlaying || narratorPlaying;
       setIsAnySpeechActive(active);
-      if (rampAudioRef.current && scene === "passage") {
+      if (rampAudioRef.current && isMughalFortMusicScene(scene)) {
         rampAudioRef.current.volume = active ? 0.03 : 0.16;
       }
     };
@@ -559,7 +570,9 @@ export default function MughalGameScreen() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    if (scene === "passage" && !isTransitioning) {
+    const isMusicScene = isMughalFortMusicScene(scene);
+
+    if (isMusicScene) {
       if (!rampAudioRef.current) {
         const audio = new Audio("/ramp_passage_theme.mp3");
         audio.loop = true;
@@ -577,13 +590,15 @@ export default function MughalGameScreen() {
       if (isMusicMuted) {
         audio.pause();
       } else {
-        audio.play().catch((err) => {
-          console.log("Ramp passage theme autoplay pending player gesture:", err?.message || err);
-        });
+        if (audio.paused) {
+          audio.play().catch((err) => {
+            console.log("Mughal theme autoplay pending player gesture:", err?.message || err);
+          });
+        }
       }
 
       const triggerOnGesture = () => {
-        if (scene === "passage" && !isMusicMuted && rampAudioRef.current && rampAudioRef.current.paused) {
+        if (isMughalFortMusicScene(scene) && !isMusicMuted && rampAudioRef.current && rampAudioRef.current.paused) {
           rampAudioRef.current.play().catch(() => {});
         }
       };
@@ -596,15 +611,15 @@ export default function MughalGameScreen() {
         window.removeEventListener("keydown", triggerOnGesture);
       };
     } else {
-      // Pause immediately and rewind when exiting the ramp passage
+      // Pause immediately and rewind when exiting the Mughal fort palace grounds
       if (rampAudioRef.current) {
         rampAudioRef.current.pause();
         rampAudioRef.current.currentTime = 0;
       }
     }
-  }, [scene, isTransitioning, isAnySpeechActive, isMusicMuted]);
+  }, [scene, isAnySpeechActive, isMusicMuted]);
 
-  // Clean up ramp passage audio on component unmount
+  // Clean up theme audio on component unmount
   useEffect(() => {
     return () => {
       if (rampAudioRef.current) {
@@ -1255,11 +1270,7 @@ export default function MughalGameScreen() {
               setShowPietraDuraPuzzle(true);
             }
           } else if (pos.x >= 35.0 && pos.x <= 65.0 && pos.y <= 85.0) {
-            if (!isPietraDuraSolved) {
-              setShowPietraDuraPuzzle(true);
-            } else {
-              setShowThroneScroll((prev) => !prev);
-            }
+            setShowPietraDuraPuzzle(true);
           }
         }
         if (curScene === "sheesh_passage" && pos.y <= 85.0) {
@@ -2246,18 +2257,38 @@ export default function MughalGameScreen() {
 
       {/* Throne Inspection / Art Performance Prompt (Interior Scene) */}
       {scene === "interior" && isNearThrone && !showThroneScroll && !showPietraDuraPuzzle && (
-        <div 
-          className="absolute top-[52%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 cursor-pointer z-10 animate-bounce"
-          onClick={() => {
-            if (!isPietraDuraSolved) {
-              setShowPietraDuraPuzzle(true);
-            } else {
-              setShowThroneScroll(true);
-            }
-          }}
-        >
-          <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
-          {isPietraDuraSolved ? "Inspect Imperial Throne Dais" : "🎨 Perform Pietra Dura Marble Flower Art"}
+        <div className="absolute top-[50%] left-1/2 -translate-x-1/2 z-10 animate-bounce flex flex-col sm:flex-row items-center gap-2">
+          {!isPietraDuraSolved ? (
+            <div 
+              className="bg-[#fff9ea] hover:bg-amber-100 border-2 border-black rounded-lg px-3 py-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] text-[12px] font-bold text-black flex items-center gap-2 cursor-pointer active:translate-y-0.5 transition-all"
+              onClick={() => setShowPietraDuraPuzzle(true)}
+            >
+              <span className="bg-amber-400 border border-black rounded px-1.5 text-[10px]">E</span>
+              <span>🎨 Perform Pietra Dura Marble Flower Art</span>
+            </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row items-center gap-2 bg-[#fff9ea]/95 backdrop-blur-xs border-2 border-black rounded-xl p-1.5 shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
+              <button 
+                type="button"
+                className="bg-amber-400 hover:bg-amber-300 border-2 border-black rounded-lg px-3 py-1.5 text-[12px] font-black text-black flex items-center gap-1.5 cursor-pointer shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 transition-all"
+                onClick={() => setShowPietraDuraPuzzle(true)}
+                title="Play the Pietra Dura marble puzzle again"
+              >
+                <span>🎨</span>
+                <span>Replay Pietra Dura Puzzle</span>
+                <span className="bg-black text-amber-300 text-[9.5px] px-1.5 py-0.5 rounded font-mono font-bold">[E]</span>
+              </button>
+              <button 
+                type="button"
+                className="bg-white hover:bg-amber-50 border-2 border-black rounded-lg px-3 py-1.5 text-[12px] font-bold text-black flex items-center gap-1.5 cursor-pointer shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 transition-all"
+                onClick={() => setShowThroneScroll(true)}
+                title="Inspect Imperial Throne Dais & Farman"
+              >
+                <span>📜</span>
+                <span>Inspect Throne Farman</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -2537,12 +2568,26 @@ export default function MughalGameScreen() {
                 ★ <strong className="text-black">New Objective:</strong> Head right through the colonnade archway to enter the Sheesh Mahal corridor!
               </p>
             </div>
-            <button 
-              onClick={() => setShowThroneScroll(false)}
-              className="bg-amber-400 hover:bg-amber-300 border-2 border-black rounded-lg py-2 text-xs font-bold text-black shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 cursor-pointer"
-            >
-              Continue to Sheesh Mahal
-            </button>
+            <div className="flex flex-col sm:flex-row gap-2 mt-2">
+              <button 
+                type="button"
+                onClick={() => {
+                  setShowThroneScroll(false);
+                  setShowPietraDuraPuzzle(true);
+                }}
+                className="flex-1 bg-amber-400 hover:bg-amber-300 border-2 border-black rounded-lg py-2.5 px-3 text-xs font-black text-black shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 cursor-pointer flex items-center justify-center gap-1.5 transition-all"
+              >
+                <span>🎨</span>
+                <span>Replay Pietra Dura Marble Art</span>
+              </button>
+              <button 
+                type="button"
+                onClick={() => setShowThroneScroll(false)}
+                className="flex-1 bg-white hover:bg-amber-50 border-2 border-black rounded-lg py-2.5 px-3 text-xs font-bold text-black shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 cursor-pointer transition-all"
+              >
+                Continue to Sheesh Mahal
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -4166,14 +4211,19 @@ export default function MughalGameScreen() {
         onTimeout={() => {
           setShowPietraDuraPuzzle(false);
           stopCharacterDialogue();
-          setPunishmentState({
-            isOpen: true,
-            title: "Failed the Court Art Performance",
-            subtitle: "DISGRACED BEFORE THE GUARDS",
-            description: "Time ran out before you could arrange the sacred Pietra Dura marble floral art. The Emperor's military guards saw through your deception and expelled you outside the palace gates!"
-          });
-          setScene("gate");
-          setPlayerPos({ x: 50.0, y: 88.0 });
+          if (isPietraDuraSolvedRef.current) {
+            setThroneGuardSpeech("Time ran out on your practice run! You already hold royal clearance to Sheesh Mahal, so take your time and try again whenever you like.");
+            setTimeout(() => setThroneGuardSpeech(null), 7000);
+          } else {
+            setPunishmentState({
+              isOpen: true,
+              title: "Failed the Court Art Performance",
+              subtitle: "DISGRACED BEFORE THE GUARDS",
+              description: "Time ran out before you could arrange the sacred Pietra Dura marble floral art. The Emperor's military guards saw through your deception and expelled you outside the palace gates!"
+            });
+            setScene("gate");
+            setPlayerPos({ x: 50.0, y: 88.0 });
+          }
         }}
       />
 

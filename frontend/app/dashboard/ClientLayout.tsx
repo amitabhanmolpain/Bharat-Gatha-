@@ -18,13 +18,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const pathname = usePathname();
 
   return (
-    <div className={`flex min-h-screen w-full font-sans transition-colors duration-500 ${isDark ? 'bg-[#050403] selection:bg-[#91714b]/30' : 'bg-[#fdfbf7] selection:bg-[#c9a776]/30'}`}>
+    <div className={`flex h-screen w-full overflow-hidden font-sans transition-colors duration-500 ${isDark ? 'bg-[#050403] selection:bg-[#91714b]/30' : 'bg-[#fdfbf7] selection:bg-[#c9a776]/30'}`}>
       
       {/* Subtle background glow */}
-      <div className={`absolute inset-0 pointer-events-none z-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] ${isDark ? 'from-[#91714b]/10 via-[#050403]/80 to-[#050403]' : 'from-[#c9a776]/20 via-[#fdfbf7]/80 to-[#fdfbf7]'}`}></div>
+      <div className={`fixed inset-0 pointer-events-none z-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] ${isDark ? 'from-[#91714b]/10 via-[#050403]/80 to-[#050403]' : 'from-[#c9a776]/20 via-[#fdfbf7]/80 to-[#fdfbf7]'}`}></div>
 
-      {/* Sidebar */}
-      <aside className={`w-64 md:w-72 border-r-[1.5px] backdrop-blur-xl flex flex-col z-20 transition-colors duration-500 ${isDark ? 'border-[#3a2d1d] bg-[#0a0806]/80 shadow-[4px_0_24px_rgba(0,0,0,0.6)]' : 'border-[#e3d5c1] bg-white/80 shadow-[4px_0_24px_rgba(0,0,0,0.03)]'}`}>
+      {/* Sidebar (Fixed in place, never scrolls) */}
+      <aside className={`w-64 md:w-72 h-screen flex-shrink-0 border-r-[1.5px] backdrop-blur-xl flex flex-col z-20 transition-colors duration-500 ${isDark ? 'border-[#3a2d1d] bg-[#0a0806]/80 shadow-[4px_0_24px_rgba(0,0,0,0.6)]' : 'border-[#e3d5c1] bg-white/80 shadow-[4px_0_24px_rgba(0,0,0,0.03)]'}`}>
         <div className={`p-8 border-b-[1.5px] relative transition-colors duration-500 ${isDark ? 'border-[#3a2d1d]' : 'border-[#e3d5c1]'}`}>
           {/* Subtle top glow */}
           <div className={`absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent to-transparent ${isDark ? 'via-[#91714b]/50' : 'via-[#c9a776]/50'}`}></div>
@@ -55,7 +55,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           </div>
         </div>
 
-        <nav className="flex-1 p-6 space-y-2">
+        <nav className="flex-1 p-6 space-y-2 overflow-y-auto">
           {/* Games Link */}
           <Link href="/dashboard" className={`flex items-center gap-4 px-4 py-3.5 rounded-lg font-medium text-[14px] tracking-wide transition-all ${
             pathname === '/dashboard'
@@ -130,12 +130,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 p-8 md:p-12 relative overflow-hidden flex flex-col z-10">
+      {/* Main Content (Independent Scrollable Container) */}
+      <main className="flex-1 h-screen overflow-y-auto p-8 md:p-12 relative flex flex-col z-10">
          {/* Subtle background texture/pattern */}
-         <div className={`absolute inset-0 opacity-[0.03] bg-[size:32px_32px] pointer-events-none transition-colors duration-500 ${isDark ? 'bg-[radial-gradient(circle_at_center,_#91714b_1px,_transparent_1px)]' : 'bg-[radial-gradient(circle_at_center,_#8a6835_1.5px,_transparent_1.5px)]'}`}></div>
+         <div className={`fixed inset-0 opacity-[0.03] bg-[size:32px_32px] pointer-events-none transition-colors duration-500 ${isDark ? 'bg-[radial-gradient(circle_at_center,_#91714b_1px,_transparent_1px)]' : 'bg-[radial-gradient(circle_at_center,_#8a6835_1.5px,_transparent_1.5px)]'}`}></div>
          
-         <div className="relative z-10 w-full max-w-5xl mx-auto flex-1 flex flex-col">
+         <div className="relative z-10 w-full max-w-7xl mx-auto flex-1 flex flex-col pb-16">
             {children}
          </div>
       </main>

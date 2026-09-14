@@ -182,15 +182,19 @@ export default function VijayanagaraGameScreen() {
     }
   }, []);
 
-  // Intro narration for Vijayanagara Empire
+  // Intro narration for Vijayanagara Empire (Stage 1: 1336 AD)
   const hasPlayedIntroNarrationRef = useRef(false);
   useEffect(() => {
     if (!isLoading && scene === "anegundi_river_crossing" && !hasPlayedIntroNarrationRef.current) {
       hasPlayedIntroNarrationRef.current = true;
-      const introText = "You have entered the year 1565, the golden age of the Vijayanagara Empire. The bustling markets, grand temples, and heroic tales await you. Travel wisely and uncover the lost secrets of this mighty kingdom.";
+      const introText =
+        "You have entered the year 1336 AD, the dawn of the Vijayanagara Empire.\n\n" +
+        "Before the grand city of Hampi rose in stone, it all began here at ancient Anegundi, along the sacred Tungabhadra River.\n\n" +
+        "Cross the waters and seek Sage Vidyaranya, traveler. The foundation of a legendary kingdom awaits your steps.";
       const timer = setTimeout(() => {
+        setShowOpeningAtmosphere(false);
         playNarration(introText, { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
-      }, 500);
+      }, 2500);
       return () => clearTimeout(timer);
     }
   }, [isLoading, scene]);
@@ -200,8 +204,14 @@ export default function VijayanagaraGameScreen() {
   useEffect(() => {
     if (!isLoading && stage === 2 && !hasPlayedStage2NarrationRef.current) {
       hasPlayedStage2NarrationRef.current = true;
-      const text = "Stage Two: The vibrant Hampi Bazaar beckons. merchants trade exotic wares, and whispers of hidden ledgers drift through the air.";
-      playNarration(text, { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
+      const text =
+        "The year is 1520 AD, the golden age of Emperor Krishnadevaraya.\n\n" +
+        "The vibrant Hampi Bazaar beckons with exotic silks and gemstones, but whispers speak of a missing merchant's ledger.";
+      const timer = setTimeout(() => {
+        setShowStage2OpeningBanner(false);
+        playNarration(text, { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
+      }, 2000);
+      return () => clearTimeout(timer);
     }
   }, [isLoading, stage]);
 
@@ -209,8 +219,14 @@ export default function VijayanagaraGameScreen() {
   useEffect(() => {
     if (!isLoading && stage === 3 && !hasPlayedStage3NarrationRef.current) {
       hasPlayedStage3NarrationRef.current = true;
-      const text = "Stage Three: The Stone Chariot stands tall, its carvings echoing ancient hymns. Resolve the musical pillars to proceed.";
-      playNarration(text, { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
+      const text =
+        "The year is 1540 AD, before the sacred Vittala Temple.\n\n" +
+        "The magnificent Stone Chariot and musical pillars echo ancient melodies. Uncover the acoustic resonance within.";
+      const timer = setTimeout(() => {
+        setShowStage3OpeningBanner(false);
+        playNarration(text, { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
+      }, 2000);
+      return () => clearTimeout(timer);
     }
   }, [isLoading, stage]);
 
@@ -218,10 +234,40 @@ export default function VijayanagaraGameScreen() {
   useEffect(() => {
     if (!isLoading && stage === 4 && !hasPlayedStage4NarrationRef.current) {
       hasPlayedStage4NarrationRef.current = true;
-      const text = "Stage Four: The Mahanavami celebration awaits. Assemble the ledger and claim the final seal of the empire.";
-      playNarration(text, { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
+      const text =
+        "The year is 1565 AD, atop the grand platform of Mahanavami Dibba.\n\n" +
+        "As fateful clouds gather over the empire, assemble the scattered ledger fragments and safeguard the eternal memory of Vijayanagara.";
+      const timer = setTimeout(() => {
+        setShowStage4OpeningBanner(false);
+        playNarration(text, { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
+      }, 2000);
+      return () => clearTimeout(timer);
     }
   }, [isLoading, stage]);
+
+  // Sage Vidyaranya Dialogue Narration (1336 AD Sringeri Scholar)
+  useEffect(() => {
+    if (showVidyaranyaDialogue) {
+      let speech = "";
+      if (dialogueTopic === "intro") {
+        speech =
+          "Khamma, traveler. Welcome to the granite crags of Anegundi. Here on the northern banks of the Tungabhadra, history gathers its breath before surging forward. Sit with me. Let us discuss the purpose of an empire, or test your strategic patience upon the Chowka Bara board.";
+      } else if (dialogueTopic === "founders") {
+        speech =
+          "Harihara and Bukka are two brothers of noble resolve. In a period of turmoil across the Deccan, they chose not to yield to fragmentation, but to build a haven where our traditions, arts, and trade could flourish unhindered.";
+      } else if (dialogueTopic === "region") {
+        speech =
+          "Observe these colossal boulders and the torrential Tungabhadra river. Nature crafted an invincible fortress long before our stonemasons laid a single chisel. The granite ramparts shield our people, while the fertile valley provides boundless sustenance.";
+      } else if (dialogueTopic === "vidyaranya") {
+        speech =
+          "Thrones rise and fall, and armies disperse like mist. But knowledge, music, craftsmanship, and dharma endure across ages. My role is to ensure that as this empire grows in wealth and stone, it never forgets its founding soul.";
+      }
+
+      if (speech) {
+        playNarration(speech, { speaker: "ratan", pace: 0.86, language_code: "en-IN", hideSubtitle: true });
+      }
+    }
+  }, [showVidyaranyaDialogue, dialogueTopic]);
 
   // Cleanup narration on component unmount
   useEffect(() => {
@@ -2357,12 +2403,42 @@ export default function VijayanagaraGameScreen() {
                   </div>
                 </div>
 
-                <button
-                  onClick={() => setShowVidyaranyaDialogue(false)}
-                  className="text-[#a89985] hover:text-[#f6ede0] text-sm bg-[#2b2520] hover:bg-[#3d3329] border border-[#5a4d3f] px-3 py-1.5 rounded-lg transition-all cursor-pointer"
-                >
-                  ✕ Close
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      let speech = "";
+                      if (dialogueTopic === "intro") {
+                        speech =
+                          "Khamma, traveler. Welcome to the granite crags of Anegundi. Here on the northern banks of the Tungabhadra, history gathers its breath before surging forward. Sit with me. Let us discuss the purpose of an empire, or test your strategic patience upon the Chowka Bara board.";
+                      } else if (dialogueTopic === "founders") {
+                        speech =
+                          "Harihara and Bukka are two brothers of noble resolve. In a period of turmoil across the Deccan, they chose not to yield to fragmentation, but to build a haven where our traditions, arts, and trade could flourish unhindered.";
+                      } else if (dialogueTopic === "region") {
+                        speech =
+                          "Observe these colossal boulders and the torrential Tungabhadra river. Nature crafted an invincible fortress long before our stonemasons laid a single chisel. The granite ramparts shield our people, while the fertile valley provides boundless sustenance.";
+                      } else if (dialogueTopic === "vidyaranya") {
+                        speech =
+                          "Thrones rise and fall, and armies disperse like mist. But knowledge, music, craftsmanship, and dharma endure across ages. My role is to ensure that as this empire grows in wealth and stone, it never forgets its founding soul.";
+                      }
+                      playNarration(speech, { speaker: "ratan", pace: 0.86, language_code: "en-IN", hideSubtitle: true });
+                    }}
+                    className="text-[#d4a359] hover:text-[#f6ede0] text-xs bg-[#2b2520] hover:bg-[#3d3329] border border-[#5a4d3f] px-2.5 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
+                    title="Listen to Sage Vidyaranya's Voice"
+                  >
+                    <span>🔊</span>
+                    <span>Listen</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      stopNarration();
+                      setShowVidyaranyaDialogue(false);
+                    }}
+                    className="text-[#a89985] hover:text-[#f6ede0] text-sm bg-[#2b2520] hover:bg-[#3d3329] border border-[#5a4d3f] px-3 py-1.5 rounded-lg transition-all cursor-pointer"
+                  >
+                    ✕ Close
+                  </button>
+                </div>
               </div>
 
               <div className="p-4 rounded-xl bg-[#26201b] border border-[#473d32] text-sm font-serif leading-relaxed text-[#eedfc8] mb-5">
@@ -2450,6 +2526,7 @@ export default function VijayanagaraGameScreen() {
                 </div>
                 <button
                   onClick={() => {
+                    stopNarration();
                     setShowVidyaranyaDialogue(false);
                     setShowChowkaBaraModal(true);
                   }}
@@ -2986,7 +3063,7 @@ export default function VijayanagaraGameScreen() {
             characterTitle="Ancient Time-Traveling Genie Companion"
             characterId="jolly"
             historicalContext={{
-              current_year: 1565,
+              current_year: stage === 1 ? 1336 : stage === 2 ? 1520 : stage === 3 ? 1540 : 1565,
               era: "Vijayanagara Empire",
               location: scene === "anegundi_river_crossing" ? "Anegundi - Tungabhadra River Bank" :
                         scene === "anegundi_old_fort" ? "Anegundi - Old Fort Ruins" :

@@ -77,12 +77,28 @@ CAMPAIGN_REGISTRY = {
             "and the 2-minute ancient relic challenge within the ruins of Bhangarh."
         ),
         "greeting": "Khamma Ghani, mere aaka! I am Jolly Bhai, your time-traveling genie in legendary Rajputana! What tales of bravery and mystery shall we uncover?"
+    },
+    "indus": {
+        "id": "indus",
+        "title": "The First Urban Dawn: Indus Valley",
+        "era": "Bronze Age Urban Dawn (Mature Harappan Civilisation)",
+        "year": "c. 2500 BCE",
+        "location": "Mohenjo-daro, Harappa, Dholavira, & Lothal along the sacred Sindhu-Saraswati Basin",
+        "ruler": "The Civic Assembly & The Priest-King",
+        "monuments": "The Great Bath, The Great Granary, Lower Town Grid, Steatite Seal Workshop, Dholavira Water Reservoirs, Lothal Tidal Dockyard",
+        "key_lore": (
+            "The world's earliest master-planned urban civilization with sophisticated hydraulic engineering. "
+            "Features the bitumen-sealed Great Bath of Mohenjo-daro, precision baked-brick ratios of 1:2:4, "
+            "underground covered drainage culverts with inspection manholes, enigmatic steatite seals bearing the Unicorn and Pashupati motifs, "
+            "and the lost-wax cast Bronze Dancing Girl."
+        ),
+        "greeting": "Pranam, mere aaka! I am Jolly Bhai. Welcome to the dawn of civilisation along the sacred Sindhu River! What ancient secrets of the Harappan masters shall we uncover?"
     }
 }
 
 
 def resolve_campaign_context(context: dict = None, question: str = "") -> dict:
-    """Intelligently detect and resolve campaign context across all 3 mini-games."""
+    """Intelligently detect and resolve campaign context across all mini-games."""
     ctx = context or {}
     era_hint = str(ctx.get("era", "")).lower()
     loc_hint = str(ctx.get("location", "")).lower()
@@ -90,19 +106,26 @@ def resolve_campaign_context(context: dict = None, question: str = "") -> dict:
     q_hint = question.lower() if question else ""
     combined = f"{era_hint} {loc_hint} {camp_hint} {q_hint}"
 
-    # 1. Check Vijayanagara
+    # 1. Check Indus Valley
     if any(k in combined for k in [
+        "indus", "harappa", "harappan", "mohenjo", "dholavira", "lothal",
+        "great bath", "steatite", "pashupati", "priest-king", "dancing girl",
+        "sindhu", "meluhha", "baked brick", "drainage"
+    ]):
+        base = dict(CAMPAIGN_REGISTRY["indus"])
+    # 2. Check Vijayanagara
+    elif any(k in combined for k in [
         "vijayanagar", "vijayanagara", "hampi", "krishnadevaraya", "vidyaranya",
         "vitthala", "chowka", "tungabhadra", "talikota", "anegundi", "mahanavami"
     ]):
         base = dict(CAMPAIGN_REGISTRY["vijayanagara"])
-    # 2. Check Rajasthan
+    # 3. Check Rajasthan
     elif any(k in combined for k in [
         "rajasthan", "rajput", "chittorgarh", "kumbhalgarh", "kuldhara",
         "bhangarh", "chaupar", "chacha", "paliwal", "salim singh", "vijay stambh"
     ]):
         base = dict(CAMPAIGN_REGISTRY["rajasthan"])
-    # 3. Default / Mughal
+    # 4. Default / Mughal
     else:
         base = dict(CAMPAIGN_REGISTRY["mughal"])
 
@@ -348,6 +371,7 @@ def ask_genie_agent(
     try:
         from app.services.vector_store_service import query_index
         campaign_to_region = {
+            "indus": "indus",
             "vijayanagara": "vijayanagara",
             "rajasthan": "rajputana",
             "mughal": "mughal"

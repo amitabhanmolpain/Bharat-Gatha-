@@ -11,6 +11,7 @@ export interface NarrationOptions {
   pace?: number;
   language_code?: string;
   model?: string;
+  hideSubtitle?: boolean;
   onStart?: () => void;
   onEnd?: () => void;
   onError?: (err: any) => void;
@@ -20,6 +21,7 @@ export interface NarratorState {
   isPlaying: boolean;
   isLoading: boolean;
   currentText: string | null;
+  options?: NarrationOptions;
   error: string | null;
 }
 
@@ -31,6 +33,8 @@ class NarratorManager {
   private currentOptions: NarrationOptions | undefined = undefined;
   private audioCache: Map<string, string> = new Map();
   private listeners: Set<Listener> = new Set();
+  private currentSessionId: number = 0;
+  private abortController: AbortController | null = null;
 
   private state: NarratorState = {
     isPlaying: false,
@@ -75,18 +79,26 @@ class NarratorManager {
    * Stop any ongoing narrator audio playback immediately.
    */
   public stopNarration(triggerOnEnd: boolean = false): void {
+    this.currentSessionId++;
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
     if (this.activeAudio) {
       const audioToStop = this.activeAudio;
       this.activeAudio = null;
       try {
         audioToStop.pause();
         audioToStop.currentTime = 0;
+        audioToStop.src = "";
       } catch (e) {
         // Safe to ignore interruption
       }
     }
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
+      try {
+        window.speechSynthesis.cancel();
+      } catch (e) {}
     }
     const endCallback = this.currentOptions?.onEnd;
     this.currentOptions = undefined;
@@ -129,21 +141,36 @@ class NarratorManager {
     const trimmed = text.trim();
     if (!trimmed) return null;
 
+    // Invalidate any in-flight asynchronous operations
+    const sessionId = ++this.currentSessionId;
+    if (this.abortController) {
+      this.abortController.abort();
+    }
+    this.abortController = new AbortController();
+    const currentSignal = this.abortController.signal;
+
     this.currentOptions = options;
 
-    // 1. Stop any previous narrator audio immediately
+    // 1. Stop any previous narrator audio and synthesis immediately
     if (this.activeAudio) {
       try {
         this.activeAudio.pause();
         this.activeAudio.currentTime = 0;
+        this.activeAudio.src = "";
       } catch (e) {}
       this.activeAudio = null;
+    }
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch (e) {}
     }
 
     this.updateState({
       isLoading: true,
       isPlaying: false,
       currentText: trimmed,
+      options,
       error: null,
     });
 
@@ -171,6 +198,18 @@ class NarratorManager {
           audioSrc = "/kuldhara_solved_narration.wav";
         } else if (lowerText.includes("cast out into the sands") || lowerText.includes("desert patrol caught you") || (lowerText.includes("time has expired") && lowerText.includes("kuldhara"))) {
           audioSrc = "/kuldhara_timeout_narration.wav";
+        } else if (
+          lowerText.includes("ratnavati") ||
+          lowerText.includes("tantrik singhia") ||
+          lowerText.includes("mystery of why bhangarh is believed to be haunted") ||
+          (lowerText.includes("curse") && lowerText.includes("bhangarh"))
+        ) {
+          audioSrc = "/bhangarh_ratnavati_curse_narration.wav";
+        } else if (
+          lowerText.includes("congratulations") &&
+          lowerText.includes("rajasthan campaign")
+        ) {
+          audioSrc = "/rajasthan_campaign_complete_narration.wav";
         }
       }
 
@@ -183,6 +222,7 @@ class NarratorManager {
             const res = await fetch(`${this.getBackendUrl()}/api/tts/narrate`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
+              signal: currentSignal,
               body: JSON.stringify({
                 text: trimmed,
                 speaker: options?.speaker || "ratan",
@@ -205,10 +245,17 @@ class NarratorManager {
                 this.audioCache.set(trimmed, urlSrc);
               }
             }
-          } catch (fetchErr) {
-            console.warn("Sarvam AI TTS backend fetch failed, using browser speech fallback:", fetchErr);
+          } catch (fetchErr: any) {
+            if (fetchErr?.name !== "AbortError") {
+              console.warn("Sarvam AI TTS backend fetch failed, using browser speech fallback:", fetchErr);
+            }
           }
         }
+      }
+
+      // If session changed while fetching, abort immediately
+      if (this.currentSessionId !== sessionId) {
+        return null;
       }
 
       // If still no audioSrc, use browser SpeechSynthesis as robust fallback
@@ -219,21 +266,31 @@ class NarratorManager {
           utterance.rate = 0.88;
           utterance.pitch = 0.95;
           utterance.onstart = () => {
-            this.updateState({ isPlaying: true, isLoading: false });
-            options?.onStart?.();
+            if (this.currentSessionId === sessionId) {
+              this.updateState({ isPlaying: true, isLoading: false });
+              options?.onStart?.();
+            }
           };
           utterance.onend = () => {
-            this.updateState({ isPlaying: false, isLoading: false, currentText: null });
-            options?.onEnd?.();
+            if (this.currentSessionId === sessionId) {
+              this.updateState({ isPlaying: false, isLoading: false, currentText: null });
+              options?.onEnd?.();
+            }
           };
           utterance.onerror = (e) => {
-            this.updateState({ isPlaying: false, isLoading: false });
-            options?.onError?.(e);
+            if (this.currentSessionId === sessionId) {
+              this.updateState({ isPlaying: false, isLoading: false });
+              options?.onError?.(e);
+            }
           };
           window.speechSynthesis.speak(utterance);
           return null;
         }
         audioSrc = "/sheesh_mahal_solved_narration.wav";
+      }
+
+      if (this.currentSessionId !== sessionId) {
+        return null;
       }
 
       this.currentAudioSrc = audioSrc;

@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import AccessibleModal from "./AccessibleModal";
+import { soundFx } from "../../../../services/soundService";
+import { playNarration, stopNarration } from "../../../../services/narratorService";
 
 interface ChowkaBaraGameProps {
   isOpen: boolean;
@@ -60,10 +62,18 @@ export default function ChowkaBaraGame({
   useEffect(() => {
     if (!isOpen) {
       clearAllTimers();
+      stopNarration();
       resetMatchState();
+    } else {
+      // Intro narration for Chowka Bara match
+      playNarration(
+        "Roll the four sacred cowrie shells to advance your carved stone pawns toward the central sanctuary.",
+        { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
+      );
     }
     return () => {
       clearAllTimers();
+      stopNarration();
     };
   }, [isOpen, clearAllTimers, resetMatchState]);
 
@@ -84,6 +94,9 @@ export default function ChowkaBaraGame({
   };
 
   const executeAiTurn = useCallback(() => {
+    // Play authentic cowrie shell clatter for AI cast
+    soundFx.playCowrieShellsSound();
+
     const { roll, faces } = rollCowries();
     setCowries(faces);
     setLastRoll(roll);
@@ -93,34 +106,46 @@ export default function ChowkaBaraGame({
       const a2 = prevAi[1];
 
       let nextAiPieces: [number, number];
+      let aiMoved = false;
       if (a1 + roll <= 12 && a1 <= a2) {
         nextAiPieces = [a1 + roll, a2];
+        aiMoved = true;
       } else if (a2 + roll <= 12) {
         nextAiPieces = [a1, a2 + roll];
+        aiMoved = true;
       } else if (a1 + roll <= 12) {
         nextAiPieces = [a1 + roll, a2];
+        aiMoved = true;
       } else {
         nextAiPieces = [a1, a2];
+      }
+
+      if (aiMoved) {
+        soundFx.playTileSwap();
       }
 
       if (nextAiPieces[0] === 12 && nextAiPieces[1] === 12) {
         setGameStatus("ai_won");
         setGameAttempts((prevAtt) => {
           const nextAtt = prevAtt + 1;
-          if (nextAtt >= 2) {
-            setDialogueMessage(
-              "Vidyaranya smiles warmly: 'A true leader is not measured by winning every board game, but by their resilience and inner purpose. You have proven your spirit.'"
-            );
-          } else {
-            setDialogueMessage(
-              "Vidyaranya's pawns reach the sanctuary first. 'A good strategist learns from each turn of fortune. Try again, traveler!'"
-            );
-          }
+          const endMsg =
+            nextAtt >= 2
+              ? "Vidyaranya smiles warmly: 'A true leader is not measured by winning every board game, but by their resilience and inner purpose. You have proven your spirit.'"
+              : "Vidyaranya's pawns reach the sanctuary first. 'A good strategist learns from each turn of fortune. Try again, traveler!'";
+          setDialogueMessage(endMsg);
+          playNarration(endMsg, { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true });
           return nextAtt;
         });
       } else {
         setCurrentTurn("player");
-        setDialogueMessage(`Vidyaranya rolled ${roll}. Your turn to cast the cowries!`);
+        const aiMsg = `Vidyaranya rolled ${roll}. Your turn to cast the cowries!`;
+        setDialogueMessage(aiMsg);
+        playNarration(`Vidyaranya casts the shells and rolls a ${roll}. Your turn to cast!`, {
+          speaker: "ratan",
+          pace: 0.88,
+          language_code: "en-IN",
+          hideSubtitle: true,
+        });
       }
 
       return nextAiPieces;
@@ -132,6 +157,9 @@ export default function ChowkaBaraGame({
 
     clearAllTimers();
     setIsRolling(true);
+
+    // 1. Play immediate authentic cowrie shell clatter sound on click
+    soundFx.playCowrieShellsSound();
     let spins = 0;
 
     spinIntervalRef.current = setInterval(() => {
@@ -148,19 +176,36 @@ export default function ChowkaBaraGame({
         setLastRoll(roll);
         setIsRolling(false);
 
+        // 2. Play settling shell click
+        soundFx.playCowrieShellsSound();
+
         const p1 = playerPieces[0];
         const p2 = playerPieces[1];
 
         let nextPieces: [number, number];
+        let moved = false;
         if (p1 + roll <= 12 && p1 <= p2) {
           nextPieces = [p1 + roll, p2];
+          moved = true;
         } else if (p2 + roll <= 12) {
           nextPieces = [p1, p2 + roll];
+          moved = true;
         } else if (p1 + roll <= 12) {
           nextPieces = [p1 + roll, p2];
+          moved = true;
         } else {
           nextPieces = [p1, p2];
           setDialogueMessage(`Rolled ${roll}! A leap too far — steady your next roll.`);
+          playNarration(`Rolled a ${roll}! A leap beyond the sanctuary — steady your next cast.`, {
+            speaker: "ratan",
+            pace: 0.88,
+            language_code: "en-IN",
+            hideSubtitle: true,
+          });
+        }
+
+        if (moved) {
+          soundFx.playTileSwap();
         }
 
         setPlayerPieces(nextPieces);
@@ -171,35 +216,54 @@ export default function ChowkaBaraGame({
           setDialogueMessage(
             "Splendid match! You navigated the stone grid with patience and strategic grace."
           );
+          playNarration(
+            "Splendid match! You navigated the stone grid with patience and strategic grace, winning the blessing of Sage Vidyaranya!",
+            { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
+          );
           return;
         }
 
         // Switch to Sage Vidyaranya AI turn
         setCurrentTurn("ai");
-        setDialogueMessage(`You rolled ${roll}! Vidyaranya observes and prepares his counter-move.`);
+        if (moved) {
+          const rollSpoken =
+            roll === 8
+              ? "Ashta! You rolled an eight! Supreme fortune smiles upon your cast!"
+              : roll === 4
+              ? "Chowka! You rolled a four! Your stone pawn surges forward!"
+              : `You rolled a ${roll}! Your golden pawn advances.`;
+          setDialogueMessage(`You rolled ${roll}! Vidyaranya observes and prepares his counter-move.`);
+          playNarration(rollSpoken, { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true });
+        }
 
         // AI Turn Delay with tracked timeout
         aiTimeoutRef.current = setTimeout(() => {
           executeAiTurn();
           aiTimeoutRef.current = null;
-        }, 1200);
+        }, 1500);
       }
     }, 80);
   };
 
   const handleRestartMatch = () => {
     clearAllTimers();
+    stopNarration();
     resetMatchState();
   };
 
   const handleFinish = () => {
     clearAllTimers();
     const won = gameStatus === "player_won";
+    playNarration(
+      "Shabash, traveler! You carry the blessing of Sage Vidyaranya. Cross the Tungabhadra river to enter the golden bazaars of Hampi!",
+      { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
+    );
     onComplete(won, gameAttempts);
   };
 
   const handleModalClose = () => {
     clearAllTimers();
+    stopNarration();
     resetMatchState();
     onClose();
   };

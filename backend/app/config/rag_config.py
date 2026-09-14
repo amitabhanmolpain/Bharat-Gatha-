@@ -11,6 +11,7 @@ VECTOR_DB_DIR = DATA_DIR / "vector_db"
 
 # Knowledge Base Files mapping to regions
 KB_FILES = {
+    "indus": KNOWLEDGE_BASE_DIR / "indus-valley-knowledge-base.md",
     "mughal": KNOWLEDGE_BASE_DIR / "mughal-empire-knowledge-base.md",
     "rajputana": KNOWLEDGE_BASE_DIR / "rajputana-knowledge-base.md",
     "vijayanagara": KNOWLEDGE_BASE_DIR / "vijayanagara-knowledge-base.md"
@@ -18,6 +19,9 @@ KB_FILES = {
 
 # ChromaDB Collection Names per region
 REGION_COLLECTIONS = {
+    "indus": "indus_kb",
+    "harappa": "indus_kb",
+    "mohenjodaro": "indus_kb",
     "mughal": "mughal_kb",
     "rajputana": "rajputana_kb",
     "rajasthan": "rajputana_kb",

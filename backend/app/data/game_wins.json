@@ -180,5 +180,120 @@
       "completedAt": "2026-09-04T06:09:22.420Z"
     },
     "_id": "6a9a609347e4726183b84e27"
+  },
+  {
+    "user_id": "default_traveller",
+    "era": "mughal",
+    "game_type": "pietra_dura_flower_art",
+    "solved": true,
+    "is_solved": true,
+    "status": "solved",
+    "prize_unlocked": "Sheesh Mahal Corridor Clearance",
+    "clues_found": [],
+    "score": 150,
+    "moves": 0,
+    "created_at": "2026-09-05T05:01:51.579500",
+    "solved_at": "2026-09-05T05:01:51.579500",
+    "metadata": {},
+    "_id": "6a9ba23f06188c1b47ce678f"
+  },
+  {
+    "user_id": "default_traveller",
+    "era": "mughal",
+    "game_type": "mughal_campaign",
+    "solved": true,
+    "is_solved": true,
+    "status": "solved",
+    "prize_unlocked": "companion_rescued",
+    "clues_found": [
+      "guard_permit",
+      "sheesh_mirror_shard",
+      "calligraphy_scroll",
+      "charbagh_paradise_map",
+      "mehtab_bagh_journal",
+      "red_fort_imperial_key"
+    ],
+    "score": 500,
+    "moves": 0,
+    "created_at": "2026-09-05T05:10:46.093951",
+    "solved_at": "2026-09-05T05:10:46.093951",
+    "metadata": {
+      "companionRescued": true,
+      "completedAt": "2026-09-05T05:10:45.518Z"
+    },
+    "_id": "6a9ba45606188c1b47ce6790"
+  },
+  {
+    "user_id": "default_traveller",
+    "era": "mughal",
+    "game_type": "mughal_campaign",
+    "solved": true,
+    "is_solved": true,
+    "status": "solved",
+    "prize_unlocked": "companion_rescued",
+    "clues_found": [
+      "guard_permit",
+      "calligraphy_scroll",
+      "charbagh_paradise_map",
+      "mehtab_bagh_journal",
+      "red_fort_imperial_key"
+    ],
+    "score": 500,
+    "moves": 0,
+    "created_at": "2026-09-05T05:42:38.454892",
+    "solved_at": "2026-09-05T05:42:38.454892",
+    "metadata": {
+      "companionRescued": true,
+      "completedAt": "2026-09-05T05:42:37.829Z"
+    },
+    "_id": "6a9babce06188c1b47ce6791"
+  },
+  {
+    "user_id": "default_traveller",
+    "era": "indus",
+    "game_type": "great_bath_drainage",
+    "solved": true,
+    "is_solved": true,
+    "status": "solved",
+    "prize_unlocked": "Corbelled Terracotta Sluice Fragment",
+    "clues_found": [],
+    "score": 150,
+    "moves": 0,
+    "created_at": "2026-09-10T16:28:19.276628",
+    "solved_at": "2026-09-10T16:28:19.276628",
+    "metadata": {},
+    "_id": "6aa2daa397549bcb9367b257"
+  },
+  {
+    "user_id": "default_traveller",
+    "era": "indus",
+    "game_type": "steatite_seal_decryption",
+    "solved": true,
+    "is_solved": true,
+    "status": "solved",
+    "prize_unlocked": "Ekasringa Unicorn Steatite Seal",
+    "clues_found": [],
+    "score": 200,
+    "moves": 0,
+    "created_at": "2026-09-10T16:28:44.850651",
+    "solved_at": "2026-09-10T16:28:44.850651",
+    "metadata": {},
+    "_id": "6aa2dabc97549bcb9367b258"
+  },
+  {
+    "user_id": "default_traveller",
+    "era": "rajasthan",
+    "game_type": "chaupar",
+    "solved": true,
+    "is_solved": true,
+    "status": "solved",
+    "prize_unlocked": "Royal Rajput Chaupar Victory",
+    "clues_found": [],
+    "score": 100,
+    "moves": 0,
+    "created_at": "2026-09-14T12:44:44.922906",
+    "solved_at": "2026-09-14T12:44:44.922906",
+    "metadata": {},
+    "_id": "win_1789370084922"
   }
 ]
