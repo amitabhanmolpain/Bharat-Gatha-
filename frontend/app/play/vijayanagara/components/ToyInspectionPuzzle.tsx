@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import AccessibleModal from "./AccessibleModal";
+import GameIcon from "./GameIcon";
 
 interface ToyInspectionPuzzleProps {
   isOpen: boolean;
@@ -128,8 +129,8 @@ export default function ToyInspectionPuzzle({
       {/* Top Header */}
       <div className="flex items-center justify-between pb-3 border-b-2 border-[#5a4d3f] mb-4">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl bg-[#2e261f] border border-[#c86446] flex items-center justify-center text-2xl shadow-inner">
-            🎨
+          <div className="w-11 h-11 rounded-xl bg-[#2e261f] border border-[#c86446] flex items-center justify-center shadow-inner">
+            <GameIcon name="artisan" size={22} className="text-[#d4a359]" />
           </div>
           <div>
             <div className="text-[10px] font-mono text-[#d4a359] uppercase tracking-[0.2em]">

@@ -33,7 +33,7 @@ export default function TransitionModal({
           boatAudioRef.current.pause();
           boatAudioRef.current.currentTime = 0;
           boatAudioRef.current.src = "";
-        } catch (_) {}
+        } catch (_) { }
         boatAudioRef.current = null;
       }
       return;
@@ -57,7 +57,7 @@ export default function TransitionModal({
         audio.pause();
         audio.currentTime = 0;
         audio.src = "";
-      } catch (_) {}
+      } catch (_) { }
       if (boatAudioRef.current === audio) {
         boatAudioRef.current = null;
       }
@@ -137,8 +137,8 @@ export default function TransitionModal({
           {travelType === "coracle"
             ? "Tungabhadra Coracle Crossing"
             : travelType === "stone_road"
-            ? "Royal Granite Car Street"
-            : "Hampi Monumental Pathway"}
+              ? "Royal Granite Car Street"
+              : "Hampi Monumental Pathway"}
         </div>
 
         {/* Title */}

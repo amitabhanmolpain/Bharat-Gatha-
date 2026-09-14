@@ -18,6 +18,13 @@ import {
   Shield,
   Sunset,
   Layers,
+  Search,
+  Key,
+  Volume2,
+  VolumeX,
+  Play,
+  Square,
+  X,
   LucideProps,
 } from "lucide-react";
 
@@ -39,7 +46,14 @@ export type GameIconType =
   | "archery"
   | "courtyard"
   | "sunset"
-  | "keeper";
+  | "keeper"
+  | "search"
+  | "key"
+  | "volume"
+  | "volume_x"
+  | "play"
+  | "stop"
+  | "close";
 
 interface GameIconProps extends Omit<LucideProps, "ref"> {
   name: GameIconType;
@@ -66,6 +80,13 @@ const ICON_MAP: Record<GameIconType, React.ComponentType<LucideProps>> = {
   courtyard: RotateCcw,
   sunset: Sunset,
   keeper: Layers,
+  search: Search,
+  key: Key,
+  volume: Volume2,
+  volume_x: VolumeX,
+  play: Play,
+  stop: Square,
+  close: X,
 };
 
 export default function GameIcon({

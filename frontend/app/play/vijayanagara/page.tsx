@@ -28,6 +28,7 @@ import CampaignCompletionModal from "./components/CampaignCompletionModal";
 import DialoguePanel from "../../components/DialoguePanel";
 import NarratorSubtitle from "../../../components/NarratorSubtitle";
 import GameIcon from "./components/GameIcon";
+import HistoricalNPCDialogueCard from "./components/HistoricalNPCDialogueCard";
 
 const PLAYER_VISUAL_SCALE = 1.75;
 
@@ -2643,186 +2644,119 @@ export default function VijayanagaraGameScreen() {
           </div>
         )}
 
-        {/* --- MASTER GEM ASSESSOR DIALOGUE MODAL --- */}
+        {/* --- MASTER GEM ASSESSOR DIALOGUE MODAL (IMAGE 2 DESIGN) --- */}
         {showGemAssessorDialogue && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fadeIn">
-            <div className="relative w-full max-w-2xl bg-[#1e1b18] text-[#f6ede0] rounded-2xl border-4 border-[#5a4d3f] p-6 shadow-[0_0_50px_rgba(0,0,0,0.95)] max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between pb-3 border-b-2 border-[#5a4d3f] mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-[#3d3328] border-2 border-[#d4a359] flex items-center justify-center shadow-inner">
-                    <GameIcon name="gem" size={24} className="text-[#d4a359]" />
-                  </div>
-                  <div>
-                    <div className="text-[10px] font-mono text-[#d4a359] uppercase tracking-widest">
-                      Royal Merchant Guild Assessor • Hampi Bazaar (c. 1520 AD)
-                    </div>
-                    <h3 className="text-xl font-serif font-bold text-[#f6ede0]">Setti Somappa</h3>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => {
-                    stopAllCharacterVoice();
-                    setShowGemAssessorDialogue(false);
-                  }}
-                  className="text-[#a89985] hover:text-[#f6ede0] text-sm bg-[#2b2520] hover:bg-[#3d3329] border border-[#5a4d3f] px-3 py-1.5 rounded-lg transition-all cursor-pointer"
-                >
-                  ✕ Close
-                </button>
-              </div>
-
-              <div className="p-4 rounded-xl bg-[#26201b] border border-[#473d32] text-sm font-serif leading-relaxed text-[#eedfc8] mb-5">
-                {gemDialogueTopic === "gems" && (
-                  <div>
-                    <p className="mb-2 font-semibold">
-                      &ldquo;Welcome, traveler! In Hampi Bazaar, diamonds from Kollur, pearls from the Persian Gulf, and rubies from Ceylon are sold openly on the streets.&rdquo;
-                    </p>
-                    <p className="text-xs text-[#d6c7b2]">
-                      Ask about our gem trade, or the rumors about the missing merchant.
-                    </p>
-                  </div>
-                )}
-
-                {gemDialogueTopic === "rumor" && (
-                  <div>
-                    <p className="mb-2 font-bold text-[#d4a359]">
-                      The Missing Merchant
-                    </p>
-                    <p className="text-xs leading-relaxed text-[#d6c7b2] mb-2">
-                      &ldquo;Ramayya the Scribe-Merchant managed royal accounts. He feared our records might be lost one day, so he hid three ledger fragments.&rdquo;
-                    </p>
-                    <p className="text-xs leading-relaxed text-[#eedfc8] italic">
-                      &ldquo;He left the first clue with his friend Master Kallappa, the toymaker.&rdquo;
-                    </p>
-                  </div>
-                )}
-
-                {gemDialogueTopic === "merchant" && (
-                  <div>
-                    <p className="mb-2 font-bold text-[#d4a359]">
-                      Why hide the ledger?
-                    </p>
-                    <p className="text-xs leading-relaxed text-[#d6c7b2]">
-                      &ldquo;Ramayya believed gold and stone fade over time, but written records and culture last forever. Inspect Kallappa&apos;s wooden toys to learn more.&rdquo;
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-5">
-                <button
-                  onClick={() => setGemDialogueTopic("gems")}
-                  className={`p-2.5 rounded-lg border text-left text-xs font-serif transition-all cursor-pointer ${
-                    gemDialogueTopic === "gems"
-                      ? "bg-[#3d3328] border-[#d4a359] text-[#f6ede0] font-bold"
-                      : "bg-[#201c18] border-[#383027] text-[#a89985] hover:text-[#f6ede0]"
-                  }`}
-                >
-                  Gem Trade
-                </button>
-                <button
-                  onClick={() => {
-                    setGemDialogueTopic("rumor");
-                    setHasEncounteredFirstRumor(true);
-                  }}
-                  className={`p-2.5 rounded-lg border text-left text-xs font-serif transition-all cursor-pointer ${
-                    gemDialogueTopic === "rumor"
-                      ? "bg-[#3d3328] border-[#d4a359] text-[#f6ede0] font-bold"
-                      : "bg-[#201c18] border-[#383027] text-[#a89985] hover:text-[#f6ede0]"
-                  }`}
-                >
-                  The Missing Merchant
-                </button>
-                <button
-                  onClick={() => {
-                    setGemDialogueTopic("merchant");
-                    setHasEncounteredFirstRumor(true);
-                  }}
-                  className={`p-2.5 rounded-lg border text-left text-xs font-serif transition-all cursor-pointer ${
-                    gemDialogueTopic === "merchant"
-                      ? "bg-[#3d3328] border-[#d4a359] text-[#f6ede0] font-bold"
-                      : "bg-[#201c18] border-[#383027] text-[#a89985] hover:text-[#f6ede0]"
-                  }`}
-                >
-                  Why Hide the Ledger?
-                </button>
-              </div>
-
-              <div className="flex justify-between items-center pt-3 border-t border-[#383027]">
-                <div className="text-[10px] font-mono text-[#a89985]">
-                  Clue Status: {hasEncounteredFirstRumor ? "Rumor Logged in Memory ✦" : "Inquire with Assessor"}
-                </div>
-                <button
-                  onClick={() => {
-                    stopAllCharacterVoice();
-                    setShowGemAssessorDialogue(false);
-                  }}
-                  className="bg-[#2b2520] hover:bg-[#3d3329] border border-[#5a4d3f] text-[#f6ede0] font-serif px-6 py-2 rounded-xl text-xs transition-all cursor-pointer"
-                >
-                  Thank the Assessor
-                </button>
-              </div>
-            </div>
-          </div>
+          <HistoricalNPCDialogueCard
+            npcRole="ROYAL MERCHANT GUILD ASSESSOR · HAMPI BAZAAR (C. 1520 AD)"
+            npcName="Setti Somappa"
+            npcIcon="gem"
+            npcIconColor="text-[#38bdf8]"
+            characterVoiceId="somappa"
+            primaryQuote={
+              gemDialogueTopic === "gems"
+                ? "Welcome, traveler! Nowhere under heaven will you behold wealth like ours. We measure diamonds from Kollur, pearls from the Persian Gulf, and Ceylon rubies by the dry measure like sesame seeds!"
+                : gemDialogueTopic === "rumor"
+                ? "Ramayya the Scribe-Merchant managed royal accounts. He feared our records might be lost one day, so he hid three ledger fragments."
+                : "Ramayya believed gold and stone fade over time, but written records and culture last forever."
+            }
+            supportingText={
+              gemDialogueTopic === "gems" ? (
+                <p className="text-xs sm:text-sm text-[#d6c7b2]">
+                  Ask me what you wish of our commerce, or of the strange rumors stirring our market colonnades.
+                </p>
+              ) : gemDialogueTopic === "rumor" ? (
+                <p className="text-xs sm:text-sm text-[#eedfc8] italic">
+                  &ldquo;He left the first clue with his friend Master Kallappa, the toymaker.&rdquo;
+                </p>
+              ) : (
+                <p className="text-xs sm:text-sm text-[#d6c7b2]">
+                  Inspect Kallappa&apos;s wooden toys to learn more.
+                </p>
+              )
+            }
+            currentSpeechText={
+              gemDialogueTopic === "gems"
+                ? "Welcome, traveler! Nowhere under heaven will you behold wealth like ours. We measure diamonds from Kollur, pearls from the Persian Gulf, and Ceylon rubies by the dry measure like sesame seeds! Ask me what you wish of our commerce, or of the strange rumors stirring our market colonnades."
+                : gemDialogueTopic === "rumor"
+                ? "Ramayya the Scribe-Merchant managed royal accounts. He feared our records might be lost one day, so he hid three ledger fragments. He left the first clue with his friend Master Kallappa, the toymaker."
+                : "Ramayya believed gold and stone fade over time, but written records and culture last forever. Inspect Kallappa's wooden toys to learn more."
+            }
+            choices={[
+              {
+                id: "gems",
+                label: "Precious Gem Trade",
+                icon: "gem",
+                isActive: gemDialogueTopic === "gems",
+                onSelect: () => setGemDialogueTopic("gems"),
+              },
+              {
+                id: "rumor",
+                label: "The Missing Merchant",
+                subLabel: "(Rumor)",
+                icon: "ledger",
+                isActive: gemDialogueTopic === "rumor",
+                onSelect: () => {
+                  setGemDialogueTopic("rumor");
+                  setHasEncounteredFirstRumor(true);
+                },
+              },
+              {
+                id: "merchant",
+                label: "Why Hide the Ledger?",
+                icon: "key",
+                isActive: gemDialogueTopic === "merchant",
+                onSelect: () => {
+                  setGemDialogueTopic("merchant");
+                  setHasEncounteredFirstRumor(true);
+                },
+              },
+            ]}
+            statusText={`Clue Status: ${
+              hasEncounteredFirstRumor
+                ? "Rumor Logged in Memory ✦"
+                : "Inquire with Assessor"
+            }`}
+            actionButtonText="Thank the Assessor"
+            actionButtonVariant="subtle"
+            onAction={() => setShowGemAssessorDialogue(false)}
+            onClose={() => setShowGemAssessorDialogue(false)}
+          />
         )}
 
-        {/* --- MASTER TOYMAKER DIALOGUE MODAL --- */}
+        {/* --- MASTER TOYMAKER DIALOGUE MODAL (IMAGE 2 DESIGN) --- */}
         {showToymakerDialogue && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fadeIn">
-            <div className="relative w-full max-w-2xl bg-[#1e1b18] text-[#f6ede0] rounded-2xl border-4 border-[#5a4d3f] p-6 shadow-[0_0_50px_rgba(0,0,0,0.95)] max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between pb-3 border-b-2 border-[#5a4d3f] mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-[#2e261f] border-2 border-[#c86446] flex items-center justify-center shadow-inner">
-                    <GameIcon name="artisan" size={24} className="text-[#c86446]" />
-                  </div>
-                  <div>
-                    <div className="text-[10px] font-mono text-[#c86446] uppercase tracking-widest">
-                      Kinhal Craft Guild Artisan • Hampi Bazaar (c. 1520 AD)
-                    </div>
-                    <h3 className="text-xl font-serif font-bold text-[#f6ede0]">Master Kallappa</h3>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => {
-                    stopAllCharacterVoice();
-                    setShowToymakerDialogue(false);
-                  }}
-                  className="text-[#a89985] hover:text-[#f6ede0] text-sm bg-[#2b2520] hover:bg-[#3d3329] border border-[#5a4d3f] px-3 py-1.5 rounded-lg transition-all cursor-pointer"
-                >
-                  ✕ Close
-                </button>
-              </div>
-
-              <div className="p-4 rounded-xl bg-[#26201b] border border-[#473d32] text-sm font-serif leading-relaxed text-[#eedfc8] mb-5">
-                <p className="mb-2 font-semibold">
-                  &ldquo;Namaskara! Every toy here is hand-carved from seasoned wood and colored with natural Kinhal lacquer.&rdquo;
+          <HistoricalNPCDialogueCard
+            npcRole="KINHAL CRAFT GUILD ARTISAN · HAMPI BAZAAR (C. 1520 AD)"
+            npcName="Master Kallappa"
+            npcIcon="artisan"
+            npcIconColor="text-[#c86446]"
+            characterVoiceId="kallappa"
+            primaryQuote="Namaskara! Every toy on these shelves is hand-carved from seasoned wood and coated with natural mineral lacquer from Kinhal."
+            supportingText={
+              <>
+                <p className="text-xs sm:text-sm text-[#d6c7b2] leading-relaxed">
+                  &ldquo;You ask of Merchant Ramayya? Yes, he was my dearest childhood friend. Shortly before he vanished, he spent hours in my workshop, admiring these very pieces and carving intricate marks into their bases.&rdquo;
                 </p>
-                <p className="text-xs text-[#d6c7b2] mb-2">
-                  &ldquo;Ramayya was my childhood friend. Before he vanished, he spent hours carving marks into these toy bases.&rdquo;
+                <p className="text-xs sm:text-sm text-[#d4a359] italic leading-relaxed pt-1">
+                  &ldquo;He told me: &lsquo;A child sees play, but a discerning seeker will discover memory.&rsquo; Feel free to inspect them closely upon my workbench!&rdquo;
                 </p>
-                <p className="text-xs text-[#d4a359] italic">
-                  &ldquo;He said: &lsquo;A child sees a toy, but a seeker finds memory.&rsquo; Inspect them on my workbench!&rdquo;
-                </p>
-              </div>
-
-              <div className="flex justify-between items-center pt-3 border-t border-[#383027]">
-                <div className="text-[10px] font-mono text-[#a89985]">
-                  Fragment 1 Status: {hasFirstLedgerFragment ? "Discovered in Elephant Base ✦" : "Unclaimed"}
-                </div>
-                <button
-                  onClick={() => {
-                    stopAllCharacterVoice();
-                    setShowToymakerDialogue(false);
-                    setShowToyInspectionModal(true);
-                  }}
-                  className="bg-gradient-to-r from-[#8b6528] to-[#d4a359] hover:from-[#a07430] hover:to-[#e5b56a] text-[#141210] font-serif font-bold px-6 py-2.5 rounded-xl shadow-md transition-all cursor-pointer text-xs uppercase tracking-wider"
-                >
-                  Inspect Handcrafted Toys 🔍
-                </button>
-              </div>
-            </div>
-          </div>
+              </>
+            }
+            currentSpeechText="Namaskara! Every toy on these shelves is hand-carved from seasoned wood and coated with natural mineral lacquer from Kinhal. You ask of Merchant Ramayya? Yes, he was my dearest childhood friend. Shortly before he vanished, he spent hours in my workshop, admiring these very pieces and carving intricate marks into their bases. He told me: A child sees play, but a discerning seeker will discover memory. Feel free to inspect them closely upon my workbench!"
+            statusText={`Fragment 1 Status: ${
+              hasFirstLedgerFragment
+                ? "Discovered in Elephant Base ✦"
+                : "Unclaimed"
+            }`}
+            actionButtonText="Inspect Handcrafted Toys"
+            actionButtonIcon="search"
+            actionButtonVariant="gold"
+            onAction={() => {
+              setShowToymakerDialogue(false);
+              setShowToyInspectionModal(true);
+            }}
+            onClose={() => setShowToymakerDialogue(false)}
+          />
         )}
 
         {/* --- FOREIGN TRAVELER DIALOGUE MODAL (OPTIONAL) --- */}

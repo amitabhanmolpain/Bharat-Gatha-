@@ -99,6 +99,30 @@ CHARACTER_VOICE_PROFILES = {
         "fallback_pace": 0.94,
         "language_code": "en-IN"
     },
+    "kallappa": {
+        "id": "kallappa",
+        "name": "Master Kallappa",
+        "role": "Kinhal Craft Guild Artisan",
+        "description": (
+            "A warm, elderly Indian male artisan speaking slow, gentle, dignified Indian English with a soft South Indian Kannada accent. "
+            "His voice is aged, gravelly, and respectful, speaking like a 16th-century master woodcraft artisan from Vijayanagara with wisdom, humility, and calm patience."
+        ),
+        "fallback_speaker": "ratan",
+        "fallback_pace": 0.80,
+        "language_code": "en-IN"
+    },
+    "somappa": {
+        "id": "somappa",
+        "name": "Setti Somappa",
+        "role": "Royal Merchant Guild Assessor",
+        "description": (
+            "A dignified, elderly Indian male merchant speaking measured, warm Indian English with a South Indian accent. "
+            "His voice is mature, seasoned, slightly deep, and authoritative yet cordial, speaking like a 16th-century royal gemstone assessor in Hampi Bazaar."
+        ),
+        "fallback_speaker": "ratan",
+        "fallback_pace": 0.82,
+        "language_code": "en-IN"
+    },
     "narrator": {
         "id": "narrator",
         "name": "Historical Chronicler",
@@ -142,6 +166,12 @@ def get_character_profile(character_id: str) -> dict:
     key = (character_id or "jolly").lower().strip()
     if "guard" in key or "sentry" in key or "soldier" in key:
         return CHARACTER_VOICE_PROFILES["guard"]
+    # Explicit match for Master Kallappa (elderly artisan)
+    if "kallappa" in key or "toymaker" in key or "artisan" in key:
+        return CHARACTER_VOICE_PROFILES["kallappa"]
+    # Explicit match for Setti Somappa (elderly merchant assessor)
+    if "somappa" in key or "gem" in key or "assessor" in key or "setti" in key:
+        return CHARACTER_VOICE_PROFILES["somappa"]
     # Explicit match for Sage Vidyaranya before the generic elder/sage catch-all
     if "vidyaranya" in key:
         return CHARACTER_VOICE_PROFILES["vidyaranya"]
@@ -227,7 +257,7 @@ def generate_character_speech(character: str, text: str) -> dict:
 
     # 0. Check persistent disk cache for exact accent consistency
     cache_key = hashlib.md5(f"parler_{character}_{clean_text}".encode('utf-8')).hexdigest()
-    cached_file = os.path.join(AUDIO_CACHE_DIR, f"jolly_{cache_key}.wav")
+    cached_file = os.path.join(AUDIO_CACHE_DIR, f"{character}_{cache_key}.wav")
     if os.path.exists(cached_file) and os.path.getsize(cached_file) > 1000:
         try:
             with open(cached_file, "rb") as f:
@@ -237,7 +267,7 @@ def generate_character_speech(character: str, text: str) -> dict:
                 "character": profile["id"],
                 "character_name": profile["name"],
                 "audio_base64": base64.b64encode(cached_bytes).decode("utf-8"),
-                "audio_url": f"/audio_cache/jolly_{cache_key}.wav",
+                "audio_url": f"/audio_cache/{character}_{cache_key}.wav",
                 "format": "wav",
                 "engine": "indic_parler_tts_cached",
                 "status_code": 200
@@ -287,7 +317,7 @@ def generate_character_speech(character: str, text: str) -> dict:
                             "character": profile["id"],
                             "character_name": profile["name"],
                             "audio_base64": audio_b64,
-                            "audio_url": f"/audio_cache/jolly_{cache_key}.wav",
+                            "audio_url": f"/audio_cache/{character}_{cache_key}.wav",
                             "format": "wav",
                             "engine": "indic_parler_tts",
                             "status_code": 200
@@ -301,7 +331,7 @@ def generate_character_speech(character: str, text: str) -> dict:
         try:
             with open(cached_file, "wb") as f:
                 f.write(base64.b64decode(result["audio_base64"]))
-            result["audio_url"] = f"/audio_cache/jolly_{cache_key}.wav"
+            result["audio_url"] = f"/audio_cache/{character}_{cache_key}.wav"
         except Exception:
             pass
     return result
