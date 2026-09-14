@@ -14,9 +14,10 @@ export type IndusSceneType =
   | "drainage_culvert"
   | "caravan_road"
 
-  // Stage 3: Artisan Quarter & Steatite Seal Workshop
+  // Stage 3: Artisan Quarter, Steatite Seal Workshop & Harappan Cemetery
   | "steatite_seal_workshop"
   | "carnelian_bead_quarter"
+  | "harappa_cemetery"
 
   // Stage 4: The Citadel Sanctuary & The Priest-King
   | "priest_king_citadel"

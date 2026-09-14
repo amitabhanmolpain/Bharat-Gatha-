@@ -951,6 +951,34 @@ function IndusValleyGameComponent() {
     playerPos.x <= 72.0 &&
     playerPos.y <= 34.0;
 
+  // Stage 3: Harappan Cemetery R37 Exit -> Return to Residential Area
+  const isNearCemeteryExit =
+    scene === "harappa_cemetery" &&
+    playerPos.y >= 80.0;
+
+  // Stage 3: Cemetery R37 Grave Pottery Offerings Hotspot
+  const isNearGravePottery =
+    scene === "harappa_cemetery" &&
+    playerPos.x >= 32.0 &&
+    playerPos.x <= 48.0 &&
+    playerPos.y >= 45.0 &&
+    playerPos.y <= 68.0;
+
+  // Stage 3: Cemetery R37 Excavated Rectangular Grave Hotspot
+  const isNearExcavatedGrave =
+    scene === "harappa_cemetery" &&
+    playerPos.x >= 48.0 &&
+    playerPos.x <= 64.0 &&
+    playerPos.y >= 45.0 &&
+    playerPos.y <= 68.0;
+
+  // Stage 3: Solemn Harappan Elder / Funeral Observer Hotspot
+  const isNearSolemnElder =
+    scene === "harappa_cemetery" &&
+    playerPos.x >= 65.0 &&
+    playerPos.y >= 45.0 &&
+    playerPos.y <= 75.0;
+
   // Stage 1.7: The Great Granary -> Return to Residential Grid (at bottom-left x: 22%, y: 82%)
   const isNearGranaryGridReturn =
     scene === "granary_avenue" &&
@@ -1721,6 +1749,9 @@ function IndusValleyGameComponent() {
         } else if (isNearResidentialAreaEntrance) {
           triggerTransition("residential_grid", { x: 50.0, y: 80.0 }, 3, 600);
           return;
+        } else if (isNearCemeteryGate) {
+          triggerTransition("harappa_cemetery", { x: 50.0, y: 82.0 }, 3, 600);
+          return;
         } else if (isNearBeadQuarterEntrance) {
           triggerTransition("carnelian_bead_quarter", { x: 30.0, y: 70.0 });
           return;
@@ -1784,6 +1815,9 @@ function IndusValleyGameComponent() {
           } else {
             triggerTransition("lower_town_gate", { x: 71.5, y: 41.0 });
           }
+          return;
+        } else if (isNearCemeteryExit) {
+          triggerTransition("residential_grid", { x: 58.0, y: 34.0 }, 3, 600);
           return;
         } else if (isNearGranaryGridReturn) {
           triggerTransition("residential_grid", { x: 76.0, y: 38.0 });
@@ -1852,6 +1886,30 @@ function IndusValleyGameComponent() {
             title: "Lower Town Watcher • Mohenjo-daro",
             icon: "",
             text: "I watch the sunrise over the eastern wall! Look along the street below—the covered drains carry every drop of wastewater away safely under the stone slabs. No other city on earth has such engineering.",
+          });
+          soundFx.playSelect();
+        } else if (isNearGravePottery) {
+          setActiveCitizenDialogue({
+            name: "Harappan Funerary Pottery",
+            title: "Grave Offerings • Cemetery R37 Harappa",
+            icon: "",
+            text: "Painted terracotta vessels, dishes-on-stand, and food offerings left at the head of the burial. Harappans placed authentic domestic pottery with their departed for the journey beyond.",
+          });
+          soundFx.playSelect();
+        } else if (isNearExcavatedGrave) {
+          setActiveCitizenDialogue({
+            name: "Excavated Rectangular Grave R37",
+            title: "North-South Extended Burial • Cemetery R37",
+            icon: "",
+            text: "Excavations at Cemetery R37 reveal rectangular earthen pits oriented strictly North-South. Bodies were placed extended on their backs with head pointing North, adorned with simple shell bangles, steatite beads, and copper rings.",
+          });
+          soundFx.playSelect();
+        } else if (isNearSolemnElder) {
+          setActiveCitizenDialogue({
+            name: "Harappan Solemn Funeral Observer",
+            title: "Elder of Cemetery R37 • Harappa",
+            icon: "",
+            text: "Peace be with our ancestors. Unlike the grandiose pyramid tombs of Egypt or royal graves of Sumer, Harappans honored all citizens with dignified, uniform earthen burials and modest pottery offerings.",
           });
           soundFx.playSelect();
         } else if (isNearRoadPedestrian) {
@@ -2834,25 +2892,128 @@ function IndusValleyGameComponent() {
           <div
             className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
             style={{ left: "58%", top: "24%" }}
-            onClick={() =>
-              setActiveCitizenDialogue({
-                name: "Harappan Cemetery Gate",
-                title: "Ancient Sacred Burial Grounds • Harappa",
-                icon: "",
-                text: "You stand before the ancient Harappan cemetery archway! Beyond this gateway lie the earthen burial mounds, lined graves, and terracotta funerary urns where ancient Harappan families laid their ancestors to rest with honored pottery offerings.",
-              })
-            }
+            onClick={() => triggerTransition("harappa_cemetery", { x: 50.0, y: 82.0 }, 3, 600)}
           >
             {isNearCemeteryGate ? (
               <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
-                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
-                <span>🪦 Inspect Cemetery Gateway</span>
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">E</div>
+                <span>✨ Enter Cemetery Area (Press E)</span>
               </div>
             ) : (
               <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
-                <span>🪦 Cemetery Gateway</span>
+                <span>🪦 Harappan Cemetery R37</span>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* Stage 3: Harappan Cemetery R37 & Sacred Burial Ground     */}
+        {/* ========================================================= */}
+
+        {/* Cemetery R37 -> Return to Residential Area */}
+        {scene === "harappa_cemetery" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "50%", top: "90%" }}
+            onClick={() => triggerTransition("residential_grid", { x: 58.0, y: 34.0 }, 3, 600)}
+          >
+            {isNearCemeteryExit ? (
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">F</div>
+                <span>▼ Return to Residential Area</span>
+              </div>
+            ) : (
+              <div className="bg-[#1b1510]/80 border border-[#d8a86a]/60 text-[#f7eedf]/80 px-2 py-0.5 rounded text-[11px] font-serif whitespace-nowrap">
+                <span>Return to Residential Area</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Hotspot 1: Grave Pottery Offerings */}
+        {scene === "harappa_cemetery" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "40%", top: "58%" }}
+            onClick={() =>
+              setActiveCitizenDialogue({
+                name: "Harappan Funerary Pottery",
+                title: "Grave Offerings • Cemetery R37 Harappa",
+                icon: "",
+                text: "Painted terracotta vessels, dishes-on-stand, and food offerings left at the head of the burial. Harappans placed authentic domestic pottery with their departed for the journey beyond.",
+              })
+            }
+          >
+            {isNearGravePottery ? (
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
+                <span>Inspect Grave Pottery</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>Grave Pottery Offerings</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Hotspot 2: Excavated Rectangular Grave R37 */}
+        {scene === "harappa_cemetery" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "56%", top: "58%" }}
+            onClick={() =>
+              setActiveCitizenDialogue({
+                name: "Excavated Rectangular Grave R37",
+                title: "North-South Extended Burial • Cemetery R37",
+                icon: "",
+                text: "Excavations at Cemetery R37 reveal rectangular earthen pits oriented strictly North-South. Bodies were placed extended on their backs with head pointing North, adorned with simple shell bangles, steatite beads, and copper rings.",
+              })
+            }
+          >
+            {isNearExcavatedGrave ? (
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
+                <span>Inspect Excavated Grave</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>Excavated Grave R37</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Hotspot 3: Solemn Harappan Elder */}
+        {scene === "harappa_cemetery" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "76%", top: "60%" }}
+            onClick={() =>
+              setActiveCitizenDialogue({
+                name: "Harappan Solemn Funeral Observer",
+                title: "Elder of Cemetery R37 • Harappa",
+                icon: "",
+                text: "Peace be with our ancestors. Unlike the grandiose pyramid tombs of Egypt or royal graves of Sumer, Harappans honored all citizens with dignified, uniform earthen burials and modest pottery offerings.",
+              })
+            }
+          >
+            {isNearSolemnElder ? (
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
+                <span>Speak with Solemn Elder</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>Solemn Observer</span>
+              </div>
+            )}
+            <img
+              src="/sprite-indus-official.png?v=4"
+              alt="Solemn Harappan Elder"
+              className="h-[68px] sm:h-[75px] md:h-[84px] w-auto object-contain block select-none mt-1"
+            />
           </div>
         )}
 

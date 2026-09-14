@@ -149,6 +149,17 @@ export const INDUS_SCENE_CONFIGS: Record<IndusSceneType, IndusSceneMeta> = {
     minY: 48.0,
     maxY: 86.0,
   },
+  harappa_cemetery: {
+    title: "Harappan Cemetery R37 & Sacred Burial Ground",
+    era: "Bronze Age • c. 2000 BCE",
+    subtitle: "Rectangular Earthen Graves & Terracotta Funerary Offerings",
+    backgroundImage: "/bg-indus-cemetery.jpg",
+    defaultObjective: "Explore the ancient Harappan burial ground, inspect excavated rectangular graves, and examine authentic terracotta pottery offerings.",
+    minX: 16.0,
+    maxX: 88.0,
+    minY: 28.0,
+    maxY: 92.0,
+  },
   priest_king_citadel: {
     title: "Harappan Toy Making Workshop",
     era: "Bronze Age • c. 2500 BCE",
