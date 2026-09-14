@@ -1539,18 +1539,31 @@ function IndusValleyGameComponent() {
 
 
 
-  // Stage 4: Priest-King
-  const isNearPriestKing =
+  // Stage 4: Citadel Building Doorway (Outdoor Citadel Mound -> Interior)
+  const isNearCitadelDoorway =
     scene === "priest_king_citadel" &&
     playerPos.x >= 40.0 &&
-    playerPos.x <= 62.0 &&
-    playerPos.y >= 52.0 &&
-    playerPos.y <= 72.0;
+    playerPos.x <= 58.0 &&
+    playerPos.y >= 25.0 &&
+    playerPos.y <= 48.0;
 
-  // Stage 4: Workshop Interior Way to Go Back to Toy Street
-  const isNearWorkshopExit =
+  // Stage 4: Outdoor Citadel Mound Exit (Mound -> Cemetery)
+  const isNearCitadelMoundExit =
     scene === "priest_king_citadel" &&
     playerPos.y >= 85.0;
+
+  // Stage 4: Citadel Interior Altar (Priest-King Blessing)
+  const isNearPriestKingAltar =
+    scene === "citadel_interior" &&
+    playerPos.x >= 60.0 &&
+    playerPos.x <= 82.0 &&
+    playerPos.y >= 38.0 &&
+    playerPos.y <= 62.0;
+
+  // Stage 4: Citadel Interior Exit (Interior -> Outdoor Citadel Mound)
+  const isNearCitadelInteriorExit =
+    scene === "citadel_interior" &&
+    (playerPos.y >= 82.0 || (playerPos.x >= 75.0 && playerPos.y >= 52.0));
 
   // Stage 3 -> Carnelian Bead Quarter
   const isNearBeadQuarterEntrance =
@@ -1788,6 +1801,9 @@ function IndusValleyGameComponent() {
         } else if (isNearSunsetReflection) {
           triggerTransition("closing_reflection", { x: 50.0, y: 60.0 });
           return;
+        } else if (isNearCitadelDoorway) {
+          triggerTransition("citadel_interior", { x: 50.0, y: 78.0 }, 4, 600);
+          return;
         }
       }
 
@@ -1796,11 +1812,17 @@ function IndusValleyGameComponent() {
         if (isNearHarappaExitArchway) {
           triggerTransition("caravan_road", { x: 80.0, y: 32.0 }, undefined, 600);
           return;
+        } else if (isNearCitadelDoorway) {
+          triggerTransition("citadel_interior", { x: 50.0, y: 78.0 }, 4, 600);
+          return;
+        } else if (isNearCitadelInteriorExit) {
+          triggerTransition("priest_king_citadel", { x: 48.0, y: 44.0 }, 4, 600);
+          return;
+        } else if (isNearCitadelMoundExit) {
+          triggerTransition("harappa_cemetery", { x: 50.0, y: 35.0 }, 3, 600);
+          return;
         } else if (isNearCaravanRoadReturn) {
           startLongTravelTransition("great_bath_citadel", { x: 68.0, y: 32.0 }, 2, "MOHENJO-DARO");
-          return;
-        } else if (isNearWorkshopExit) {
-          triggerTransition("steatite_seal_workshop", { x: 50.0, y: 65.0 }, 3, 600);
           return;
         } else if (isNearBeadQuarterExit) {
           triggerTransition("steatite_seal_workshop", { x: 80.0, y: 60.0 });
@@ -2064,7 +2086,7 @@ function IndusValleyGameComponent() {
           soundFx.playSelect();
         } else if (isNearSealBench) {
           setShowSealPuzzleModal(true);
-        } else if (isNearPriestKing) {
+        } else if (isNearPriestKingAltar) {
           setShowPriestKingDialogue(true);
         }
       };
@@ -2197,13 +2219,15 @@ function IndusValleyGameComponent() {
     courtyardReturnScene,
     isNearSealBench,
     isNearHarappaExitArchway,
-    isNearPriestKing,
+    isNearPriestKingAltar,
+    isNearCitadelDoorway,
+    isNearCitadelMoundExit,
+    isNearCitadelInteriorExit,
     isNearGranaryExit,
     isNearArtisanQuarterExit,
     isNearCitadelStairs,
     isNearWorkshopEntrance,
     isNearResidentialAreaEntrance,
-    isNearWorkshopExit,
     isNearBeadQuarterEntrance,
     isNearBeadQuarterExit,
     isNearDrainageEntrance,
@@ -4390,44 +4414,81 @@ function IndusValleyGameComponent() {
           </div>
         )}
 
-        {/* Stage 4: Priest-King Hotspot */}
+        {/* Outdoor Citadel Platform: Doorway Entrance into Citadel Hall / Interior */}
         {scene === "priest_king_citadel" && (
           <div
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
-            style={{ left: "52%", top: "62%" }}
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "48%", top: "36%" }}
+            onClick={() => triggerTransition("citadel_interior", { x: 50.0, y: 78.0 }, 4, 600)}
           >
-            {isNearPriestKing && (
+            {isNearCitadelDoorway ? (
               <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
-                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
-                <span>Speak with The Priest-King</span>
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">F</div>
+                <span>Enter Citadel Hall & Sanctuary</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>Enter Citadel Hall Doorway</span>
               </div>
             )}
-            <div className="w-14 h-18 bg-[#382b1d]/90 border-2 border-[#c29357] rounded-2xl flex items-center justify-center shadow-xl animate-pulse">
-              <svg className="w-8 h-8 text-[#c29357]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-            </div>
-            <span className="text-[10px] font-serif font-bold text-[#fdfaf3] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#6b533a] mt-1">
-              The Priest-King
-            </span>
           </div>
         )}
 
-        {/* Harappa Toy Workshop Interior: Exit back to Market Street */}
+        {/* Outdoor Citadel Mound Exit: Back to Harappa Cemetery */}
         {scene === "priest_king_citadel" && (
           <div
             className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
             style={{ left: "50%", top: "92%" }}
-            onClick={() => triggerTransition("steatite_seal_workshop", { x: 50.0, y: 65.0 }, 3, 600)}
+            onClick={() => triggerTransition("harappa_cemetery", { x: 50.0, y: 35.0 }, 3, 600)}
           >
-            {isNearWorkshopExit ? (
+            {isNearCitadelMoundExit ? (
               <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
                 <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">F</div>
-                <span>Return to Toy Market Street</span>
+                <span>Return to Harappa Cemetery</span>
               </div>
             ) : (
               <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
-                <span>Exit Workshop (Back to Street)</span>
+                <span>Exit Citadel Mound</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Citadel Interior: Priest-King Sanctuary Altar */}
+        {scene === "citadel_interior" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "70%", top: "52%" }}
+            onClick={() => setShowPriestKingDialogue(true)}
+          >
+            {isNearPriestKingAltar ? (
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
+                <span>Examine Priest-King Altar & Receive Blessing</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>Priest-King Sanctuary Dais</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Citadel Interior: Exit back to Outdoor Citadel Mound Terrace */}
+        {scene === "citadel_interior" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "82%", top: "62%" }}
+            onClick={() => triggerTransition("priest_king_citadel", { x: 48.0, y: 44.0 }, 4, 600)}
+          >
+            {isNearCitadelInteriorExit ? (
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">F</div>
+                <span>Exit to Citadel Terrace</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>Exit Doorway</span>
               </div>
             )}
           </div>

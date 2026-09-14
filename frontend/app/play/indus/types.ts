@@ -21,6 +21,7 @@ export type IndusSceneType =
 
   // Stage 4: The Citadel Sanctuary & The Priest-King
   | "priest_king_citadel"
+  | "citadel_interior"
   | "closing_reflection";
 
 export type IndusJournalCategory =

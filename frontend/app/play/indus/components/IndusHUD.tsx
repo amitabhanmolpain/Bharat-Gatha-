@@ -71,9 +71,11 @@ export default function IndusHUD({
       case "carnelian_bead_quarter":
         return "INDUS VALLEY - TOY MARKET STREET (HARAPPA)";
       case "priest_king_citadel":
-        return "INDUS VALLEY - TOY MAKING WORKSHOP (HARAPPA)";
+        return "INDUS VALLEY - THE CITADEL MOUND (c. 2500 BCE)";
+      case "citadel_interior":
+        return "INDUS VALLEY - CITADEL SANCTUARY HALL (c. 2500 BCE)";
       case "closing_reflection":
-        return "INDUS VALLEY - CITADEL PLATFORM (MOHENJO-DARO)";
+        return "INDUS VALLEY - SINDHU RIVER SUNSET (c. 2500 BCE)";
       default:
         return "INDUS VALLEY CIVILISATION (c. 2500 BCE)";
     }
@@ -102,7 +104,9 @@ export default function IndusHUD({
       case "carnelian_bead_quarter":
         return "Toy Market Street";
       case "priest_king_citadel":
-        return "Toy Studio";
+        return "Citadel Mound";
+      case "citadel_interior":
+        return "Sanctuary Hall";
       default:
         return "Mohenjo-daro";
     }
