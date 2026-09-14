@@ -30,7 +30,8 @@ import NarratorSubtitle from "../../../components/NarratorSubtitle";
 import GameIcon from "./components/GameIcon";
 import HistoricalNPCDialogueCard from "./components/HistoricalNPCDialogueCard";
 
-const PLAYER_VISUAL_SCALE = 1.75;
+// 10% visual increase requested by user
+const PLAYER_VISUAL_SCALE = 1.925;
 
 export default function VijayanagaraGameScreen() {
   const [isLoading, setIsLoading] = useState(true);
@@ -1870,13 +1871,9 @@ export default function VijayanagaraGameScreen() {
             transform: `translate(-50%, -100%) scale(${depthScale}) rotate(${walkSway}deg) translateY(${walkBob}px)`,
           }}
         >
-          <div className="text-[9px] font-serif font-bold bg-[#1a1714]/85 text-[#d4a359] border border-[#5a4d3f] px-1.5 py-0.5 rounded mb-1 whitespace-nowrap shadow-[1px_1px_0_0_rgba(0,0,0,0.8)]">
-            Traveler
-          </div>
-
           <img
             src="/player.png"
-            alt="Player Traveler"
+            alt="Player Character"
             className="w-12 h-16 object-contain drop-shadow-[0_8px_12px_rgba(0,0,0,0.9)]"
             style={{
               transform: facingLeft ? "scaleX(-1)" : "scaleX(1)",

@@ -84,10 +84,11 @@ export default function ToyInspectionPuzzle({
   hasJournalToy,
 }: ToyInspectionPuzzleProps) {
   const [selectedToyId, setSelectedToyId] = useState<string>("elephant");
-  const [rotationAngle, setRotationAngle] = useState<number>(0);
+  const [rotationAngle, setRotationAngle] = useState<number>(0); // Unbounded angle for smooth CSS rotation
   const [isViewingUnderside, setIsViewingUnderside] = useState<boolean>(false);
   const [isLatchOpened, setIsLatchOpened] = useState<boolean>(alreadyFoundFragment);
   const [inspectedToys, setInspectedToys] = useState<string[]>(["elephant"]);
+  const [isRotating, setIsRotating] = useState<boolean>(false);
   const [statusMessage, setStatusMessage] = useState<string>(
     "Examine the Kinhal artisan's wooden toys. Rotate and inspect the sides and bases for subtle craftsman seams."
   );
@@ -153,7 +154,8 @@ export default function ToyInspectionPuzzle({
   };
 
   const handleSelectToy = (toyId: string) => {
-    soundFx.playButtonClick(0.8);
+    if (isRotating) return;
+    soundFx.playSelect();
     setSelectedToyId(toyId);
     setRotationAngle(0);
     setIsViewingUnderside(false);
@@ -168,26 +170,47 @@ export default function ToyInspectionPuzzle({
     }
   };
 
+  const getNormalizedAngle = (angle: number) => ((angle % 360) + 360) % 360;
+
   const handleRotate = (delta: number) => {
-    soundFx.playKeyboardClick(0.9);
+    if (isRotating) return;
+    setIsRotating(true);
+    soundFx.playSelect();
     setIsViewingUnderside(false);
-    const newAngle = (rotationAngle + delta + 360) % 360;
-    setRotationAngle(newAngle);
     
-    const observation = currentToy.angles[newAngle] || currentToy.description;
-    triggerVoice(observation);
+    // Use unbounded angle for smooth visual CSS transition
+    const newAbsoluteAngle = rotationAngle + delta;
+    setRotationAngle(newAbsoluteAngle);
+    
+    setTimeout(() => {
+      if (isMountedRef.current) {
+        setIsRotating(false);
+        const normalizedAngle = getNormalizedAngle(newAbsoluteAngle);
+        const observation = currentToy.angles[normalizedAngle] || currentToy.description;
+        triggerVoice(observation);
+      }
+    }, 700);
   };
 
   const handleInspectBase = () => {
-    soundFx.playKeyboardClick(1.0);
+    if (isRotating) return;
+    setIsRotating(true);
+    soundFx.playSelect();
+    
     setIsViewingUnderside((prev) => {
       const isNowUnderside = !prev;
-      if (isNowUnderside) {
-        triggerVoice(currentToy.undersideClue);
-      } else {
-        const observation = currentToy.angles[rotationAngle] || currentToy.description;
-        triggerVoice(observation);
-      }
+      setTimeout(() => {
+        if (isMountedRef.current) {
+          setIsRotating(false);
+          if (isNowUnderside) {
+            triggerVoice(currentToy.undersideClue);
+          } else {
+            const normalizedAngle = getNormalizedAngle(rotationAngle);
+            const observation = currentToy.angles[normalizedAngle] || currentToy.description;
+            triggerVoice(observation);
+          }
+        }
+      }, 700);
       return isNowUnderside;
     });
   };
@@ -278,16 +301,17 @@ export default function ToyInspectionPuzzle({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-5 bg-[#171412] rounded-xl border border-[#383027] mb-5">
         {/* Left: Visual Representation & Rotation Pedestal */}
         <div className="flex flex-col items-center justify-center p-6 bg-[#211d19] rounded-xl border border-[#3d3329] relative min-h-[260px] overflow-hidden">
-          <div className="absolute top-2 left-2 text-[10px] font-mono text-[#a89985] uppercase">
-            Orientation: {isViewingUnderside ? "Base / Underside" : `${rotationAngle}° Profile`}
+          <div className="absolute top-2 left-2 text-[10px] font-mono text-[#a89985] uppercase z-20">
+            Orientation: {isViewingUnderside ? "Base / Underside" : `${getNormalizedAngle(rotationAngle)}° Profile`}
           </div>
 
           {/* Rendered Visual Artifact */}
           <div 
-            className="my-6 transform transition-all duration-700 ease-in-out drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)] flex items-center justify-center"
+            className={`my-6 transform transition-all duration-700 ease-in-out flex items-center justify-center ${isRotating ? "scale-[0.98] drop-shadow-[0_15px_25px_rgba(0,0,0,0.9)]" : "drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)] scale-100"}`}
             style={{ 
-              transform: `rotateY(${rotationAngle}deg) ${isViewingUnderside ? 'rotateX(75deg) scale(1.1)' : 'rotateX(0deg) scale(1)'}`,
-              transformStyle: 'preserve-3d'
+              transform: `rotateX(${isViewingUnderside ? 75 : 0}deg) rotateY(${rotationAngle}deg)`,
+              transformStyle: 'preserve-3d',
+              transformOrigin: 'center center'
             }}
           >
             {currentToy.id === "chariot" ? (
@@ -302,7 +326,8 @@ export default function ToyInspectionPuzzle({
             <button
               type="button"
               onClick={() => handleRotate(-90)}
-              className="bg-[#2b2520] hover:bg-[#3d3329] border border-[#5a4d3f] text-[#f6ede0] text-xs font-serif px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
+              disabled={isRotating}
+              className="bg-[#2b2520] hover:bg-[#3d3329] border border-[#5a4d3f] disabled:opacity-50 disabled:cursor-not-allowed text-[#f6ede0] text-xs font-serif px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
               title="Rotate Left"
             >
               <GameIcon name="rotate_cw" size={14} className="scale-x-[-1]" /> Rotate Left
@@ -310,7 +335,8 @@ export default function ToyInspectionPuzzle({
             <button
               type="button"
               onClick={handleInspectBase}
-              className={`border text-xs font-serif px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
+              disabled={isRotating}
+              className={`border text-xs font-serif px-3 py-1.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 transition-all cursor-pointer ${
                 isViewingUnderside
                   ? "bg-[#d4a359] text-[#141210] border-[#d4a359] font-bold"
                   : "bg-[#2b2520] hover:bg-[#3d3329] border-[#5a4d3f] text-[#f6ede0]"
@@ -321,7 +347,8 @@ export default function ToyInspectionPuzzle({
             <button
               type="button"
               onClick={() => handleRotate(90)}
-              className="bg-[#2b2520] hover:bg-[#3d3329] border border-[#5a4d3f] text-[#f6ede0] text-xs font-serif px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
+              disabled={isRotating}
+              className="bg-[#2b2520] hover:bg-[#3d3329] border border-[#5a4d3f] disabled:opacity-50 disabled:cursor-not-allowed text-[#f6ede0] text-xs font-serif px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
               title="Rotate Right"
             >
               Rotate Right <GameIcon name="rotate_cw" size={14} />
@@ -365,17 +392,20 @@ export default function ToyInspectionPuzzle({
               Material: {currentToy.material}
             </div>
 
-            {/* Dynamic Inspection Details */}
-            <div className="p-3 rounded-lg bg-[#26201b] border border-[#473d32] text-xs font-serif text-[#eedfc8] leading-relaxed">
+            <div className="p-3 rounded-lg bg-[#26201b] border border-[#473d32] text-xs font-serif text-[#eedfc8] leading-relaxed transition-opacity duration-300">
               {isViewingUnderside ? (
                 <div>
                   <span className="text-[#d4a359] font-bold block mb-1">Base Analysis:</span>
-                  {currentToy.undersideClue}
+                  <div className={isRotating ? "opacity-50" : "opacity-100 transition-opacity"}>
+                    {currentToy.undersideClue}
+                  </div>
                 </div>
               ) : (
                 <div>
                   <span className="text-[#d4a359] font-bold block mb-1">Side Analysis:</span>
-                  {currentToy.angles[rotationAngle] || currentToy.description}
+                  <div className={isRotating ? "opacity-50" : "opacity-100 transition-opacity"}>
+                    {currentToy.angles[getNormalizedAngle(rotationAngle)] || currentToy.description}
+                  </div>
                 </div>
               )}
             </div>

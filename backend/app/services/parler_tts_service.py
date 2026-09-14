@@ -63,10 +63,9 @@ CHARACTER_VOICE_PROFILES = {
         "name": "Sage Vidyaranya",
         "role": "14th-Century Sringeri Scholar and Founding Advisor of Vijayanagara",
         "description": (
-            "A very old, deeply wise Indian male elder speaking slow, deliberate, reverent Indian English. "
-            "His voice is aged and gravelly with a soft South Indian Kannada accent, warm but solemn, "
-            "like a 14th-century Sanskrit scholar who has lived many decades. "
-            "He speaks with gentle authority, long thoughtful pauses, and the serene cadence of an ancient sage."
+            "An elderly Indian male speaking moderately slow, calm, reassuring, and thoughtful Indian English. "
+            "He sounds like a wise teacher and historical sage, delivering clear pronunciation with slight pauses between important ideas. "
+            "His voice is authoritative but not aggressive, mature, and gentle."
         ),
         "fallback_speaker": "ratan",
         "fallback_pace": 0.78,
