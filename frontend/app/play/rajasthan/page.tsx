@@ -1192,18 +1192,18 @@ export default function RajasthanGameScreen() {
   const isNearBadalMahalTerraceExit = scene === "badal_mahal_terrace" && playerPos.y >= 76.0;
   const isNearTerraceElephant = scene === "badal_mahal_terrace" && playerPos.x >= 42.0;
 
-  // Stage 3 Triggers (Kuldhara)
+  // Stage 3 Triggers (Kuldhara - Physical Hidden Evidence Discovery)
   const isNearPillar83 = scene === "kuldhara_gate" && playerPos.x >= 55.0;
   const isNearGateVillagePath = scene === "kuldhara_gate" && playerPos.y <= 62.0;
-  const isNearHaveliOrnament = scene === "chiefs_house" && playerPos.x >= 54.0 && playerPos.y <= 78.0;
-  const isNearHaveliTreasuryDoor = scene === "chiefs_house" && playerPos.y <= 62.0;
-  const isNearHaveliGateExit = scene === "chiefs_house" && playerPos.y >= 80.0;
-  const isNearTaxLedger = scene === "treasury" && playerPos.x >= 34.0 && playerPos.x <= 74.0 && playerPos.y <= 76.0;
-  const isNearTreasuryWellDoor = scene === "treasury" && playerPos.x >= 68.0;
-  const isNearTreasuryHaveliExit = scene === "treasury" && (playerPos.y >= 78.0 || playerPos.x <= 28.0);
-  const isNearStepwellPots = scene === "well" && playerPos.x <= 55.0 && playerPos.y >= 65.0 && playerPos.y <= 84.0;
-  const isNearStepwellSquareDoor = scene === "well" && playerPos.x >= 68.0;
-  const isNearStepwellTreasuryExit = scene === "well" && (playerPos.x <= 32.0 || playerPos.y >= 82.0);
+  const isNearHaveliOrnament = scene === "chiefs_house" && !hasWeddingOrnament && playerPos.x >= 70.0 && playerPos.x <= 88.0 && playerPos.y >= 60.0 && playerPos.y <= 82.0;
+  const isNearHaveliTreasuryDoor = scene === "chiefs_house" && playerPos.x <= 62.0 && playerPos.y <= 62.0;
+  const isNearHaveliGateExit = scene === "chiefs_house" && playerPos.y >= 84.0;
+  const isNearTaxLedger = scene === "treasury" && !hasTaxLedger && playerPos.x >= 55.0 && playerPos.x <= 75.0 && playerPos.y >= 58.0 && playerPos.y <= 78.0;
+  const isNearTreasuryWellDoor = scene === "treasury" && playerPos.x >= 78.0;
+  const isNearTreasuryHaveliExit = scene === "treasury" && (playerPos.y >= 84.0 || playerPos.x <= 25.0);
+  const isNearStepwellPots = scene === "well" && !hasWaterPotsSupplies && playerPos.x >= 20.0 && playerPos.x <= 42.0 && playerPos.y >= 68.0 && playerPos.y <= 86.0;
+  const isNearStepwellSquareDoor = scene === "well" && playerPos.x >= 72.0;
+  const isNearStepwellTreasuryExit = scene === "well" && (playerPos.x <= 25.0 && playerPos.y >= 84.0);
   const isNearChhatriDeduction = scene === "village_square" && playerPos.x >= 28.0 && playerPos.x <= 72.0 && playerPos.y >= 55.0 && playerPos.y <= 88.0;
   const isNearSquareWellExit = scene === "village_square" && playerPos.x <= 30.0;
 
@@ -2430,13 +2430,13 @@ export default function RajasthanGameScreen() {
       case "badal_mahal_terrace":
         return "Stand atop Badal Mahal terrace. Walk to the Royal Elephant and press E to travel to Kuldhara Ghost Village (Stage 3).";
       case "kuldhara_gate":
-        return "Enter the eerie entrance of Kuldhara Ghost Village. Walk north into the Chief's Haveli.";
+        return "Enter the eerie entrance of Kuldhara Ghost Village. Explore the abandoned ruins to uncover physical evidence.";
       case "chiefs_house":
-        return "Inspect the inscribed '83' marker pillar (Press E) proving all 84 Paliwal Brahmin villages fled together overnight!";
+        return "Explore the Village Chief's Ruined Haveli. Search the alcoves and chambers for hidden physical evidence.";
       case "treasury":
-        return "Search the stepwell platform. Inspect the intact clay water pots and caches (Press E) proving coordinated evacuation.";
+        return "Explore the Merchant Treasury. Search around old records and merchant counters for hidden physical evidence.";
       case "well":
-        return "Search the stepwell platform. Inspect the intact clay water pots and caches (Press E) proving coordinated evacuation.";
+        return "Explore the Ancient Village Stepwell (Baori). Search around supply caches and stepwell corners for hidden evidence.";
       case "village_square":
         return "Approach the memorial chhatri and press E to piece together the evidence and solve the mystery of Kuldhara!";
       case "bhangarh_gate":
@@ -2863,6 +2863,82 @@ export default function RajasthanGameScreen() {
         );
       })()}
 
+      {/* --- STAGE 3: PHYSICAL HIDDEN EVIDENCE OBJECTS IN KULDHARA --- */}
+      {/* Clue 1: Royal Kundan Bridal Ring (chiefs_house - right wall alcove / shelf) */}
+      {scene === "chiefs_house" && !hasWeddingOrnament && (
+        <div
+          className="absolute z-10 pointer-events-auto cursor-pointer select-none transition-all duration-300"
+          style={{ left: "79%", top: "70%", transform: "translate(-50%, -50%)" }}
+          onClick={() => {
+            markClueGiven("kuldhara_ornament");
+            soundFx.playClueFound();
+            setHasWeddingOrnament(true);
+            setShowHaveliOrnamentModal(true);
+          }}
+        >
+          <div
+            className={`w-6 h-6 rounded-full overflow-hidden shadow-[0_3px_6px_rgba(0,0,0,0.95)] border border-amber-600/70 transition-all ${
+              isNearHaveliOrnament ? "opacity-95 scale-125 shadow-[0_0_12px_rgba(251,191,36,0.9)] animate-pulse" : "opacity-60 hover:opacity-90"
+            }`}
+            style={{ filter: "brightness(0.85) contrast(1.1)" }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/clue-bridal-ornament.jpg" alt="" className="w-full h-full object-cover pixelated" />
+          </div>
+        </div>
+      )}
+
+      {/* Clue 2: Torn Tax Ledger (treasury - right merchant desk / record counter) */}
+      {scene === "treasury" && !hasTaxLedger && (
+        <div
+          className="absolute z-10 pointer-events-auto cursor-pointer select-none transition-all duration-300"
+          style={{ left: "65%", top: "68%", transform: "translate(-50%, -50%)" }}
+          onClick={() => {
+            markClueGiven("kuldhara_ledger");
+            soundFx.playClueFound();
+            setHasTaxLedger(true);
+            setShowTaxLedgerModal(true);
+          }}
+        >
+          <div
+            className={`w-6 h-6 rounded-xs overflow-hidden shadow-[0_3px_6px_rgba(0,0,0,0.95)] border border-amber-800/70 transition-all ${
+              isNearTaxLedger ? "opacity-95 scale-125 shadow-[0_0_12px_rgba(251,191,36,0.9)] animate-pulse" : "opacity-60 hover:opacity-90"
+            }`}
+            style={{
+              transform: "perspective(300px) rotateX(20deg) rotateZ(-5deg)",
+              filter: "brightness(0.8) contrast(1.1)",
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/clue-torn-tax-ledger.jpg" alt="" className="w-full h-full object-cover pixelated" />
+          </div>
+        </div>
+      )}
+
+      {/* Clue 3: Intact Water Pots & Supplies (well - left stepwell terrace matka cache) */}
+      {scene === "well" && !hasWaterPotsSupplies && (
+        <div
+          className="absolute z-10 pointer-events-auto cursor-pointer select-none transition-all duration-300"
+          style={{ left: "30%", top: "76%", transform: "translate(-50%, -50%)" }}
+          onClick={() => {
+            markClueGiven("kuldhara_well");
+            soundFx.playClueFound();
+            setHasWaterPotsSupplies(true);
+            setShowStepwellModal(true);
+          }}
+        >
+          <div
+            className={`w-7 h-7 rounded-md overflow-hidden shadow-[0_3px_6px_rgba(0,0,0,0.95)] border border-amber-700/70 transition-all ${
+              isNearStepwellPots ? "opacity-95 scale-125 shadow-[0_0_12px_rgba(251,191,36,0.9)] animate-pulse" : "opacity-60 hover:opacity-90"
+            }`}
+            style={{ filter: "brightness(0.85) contrast(1.1)" }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/clue-intact-water-pots.jpg" alt="" className="w-full h-full object-cover pixelated" />
+          </div>
+        </div>
+      )}
+
       {/* --- STAGE 4: TINY FALLEN CLUE FRAGMENTS ON THE GROUND (HARD TO FIND, NO TEXT, NO EMOJIS) --- */}
       {/* Clue 1: Kathputli Fragment (bhangarh_gate - tiny fragment fallen on far-left ground shadow) */}
       {stage === 4 && scene === "bhangarh_gate" && !hasKathputliFragment && (
@@ -3053,21 +3129,21 @@ export default function RajasthanGameScreen() {
       {isNearHaveliOrnament && (
         <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce cursor-pointer pointer-events-auto" onClick={() => { soundFx.playClueFound(); setHasWeddingOrnament(true); setShowHaveliOrnamentModal(true); }}>
           <span className="bg-amber-400 border border-black rounded px-1.5 text-[11px]">E</span>
-          Inspect Bridal Wedding Ornament in Alcove
+          SEARCH
         </div>
       )}
 
       {isNearTaxLedger && (
         <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce cursor-pointer pointer-events-auto" onClick={() => { soundFx.playClueFound(); setHasTaxLedger(true); setShowTaxLedgerModal(true); }}>
           <span className="bg-amber-400 border border-black rounded px-1.5 text-[11px]">E</span>
-          Examine Torn Tax Ledger &amp; Grain Storage
+          SEARCH LEDGER
         </div>
       )}
 
       {isNearStepwellPots && (
         <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce cursor-pointer pointer-events-auto" onClick={() => { soundFx.playClueFound(); setHasWaterPotsSupplies(true); setShowStepwellModal(true); }}>
           <span className="bg-amber-400 border border-black rounded px-1.5 text-[11px]">E</span>
-          Inspect Intact Water Pots &amp; Supply Caches
+          SEARCH
         </div>
       )}
 
