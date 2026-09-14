@@ -979,6 +979,21 @@ function IndusValleyGameComponent() {
     playerPos.y >= 45.0 &&
     playerPos.y <= 75.0;
 
+  // Stage 3: Cemetery R37 Upper Passage to Citadel Sanctuary (Top horizon archway)
+  const isNearCitadelPassage =
+    scene === "harappa_cemetery" &&
+    playerPos.x >= 44.0 &&
+    playerPos.x <= 72.0 &&
+    playerPos.y <= 34.0;
+
+  // Stage 3: Empty Burial Slot Hotspot
+  const isNearEmptyBurialPlot =
+    scene === "harappa_cemetery" &&
+    playerPos.x >= 15.0 &&
+    playerPos.x <= 35.0 &&
+    playerPos.y >= 45.0 &&
+    playerPos.y <= 68.0;
+
   // Stage 1.7: The Great Granary -> Return to Residential Grid (at bottom-left x: 22%, y: 82%)
   const isNearGranaryGridReturn =
     scene === "granary_avenue" &&
@@ -1752,6 +1767,9 @@ function IndusValleyGameComponent() {
         } else if (isNearCemeteryGate) {
           triggerTransition("harappa_cemetery", { x: 50.0, y: 82.0 }, 3, 600);
           return;
+        } else if (isNearCitadelPassage) {
+          triggerTransition("priest_king_citadel", { x: 50.0, y: 80.0 }, 4, 600);
+          return;
         } else if (isNearBeadQuarterEntrance) {
           triggerTransition("carnelian_bead_quarter", { x: 30.0, y: 70.0 });
           return;
@@ -1910,6 +1928,14 @@ function IndusValleyGameComponent() {
             title: "Elder of Cemetery R37 • Harappa",
             icon: "",
             text: "Peace be with our ancestors. Unlike the grandiose pyramid tombs of Egypt or royal graves of Sumer, Harappans honored all citizens with dignified, uniform earthen burials and modest pottery offerings.",
+          });
+          soundFx.playSelect();
+        } else if (isNearEmptyBurialPlot) {
+          setActiveCitizenDialogue({
+            name: "Unexcavated Earthen Burial Slot",
+            title: "Reserved Grave Mound • Cemetery R37",
+            icon: "",
+            text: "An open earthen grave plot preserved for future burial rituals. Harappans maintained dedicated rectangular burial spaces outside the living city grid.",
           });
           soundFx.playSelect();
         } else if (isNearRoadPedestrian) {
@@ -3014,6 +3040,26 @@ function IndusValleyGameComponent() {
               alt="Solemn Harappan Elder"
               className="h-[68px] sm:h-[75px] md:h-[84px] w-auto object-contain block select-none mt-1"
             />
+          </div>
+        )}
+
+        {/* Cemetery R37 -> Upper Passage to Citadel Workshop */}
+        {scene === "harappa_cemetery" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "58%", top: "22%" }}
+            onClick={() => triggerTransition("priest_king_citadel", { x: 50.0, y: 80.0 }, 4, 600)}
+          >
+            {isNearCitadelPassage ? (
+              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">E</div>
+                <span>✨ Passage to Citadel Workshop (Press E)</span>
+              </div>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
+                <span>Passage to Citadel Workshop</span>
+              </div>
+            )}
           </div>
         )}
 

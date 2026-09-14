@@ -155,10 +155,10 @@ export const INDUS_SCENE_CONFIGS: Record<IndusSceneType, IndusSceneMeta> = {
     subtitle: "Rectangular Earthen Graves & Terracotta Funerary Offerings",
     backgroundImage: "/bg-indus-cemetery.jpg",
     defaultObjective: "Explore the ancient Harappan burial ground, inspect excavated rectangular graves, and examine authentic terracotta pottery offerings.",
-    minX: 16.0,
+    minX: 12.0,
     maxX: 88.0,
-    minY: 28.0,
-    maxY: 92.0,
+    minY: 20.0,
+    maxY: 94.0,
   },
   priest_king_citadel: {
     title: "Harappan Toy Making Workshop",
