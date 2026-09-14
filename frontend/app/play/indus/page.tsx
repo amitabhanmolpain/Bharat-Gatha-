@@ -178,8 +178,8 @@ function getTwoWayPatrolPosition(
 // Walks full straight along the right avenue from bottom (74.0, 98.0) to top (88.5, 36.0),
 // disappears at the end, stays disappeared for 6 seconds, then restarts from the start point.
 function getRightAvenuePatrolState(elapsedTime: number) {
-  const pointA = { x: 74.0, y: 98.0 }; // Start point: bottom of right avenue
-  const pointB = { x: 88.5, y: 36.0 }; // End point: top of right avenue
+  const pointA = { x: 48.0, y: 90.0 }; // Start point: bottom of central drain walkway
+  const pointB = { x: 48.0, y: 44.0 }; // End point: top of central drain walkway
   const walkDuration = 15.0; // Duration of straight walk up avenue
   const disappearDuration = 6.0; // Exactly 6 seconds disappeared before restarting
   const totalCycle = walkDuration + disappearDuration; // 21.0s total cycle
@@ -1047,14 +1047,14 @@ function IndusValleyGameComponent() {
     Math.hypot(playerPos.x - greatBathPotterState.x, playerPos.y - greatBathPotterState.y) <= 8.5;
 
 
-  // Person 1: Foreground Rooftop Lookout (Grounded on flat terrace floor, never touching rails)
-  const roof1PointA = { x: 16.5, y: 56.5 };
-  const roof1PointB = { x: 10.5, y: 59.5 };
+  // Person 1: Foreground Rooftop Lookout (Grounded on left flat terrace floor)
+  const roof1PointA = { x: 14.0, y: 34.0 };
+  const roof1PointB = { x: 22.0, y: 34.0 };
   const roof1State = getTwoWayPatrolPosition(roof1PointA, roof1PointB, 5.0, 6.0, carrierTime);
 
-  // Person 2: Upper Balustrade Resident (Grounded on wooden balustrade terrace floor, never on rails)
-  const roof2PointA = { x: 42.5, y: 43.8 };
-  const roof2PointB = { x: 37.5, y: 41.5 };
+  // Person 2: Upper Balustrade Resident (Grounded on upper house roof terrace)
+  const roof2PointA = { x: 26.0, y: 26.0 };
+  const roof2PointB = { x: 32.0, y: 26.0 };
   const roof2State = getTwoWayPatrolPosition(roof2PointA, roof2PointB, 5.5, 6.0, carrierTime + 2.5);
 
   // Stage 1.5: Rooftop Resident (Upper terrace patrol)
@@ -1067,16 +1067,19 @@ function IndusValleyGameComponent() {
     scene === "residential_grid" &&
     Math.hypot(playerPos.x - roof1State.x, playerPos.y - roof1State.y) <= 12.0;
 
-  // Left Lane Water Carrier Route (grounded on brick street, walking into upper house doorway, 17.5s walk + 4s pause inside)
+  // Water Carrier / Potter Route (Grounded on solid central brick avenue street, walking straight)
   const guy1Waypoints = [
-    { x: 25.0, y: 96.0 },
-    { x: 35.0, y: 84.0 },
-    { x: 45.0, y: 75.0 },
-    { x: 55.0, y: 65.5 },
-    { x: 63.5, y: 52.0 },
-    { x: 66.8, y: 42.5 },
+    { x: 58.0, y: 90.0 },
+    { x: 58.0, y: 76.0 },
+    { x: 58.0, y: 62.0 },
+    { x: 58.0, y: 44.0 },
   ];
   const guy1State = getPathPosition(guy1Waypoints, 17.5, 4.0, carrierTime);
+
+  // Stage 1.5: 2 Citizens Standing & Talking in Front Right Street
+  const isNearTalkingCitizens =
+    scene === "residential_grid" &&
+    Math.hypot(playerPos.x - 82.0, playerPos.y - 84.0) <= 12.0;
 
   // Right Lane Water Carrier Route (Straight along user's red line between bottom of avenue and cargo inspector)
   const guy2State = getRightAvenuePatrolState(carrierTime);
@@ -1873,6 +1876,14 @@ function IndusValleyGameComponent() {
             text: "We are preparing goods for the maritime trade caravans! The weaver spins fine dyed cotton textiles using standardized terracotta whorls, while the master potter crafts wheel-thrown storage amphorae and glazed beads. Together, our artisan quarter supplies exports from Dilmun to ancient Mesopotamia!",
           });
           soundFx.playSelect();
+        } else if (isNearTalkingCitizens) {
+          setActiveCitizenDialogue({
+            name: "Harappan Merchants & Citizens",
+            title: "Lower Town Citizens • Mohenjo-daro & Harappa",
+            icon: "",
+            text: "We were just discussing how all standardized baked bricks across our twin cities adhere to the exact 1:2:4 ratio, and how our street drains prevent summer monsoon overflow!",
+          });
+          soundFx.playSelect();
         } else if (isNearCourtyardResident) {
           setActiveCitizenDialogue({
             name: "Harappan Courtyard Inhabitant",
@@ -2029,6 +2040,7 @@ function IndusValleyGameComponent() {
     isNearResidentialWaterCarrier1,
     isNearResidentialWaterCarrier2,
     isNearCourtyardResident,
+    isNearTalkingCitizens,
     isNearResidentialDrains,
     isNearResidentialHouse,
     isNearHouseDoorway,
@@ -2471,11 +2483,11 @@ function IndusValleyGameComponent() {
           </div>
         )}
 
-        {/* Stage 1.5: Courtyard Resident Woman (Grounded on courtyard stone floor at x: 31%, y: 61.8%) */}
+        {/* Stage 1.5: Courtyard Resident Woman (Grounded at left street courtyard entrance) */}
         {scene === "residential_grid" && (
           <div
             className="absolute z-13 pointer-events-auto cursor-pointer select-none group"
-            style={{ left: "31.0%", top: "61.8%" }}
+            style={{ left: "18.0%", top: "78.0%" }}
             onClick={() =>
               setActiveCitizenDialogue({
                 name: "Harappan Courtyard Inhabitant",
@@ -2510,11 +2522,57 @@ function IndusValleyGameComponent() {
           </div>
         )}
 
-        {/* Stage 1.5: Marked Spot 1 - Harappan Cargo Inspector (Upper right avenue across covered drain) */}
+        {/* Stage 1.5: 2 People Talking in Front (Foreground Right Street Plaza) */}
+        {scene === "residential_grid" && (
+          <div
+            className="absolute z-16 pointer-events-auto cursor-pointer select-none group"
+            style={{ left: "82.0%", top: "84.0%" }}
+            onClick={() =>
+              setActiveCitizenDialogue({
+                name: "Harappan Merchants & Citizens",
+                title: "Lower Town Citizens • Mohenjo-daro & Harappa",
+                icon: "",
+                text: "We were just discussing how all standardized baked bricks across our twin cities adhere to the exact 1:2:4 ratio, and how our street drains prevent summer monsoon overflow!",
+              })
+            }
+          >
+            <div className="relative flex items-center justify-center gap-1 transform -translate-x-1/2 -translate-y-full transition-transform group-hover:scale-105">
+              <div className="absolute bottom-full mb-1 flex flex-col items-center pointer-events-none">
+                {isNearTalkingCitizens && (
+                  <div className="mb-1 bg-[#1b1510]/95 border border-[#d8a86a] text-[#f7eedf] px-2.5 py-0.5 rounded text-[10px] font-serif shadow-lg animate-bounce flex items-center gap-1 whitespace-nowrap pointer-events-auto">
+                    <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
+                    <span>Listen to Citizens</span>
+                  </div>
+                )}
+                <span
+                  className={`text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/85 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow whitespace-nowrap transition-opacity duration-200 ${
+                    isNearTalkingCitizens ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  Harappan Citizens
+                </span>
+              </div>
+              {/* Person 1 (Facing Right) */}
+              <img
+                src="/sprite-indus-trader.png?v=3"
+                alt="Talking Citizen 1"
+                className="h-[75px] sm:h-[84px] md:h-[95px] w-auto object-contain block select-none scale-x-100"
+              />
+              {/* Person 2 (Facing Left) */}
+              <img
+                src="/sprite-indus-courtyard.png?v=3"
+                alt="Talking Citizen 2"
+                className="h-[75px] sm:h-[84px] md:h-[95px] w-auto object-contain block select-none -scale-x-100"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Stage 1.5: Harappan Cargo Inspector (Grounded on right rooftop terrace) */}
         {scene === "residential_grid" && (
           <div
             className="absolute z-13 pointer-events-auto cursor-pointer select-none group"
-            style={{ left: "87.5%", top: "43.5%" }}
+            style={{ left: "82.0%", top: "34.0%" }}
             onClick={() =>
               setActiveCitizenDialogue({
                 name: "Harappan Cargo Inspector",
