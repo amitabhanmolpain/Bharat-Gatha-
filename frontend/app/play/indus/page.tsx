@@ -2993,11 +2993,11 @@ function IndusValleyGameComponent() {
           </div>
         )}
 
-        {/* Hotspot 2: Deceased Harappan Body in the Open Grave Pit (Marked with black scribbled line: x: 22.8%, y: 55.8%) */}
+        {/* Hotspot 2: Deceased Harappan Body inside Open Grave Pit (Enlarged and rotated to match grave pit angle) */}
         {scene === "harappa_cemetery" && (
           <div
             className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-15"
-            style={{ left: "22.8%", top: "55.8%" }}
+            style={{ left: "23.2%", top: "54.0%" }}
             onClick={() =>
               setActiveCitizenDialogue({
                 name: "Excavated Rectangular Grave R37",
@@ -3016,16 +3016,16 @@ function IndusValleyGameComponent() {
             <img
               src="/sprite-indus-deceased.png"
               alt="Deceased Harappan in Grave"
-              className="h-[45px] sm:h-[52px] md:h-[60px] w-auto object-contain block select-none opacity-90 mix-blend-multiply pointer-events-auto"
+              className="h-[120px] sm:h-[145px] md:h-[170px] w-auto object-contain block select-none opacity-95 mix-blend-multiply transform -rotate-[28deg] pointer-events-auto"
             />
           </div>
         )}
 
-        {/* Hotspot 3: Animated Crying Harappan Mourner sitting on ground beside the grave (x: 14.5%, y: 56.5%) */}
+        {/* Hotspot 3: Animated Crying Harappan Mourner sitting on ground facing RIGHT towards the body */}
         {scene === "harappa_cemetery" && (
           <div
             className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-16"
-            style={{ left: "14.5%", top: "56.5%" }}
+            style={{ left: "11.5%", top: "56.0%" }}
             onClick={() =>
               setActiveCitizenDialogue({
                 name: "Grieving Harappan Family Member",
@@ -3044,7 +3044,7 @@ function IndusValleyGameComponent() {
             <img
               src={`/sprite-indus-mourner-${mournerFrame}.png`}
               alt="Animated Crying Harappan Mourner"
-              className="h-[60px] sm:h-[68px] md:h-[78px] w-auto object-contain block select-none transition-transform duration-200 group-hover:scale-105 mix-blend-multiply"
+              className="h-[85px] sm:h-[98px] md:h-[110px] w-auto object-contain block select-none transition-transform duration-200 group-hover:scale-105 mix-blend-multiply -scale-x-100"
             />
           </div>
         )}
