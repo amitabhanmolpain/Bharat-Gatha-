@@ -9,6 +9,7 @@ from parler_tts_service import CHARACTER_VOICE_PROFILES, clean_text_for_speech
 
 PARLER_SPACE_BASE = "https://ai4bharat-indic-parler-tts.hf.space"
 TARGET_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../frontend/public/audio_cache"))
+os.makedirs(TARGET_DIR, exist_ok=True)
 
 text = "Ramayya believed gold and stone fade over time, but written records and culture last forever. Inspect Kallappa's wooden toys to learn more."
 clean_text = clean_text_for_speech(text)

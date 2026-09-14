@@ -52,9 +52,12 @@ export default function VijayanagaraHUD({
             </div>
           </div>
 
-          <div 
+          <button 
+            type="button"
             onClick={onOpenJournal}
-            className="bg-[#fff9ea] hover:bg-[#fff2cc] border-2 border-black rounded-lg px-3 py-1.5 w-64 shadow-[3px_3px_0_0_rgba(0,0,0,1)] flex items-center justify-between cursor-pointer transition-all active:translate-y-0.5 active:shadow-[1px_1px_0_0_rgba(0,0,0,1)] group"
+            disabled={isTransitioning}
+            tabIndex={isTransitioning ? -1 : 0}
+            className="bg-[#fff9ea] hover:bg-[#fff2cc] border-2 border-black rounded-lg px-3 py-1.5 w-64 shadow-[3px_3px_0_0_rgba(0,0,0,1)] flex items-center justify-between cursor-pointer transition-all active:translate-y-0.5 active:shadow-[1px_1px_0_0_rgba(0,0,0,1)] group disabled:pointer-events-none disabled:opacity-40"
             title="Open Historical Journal"
           >
             <div className="flex items-center gap-2">
@@ -76,7 +79,7 @@ export default function VijayanagaraHUD({
               {fragmentsCollectedCount}/3 pieces
               <span className="text-[10px] text-amber-700 underline font-bold group-hover:text-black">open</span>
             </span>
-          </div>
+          </button>
         </div>
 
         {/* Right: Actions, Mystery Ledger & Journal Controls */}

@@ -127,16 +127,20 @@ export default function MusicalPillarsPuzzle({
       stopAllCharacterVoice();
       // Only narration to guide the player initially
       playNarration("Listen carefully to the resonance of each pillar. Strike them in the correct order.");
-    } else {
+    } else if (!isOpen) {
       clearAllTimers();
       setIsAiPlaying(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
+  // Unmount cleanup
+  useEffect(() => {
     return () => {
       clearAllTimers();
       stopAllCharacterVoice(); // cleanup when unmounting/closing
     };
-  }, [isOpen, currentPhase, isCompleted, playDemonstration, clearAllTimers]);
+  }, [clearAllTimers]);
 
   const handlePillarClick = (pillarId: number) => {
     if (isAiPlaying || isCompleted) return;

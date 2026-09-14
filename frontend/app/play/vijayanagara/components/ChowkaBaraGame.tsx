@@ -314,10 +314,12 @@ export default function ChowkaBaraGame({
     clearAllTimers();
     stopAllCharacterVoice();
     const won = gameStatus === "player_won";
-    playNarration(
-      "Well done, traveler! You carry Vidyaranya's blessing. Cross the Tungabhadra to enter Hampi Bazaar!",
-      { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
-    );
+    if (won) {
+      playNarration(
+        "Well done, traveler! You carry Vidyaranya's blessing. Cross the Tungabhadra to enter Hampi Bazaar!",
+        { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
+      );
+    }
     onComplete(won, gameAttempts);
   };
 

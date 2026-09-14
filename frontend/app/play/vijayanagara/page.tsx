@@ -1210,18 +1210,21 @@ export default function VijayanagaraGameScreen() {
   const handleChowkaBaraComplete = (won: boolean, attempts: number) => {
     setShowChowkaBaraModal(false);
     setChowkaBaraAttempts(attempts);
-    setIsChowkaBaraComplete(true);
-    setHasVidyaranyaBlessing(true);
-    setIsStage1Complete(true);
 
-    setUnlockedJournalEntries((prev) => {
-      const next = [...prev];
-      if (!next.includes("chowka_bara_game")) next.push("chowka_bara_game");
-      if (!next.includes("tungabhadra_defenses")) next.push("tungabhadra_defenses");
-      return next;
-    });
+    if (won) {
+      setIsChowkaBaraComplete(true);
+      setHasVidyaranyaBlessing(true);
+      setIsStage1Complete(true);
 
-    setShowBlessingCutscene(true);
+      setUnlockedJournalEntries((prev) => {
+        const next = [...prev];
+        if (!next.includes("chowka_bara_game")) next.push("chowka_bara_game");
+        if (!next.includes("tungabhadra_defenses")) next.push("tungabhadra_defenses");
+        return next;
+      });
+
+      setShowBlessingCutscene(true);
+    }
   };
 
   // Stage 2 Handlers
@@ -2527,11 +2530,9 @@ export default function VijayanagaraGameScreen() {
                           "Kings and armies pass away, but knowledge and culture last forever. I guided the founders to build temples, support learning, and protect justice.";
                       }
                       setIsVidyaranyaVoiceActive(true);
-                      playNarration(speech, {
-                        speaker: "ratan",
-                        pace: 0.88,
-                        language_code: "en-IN",
-                        hideSubtitle: true,
+                      playCharacterDialogue({
+                        character: "vidyaranya",
+                        text: speech,
                         onStart: () => setIsVidyaranyaVoiceActive(true),
                         onEnd: () => setIsVidyaranyaVoiceActive(false),
                         onError: () => setIsVidyaranyaVoiceActive(false),

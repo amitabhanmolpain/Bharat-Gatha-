@@ -255,8 +255,9 @@ def generate_character_speech(character: str, text: str) -> dict:
         }
 
     # 0. Check persistent disk cache for exact accent consistency
-    cache_key = hashlib.md5(f"parler_{character}_{clean_text}".encode('utf-8')).hexdigest()
-    cached_file = os.path.join(AUDIO_CACHE_DIR, f"{character}_{cache_key}.wav")
+    safe_character = profile["id"]
+    cache_key = hashlib.md5(f"parler_{safe_character}_{clean_text}".encode('utf-8')).hexdigest()
+    cached_file = os.path.join(AUDIO_CACHE_DIR, f"{safe_character}_{cache_key}.wav")
     if os.path.exists(cached_file) and os.path.getsize(cached_file) > 1000:
         try:
             with open(cached_file, "rb") as f:
@@ -266,7 +267,7 @@ def generate_character_speech(character: str, text: str) -> dict:
                 "character": profile["id"],
                 "character_name": profile["name"],
                 "audio_base64": base64.b64encode(cached_bytes).decode("utf-8"),
-                "audio_url": f"/audio_cache/{character}_{cache_key}.wav",
+                "audio_url": f"/audio_cache/{safe_character}_{cache_key}.wav",
                 "format": "wav",
                 "engine": "indic_parler_tts_cached",
                 "status_code": 200
@@ -316,7 +317,7 @@ def generate_character_speech(character: str, text: str) -> dict:
                             "character": profile["id"],
                             "character_name": profile["name"],
                             "audio_base64": audio_b64,
-                            "audio_url": f"/audio_cache/{character}_{cache_key}.wav",
+                            "audio_url": f"/audio_cache/{safe_character}_{cache_key}.wav",
                             "format": "wav",
                             "engine": "indic_parler_tts",
                             "status_code": 200
@@ -330,7 +331,7 @@ def generate_character_speech(character: str, text: str) -> dict:
         try:
             with open(cached_file, "wb") as f:
                 f.write(base64.b64decode(result["audio_base64"]))
-            result["audio_url"] = f"/audio_cache/{character}_{cache_key}.wav"
+            result["audio_url"] = f"/audio_cache/{safe_character}_{cache_key}.wav"
         except Exception:
             pass
     return result

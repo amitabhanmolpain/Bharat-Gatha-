@@ -369,7 +369,7 @@ export default function ToyInspectionPuzzle({
                 onClick={isSpeaking || isLoadingVoice ? handleStopVoice : () => {
                   const txt = isViewingUnderside 
                     ? currentToy.undersideClue 
-                    : (currentToy.angles[rotationAngle] || currentToy.description);
+                    : (currentToy.angles[getNormalizedAngle(rotationAngle)] || currentToy.description);
                   triggerVoice(txt);
                 }}
                 className="flex items-center justify-center p-1.5 rounded-md bg-[#2e261f] border border-[#5a4d3f] hover:bg-[#3d3329] transition-colors cursor-pointer"
