@@ -1530,10 +1530,10 @@ function IndusValleyGameComponent() {
     playerPos.y >= 52.0 &&
     playerPos.y <= 72.0;
 
-  // Stage 4: Workshop Interior Way to Go Back to Toy Street
+  // Stage 4: Workshop Interior Way to Go Back to Toy Street (near left doorway)
   const isNearWorkshopExit =
-    scene === "priest_king_citadel" &&
-    playerPos.y >= 85.0;
+    scene === "harappa_residential" &&
+    playerPos.x <= 18.0;
 
   // Stage 3 -> Carnelian Bead Quarter
   const isNearBeadQuarterEntrance =
@@ -1759,7 +1759,7 @@ function IndusValleyGameComponent() {
           triggerTransition("priest_king_citadel", { x: 50.0, y: 80.0 }, 4);
           return;
         } else if (isNearWorkshopEntrance) {
-          triggerTransition("priest_king_citadel", { x: 50.0, y: 80.0 }, 4);
+          triggerTransition("harappa_residential", { x: 50.0, y: 80.0 });
           return;
         } else if (isNearHarappaResidentialDoor) {
           triggerTransition("harappa_residential_street", { x: 50.0, y: 72.0 });
@@ -4096,7 +4096,7 @@ function IndusValleyGameComponent() {
           <div
             className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
             style={{ left: "42%", top: "50%" }}
-            onClick={() => triggerTransition("priest_king_citadel", { x: 50.0, y: 80.0 }, 4, 600)}
+            onClick={() => triggerTransition("harappa_residential", { x: 50.0, y: 80.0 })}
           >
             {isNearWorkshopEntrance ? (
               <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
@@ -4301,10 +4301,10 @@ function IndusValleyGameComponent() {
         )}
 
         {/* Harappa Toy Workshop Interior: Exit back to Market Street */}
-        {scene === "priest_king_citadel" && (
+        {scene === "harappa_residential" && (
           <div
             className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
-            style={{ left: "50%", top: "92%" }}
+            style={{ left: "8%", top: "55%" }}
             onClick={() => triggerTransition("steatite_seal_workshop", { x: 50.0, y: 65.0 }, 3, 600)}
           >
             {isNearWorkshopExit ? (
