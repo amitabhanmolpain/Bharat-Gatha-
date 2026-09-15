@@ -111,7 +111,7 @@ export const SCENE_CONFIGS: Record<VijayanagaraSceneType, SceneMeta> = {
     title: "Virupaksha Car Street Entrance",
     era: "c. 1520 AD",
     subtitle: "The vibrant half-mile covered colonnade of global merchants",
-    backgroundImage: "/bg-vijayanagara-hampi-bazaar.jpg",
+    backgroundImage: "/bg-vijayanagara-hampi-bazaar-clean.jpg",
     defaultObjective: "Explore the bustling bazaar and seek rumors of the missing merchant.",
     minX: 20.0,
     maxX: 80.0,
@@ -144,7 +144,7 @@ export const SCENE_CONFIGS: Record<VijayanagaraSceneType, SceneMeta> = {
     title: "Travelers' Chhappar Pavilion",
     era: "c. 1520 AD",
     subtitle: "Where Portuguese and overseas chroniclers recorded the empire's glory",
-    backgroundImage: "/bg-vijayanagara-hampi-bazaar.jpg",
+    backgroundImage: "/bg-vijayanagara-hampi-bazaar-clean.jpg",
     defaultObjective: "Listen to the Portuguese visitor's impressions of Hampi's wealth.",
     minX: 20.0,
     maxX: 80.0,
@@ -254,7 +254,7 @@ export const JOURNAL_DATABASE: JournalEntry[] = [
     historicalNote:
       "Before the grand city of Vijayanagara arose on the south bank of the Tungabhadra, the early rulers Harihara I and Bukka Raya I established their fortified base at Anegundi amidst the rugged granite hills.",
     gameplayContext: "Discovered upon stepping onto the ancient northern river crossing.",
-    icon: "🌊",
+    icon: "river",
   },
   {
     id: "vidyaranya_sage",
@@ -263,7 +263,7 @@ export const JOURNAL_DATABASE: JournalEntry[] = [
     historicalNote:
       "Tradition attributes the spiritual and geopolitical foundation of the empire to the sage Vidyaranya of the Sringeri Sharada Peetham, who envisioned a prosperous kingdom capable of protecting and revitalizing southern Indian arts and civilization.",
     gameplayContext: "Recorded from the stone inscription at the Anegundi mandapa.",
-    icon: "📿",
+    icon: "sage",
   },
   {
     id: "harihara_bukka_founding",
@@ -272,7 +272,7 @@ export const JOURNAL_DATABASE: JournalEntry[] = [
     historicalNote:
       "Brothers and commanders of the Sangama dynasty, Harihara I and Bukka Raya I unified the southern plateau in 1336 AD, transforming small defensive outposts into a resilient empire.",
     gameplayContext: "Discovered during discussion with Sage Vidyaranya at Anegundi.",
-    icon: "👑",
+    icon: "crown",
   },
   {
     id: "chowka_bara_game",
@@ -281,7 +281,7 @@ export const JOURNAL_DATABASE: JournalEntry[] = [
     historicalNote:
       "One of the oldest known strategic race games of Karnataka, played on a 5x5 cloth or stone-etched grid using cowrie shells (Kavade). Used by military tacticians to teach spatial foresight.",
     gameplayContext: "Unlocked by completing the Chowka Bara match with Sage Vidyaranya.",
-    icon: "🎲",
+    icon: "dice",
   },
   {
     id: "tungabhadra_defenses",
@@ -290,7 +290,7 @@ export const JOURNAL_DATABASE: JournalEntry[] = [
     historicalNote:
       "The rapid river, jagged granite boulders, and natural moat formed an impenetrable defensive barrier that shielded the nascent empire during its early consolidation.",
     gameplayContext: "Noted while observing the ancient stone bastion architecture.",
-    icon: "🛡️",
+    icon: "shield",
   },
 
   // Category 2: CITY AND TRADE
@@ -301,7 +301,7 @@ export const JOURNAL_DATABASE: JournalEntry[] = [
     historicalNote:
       "At its peak in the early 16th century, Hampi Bazaar stretched for nearly a kilometer in front of Virupaksha Temple. Portuguese chronicler Domingo Paes called Vijayanagara 'the best provided city in the world'.",
     gameplayContext: "Recorded upon entering the bustling covered merchant colonnade.",
-    icon: "🏛️",
+    icon: "hub",
   },
   {
     id: "gem_markets",
@@ -310,7 +310,7 @@ export const JOURNAL_DATABASE: JournalEntry[] = [
     historicalNote:
       "Foreign visitors marvelled that diamonds from the Kollur mines, Ceylon rubies, and Gulf pearls were sold openly by dry measure on streets lined with stone arcades.",
     gameplayContext: "Discovered in the gem assessor's quarter.",
-    icon: "💎",
+    icon: "gem",
   },
   {
     id: "kinhal_toys",
@@ -319,7 +319,7 @@ export const JOURNAL_DATABASE: JournalEntry[] = [
     historicalNote:
       "The master artisans of Kinhal and surrounding towns received royal patronage to create vibrant wooden toys, temple chariots, and ornate painted screens using natural mineral dyes.",
     gameplayContext: "Unlocked by inspecting the handcrafted toy stall.",
-    icon: "🎨",
+    icon: "artisan",
   },
   {
     id: "foreign_chronicles_paes",
@@ -328,7 +328,7 @@ export const JOURNAL_DATABASE: JournalEntry[] = [
     historicalNote:
       "Visitors from Portugal, Venice, and Persia documented Vijayanagara's cosmopolitan splendor. Travelers recorded seeing citizens adorned with gems and vast bazaars trading Arabian horses.",
     gameplayContext: "Discovered by conversing with the Overseas Traveler at the Chhappar Pavilion.",
-    icon: "📜",
+    icon: "ledger",
   },
 
   // Category 3: GOLDEN AGE
@@ -339,7 +339,7 @@ export const JOURNAL_DATABASE: JournalEntry[] = [
     historicalNote:
       "A scholar, warrior, and patron of literature, Krishnadevaraya's reign marked the cultural zenith of Vijayanagara, composing the Telugu epic poem Amuktamalyada.",
     gameplayContext: "Inscribed upon the royal Vittala Temple inscription stone.",
-    icon: "👑",
+    icon: "crown",
   },
   {
     id: "stone_chariot_garuda",
@@ -348,7 +348,7 @@ export const JOURNAL_DATABASE: JournalEntry[] = [
     historicalNote:
       "Built as a dedicated shrine to Garuda within the Vittala complex, this architectural masterpiece was carved from individual granite blocks so seamlessly that it appears sculpted from a single colossal stone.",
     gameplayContext: "Discovered near the entrance courtyard of Vittala Temple.",
-    icon: "🛞",
+    icon: "wheel",
   },
   {
     id: "musical_pillars_acoustics",
@@ -357,7 +357,7 @@ export const JOURNAL_DATABASE: JournalEntry[] = [
     historicalNote:
       "The pillars of the Ranga Mandapa are crafted from resonance-rich resonant granite. Tapping the slender clustered pillars produces distinct musical swaras (notes) and percussion rhythms.",
     gameplayContext: "Unlocked during the acoustic harmony calibration.",
-    icon: "🎵",
+    icon: "music",
   },
   {
     id: "hazara_rama_friezes",
@@ -366,7 +366,7 @@ export const JOURNAL_DATABASE: JournalEntry[] = [
     historicalNote:
       "Serving as the private temple of the Vijayanagara kings, its outer enclosure walls present continuous stone narrative bas-reliefs illustrating royal cavalry, dancing troops, and the entire Ramayana.",
     gameplayContext: "Discovered by inspecting the carved stone friezes.",
-    icon: "🏹",
+    icon: "archery",
   },
 
   // Category 4: MEMORY AND FALL
@@ -377,7 +377,7 @@ export const JOURNAL_DATABASE: JournalEntry[] = [
     historicalNote:
       "Standing 8 meters high with intricate stone reliefs of royal hunts, foreign envoys, and dancers, this platform was the epicenter of the 9-day grand Navaratri festival.",
     gameplayContext: "Recorded at the base of the imperial celebration dais.",
-    icon: "🎪",
+    icon: "tent",
   },
   {
     id: "battle_of_talikota",
@@ -386,7 +386,7 @@ export const JOURNAL_DATABASE: JournalEntry[] = [
     historicalNote:
       "In January 1565, the combined armies of the Deccan Sultanates defeated the Vijayanagara forces at Talikota (Rakshasi-Tangadi), leading to the abandonment of the imperial capital.",
     gameplayContext: "Witnessed during the historical narration sequence.",
-    icon: "⚔️",
+    icon: "swords",
   },
   {
     id: "living_heritage_endures",
@@ -395,7 +395,7 @@ export const JOURNAL_DATABASE: JournalEntry[] = [
     historicalNote:
       "Though the stone halls were deserted, the music, dance, textile crafts, architectural traditions, and community memories of Vijayanagara live on across South India to this day.",
     gameplayContext: "Reflected upon during the final sunset sequence.",
-    icon: "🌅",
+    icon: "sunset",
   },
 
   // Category 5: MYSTERY (The Missing Merchant's Ledger)
@@ -406,7 +406,7 @@ export const JOURNAL_DATABASE: JournalEntry[] = [
     historicalNote:
       "A torn palm-leaf parchment bearing the official wax crest of the Chief Guild Merchant (Pattanaswami), recording an emergency diversion of state granaries.",
     gameplayContext: "Discovered within the hidden corner of Hampi Bazaar.",
-    icon: "📜",
+    icon: "ledger",
   },
   {
     id: "ledger_fragment_2",
@@ -415,7 +415,7 @@ export const JOURNAL_DATABASE: JournalEntry[] = [
     historicalNote:
       "Recovered from the resonant chamber behind the central musical pillar, confirming that precious manuscripts and artisan trade secrets were quietly relocated southwards.",
     gameplayContext: "Found following the musical pillars harmony resonance.",
-    icon: "🎼",
+    icon: "music",
   },
   {
     id: "ledger_fragment_3",
@@ -424,7 +424,7 @@ export const JOURNAL_DATABASE: JournalEntry[] = [
     historicalNote:
       "The final missing page bearing the seal of the royal treasury: the missing merchant was acting under secret imperial decree to safeguard knowledge, heritage, and guild records before the fateful siege.",
     gameplayContext: "Unveiled from the underground Pushkarani vault.",
-    icon: "🗝️",
+    icon: "key",
   },
 ];
 
@@ -435,7 +435,7 @@ export const LEDGER_FRAGMENTS: LedgerFragment[] = [
     stageName: "Stage 2: Hampi Bazaar",
     clueText: "Emergency accounts documenting the quiet movement of royal reserves away from border granaries.",
     significance: "First evidence that the merchant did not flee in greed, but was executing an organized directive.",
-    sealIcon: "📜",
+    sealIcon: "ledger",
   },
   {
     id: "frag_2",
@@ -443,7 +443,7 @@ export const LEDGER_FRAGMENTS: LedgerFragment[] = [
     stageName: "Stage 3: Vittala Temple",
     clueText: "Guild records documenting the preservation of master architectural blueprints and artisan lineage books.",
     significance: "Proves that the cultural knowledge and craftsmanship secrets were prioritized for preservation.",
-    sealIcon: "🎼",
+    sealIcon: "music",
   },
   {
     id: "frag_3",
@@ -451,7 +451,7 @@ export const LEDGER_FRAGMENTS: LedgerFragment[] = [
     stageName: "Stage 4: Mahanavami Dibba",
     clueText: "The final seal confirming that the wealth was moved to protect the people, artisans, and historical archives.",
     significance: "Solves the mystery: Empires may fall, but their knowledge, memory, and heritage survive forever.",
-    sealIcon: "🗝️",
+    sealIcon: "crown",
   },
 ];
 

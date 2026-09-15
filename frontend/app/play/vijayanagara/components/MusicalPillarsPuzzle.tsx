@@ -2,6 +2,9 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import AccessibleModal from "./AccessibleModal";
+import GameIcon from "./GameIcon";
+import { soundFx } from "../../../../services/soundService";
+import { playNarration, stopAllCharacterVoice } from "../../../../services/narratorService";
 
 interface MusicalPillarsPuzzleProps {
   isOpen: boolean;
@@ -50,7 +53,6 @@ export default function MusicalPillarsPuzzle({
     "Listen closely as the temple musician strikes the resonant granite pillars, then reproduce the acoustic melody."
   );
 
-  const audioCtxRef = useRef<AudioContext | null>(null);
   const demoIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const demoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const glowTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -76,37 +78,8 @@ export default function MusicalPillarsPuzzle({
     setActivePillarGlow(null);
   }, []);
 
-  // Initialize Web Audio API on client
   const playPillarTone = useCallback((freq: number) => {
-    try {
-      if (typeof window === "undefined") return;
-      if (!audioCtxRef.current) {
-        const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-        audioCtxRef.current = new AudioCtx();
-      }
-      const ctx = audioCtxRef.current;
-      if (ctx.state === "suspended") {
-        ctx.resume();
-      }
-
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      // Warm bell-like acoustic chime synthesis
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(freq, ctx.currentTime);
-
-      gain.gain.setValueAtTime(0.3, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-
-      osc.start();
-      osc.stop(ctx.currentTime + 0.85);
-    } catch {
-      // Audio fallback silent
-    }
+    soundFx.playStonePillar(freq);
   }, []);
 
   // Play Sequence Demonstration
@@ -149,19 +122,25 @@ export default function MusicalPillarsPuzzle({
   useEffect(() => {
     if (isOpen && !isCompleted) {
       clearAllTimers();
-      demoTimeoutRef.current = setTimeout(() => {
-        playDemonstration(currentPhase);
-        demoTimeoutRef.current = null;
-      }, 600);
-    } else {
+      
+      // Stop any other active voice
+      stopAllCharacterVoice();
+      // Only narration to guide the player initially
+      playNarration("Listen carefully to the resonance of each pillar. Strike them in the correct order.");
+    } else if (!isOpen) {
       clearAllTimers();
       setIsAiPlaying(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
+  // Unmount cleanup
+  useEffect(() => {
     return () => {
       clearAllTimers();
+      stopAllCharacterVoice(); // cleanup when unmounting/closing
     };
-  }, [isOpen, currentPhase, isCompleted, playDemonstration, clearAllTimers]);
+  }, [clearAllTimers]);
 
   const handlePillarClick = (pillarId: number) => {
     if (isAiPlaying || isCompleted) return;
@@ -225,6 +204,7 @@ export default function MusicalPillarsPuzzle({
   const handleCloseModal = () => {
     clearAllTimers();
     setIsAiPlaying(false);
+    stopAllCharacterVoice();
     onClose();
   };
 
@@ -239,8 +219,8 @@ export default function MusicalPillarsPuzzle({
       {/* Top Header */}
       <div className="flex items-center justify-between pb-3 border-b-2 border-[#5a4d3f] mb-4">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl bg-[#3d3328] border border-[#d4a359] flex items-center justify-center text-2xl shadow-inner">
-            🎶
+          <div className="w-11 h-11 rounded-xl bg-[#3d3328] border border-[#d4a359] flex items-center justify-center text-[#d4a359] shadow-inner">
+            <GameIcon name="music" size={20} />
           </div>
           <div>
             <div className="text-[10px] font-mono text-[#d4a359] uppercase tracking-[0.2em]">
@@ -255,15 +235,15 @@ export default function MusicalPillarsPuzzle({
         <button
           type="button"
           onClick={handleCloseModal}
-          className="text-[#a89985] hover:text-[#f6ede0] text-sm bg-[#2b2520] hover:bg-[#3d3329] border border-[#5a4d3f] px-3 py-1.5 rounded-lg transition-all cursor-pointer"
+          className="flex items-center gap-1.5 text-[#a89985] hover:text-[#f6ede0] text-sm bg-[#2b2520] hover:bg-[#3d3329] border border-[#5a4d3f] px-3 py-1.5 rounded-lg transition-all cursor-pointer"
         >
-          ✕ Exit
+          <GameIcon name="close" size={14} /> Exit
         </button>
       </div>
 
       {/* Narrative Box */}
       <div className="p-3.5 rounded-xl bg-[#26201b] border border-[#473d32] text-xs font-serif leading-relaxed text-[#eedfc8] mb-5 flex items-start gap-3">
-        <span className="text-2xl mt-0.5">🎵</span>
+        <GameIcon name="music" size={24} className="text-[#d4a359] mt-0.5" />
         <p className="flex-1 italic">{statusMessage}</p>
       </div>
 
@@ -301,26 +281,31 @@ export default function MusicalPillarsPuzzle({
               key={pillar.id}
               onClick={() => handlePillarClick(pillar.id)}
               disabled={isAiPlaying || isCompleted}
-              className={`relative p-4 rounded-2xl border-2 text-center transition-all cursor-pointer flex flex-col items-center justify-between min-h-[140px] select-none ${
+              className={`relative p-4 rounded-xl border-2 text-center transition-all cursor-pointer flex flex-col items-center justify-between min-h-[160px] select-none ${
                 isGlowing
-                  ? "scale-105 shadow-[0_0_30px_rgba(212,163,89,0.8)] border-[#f6ede0] bg-[#3d3328]"
-                  : "bg-[#211c18] border-[#3d3329] hover:border-[#d4a359] hover:bg-[#2c251f]"
-              } ${isAiPlaying ? "opacity-90" : "hover:scale-[1.02]"}`}
+                  ? "scale-[0.98] shadow-inner border-[#e8dccb] bg-[#362e26]" // subtle press in instead of pop out
+                  : "bg-[#211c18] border-[#3d3329] hover:border-[#6b5847] hover:bg-[#2c251f]" // stone aesthetic
+              } ${isAiPlaying ? "opacity-90" : ""}`}
               style={{
                 borderColor: isGlowing ? pillar.color : undefined,
               }}
             >
-              {/* Pillar Column Visual */}
+              {/* Stone Pillar Column Visual */}
               <div
-                className="w-8 h-16 rounded-lg mb-2 border border-[#5a4d3f] flex items-center justify-center transition-all"
+                className="w-10 h-[80px] rounded-sm mb-3 border border-[#473d32] flex flex-col items-center justify-center transition-all overflow-hidden relative shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
                 style={{
                   background: isGlowing
-                    ? `linear-gradient(to top, ${pillar.color}, #f6ede0)`
-                    : "linear-gradient(to top, #2b2520, #473d32)",
-                  boxShadow: isGlowing ? `0 0 20px ${pillar.glowColor}` : "none",
+                    ? `linear-gradient(to right, #362e26 0%, ${pillar.color} 50%, #362e26 100%)`
+                    : "linear-gradient(to right, #2b2520 0%, #473d32 30%, #3d3329 70%, #2b2520 100%)",
                 }}
               >
-                <div className="w-1 h-12 bg-black/30 rounded"></div>
+                {/* Fluting/Carving indentations on pillar */}
+                <div className="absolute inset-y-0 left-[20%] w-[1px] bg-black/40"></div>
+                <div className="absolute inset-y-0 left-[50%] w-[1px] bg-black/40"></div>
+                <div className="absolute inset-y-0 right-[20%] w-[1px] bg-black/40"></div>
+                {/* Horizontal banding at top and bottom */}
+                <div className="absolute top-1 inset-x-1 h-[2px] bg-black/30"></div>
+                <div className="absolute bottom-1 inset-x-1 h-[2px] bg-black/30"></div>
               </div>
 
               {/* Swara Name */}
@@ -339,7 +324,7 @@ export default function MusicalPillarsPuzzle({
       {isCompleted && (
         <div className="p-4 rounded-xl bg-[#231e1a] border-2 border-[#d4a359] mb-5 animate-fadeIn">
           <div className="flex items-center gap-3">
-            <span className="text-3xl">📜</span>
+            <GameIcon name="ledger" size={32} className="text-[#d4a359]" />
             <div>
               <div className="text-[10px] font-mono text-[#d4a359] uppercase tracking-wider">
                 Unsealed Temple Niche Discovery
@@ -365,9 +350,9 @@ export default function MusicalPillarsPuzzle({
             }
           }}
           disabled={isAiPlaying || isCompleted}
-          className="text-xs font-serif text-[#d4a359] hover:text-[#eedfc8] bg-[#231e1a] border border-[#473d32] px-4 py-2 rounded-xl transition-all cursor-pointer disabled:opacity-40"
+          className="flex items-center gap-1.5 text-xs font-serif text-[#d4a359] hover:text-[#eedfc8] bg-[#231e1a] border border-[#473d32] px-4 py-2 rounded-xl transition-all cursor-pointer disabled:opacity-40"
         >
-          🔊 Replay Maestoso&apos;s Melody
+          <GameIcon name="rotate_cw" size={14} /> Replay Maestoso&apos;s Melody
         </button>
 
         <button

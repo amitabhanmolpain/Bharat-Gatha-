@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { JournalCategory, JournalEntry } from "../types";
 import { JOURNAL_DATABASE, LEDGER_FRAGMENTS } from "../constants";
 import AccessibleModal from "./AccessibleModal";
+import GameIcon, { GameIconType } from "./GameIcon";
 
 interface JournalModalProps {
   isOpen: boolean;
@@ -21,12 +22,12 @@ export default function JournalModal({
   const [activeCategory, setActiveCategory] = useState<JournalCategory>("FOUNDING");
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
 
-  const categories: { key: JournalCategory; label: string; icon: string }[] = [
-    { key: "FOUNDING", label: "Founding", icon: "🌊" },
-    { key: "CITY_AND_TRADE", label: "Trade & Bazaar", icon: "🏛️" },
-    { key: "GOLDEN_AGE", label: "Golden Age", icon: "👑" },
-    { key: "MEMORY_AND_FALL", label: "Memory & Fall", icon: "🌅" },
-    { key: "MYSTERY", label: "Ledger Mystery", icon: "📜" },
+  const categories: { key: JournalCategory; label: string; icon: GameIconType }[] = [
+    { key: "FOUNDING", label: "Founding", icon: "river" },
+    { key: "CITY_AND_TRADE", label: "Trade & Bazaar", icon: "temple" },
+    { key: "GOLDEN_AGE", label: "Golden Age", icon: "crown" },
+    { key: "MEMORY_AND_FALL", label: "Memory & Fall", icon: "sunset" },
+    { key: "MYSTERY", label: "Ledger Mystery", icon: "ledger" },
   ];
 
   const categoryEntries = JOURNAL_DATABASE.filter((e) => e.category === activeCategory);
@@ -84,7 +85,7 @@ export default function JournalModal({
                 : "bg-[#201c18] border-[#383027] text-[#a89985] hover:text-[#f6ede0] hover:bg-[#2b2520]"
             }`}
           >
-            <span>{cat.icon}</span>
+            <span><GameIcon name={cat.icon} size={14} /></span>
             <span>{cat.label}</span>
           </button>
         ))}
@@ -116,7 +117,9 @@ export default function JournalModal({
                     : "bg-[#181512] border-[#29231e] text-[#6b6053] opacity-65"
                 }`}
               >
-                <span className="text-xl mt-0.5">{isUnlocked ? entry.icon : "🔒"}</span>
+                <span className="mt-0.5 text-[#d4a359]">
+                  {isUnlocked ? <GameIcon name={entry.icon as GameIconType} size={18} /> : "🔒"}
+                </span>
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-serif font-bold truncate">
                     {isUnlocked ? entry.title : "Unrecorded Tablet"}
@@ -147,7 +150,9 @@ export default function JournalModal({
                     }`}
                   >
                     <div className="flex items-center gap-2 font-bold">
-                      <span>{isFound ? frag.sealIcon : "🔒"}</span>
+                      <span className="text-[#d4a359]">
+                        {isFound ? <GameIcon name={frag.sealIcon as GameIconType} size={14} /> : "🔒"}
+                      </span>
                       <span>Fragment #{idx + 1}: {isFound ? frag.title : "Hidden in " + frag.stageName}</span>
                     </div>
                   </div>
