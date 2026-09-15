@@ -68,10 +68,10 @@ export default function IndusHUD({
       case "caravan_road":
         return "INDUS VALLEY - THE CARAVAN ROAD TO HARAPPA (c. 2500 BCE)";
       case "harappa_residential":
-        return "INDUS VALLEY - HARAPPA RESIDENTIAL AREA (c. 2500 BCE)";
+        return "INDUS VALLEY - HARAPPAN TOY WORKSHOP INTERIOR (c. 2500 BCE)";
       case "steatite_seal_workshop":
       case "carnelian_bead_quarter":
-        return "INDUS VALLEY - HARAPPAN TOY WORKSHOP (c. 2500 BCE)";
+        return "INDUS VALLEY - HARAPPA TOY MARKET STREET (c. 2500 BCE)";
       case "priest_king_citadel":
         return "INDUS VALLEY - THE CITADEL MOUND (c. 2500 BCE)";
       case "citadel_interior":
@@ -109,10 +109,10 @@ export default function IndusHUD({
       case "caravan_road":
         return "Caravan Road";
       case "harappa_residential":
-        return "Harappa Residential";
+        return "Toy Workshop";
       case "steatite_seal_workshop":
       case "carnelian_bead_quarter":
-        return "Toy Workshop";
+        return "Toy Market Street";
       case "priest_king_citadel":
         return "Citadel Mound";
       case "citadel_interior":
