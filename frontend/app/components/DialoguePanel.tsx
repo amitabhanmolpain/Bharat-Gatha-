@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { askHistoricalQuestionDetailed, GameHistoricalContext } from '../../services/groqAiService';
-import { playCharacterDialogue, stopCharacterDialogue, subscribeCharacterVoice } from '../../services/characterVoiceService';
+import { playCharacterDialogue, stopAllCharacterVoice, subscribeCharacterVoice } from '../../services/characterVoiceService';
 import { soundFx } from '../../services/soundService';
 
 export interface DialogueOption {
@@ -52,13 +52,32 @@ export default function DialoguePanel({
   const [isVoiceActive, setIsVoiceActive] = useState(false);
   const [questionCount, setQuestionCount] = useState(0);
   const lastSpokenTextRef = useRef<string | null>(null);
+  const isMountedRef = useRef<boolean>(true);
+  const activeQueryIdRef = useRef<number>(0);
 
-  // Clean up voice immediately when panel unmounts
+  // Clean up voice immediately when panel unmounts & track mounted status
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
-      stopCharacterDialogue();
+      isMountedRef.current = false;
+      activeQueryIdRef.current++;
+      stopAllCharacterVoice();
     };
   }, []);
+
+  // Listen to Escape key globally to immediately close panel and stop voice
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        handleClosePanel();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [onClose]);
 
   useEffect(() => {
     setActiveBadge(statusBadge || "normal");
@@ -120,7 +139,8 @@ function isVulgar(text: string): boolean {
 
     // Immediate Punishment for Vulgar / Bad Language
     if (isVulgar(query)) {
-      stopCharacterDialogue();
+      activeQueryIdRef.current++;
+      stopAllCharacterVoice();
       onClose();
       if (onPunish) {
         onPunish({
@@ -141,6 +161,7 @@ function isVulgar(text: string): boolean {
         const warningText = "Again you ask me a question, you will be punished!";
         setDisplayedText(warningText);
         setIsVoiceActive(true);
+        stopAllCharacterVoice();
         playCharacterDialogue({
           character: "guard",
           text: warningText,
@@ -150,7 +171,8 @@ function isVulgar(text: string): boolean {
         });
         return;
       } else {
-        stopCharacterDialogue();
+        activeQueryIdRef.current++;
+        stopAllCharacterVoice();
         onClose();
         if (onPunish) {
           onPunish({
@@ -163,7 +185,9 @@ function isVulgar(text: string): boolean {
       }
     }
 
+    const queryId = ++activeQueryIdRef.current;
     setIsAskingAI(true);
+    stopAllCharacterVoice();
     setDisplayedText(`Thinking... Consulting chronicles of ${historicalContext?.era || "history"}...`);
 
     try {
@@ -178,25 +202,37 @@ function isVulgar(text: string): boolean {
         characterId
       );
 
+      // Protect against stale async response if dialogue was closed or query changed
+      if (!isMountedRef.current || activeQueryIdRef.current !== queryId) {
+        return;
+      }
+
       setDisplayedText(res.answer);
       if (characterId === "jolly") {
         setActiveBadge(res.behavior || "normal");
       }
       setIsAskingAI(false);
 
-      // Play character voice for the generated answer
-      if (characterId) {
+      // Play character voice for the generated answer only if panel is still active
+      if (characterId && isMountedRef.current && activeQueryIdRef.current === queryId) {
         lastSpokenTextRef.current = `${characterId}:${res.answer.trim()}`;
         setIsVoiceActive(true);
         playCharacterDialogue({
           character: characterId,
           text: res.answer,
-          onStart: () => setIsVoiceActive(true),
+          onStart: () => {
+            if (isMountedRef.current && activeQueryIdRef.current === queryId) {
+              setIsVoiceActive(true);
+            }
+          },
           onEnd: () => setIsVoiceActive(false),
           onError: () => setIsVoiceActive(false)
         });
       }
     } catch (err) {
+      if (!isMountedRef.current || activeQueryIdRef.current !== queryId) {
+        return;
+      }
       console.error("Ask AI error:", err);
       setDisplayedText("The royal archives are silent at this moment. Ask again shortly.");
       setIsAskingAI(false);
@@ -211,17 +247,20 @@ function isVulgar(text: string): boolean {
   };
 
   const handleClosePanel = () => {
-    stopCharacterDialogue();
+    isMountedRef.current = false;
+    activeQueryIdRef.current++;
+    stopAllCharacterVoice();
     onClose();
   };
 
   const handleToggleVoice = () => {
     if (isVoiceActive) {
-      stopCharacterDialogue();
+      stopAllCharacterVoice();
       setIsVoiceActive(false);
     } else {
-      setIsVoiceActive(true);
-      if (characterId) {
+      if (characterId && displayedText) {
+        stopAllCharacterVoice();
+        setIsVoiceActive(true);
         lastSpokenTextRef.current = `${characterId}:${displayedText.trim()}`;
         playCharacterDialogue({
           character: characterId,
@@ -354,6 +393,7 @@ function isVulgar(text: string): boolean {
                 onMouseEnter={() => soundFx.playButtonHover()}
                 onClick={() => {
                   soundFx.playKeyboardClick();
+                  stopAllCharacterVoice();
                   if (onOptionSelect) onOptionSelect(opt);
                   if (!preventAiOnOptionSelect) {
                     executeAskQuery(opt.text);

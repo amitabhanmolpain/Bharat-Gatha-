@@ -19,7 +19,52 @@ export default function TransitionModal({
 }: TransitionModalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const previousActiveElementRef = useRef<HTMLElement | null>(null);
+  // Single audio instance — prevents double-play and guarantees clean teardown
+  const boatAudioRef = useRef<HTMLAudioElement | null>(null);
 
+  // --- BOAT ROWING SOUND (existing /boat-transition.webm asset) ---
+  // Plays only during a coracle river crossing and stops the moment the
+  // transition ends or the component unmounts.
+  useEffect(() => {
+    if (!isActive || travelType !== "coracle") {
+      // Not a coracle crossing — stop any leftover audio
+      if (boatAudioRef.current) {
+        try {
+          boatAudioRef.current.pause();
+          boatAudioRef.current.currentTime = 0;
+          boatAudioRef.current.src = "";
+        } catch (_) { }
+        boatAudioRef.current = null;
+      }
+      return;
+    }
+
+    // Already playing — don't start a second instance
+    if (boatAudioRef.current) return;
+
+    const audio = new Audio("/boat-transition.webm");
+    audio.loop = true;
+    audio.volume = 0.55;
+    boatAudioRef.current = audio;
+
+    audio.play().catch(() => {
+      // Autoplay may be blocked until a user gesture — silent fail is acceptable
+    });
+
+    return () => {
+      // Transition ended or component unmounted — stop immediately
+      try {
+        audio.pause();
+        audio.currentTime = 0;
+        audio.src = "";
+      } catch (_) { }
+      if (boatAudioRef.current === audio) {
+        boatAudioRef.current = null;
+      }
+    };
+  }, [isActive, travelType]);
+
+  // --- FOCUS MANAGEMENT ---
   useEffect(() => {
     if (!isActive) return;
 
@@ -40,15 +85,12 @@ export default function TransitionModal({
 
     // Trap focus and prevent key activations from bubbling to background
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Prevent Tab from moving focus to background elements
       if (e.key === "Tab") {
         e.preventDefault();
         if (containerRef.current) {
           containerRef.current.focus();
         }
       }
-
-      // Prevent Space / Enter from activating previously focused background controls
       if (e.key === " " || e.key === "Enter") {
         e.preventDefault();
       }
@@ -60,7 +102,6 @@ export default function TransitionModal({
       clearTimeout(focusTimer);
       document.removeEventListener("keydown", handleKeyDown, { capture: true });
 
-      // Restore focus to previous element on close
       if (
         previousActiveElementRef.current &&
         typeof previousActiveElementRef.current.focus === "function" &&
@@ -96,8 +137,8 @@ export default function TransitionModal({
           {travelType === "coracle"
             ? "Tungabhadra Coracle Crossing"
             : travelType === "stone_road"
-            ? "Royal Granite Car Street"
-            : "Hampi Monumental Pathway"}
+              ? "Royal Granite Car Street"
+              : "Hampi Monumental Pathway"}
         </div>
 
         {/* Title */}
