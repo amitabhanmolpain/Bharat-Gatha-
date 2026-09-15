@@ -16,6 +16,7 @@ export type IndusSceneType =
 
   // Stage 3: Artisan Quarter & Steatite Seal Workshop
   | "steatite_seal_workshop"
+  | "harappa_residential_street"
   | "carnelian_bead_quarter"
 
   // Stage 4: The Citadel Sanctuary & The Priest-King

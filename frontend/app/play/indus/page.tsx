@@ -523,7 +523,7 @@ function IndusValleyGameComponent() {
   const [showCourtyardStaircaseModal, setShowCourtyardStaircaseModal] = useState(false);
   const [hasInspectedCourtyardToilet, setHasInspectedCourtyardToilet] = useState(false);
   const [lastCourtyardDoor, setLastCourtyardDoor] = useState<"left" | "right">("right");
-  const [courtyardReturnScene, setCourtyardReturnScene] = useState<"residential_grid" | "great_bath_citadel">("residential_grid");
+  const [courtyardReturnScene, setCourtyardReturnScene] = useState<"residential_grid" | "great_bath_citadel" | "steatite_seal_workshop">("residential_grid");
 
   // Stage 1.6: House Interior
   const [showInteriorStaircaseModal, setShowInteriorStaircaseModal] = useState(false);
@@ -779,10 +779,10 @@ function IndusValleyGameComponent() {
   // Stage 1.5: Residential Grid -> Enter Courtyard Doorway (Image 4 doorway on avenue right side: x: ~80%, y: ~78%)
   const isNearHouseDoorway =
     scene === "residential_grid" &&
-    playerPos.x >= 70.0 &&
-    playerPos.x <= 88.0 &&
-    playerPos.y >= 66.0 &&
-    playerPos.y <= 86.0;
+    playerPos.x >= 40.0 &&
+    playerPos.x <= 58.0 &&
+    playerPos.y >= 45.0 &&
+    playerPos.y <= 65.0;
 
   // Stage 1.55: Central Domestic Courtyard -> Exit back to Street Grid (at bottom entrance)
   const isNearCourtyardExit =
@@ -1465,8 +1465,16 @@ function IndusValleyGameComponent() {
     scene === "steatite_seal_workshop" &&
     playerPos.x >= 36.0 &&
     playerPos.x <= 48.0 &&
-    playerPos.y >= 40.0 &&
-    playerPos.y <= 56.0;
+    playerPos.y >= 55.0 &&
+    playerPos.y <= 75.0;
+
+  // Stage 3: Harappa Toy Street Way to enter the Residential Area
+  const isNearHarappaResidentialDoor =
+    scene === "steatite_seal_workshop" &&
+    playerPos.x >= 65.0 &&
+    playerPos.x <= 80.0 &&
+    playerPos.y >= 15.0 &&
+    playerPos.y <= 35.0;
 
 
   // Stage 4: Priest-King
@@ -1700,6 +1708,9 @@ function IndusValleyGameComponent() {
         } else if (isNearWorkshopEntrance) {
           triggerTransition("priest_king_citadel", { x: 50.0, y: 80.0 }, 4);
           return;
+        } else if (isNearHarappaResidentialDoor) {
+          triggerTransition("harappa_residential_street", { x: 50.0, y: 72.0 });
+          return;
         } else if (isNearBeadQuarterEntrance) {
           triggerTransition("carnelian_bead_quarter", { x: 30.0, y: 70.0 });
           return;
@@ -1745,6 +1756,8 @@ function IndusValleyGameComponent() {
           // Exit from courtyard back to Great Bath or street grid depending on entry point
           if (courtyardReturnScene === "great_bath_citadel") {
             triggerTransition("great_bath_citadel", { x: 68.0, y: 32.0 });
+          } else if (courtyardReturnScene === "steatite_seal_workshop") {
+            triggerTransition("steatite_seal_workshop", { x: 72.0, y: 25.0 });
           } else {
             triggerTransition("residential_grid", isNearCourtyardRightExitDoor ? { x: 48.0, y: 60.0 } : { x: 80.0, y: 38.0 });
           }
@@ -2067,6 +2080,7 @@ function IndusValleyGameComponent() {
     isNearArtisanQuarterExit,
     isNearCitadelStairs,
     isNearWorkshopEntrance,
+    isNearHarappaResidentialDoor,
     isNearWorkshopExit,
     isNearBeadQuarterEntrance,
     isNearBeadQuarterExit,
@@ -2746,13 +2760,15 @@ function IndusValleyGameComponent() {
             onClick={() => {
               if (courtyardReturnScene === "great_bath_citadel") {
                 triggerTransition("great_bath_citadel", { x: 68.0, y: 32.0 });
+              } else if (courtyardReturnScene === "steatite_seal_workshop") {
+                triggerTransition("steatite_seal_workshop", { x: 72.0, y: 25.0 });
               } else {
                 triggerTransition("residential_grid", { x: 80.0, y: 38.0 });
               }
             }}
           >
             <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
-              <span>▼ [F] {courtyardReturnScene === "great_bath_citadel" ? "Exit to The Great Bath" : "Exit to Street Grid"}</span>
+              <span>▼ [F] {courtyardReturnScene === "steatite_seal_workshop" ? "Exit to Harappa Street" : courtyardReturnScene === "great_bath_citadel" ? "Exit to The Great Bath" : "Exit to Street Grid"}</span>
             </div>
           </div>
         )}
@@ -2797,13 +2813,15 @@ function IndusValleyGameComponent() {
             onClick={() => {
               if (courtyardReturnScene === "great_bath_citadel") {
                 triggerTransition("great_bath_citadel", { x: 68.0, y: 32.0 });
+              } else if (courtyardReturnScene === "steatite_seal_workshop") {
+                triggerTransition("steatite_seal_workshop", { x: 72.0, y: 25.0 });
               } else {
                 triggerTransition("residential_grid", { x: 48.0, y: 60.0 });
               }
             }}
           >
             <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
-              <span>▼ [F] {courtyardReturnScene === "great_bath_citadel" ? "Exit to The Great Bath" : "Exit to Street Grid"}</span>
+              <span>▼ [F] {courtyardReturnScene === "steatite_seal_workshop" ? "Exit to Harappa Street" : courtyardReturnScene === "great_bath_citadel" ? "Exit to The Great Bath" : "Exit to Street Grid"}</span>
             </div>
           </div>
         )}
@@ -4002,6 +4020,22 @@ function IndusValleyGameComponent() {
           </div>
         )}
 
+        {/* ========================================================= */}
+        {/* HARAPPA RESIDENTIAL STREET (CEMETERY PATH) SCENE OVERLAYS */}
+        {/* ========================================================= */}
+        
+        {scene === "harappa_residential_street" && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "50%", top: "86%" }}
+            onClick={() => triggerTransition("steatite_seal_workshop", { x: 72.0, y: 25.0 })}
+          >
+            <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+              <span>▼ [F] Exit back to Market Street</span>
+            </div>
+          </div>
+        )}
+
         {/* Stage 4: Priest-King Hotspot */}
         {scene === "priest_king_citadel" && (
           <div
@@ -4042,6 +4076,22 @@ function IndusValleyGameComponent() {
                 <span>Exit Workshop (Back to Street)</span>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Harappa Toy Workshop: Entrance to Residential Area */}
+        {scene === "steatite_seal_workshop" && isNearHarappaResidentialDoor && (
+          <div
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+            style={{ left: "72%", top: "22%" }}
+            onClick={() => {
+              triggerTransition("harappa_residential_street", { x: 50.0, y: 72.0 });
+            }}
+          >
+            <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+              <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">E</div>
+              <span>Enter Harappan Residence</span>
+            </div>
           </div>
         )}
 

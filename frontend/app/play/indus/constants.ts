@@ -138,6 +138,17 @@ export const INDUS_SCENE_CONFIGS: Record<IndusSceneType, IndusSceneMeta> = {
     minY: 22.0,
     maxY: 95.0,
   },
+  harappa_residential_street: {
+    title: "Harappa Residential Quarters",
+    era: "Bronze Age • c. 2500 BCE",
+    subtitle: "Street of Homes Leading to Cemetery R-37",
+    backgroundImage: "/bg-indus-harappa-toy-street.jpg",
+    defaultObjective: "Explore the residential street of Harappa.",
+    minX: 5.0,
+    maxX: 95.0,
+    minY: 45.0,
+    maxY: 90.0,
+  },
   carnelian_bead_quarter: {
     title: "Carnelian Bead Kiln & Gem Terrace",
     era: "Bronze Age • c. 2500 BCE",
