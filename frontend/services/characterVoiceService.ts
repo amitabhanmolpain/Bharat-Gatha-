@@ -5,6 +5,8 @@
  * Plays pre-rendered offline audio files locally and synthesizes dynamic answers.
  */
 
+import { networkService } from "./networkService";
+
 export interface CharacterDialogueOptions {
   character: "jolly" | "guard" | string;
   text: string;
@@ -304,7 +306,7 @@ class CharacterVoiceManager {
       if (!audioSrc) {
         let cachedB64 = this.audioCache.get(lookupKey);
 
-        if (!cachedB64) {
+        if (!cachedB64 && networkService.isOnline()) {
           try {
             const backendUrl = this.getBackendUrl();
             const response = await fetch(`${backendUrl}/api/tts/character`, {
