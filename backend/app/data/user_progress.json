@@ -14,7 +14,7 @@
       "companion_rescued",
       "Sheesh Mahal Corridor Clearance"
     ],
-    "total_score": 3650
+    "total_score": 4150
   },
   "default_traveller_indus": {
     "user_id": "default_traveller",
@@ -28,29 +28,5 @@
       "Ekasringa Unicorn Steatite Seal"
     ],
     "total_score": 350
-  },
-  "default_traveller_rajasthan": {
-    "user_id": "default_traveller",
-    "era": "rajasthan",
-    "solved_puzzles": [
-      "chaupar"
-    ],
-    "prizes_unlocked": [
-      "Royal Rajput Chaupar Victory"
-    ],
-    "total_score": 200
-  },
-  "default_traveller_rajputana": {
-    "user_id": "default_traveller",
-    "era": "rajputana",
-    "solved_puzzles": [
-      "sculptors_testament",
-      "badal_mahal_lamps"
-    ],
-    "prizes_unlocked": [
-      "sculptors_testament_master",
-      "badal_mahal_light_master"
-    ],
-    "total_score": 1500
   }
 }

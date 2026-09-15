@@ -52,15 +52,26 @@ export default function IndusHUD({
     switch (sc) {
       case "lower_town_gate":
         return "INDUS VALLEY - THE GHAT OF MOHENJO-DARO (c. 2500 BCE)";
+      case "residential_grid":
+        return "INDUS VALLEY - RESIDENTIAL GRID (MOHENJO-DARO)";
+      case "house_courtyard":
+        return "INDUS VALLEY - CENTRAL DOMESTIC COURTYARD (MOHENJO-DARO)";
+      case "house_interior":
+        return "INDUS VALLEY - GROUND FLOOR RESIDENCE (MOHENJO-DARO)";
+      case "house_second_floor":
+        return "INDUS VALLEY - RESIDENTIAL SECOND FLOOR & ROOF (MOHENJO-DARO)";
       case "granary_avenue":
-        return "INDUS VALLEY - LOWER TOWN & GRANARY (c. 2500 BCE)";
+        return "INDUS VALLEY - THE GREAT GRANARY (MOHENJO-DARO)";
       case "great_bath_citadel":
       case "drainage_culvert":
         return "INDUS VALLEY - THE GREAT BATH (MOHENJO-DARO)";
+      case "caravan_road":
+        return "INDUS VALLEY - THE CARAVAN ROAD TO HARAPPA (c. 2500 BCE)";
       case "steatite_seal_workshop":
       case "carnelian_bead_quarter":
-        return "INDUS VALLEY - STEATITE SEAL WORKSHOP (HARAPPA)";
+        return "INDUS VALLEY - TOY MARKET STREET (HARAPPA)";
       case "priest_king_citadel":
+        return "INDUS VALLEY - TOY MAKING WORKSHOP (HARAPPA)";
       case "closing_reflection":
         return "INDUS VALLEY - CITADEL PLATFORM (MOHENJO-DARO)";
       default:
@@ -72,17 +83,26 @@ export default function IndusHUD({
     switch (sc) {
       case "lower_town_gate":
         return "The Indus Ghat";
+      case "residential_grid":
+        return "Residential Grid";
+      case "house_courtyard":
+        return "Domestic Courtyard";
+      case "house_interior":
+        return "Ground Floor Room";
+      case "house_second_floor":
+        return "Second Floor & Roof";
       case "granary_avenue":
-        return "Lower Town Grid";
+        return "The Great Granary";
       case "great_bath_citadel":
       case "drainage_culvert":
         return "The Great Bath";
+      case "caravan_road":
+        return "Caravan Road";
       case "steatite_seal_workshop":
       case "carnelian_bead_quarter":
-        return "Seal Workshop";
+        return "Toy Market Street";
       case "priest_king_citadel":
-      case "closing_reflection":
-        return "Citadel Platform";
+        return "Toy Studio";
       default:
         return "Mohenjo-daro";
     }
@@ -282,18 +302,18 @@ export default function IndusHUD({
         {/* Minimap Box (Image 2 style) */}
         <div className="bg-[#fff9ea] border-2 border-black rounded-lg p-3 w-44 h-36 shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex flex-col">
           <div className="flex-1 grid grid-cols-3 grid-rows-3 gap-1 p-1 bg-amber-50/50 rounded">
-            {/* Top row: Priest-King Citadel */}
+            {/* Top row: Priest-King Citadel & Closing */}
             <div className="bg-transparent"></div>
             <div
               className={
-                scene === "priest_king_citadel"
+                scene === "priest_king_citadel" || scene === "closing_reflection"
                   ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600"
                   : "bg-amber-100 rounded-sm"
               }
             ></div>
             <div className="bg-transparent"></div>
 
-            {/* Middle row: Great Bath (west) & Steatite Workshop (east) */}
+            {/* Middle row: Great Bath (west) - Caravan Road (center) - Steatite Workshop (east) */}
             <div
               className={
                 scene === "great_bath_citadel" || scene === "drainage_culvert"
@@ -301,7 +321,13 @@ export default function IndusHUD({
                   : "bg-amber-100 rounded-sm"
               }
             ></div>
-            <div className="bg-transparent"></div>
+            <div
+              className={
+                scene === "caravan_road"
+                  ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600"
+                  : "bg-amber-100 rounded-sm"
+              }
+            ></div>
             <div
               className={
                 scene === "steatite_seal_workshop" || scene === "carnelian_bead_quarter"
@@ -310,11 +336,16 @@ export default function IndusHUD({
               }
             ></div>
 
-            {/* Bottom row: Lower Town Gate */}
+            {/* Bottom row: Lower Town Gate & Granary */}
             <div className="bg-transparent"></div>
             <div
               className={
-                scene === "lower_town_gate" || scene === "granary_avenue"
+                scene === "lower_town_gate" || 
+                scene === "granary_avenue" || 
+                scene === "residential_grid" ||
+                scene === "house_courtyard" ||
+                scene === "house_interior" ||
+                scene === "house_second_floor"
                   ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600"
                   : "bg-amber-100 rounded-sm"
               }
