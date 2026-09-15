@@ -1510,25 +1510,25 @@ function IndusValleyGameComponent() {
 
   // Stage 3: Harappan Terracotta Toy Workshop Counter & Stalls (Foreground Left)
   const isNearSealBench =
-    scene === "steatite_seal_workshop" &&
+    (scene === "steatite_seal_workshop" || scene === "harappa_residential") &&
     playerPos.x <= 36.0 &&
     playerPos.y >= 58.0;
 
   // Stage 3: Harappa Toy Street Way to Go Back to Caravan Road (Upper Left Archway)
   const isNearHarappaExitArchway =
-    scene === "steatite_seal_workshop" &&
+    (scene === "steatite_seal_workshop" || scene === "harappa_residential") &&
     playerPos.x <= 25.0 &&
     playerPos.y <= 45.0;
 
   // Stage 3 -> Stage 4 Citadel stairs (Upper Right Avenue)
   const isNearCitadelStairs =
-    scene === "steatite_seal_workshop" &&
+    (scene === "steatite_seal_workshop" || scene === "harappa_residential") &&
     playerPos.x >= 78.0 &&
     playerPos.y <= 38.0;
 
   // Stage 3: Harappa Toy Street Way to enter the Toy Workshop Interior
   const isNearWorkshopEntrance =
-    scene === "steatite_seal_workshop" &&
+    (scene === "steatite_seal_workshop" || scene === "harappa_residential") &&
     playerPos.x >= 36.0 &&
     playerPos.x <= 48.0 &&
     playerPos.y >= 40.0 &&
@@ -1536,7 +1536,7 @@ function IndusValleyGameComponent() {
 
   // Stage 3: Harappa Toy Street Entrance to Residential Area
   const isNearResidentialAreaEntrance =
-    scene === "steatite_seal_workshop" &&
+    (scene === "steatite_seal_workshop" || scene === "harappa_residential") &&
     playerPos.x >= 54.0 &&
     playerPos.x <= 74.0 &&
     playerPos.y >= 38.0 &&
@@ -4396,7 +4396,7 @@ function IndusValleyGameComponent() {
           <div
             className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
             style={{ left: "85%", top: "23%" }}
-            onClick={() => triggerTransition("steatite_seal_workshop", { x: 20.0, y: 38.0 }, 3, 600)}
+            onClick={() => triggerTransition("harappa_residential", { x: 20.0, y: 38.0 }, 3, 600)}
           >
             {isNearCaravanRoadHarappaGate ? (
               <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
@@ -4432,7 +4432,7 @@ function IndusValleyGameComponent() {
         )}
 
         {/* Stage 3: Harappan Terracotta Toy Workshop & Stalls */}
-        {scene === "steatite_seal_workshop" && (
+        {(scene === "steatite_seal_workshop" || scene === "harappa_residential") && (
           <div
             className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-15"
             style={{ left: "18%", top: "72%" }}
@@ -4458,8 +4458,8 @@ function IndusValleyGameComponent() {
           </div>
         )}
 
-        {/* Harappa Toy Workshop: Archway Way to Go Back to Caravan Road */}
-        {scene === "steatite_seal_workshop" && (
+        {/* Harappa Toy Workshop / Residential: Archway Way to Go Back to Caravan Road */}
+        {(scene === "steatite_seal_workshop" || scene === "harappa_residential") && (
           <div
             className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
             style={{ left: "14%", top: "28%" }}
@@ -4479,7 +4479,7 @@ function IndusValleyGameComponent() {
         )}
 
         {/* Stage 3: Avenue to Citadel Platform */}
-        {scene === "steatite_seal_workshop" && (
+        {(scene === "steatite_seal_workshop" || scene === "harappa_residential") && (
           <div
             className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
             style={{ left: "88%", top: "22%" }}
@@ -4498,41 +4498,41 @@ function IndusValleyGameComponent() {
           </div>
         )}
 
-        {/* Harappa Toy Workshop: Entrance from the Street */}
-        {scene === "steatite_seal_workshop" && (
+        {/* Harappa Residential: Entrance into the Toy Workshop Interior */}
+        {(scene === "steatite_seal_workshop" || scene === "harappa_residential") && (
           <div
             className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
             style={{ left: "42%", top: "50%" }}
-            onClick={() => triggerTransition("priest_king_citadel", { x: 50.0, y: 80.0 }, 4, 600)}
+            onClick={() => triggerTransition("steatite_seal_workshop", { x: 50.0, y: 80.0 }, 3, 600)}
           >
             {isNearWorkshopEntrance ? (
               <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
                 <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">E</div>
-                <span>Enter Toy Workshop</span>
+                <span>Enter Toy Workshop Interior</span>
               </div>
             ) : (
               <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
-                <span>Toy Workshop Entrance</span>
+                <span>Toy Workshop Interior</span>
               </div>
             )}
           </div>
         )}
 
-        {/* Harappa Toy Street: Entrance to Harappan Residential Area */}
-        {scene === "steatite_seal_workshop" && (
+        {/* Harappa Toy Workshop / Residential: Entrance to Harappa Residential Area */}
+        {(scene === "steatite_seal_workshop" || scene === "harappa_residential") && (
           <div
             className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
             style={{ left: "64%", top: "50%" }}
-            onClick={() => triggerTransition("residential_grid", { x: 50.0, y: 80.0 }, 3, 600)}
+            onClick={() => triggerTransition("harappa_residential", { x: 50.0, y: 80.0 }, 3, 600)}
           >
             {isNearResidentialAreaEntrance ? (
               <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
                 <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">E</div>
-                <span>✨ Enter Residential Area (Press E)</span>
+                <span>Enter Harappa Residential Area</span>
               </div>
             ) : (
               <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#1b1510]/90 border border-[#d8a86a]/60 text-[#f7eedf] px-2.5 py-1 rounded text-[11px] font-serif shadow-md whitespace-nowrap">
-                <span>✨ Harappan Residential Area</span>
+                <span>Harappa Residential Area</span>
               </div>
             )}
           </div>

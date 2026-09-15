@@ -53,7 +53,7 @@ export default function IndusHUD({
       case "lower_town_gate":
         return "INDUS VALLEY - THE GHAT OF MOHENJO-DARO (c. 2500 BCE)";
       case "residential_grid":
-        return "INDUS VALLEY - RESIDENTIAL GRID (MOHENJO-DARO)";
+        return "INDUS VALLEY - MOHENJO-DARO RESIDENTIAL GRID (c. 2500 BCE)";
       case "house_courtyard":
         return "INDUS VALLEY - CENTRAL DOMESTIC COURTYARD (MOHENJO-DARO)";
       case "house_interior":
@@ -67,9 +67,11 @@ export default function IndusHUD({
         return "INDUS VALLEY - THE GREAT BATH (MOHENJO-DARO)";
       case "caravan_road":
         return "INDUS VALLEY - THE CARAVAN ROAD TO HARAPPA (c. 2500 BCE)";
+      case "harappa_residential":
+        return "INDUS VALLEY - HARAPPA RESIDENTIAL AREA (c. 2500 BCE)";
       case "steatite_seal_workshop":
       case "carnelian_bead_quarter":
-        return "INDUS VALLEY - HARAPPAN TERRACOTTA TOY MARKET (c. 2500 BCE)";
+        return "INDUS VALLEY - HARAPPAN TOY WORKSHOP (c. 2500 BCE)";
       case "priest_king_citadel":
         return "INDUS VALLEY - THE CITADEL MOUND (c. 2500 BCE)";
       case "citadel_interior":
@@ -92,7 +94,7 @@ export default function IndusHUD({
       case "lower_town_gate":
         return "The Indus Ghat";
       case "residential_grid":
-        return "Residential Grid";
+        return "Mohenjo-daro Residential";
       case "house_courtyard":
         return "Domestic Courtyard";
       case "house_interior":
@@ -106,9 +108,11 @@ export default function IndusHUD({
         return "The Great Bath";
       case "caravan_road":
         return "Caravan Road";
+      case "harappa_residential":
+        return "Harappa Residential";
       case "steatite_seal_workshop":
       case "carnelian_bead_quarter":
-        return "Toy Market Street";
+        return "Toy Workshop";
       case "priest_king_citadel":
         return "Citadel Mound";
       case "citadel_interior":
@@ -346,7 +350,9 @@ export default function IndusHUD({
             ></div>
             <div
               className={
-                scene === "steatite_seal_workshop" || scene === "carnelian_bead_quarter"
+                scene === "steatite_seal_workshop" || 
+                scene === "carnelian_bead_quarter" || 
+                scene === "harappa_residential"
                   ? "bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600"
                   : "bg-amber-100 rounded-sm"
               }

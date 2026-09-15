@@ -15,6 +15,7 @@ export type IndusSceneType =
   | "caravan_road"
 
   // Stage 3: Artisan Quarter, Steatite Seal Workshop & Harappan Cemetery
+  | "harappa_residential"
   | "steatite_seal_workshop"
   | "carnelian_bead_quarter"
   | "harappa_cemetery"
