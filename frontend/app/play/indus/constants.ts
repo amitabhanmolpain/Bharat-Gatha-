@@ -131,7 +131,7 @@ export const INDUS_SCENE_CONFIGS: Record<IndusSceneType, IndusSceneMeta> = {
     title: "Harappan Terracotta Toy Market & Artisan Street",
     era: "Bronze Age • c. 2500 BCE",
     subtitle: "Terracotta Toys, Craft Kilns & Market Stalls",
-    backgroundImage: "/bg-indus-harappa-toy-street.jpg",
+    backgroundImage: "/bg-indus-toy-street.jpg",
     defaultObjective: "Explore Harappa's toy market street, inspect craft stalls with terracotta bullock carts and whistle toys, and ascend toward the Citadel.",
     minX: 8.0,
     maxX: 94.0,
