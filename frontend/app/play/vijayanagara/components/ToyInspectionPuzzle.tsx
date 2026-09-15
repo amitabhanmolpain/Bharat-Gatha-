@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import AccessibleModal from "./AccessibleModal";
 import GameIcon, { GameIconType } from "./GameIcon";
 import ChariotSvg from "./ChariotSvg";
+import ElephantSvg from "./ElephantSvg";
+import DollSvg from "./DollSvg";
 import { playCharacterDialogue, stopAllCharacterVoice } from "../../../../services/characterVoiceService";
 import { soundFx } from "../../../../services/soundService";
 
@@ -307,15 +309,19 @@ export default function ToyInspectionPuzzle({
 
           {/* Rendered Visual Artifact */}
           <div 
-            className={`my-6 transform transition-all duration-700 ease-in-out flex items-center justify-center ${isRotating ? "scale-[0.98] drop-shadow-[0_15px_25px_rgba(0,0,0,0.9)]" : "drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)] scale-100"}`}
+            className={`my-6 transition-all duration-700 ease-in-out flex items-center justify-center ${isRotating ? "drop-shadow-[0_15px_25px_rgba(0,0,0,0.9)]" : "drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)]"}`}
             style={{ 
-              transform: `rotateX(${isViewingUnderside ? 75 : 0}deg) rotateY(${rotationAngle}deg)`,
+              transform: `scale(${isRotating ? 0.98 : 1}) rotateX(${isViewingUnderside ? 75 : 0}deg) rotateY(${rotationAngle}deg)`,
               transformStyle: 'preserve-3d',
               transformOrigin: 'center center'
             }}
           >
             {currentToy.id === "chariot" ? (
               <ChariotSvg className="w-32 h-32 text-[#c89a50]" />
+            ) : currentToy.id === "elephant" ? (
+              <ElephantSvg className="w-32 h-32 text-[#c89a50]" />
+            ) : currentToy.id === "doll" ? (
+              <DollSvg className="w-32 h-32 text-[#c89a50]" />
             ) : (
               <GameIcon name={currentToy.icon} size={80} className="text-[#c89a50]" />
             )}
@@ -396,14 +402,14 @@ export default function ToyInspectionPuzzle({
               {isViewingUnderside ? (
                 <div>
                   <span className="text-[#d4a359] font-bold block mb-1">Base Analysis:</span>
-                  <div className={isRotating ? "opacity-50" : "opacity-100 transition-opacity"}>
+                  <div className={`transition-opacity duration-300 ${isRotating ? "opacity-0" : "opacity-100"}`}>
                     {currentToy.undersideClue}
                   </div>
                 </div>
               ) : (
                 <div>
                   <span className="text-[#d4a359] font-bold block mb-1">Side Analysis:</span>
-                  <div className={isRotating ? "opacity-50" : "opacity-100 transition-opacity"}>
+                  <div className={`transition-opacity duration-300 ${isRotating ? "opacity-0" : "opacity-100"}`}>
                     {currentToy.angles[getNormalizedAngle(rotationAngle)] || currentToy.description}
                   </div>
                 </div>

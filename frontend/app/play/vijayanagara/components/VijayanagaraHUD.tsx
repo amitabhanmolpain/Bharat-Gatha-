@@ -1,11 +1,14 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { soundFx } from "../../../../services/soundService";
 import { VijayanagaraStage } from "../types";
 import { STAGE_METAS, SCENE_CONFIGS } from "../constants";
 import { VijayanagaraSceneType } from "../types";
 import GameIcon from "./GameIcon";
+import SharedHUDBoxes from "../../../../components/SharedHUDBoxes";
 
 interface VijayanagaraHUDProps {
   stage: VijayanagaraStage;
@@ -31,6 +34,19 @@ export default function VijayanagaraHUD({
   const currentStageMeta = STAGE_METAS[stage];
   const currentSceneMeta = SCENE_CONFIGS[scene];
 
+  const router = useRouter();
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [isTimerVisible, setIsTimerVisible] = useState(false);
+  const [isMusicMuted, setIsMusicMuted] = useState(false);
+  const [isSoundMuted, setIsSoundMuted] = useState(false);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setElapsedSeconds((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   return (
     <div
       aria-hidden={isTransitioning}
@@ -38,93 +54,106 @@ export default function VijayanagaraHUD({
         isTransitioning ? "opacity-40" : ""
       }`}
     >
-      {/* Top Header Bar */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 w-full">
-        
-        {/* Left: Quest & Stage Card (Mughal Style) */}
-        <div className="flex flex-col gap-2 z-10 pointer-events-auto">
-          <div className="bg-[#fff9ea] border-2 border-black rounded-lg p-3 w-80 shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
-            <div className="text-[10px] font-extrabold text-amber-800 uppercase tracking-widest mb-0.5">
-              VIJAYANAGARA EMPIRE • {currentSceneMeta.title.toUpperCase()} ({currentStageMeta.era})
-            </div>
-            <div className="text-[13px] font-black text-black leading-snug">
-              {objective}
-            </div>
-          </div>
+      <SharedHUDBoxes
+        heading={
+          <>VIJAYANAGARA EMPIRE • {currentSceneMeta.title.toUpperCase()} ({currentStageMeta.era})</>
+        }
+        objective={objective}
+        cluesStatus={[0, 1, 2].map((i) => i < fragmentsCollectedCount)}
+        cluesLabel="pieces"
+        onCluesClick={onOpenJournal}
+        isTransitioning={isTransitioning}
+      />
+
+      {/* Top Right: Actions & Minimap */}
+      <div className="absolute top-6 right-6 flex flex-col items-end gap-3 pointer-events-auto">
+        <div className="flex items-center gap-2.5">
+          <button 
+            onClick={() => setIsTimerVisible(!isTimerVisible)}
+            title={isTimerVisible ? "Timer Active (Click to hide)" : "Click to view session timer"}
+            className={`h-10 px-3.5 border-2 border-black rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all flex items-center justify-center gap-1.5 font-black text-xs cursor-pointer ${
+              isTimerVisible ? "bg-[#fcd34d] text-black" : "bg-white/90 hover:bg-white text-gray-800"
+            }`}
+          >
+            <span>⏱️</span>
+            {isTimerVisible ? (
+              <span>
+                {String(Math.floor(elapsedSeconds / 60)).padStart(2, '0')}:
+                {String(elapsedSeconds % 60).padStart(2, '0')}
+              </span>
+            ) : (
+              <span className="text-[11px] font-bold uppercase tracking-wider text-black">Timer</span>
+            )}
+          </button>
 
           <button 
-            type="button"
-            onClick={onOpenJournal}
-            disabled={isTransitioning}
-            tabIndex={isTransitioning ? -1 : 0}
-            className="bg-[#fff9ea] hover:bg-[#fff2cc] border-2 border-black rounded-lg px-3 py-1.5 w-64 shadow-[3px_3px_0_0_rgba(0,0,0,1)] flex items-center justify-between cursor-pointer transition-all active:translate-y-0.5 active:shadow-[1px_1px_0_0_rgba(0,0,0,1)] group disabled:pointer-events-none disabled:opacity-40"
-            title="Open Historical Journal"
+            onMouseEnter={() => soundFx.playButtonHover()}
+            onClick={() => {
+              soundFx.playKeyboardClick();
+              onResetCampaign();
+            }}
+            title="Restart to Beginning"
+            className="h-10 bg-red-600 border-2 border-black rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all flex items-center justify-center px-3 gap-1.5 group cursor-pointer"
           >
-            <div className="flex items-center gap-2">
-              <svg className="w-4 h-4 text-amber-700 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-              </svg>
-              <div className="flex gap-1">
-                {[0, 1, 2].map((i) => (
-                  <div 
-                    key={i}
-                    className={`w-3.5 h-1.5 rounded-sm transition-all ${
-                      i < fragmentsCollectedCount ? "bg-amber-500 shadow-sm" : "bg-amber-200"
-                    }`}
-                  ></div>
-                ))}
-              </div>
-            </div>
-            <span className="text-[12px] font-extrabold text-black flex items-center gap-1">
-              {fragmentsCollectedCount}/3 pieces
-              <span className="text-[10px] text-amber-700 underline font-bold group-hover:text-black">open</span>
-            </span>
+            <svg className="w-5 h-5 text-white group-hover:-rotate-180 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+            <span className="text-[13px] font-bold text-white">Restart</span>
+          </button>
+          <button 
+            onMouseEnter={() => soundFx.playButtonHover()}
+            onClick={() => {
+              soundFx.playKeyboardClick();
+              setIsMusicMuted((prev) => !prev);
+            }}
+            title={isMusicMuted ? "Unmute Music" : "Mute Music"}
+            className={`w-10 h-10 border-2 border-black rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all flex items-center justify-center cursor-pointer ${
+              isMusicMuted ? "bg-gray-200 text-gray-500" : "bg-amber-400 text-black"
+            }`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
+          </button>
+          <button 
+            onMouseEnter={() => soundFx.playButtonHover()}
+            onClick={() => {
+              soundFx.playKeyboardClick();
+              const muted = soundFx.toggleMute();
+              setIsSoundMuted(muted);
+            }}
+            title={isSoundMuted ? "Unmute Sound" : "Mute Sound"}
+            className={`w-10 h-10 border-2 border-black rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all flex items-center justify-center cursor-pointer ${
+              isSoundMuted ? "bg-gray-200 text-gray-500" : "bg-amber-400 text-black"
+            }`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.898a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 5.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>
+          </button>
+          <button 
+            onMouseEnter={() => soundFx.playButtonHover()}
+            onClick={() => {
+              soundFx.playKeyboardClick();
+              router.push('/dashboard');
+            }} 
+            className="h-10 bg-red-600 border-2 border-black rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all flex items-center justify-center px-4 cursor-pointer"
+          >
+            <span className="text-[13px] font-bold text-white">Leave world</span>
           </button>
         </div>
 
-        {/* Right: Actions, Mystery Ledger & Journal Controls */}
-        <div className="pointer-events-auto flex items-center gap-2.5 self-end md:self-auto">
-          
-          {/* Mystery Ledger Pieces Badge replaced by Left Clue Box */}
+        {/* Minimap Box */}
+        <div className="bg-[#fff9ea] border-2 border-black rounded-lg p-3 w-44 h-36 shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex flex-col">
+          <div className="flex-1 grid grid-cols-3 grid-rows-3 gap-1 p-1 bg-amber-50/50 rounded">
+             <div className="bg-amber-100 rounded-sm"></div>
+             <div className="bg-amber-100 rounded-sm"></div>
+             <div className="bg-amber-100 rounded-sm"></div>
+             
+             <div className="bg-amber-100 rounded-sm"></div>
+             <div className="bg-amber-400 rounded-sm shadow-[0_0_5px_rgba(251,191,36,0.8)] border border-amber-600 flex items-center justify-center">
+                <span className="text-[10px] font-bold">YOU</span>
+             </div>
+             <div className="bg-amber-100 rounded-sm"></div>
 
-          {/* Palm-Leaf Journal Button */}
-          <button
-            type="button"
-            onClick={onOpenJournal}
-            disabled={isTransitioning}
-            tabIndex={isTransitioning ? -1 : 0}
-            className="flex items-center gap-2 bg-gradient-to-r from-[#2c241c] to-[#3d3328] hover:from-[#3d3328] hover:to-[#4f4234] border-2 border-[#d4a359] text-[#f6ede0] font-serif font-bold px-3.5 py-2.5 rounded-xl shadow-[3px_3px_0_0_rgba(0,0,0,0.8)] active:translate-y-0.5 transition-all cursor-pointer text-xs uppercase tracking-wider disabled:pointer-events-none disabled:opacity-40 group"
-            title="Open Historical Journal"
-          >
-            <GameIcon name="journal" size={15} className="text-[#d4a359] group-hover:scale-110 transition-transform" />
-            <span>Journal ({unlockedJournalCount})</span>
-          </button>
-
-          {/* Dashboard Return Button */}
-          <Link
-            href="/dashboard"
-            tabIndex={isTransitioning ? -1 : 0}
-            className={`flex items-center gap-1.5 justify-center bg-[#1a1714]/90 hover:bg-[#2b2520] border-2 border-[#5a4d3f] hover:border-[#d4a359] text-[#d6c7b2] hover:text-[#f6ede0] px-3.5 py-2.5 rounded-xl shadow-[3px_3px_0_0_rgba(0,0,0,0.8)] active:translate-y-0.5 transition-all text-xs font-serif font-bold uppercase tracking-wider group ${
-              isTransitioning ? "pointer-events-none opacity-40" : ""
-            }`}
-            title="Return to Campaign Hub"
-          >
-            <GameIcon name="hub" size={15} className="text-[#d4a359] group-hover:scale-110 transition-transform" />
-            <span>Hub</span>
-          </Link>
-
-          {/* Reset Campaign Button */}
-          <button
-            type="button"
-            onClick={onResetCampaign}
-            disabled={isTransitioning}
-            tabIndex={isTransitioning ? -1 : 0}
-            aria-label="Reset Vijayanagara Campaign Progress"
-            className="flex items-center justify-center bg-[#1a1714]/90 hover:bg-[#381a17] border-2 border-[#5a4d3f] hover:border-[#c86446] text-[#a89985] hover:text-[#fca5a5] p-2.5 rounded-xl shadow-[3px_3px_0_0_rgba(0,0,0,0.8)] active:translate-y-0.5 transition-all cursor-pointer text-xs disabled:pointer-events-none disabled:opacity-40 group"
-            title="Reset Vijayanagara Campaign Progress"
-          >
-            <GameIcon name="reset" size={15} className="group-hover:rotate-[-45deg] transition-transform" />
-          </button>
+             <div className="bg-transparent"></div>
+             <div className="bg-amber-100 rounded-sm"></div>
+             <div className="bg-amber-100 rounded-sm"></div>
+          </div>
         </div>
       </div>
 

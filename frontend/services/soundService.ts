@@ -21,7 +21,7 @@ class SoundEffectsService {
       }
     }
     if (this.ctx && this.ctx.state === "suspended") {
-      this.ctx.resume().catch(() => {});
+      this.ctx.resume().catch(() => { });
     }
     return this.ctx;
   }
@@ -107,7 +107,7 @@ class SoundEffectsService {
       noiseGain.connect(ctx.destination);
 
       noise.start(now);
-    } catch (e) {}
+    } catch (e) { }
   }
 
   /**
@@ -146,7 +146,7 @@ class SoundEffectsService {
 
       osc.start(now);
       osc.stop(now + 0.04);
-    } catch (e) {}
+    } catch (e) { }
   }
 
   /**
@@ -173,7 +173,7 @@ class SoundEffectsService {
 
       osc.start();
       osc.stop(ctx.currentTime + 0.11);
-    } catch (e) {}
+    } catch (e) { }
   }
 
   /**
@@ -204,7 +204,7 @@ class SoundEffectsService {
         osc.start(startTime);
         osc.stop(startTime + 0.55);
       });
-    } catch (e) {}
+    } catch (e) { }
   }
 
   /**
@@ -251,7 +251,7 @@ class SoundEffectsService {
       sparkleGain.connect(ctx.destination);
       sparkleOsc.start(sparkleTime);
       sparkleOsc.stop(sparkleTime + 0.5);
-    } catch (e) {}
+    } catch (e) { }
   }
 
   /**
@@ -278,7 +278,7 @@ class SoundEffectsService {
 
       osc.start();
       osc.stop(ctx.currentTime + 0.1);
-    } catch (e) {}
+    } catch (e) { }
   }
 
   /**
@@ -305,7 +305,7 @@ class SoundEffectsService {
 
       osc.start();
       osc.stop(ctx.currentTime + 0.08);
-    } catch (e) {}
+    } catch (e) { }
   }
 
   /**
@@ -384,7 +384,7 @@ class SoundEffectsService {
         tapOsc.start(t);
         tapOsc.stop(t + 0.03);
       });
-    } catch (e) {}
+    } catch (e) { }
   }
 
   /**
@@ -395,7 +395,7 @@ class SoundEffectsService {
    */
   public playStonePillar(baseFreq: number) {
     if (this.isMuted) return;
-    
+
     const play = async () => {
       try {
         console.log(`[VITTALA AUDIO] Clicked pillar: frequency ${baseFreq}Hz`);
@@ -409,7 +409,7 @@ class SoundEffectsService {
           console.log("[VITTALA AUDIO] AudioContext suspended, attempting to resume...");
           await ctx.resume();
         }
-        
+
         console.log(`[VITTALA AUDIO] AudioContext state: ${ctx.state}`);
         const now = ctx.currentTime;
         console.log(`[VITTALA AUDIO] Playback starting at currentTime: ${now}`);
@@ -429,11 +429,11 @@ class SoundEffectsService {
           noiseFilter.frequency.value = 4000;
           noiseFilter.Q.value = 1.0;
           const noiseGain = ctx.createGain();
-          
+
           noiseGain.gain.setValueAtTime(0, now);
           noiseGain.gain.linearRampToValueAtTime(0.5, now + 0.005);
           noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
-          
+
           noiseSource.connect(noiseFilter);
           noiseFilter.connect(noiseGain);
           noiseGain.connect(ctx.destination);
@@ -452,7 +452,7 @@ class SoundEffectsService {
         partials.forEach((partial, index) => {
           const osc = ctx.createOscillator();
           const pGain = ctx.createGain();
-          
+
           // Slight detune for that imperfect acoustic feel
           const detune = (Math.random() - 0.5) * 4; // +/- 2 cents
           osc.type = "sine";
@@ -466,12 +466,12 @@ class SoundEffectsService {
 
           osc.connect(pGain);
           pGain.connect(ctx.destination);
-          
+
           osc.start(now);
           // Stop oscillator after it has decayed
           osc.stop(now + partial.decay * 2);
         });
-        
+
         console.log(`[VITTALA AUDIO] Nodes scheduled successfully for freq ${baseFreq}Hz`);
       } catch (e) {
         console.error("[VITTALA AUDIO ERROR] Playback failed:", e);
@@ -479,6 +479,10 @@ class SoundEffectsService {
     };
 
     play();
+  }
+
+  public playDialogueOpen() {
+    this.playClueChime();
   }
 }
 

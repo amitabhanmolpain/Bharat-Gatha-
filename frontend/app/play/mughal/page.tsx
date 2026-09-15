@@ -13,6 +13,7 @@ import SheeshMirrorReflectionModal from "./components/SheeshMirrorReflectionModa
 import KhasMahalPermissionModal from "./components/KhasMahalPermissionModal";
 import { soundFx } from "../../../services/soundService";
 import { recordGameWinToDatabase, fetchUserWinsFromDatabase, fetchSolvedStatusFromDatabase } from "../../../services/gameProgressService";
+import SharedHUDBoxes from "../../../components/SharedHUDBoxes";
 
 export type SceneType =
   | "gate"
@@ -2968,109 +2969,82 @@ export default function MughalGameScreen() {
       )}
 
       {/* Top Left: Scenario Quest Box & Clues */}
-      <div className="absolute top-6 left-6 flex flex-col gap-2 z-10 pointer-events-auto">
-        <div className="bg-[#fff9ea] border-2 border-black rounded-lg p-3 w-80 shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
-          <div className="text-[10px] font-extrabold text-amber-800 uppercase tracking-widest mb-0.5">
-            {scene.startsWith("red_fort")
-              ? "MUGHAL EMPIRE - RED FORT (OLD DELHI)"
-              : scene.startsWith("taj")
-              ? "MUGHAL EMPIRE - TAJ MAHAL COMPLEX"
-              : scene === "gate"
-              ? "MUGHAL EMPIRE - AGRA FORT (1653 AD)"
-              : scene === "passage"
-              ? "MUGHAL EMPIRE - INNER PASSAGE"
-              : scene === "interior"
-              ? "MUGHAL EMPIRE - DIWAN-I-AAM THRONE ROOM"
-              : scene === "sheesh_mahal"
-              ? "MUGHAL EMPIRE - SHEESH MAHAL"
-              : scene === "khas_mahal"
-              ? "MUGHAL EMPIRE - KHAS MAHAL"
-              : "MUGHAL EMPIRE - DIWAN-I-AAM & ANGURI BAGH"}
-          </div>
-          <div className="text-[13px] font-black text-black leading-snug">
-            {scene === "gate"
-              ? hasGuardPermission || guardAttempts >= 1
-                ? "You have clearance from the guard! Walk through the passage to reach the Diwan-i-Khas marble building."
-                : "Talk to the Royal Guard at the gate to gain clearance into the palace."
-              : scene === "passage"
-              ? "Ascend the royal ramp passage to reach the Diwan-i-Khas marble building and Anguri Bagh."
-              : scene === "courtyard"
-              ? "Go to the white marble Diwan-i-Khas building (top-left palace) across the Anguri Bagh garden."
-              : scene === "interior"
-              ? isPietraDuraSolved
-                ? "Pietra Dura Art performed! The passage to Sheesh Mahal is open to proceed."
-                : "King Shah Jahan has gone for his prayers. Perform the famous Pietra Dura Marble Flower Art among the military guards or inspect the throne dais."
-              : scene === "sheesh_passage"
-              ? "Walk forward through the golden archway to enter the Sheesh Mahal (Palace of Mirrors)."
-              : scene === "sheesh_mahal"
-              ? isSheeshMirrorSolved
-                ? "The starlight reflection is complete! The passage to Khas Mahal is open (Press F or door)."
-                : "Position the candle and mirrors to form the Celestial Star on the ceiling dome."
-              : scene === "brown_passage"
-              ? "Walk through the colonnade to enter Khas Mahal, or walk down to return to the garden."
-              : scene === "khas_mahal"
-              ? "Inspect Khas Mahal and board the royal barge across Yamuna River to Taj Mahal."
-              : scene === "taj_gate"
-              ? !isCalligraphySolved
-                ? "Decipher the sacred Thuluth calligraphy on the Great Gate to enter the Charbagh gardens."
-                : "Walk through the Great Gate archway into the Charbagh gardens."
-              : scene === "taj_charbagh"
-              ? !isSymmetrySolved
-                ? "Balance the Charbagh water gates to restore the fountains and unlock the path."
-                : "Walk up the marble avenue to the Taj Mahal outside terrace."
-              : scene === "taj_exterior"
-              ? "Approach the main Pishtaq archway to enter the central mausoleum chamber, or press F to cross Yamuna."
-              : scene === "taj_mausoleum"
-              ? !isMausoleumExplored
-                ? "Inspect the royal cenotaphs of Emperor Shah Jahan and Empress Mumtaz Mahal."
-                : "Mausoleum fully explored! Walk down to exit to the terrace."
-              : scene === "taj_mehtab_bagh"
-              ? !isArchaeologistTalked
-                ? "Explore Mehtab Bagh and talk to the Caretaker Archaeologist to locate your companion."
-                : "Proceed to the bottom-right carriage to Delhi, or walk up across the pier to return to Taj exterior."
-              : scene === "red_fort_diwani_khas"
-              ? "All the ministers are waiting for Badshah Shah Jahan. Inspect the legendary Peacock Throne (Takht-i-Taus)!"
-              : scene === "red_fort_interior"
-              ? "Explore the Chatta Chowk covered bazaar and trade with the imperial merchants."
-              : scene === "red_fort_plaza"
-              ? "Proceed into the Diwan-i-Khas or trade in the Chatta Chowk arcade bazaar."
-              : scene === "red_fort_rang_mahal"
-              ? "You are in the Rang Mahal, Emperor Shah Jahan's palace for his queens. Find the imperial key before the queens return from their hunt!"
-              : scene === "red_fort_corridor"
-              ? (hasFoundDungeonKey
-                  ? "You have the royal key! Approach the door and press [E] to unlock the dungeon and rescue your companion!"
-                  : "The dungeon door is locked! Search the Rang Mahal for the royal key to rescue your companion.")
-              : "Walk forward into the monumental Lahori Gate of the Red Fort."}
-          </div>
-        </div>
-
-        {/* Interactive Dynamic Clues Box Card (Exact Rajasthan Style) */}
-        <div 
-          onClick={() => setShowCluesModal(true)}
-          className="bg-[#fff9ea] hover:bg-[#fff2cc] border-2 border-black rounded-lg px-3 py-1.5 w-64 shadow-[3px_3px_0_0_rgba(0,0,0,1)] flex items-center justify-between cursor-pointer transition-all active:translate-y-0.5 active:shadow-[1px_1px_0_0_rgba(0,0,0,1)] group"
-          title="Click to inspect discovered historical clues"
-        >
-          <div className="flex items-center gap-2">
-            <svg className="w-4 h-4 text-amber-700 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-            </svg>
-            <div className="flex gap-1">
-              {MUGHAL_HISTORICAL_CLUES.map((clue) => (
-                <div 
-                  key={clue.id}
-                  className={`w-3.5 h-1.5 rounded-sm transition-all ${
-                    discoveredClueIds.includes(clue.id) ? "bg-amber-500 shadow-sm" : "bg-amber-200"
-                  }`}
-                ></div>
-              ))}
-            </div>
-          </div>
-          <span className="text-[12px] font-extrabold text-black flex items-center gap-1">
-            {discoveredClueIds.length}/{MUGHAL_HISTORICAL_CLUES.length} clues
-            <span className="text-[10px] text-amber-700 underline font-bold group-hover:text-black">open</span>
-          </span>
-        </div>
-      </div>
+      <SharedHUDBoxes
+        heading={
+          scene.startsWith("red_fort")
+            ? "MUGHAL EMPIRE - RED FORT (OLD DELHI)"
+            : scene.startsWith("taj")
+            ? "MUGHAL EMPIRE - TAJ MAHAL COMPLEX"
+            : scene === "gate"
+            ? "MUGHAL EMPIRE - AGRA FORT (1653 AD)"
+            : scene === "passage"
+            ? "MUGHAL EMPIRE - INNER PASSAGE"
+            : scene === "interior"
+            ? "MUGHAL EMPIRE - DIWAN-I-AAM THRONE ROOM"
+            : scene === "sheesh_mahal"
+            ? "MUGHAL EMPIRE - SHEESH MAHAL"
+            : scene === "khas_mahal"
+            ? "MUGHAL EMPIRE - KHAS MAHAL"
+            : "MUGHAL EMPIRE - DIWAN-I-AAM & ANGURI BAGH"
+        }
+        objective={
+          scene === "gate"
+            ? hasGuardPermission || guardAttempts >= 1
+              ? "You have clearance from the guard! Walk through the passage to reach the Diwan-i-Khas marble building."
+              : "Talk to the Royal Guard at the gate to gain clearance into the palace."
+            : scene === "passage"
+            ? "Ascend the royal ramp passage to reach the Diwan-i-Khas marble building and Anguri Bagh."
+            : scene === "courtyard"
+            ? "Go to the white marble Diwan-i-Khas building (top-left palace) across the Anguri Bagh garden."
+            : scene === "interior"
+            ? isPietraDuraSolved
+              ? "Pietra Dura Art performed! The passage to Sheesh Mahal is open to proceed."
+              : "King Shah Jahan has gone for his prayers. Perform the famous Pietra Dura Marble Flower Art among the military guards or inspect the throne dais."
+            : scene === "sheesh_passage"
+            ? "Walk forward through the golden archway to enter the Sheesh Mahal (Palace of Mirrors)."
+            : scene === "sheesh_mahal"
+            ? isSheeshMirrorSolved
+              ? "The starlight reflection is complete! The passage to Khas Mahal is open (Press F or door)."
+              : "Position the candle and mirrors to form the Celestial Star on the ceiling dome."
+            : scene === "brown_passage"
+            ? "Walk through the colonnade to enter Khas Mahal, or walk down to return to the garden."
+            : scene === "khas_mahal"
+            ? "Inspect Khas Mahal and board the royal barge across Yamuna River to Taj Mahal."
+            : scene === "taj_gate"
+            ? !isCalligraphySolved
+              ? "Decipher the sacred Thuluth calligraphy on the Great Gate to enter the Charbagh gardens."
+              : "Walk through the Great Gate archway into the Charbagh gardens."
+            : scene === "taj_charbagh"
+            ? !isSymmetrySolved
+              ? "Balance the Charbagh water gates to restore the fountains and unlock the path."
+              : "Walk up the marble avenue to the Taj Mahal outside terrace."
+            : scene === "taj_exterior"
+            ? "Approach the main Pishtaq archway to enter the central mausoleum chamber, or press F to cross Yamuna."
+            : scene === "taj_mausoleum"
+            ? !isMausoleumExplored
+              ? "Inspect the royal cenotaphs of Emperor Shah Jahan and Empress Mumtaz Mahal."
+              : "Mausoleum fully explored! Walk down to exit to the terrace."
+            : scene === "taj_mehtab_bagh"
+            ? !isArchaeologistTalked
+              ? "Explore Mehtab Bagh and talk to the Caretaker Archaeologist to locate your companion."
+              : "Proceed to the bottom-right carriage to Delhi, or walk up across the pier to return to Taj exterior."
+            : scene === "red_fort_diwani_khas"
+            ? "All the ministers are waiting for Badshah Shah Jahan. Inspect the legendary Peacock Throne (Takht-i-Taus)!"
+            : scene === "red_fort_interior"
+            ? "Explore the Chatta Chowk covered bazaar and trade with the imperial merchants."
+            : scene === "red_fort_plaza"
+            ? "Proceed into the Diwan-i-Khas or trade in the Chatta Chowk arcade bazaar."
+            : scene === "red_fort_rang_mahal"
+            ? "You are in the Rang Mahal, Emperor Shah Jahan's palace for his queens. Find the imperial key before the queens return from their hunt!"
+            : scene === "red_fort_corridor"
+            ? (hasFoundDungeonKey
+                ? "You have the royal key! Approach the door and press [E] to unlock the dungeon and rescue your companion!"
+                : "The dungeon door is locked! Search the Rang Mahal for the royal key to rescue your companion.")
+            : "Walk forward into the monumental Lahori Gate of the Red Fort."
+        }
+        cluesStatus={MUGHAL_HISTORICAL_CLUES.map(clue => discoveredClueIds.includes(clue.id))}
+        onCluesClick={() => setShowCluesModal(true)}
+      />
 
       {/* Top Right: Actions & Minimap */}
       <div className="absolute top-6 right-6 flex flex-col items-end gap-3">

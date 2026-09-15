@@ -103,8 +103,8 @@ CHARACTER_VOICE_PROFILES = {
         "name": "Master Kallappa",
         "role": "Kinhal Craft Guild Artisan",
         "description": (
-            "A warm, elderly Indian male artisan speaking slow, gentle, dignified Indian English with a soft South Indian Kannada accent. "
-            "His voice is aged, gravelly, and respectful, speaking like a 16th-century master woodcraft artisan from Vijayanagara with wisdom, humility, and calm patience."
+            "An old man's voice. A warm, very elderly Indian male artisan speaking slow, gentle, dignified Indian English with a soft South Indian accent. "
+            "His voice is aged, gravelly, respectful, and slightly raspy, speaking like a 16th-century master woodcraft artisan with wisdom, humility, and calm patience."
         ),
         "fallback_speaker": "ratan",
         "fallback_pace": 0.80,
@@ -129,6 +129,33 @@ CHARACTER_VOICE_PROFILES = {
         "description": "A deep, resonant, cinematic Indian male voice delivering historical lore.",
         "fallback_speaker": "ratan",
         "fallback_pace": 0.88,
+        "language_code": "en-IN"
+    },
+    "duarte": {
+        "id": "duarte",
+        "name": "Senhor Duarte",
+        "role": "Overseas Chronicler & Emissary",
+        "description": "An adult male speaking clear Indian English with a slight formal, measured tone. He sounds like a scholarly foreign emissary recounting his observations of a grand empire.",
+        "fallback_speaker": "rahul",
+        "fallback_pace": 0.95,
+        "language_code": "en-IN"
+    },
+    "raghavendra": {
+        "id": "raghavendra",
+        "name": "Raghavendra",
+        "role": "Temple Musician",
+        "description": "A calm, devoted Indian male voice speaking softly but clearly in Indian English. He sounds like a traditional temple artist immersed in his craft.",
+        "fallback_speaker": "ratan",
+        "fallback_pace": 0.90,
+        "language_code": "en-IN"
+    },
+    "keeper": {
+        "id": "keeper",
+        "name": "Lotus Mahal Keeper",
+        "role": "Keeper of the Records",
+        "description": "An elderly Indian male speaking moderately slow, calm Indian English. He sounds like a wise, secretive librarian guarding ancient royal documents.",
+        "fallback_speaker": "ratan",
+        "fallback_pace": 0.80,
         "language_code": "en-IN"
     }
 }
@@ -180,6 +207,12 @@ def get_character_profile(character_id: str) -> dict:
         return CHARACTER_VOICE_PROFILES["archaeologist"]
     if "narrator" in key or "story" in key or "chronicler" in key:
         return CHARACTER_VOICE_PROFILES["narrator"]
+    if "duarte" in key or "traveler" in key:
+        return CHARACTER_VOICE_PROFILES["duarte"]
+    if "raghavendra" in key or "musician" in key:
+        return CHARACTER_VOICE_PROFILES["raghavendra"]
+    if "keeper" in key or "librarian" in key:
+        return CHARACTER_VOICE_PROFILES["keeper"]
     return CHARACTER_VOICE_PROFILES.get(key, CHARACTER_VOICE_PROFILES["jolly"])
 
 
