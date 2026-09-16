@@ -169,7 +169,7 @@ export default function RajasthanGameScreen() {
     } else {
       if (isAutoIntro) return; // Never repeat intro automatically
       const returnSpeech = "Khamma Ghani, young traveller! Are you ready to roll the wooden pasa dice and challenge me in royal Chaupar?";
-      setChachaAudioUrl(undefined);
+      setChachaAudioUrl("/buzurg_chacha_return.wav");
       setChachaSpeechText(returnSpeech);
       setChachaOptions([
         { id: 1, text: "I am ready! Let us roll the pasa dice!" },
@@ -2296,20 +2296,12 @@ export default function RajasthanGameScreen() {
 
     const chachaStairsText = "Beta, go towards the staircase! Ascend the steps to the upper passage and reach the glorious Vijay Stambh!";
     setChachaSpeechText(chachaStairsText);
-    setChachaAudioUrl(undefined);
+    setChachaAudioUrl("/buzurg_chacha_stairs.wav");
     setChachaOptions([
       { id: 10, text: "Ji Chacha-ji! Heading towards the staircase now." },
       { id: 11, text: "Thank you for the wonderful Chaupar match, Chacha-ji!" }
     ]);
     setShowChachaDialogue(true);
-
-    playCharacterDialogue({
-      character: "chacha",
-      text: chachaStairsText,
-      onError: () => {
-        playNarration(chachaStairsText, { speaker: "ratan", pace: 0.85, language_code: "en-IN" });
-      }
-    });
   };
 
   const handleResetChauparMatch = () => {
@@ -3803,16 +3795,12 @@ export default function RajasthanGameScreen() {
           // Buzurg Chacha congratulates player and opens courtyard staircase
           const chachaWinSpeech = "Shabash, young warrior! You have triumphed in royal Chaupar and proven your wisdom and patience! Ascend the grand staircase to the upper passage and reach the glorious Vijay Stambh!";
           setChachaSpeechText(chachaWinSpeech);
-          setChachaAudioUrl(undefined);
+          setChachaAudioUrl("/buzurg_chacha_win.wav");
           setChachaOptions([
             { id: 10, text: "Ji Chacha-ji! Heading towards the staircase now." },
             { id: 11, text: "Thank you for the wonderful Chaupar match, Chacha-ji!" }
           ]);
           setShowChachaDialogue(true);
-          playCharacterDialogue({
-            character: "chacha",
-            text: chachaWinSpeech,
-          });
         }}
       />
 
