@@ -70,6 +70,8 @@ export default function RajasthanGameScreen() {
   const chittorgarhAudioRef = useRef<HTMLAudioElement | null>(null);
   // --- BHANGARH KILA THEME MUSIC REF ---
   const bhangarhAudioRef = useRef<HTMLAudioElement | null>(null);
+  // --- KUMBHALGARH MOUNTAIN WIND AMBIENCE REF ---
+  const kumbhalgarhWindAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // --- NOW PLAYING SONG BANNER STATE (Image 1: 3s Display & Click-to-Mute) ---
   const [showSongBanner, setShowSongBanner] = useState<boolean>(true);
@@ -611,9 +613,123 @@ export default function RajasthanGameScreen() {
     }
   }, [stage, isTransitioning, isCampaignComplete, isMusicMuted]);
 
-  // Pause all background music on unmount
+  // --- KUMBHALGARH MOUNTAIN WIND AMBIENCE (OPEN-AIR FORT WALL SECTIONS ONLY) ---
+  const windFadeIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const isKumbhalgarhWallOutdoor =
+      stage === 2 &&
+      (scene === "kumbhalgarh_gate" ||
+        scene === "kumbhalgarh_great_wall" ||
+        scene === "kumbhalgarh_zigzag_gates") &&
+      !isCampaignComplete;
+
+    if (isKumbhalgarhWallOutdoor) {
+      if (windFadeIntervalRef.current) {
+        clearInterval(windFadeIntervalRef.current);
+        windFadeIntervalRef.current = null;
+      }
+
+      if (!kumbhalgarhWindAudioRef.current) {
+        const audio = new Audio("/audio/kumbhalgarh_wind_ambience.wav");
+        audio.loop = true;
+        audio.volume = 0;
+        audio.onended = () => {
+          audio.currentTime = 0;
+          audio.play().catch(() => {});
+        };
+        kumbhalgarhWindAudioRef.current = audio;
+      }
+
+      const audio = kumbhalgarhWindAudioRef.current;
+
+      if (isSoundMuted || isMusicMuted) {
+        audio.pause();
+      } else {
+        if (audio.paused) {
+          audio.volume = 0;
+          audio.play().catch((err) => {
+            console.log("Kumbhalgarh wind autoplay pending player gesture:", err?.message || err);
+          });
+        }
+        // Smooth fade-in to target volume 0.22
+        const targetVol = 0.22;
+        const step = 0.02;
+        windFadeIntervalRef.current = setInterval(() => {
+          if (!kumbhalgarhWindAudioRef.current) return;
+          if (kumbhalgarhWindAudioRef.current.volume < targetVol) {
+            kumbhalgarhWindAudioRef.current.volume = Math.min(
+              targetVol,
+              kumbhalgarhWindAudioRef.current.volume + step
+            );
+          } else {
+            if (windFadeIntervalRef.current) {
+              clearInterval(windFadeIntervalRef.current);
+              windFadeIntervalRef.current = null;
+            }
+          }
+        }, 40);
+      }
+
+      const triggerOnGesture = () => {
+        if (
+          isKumbhalgarhWallOutdoor &&
+          !isSoundMuted &&
+          !isMusicMuted &&
+          kumbhalgarhWindAudioRef.current &&
+          kumbhalgarhWindAudioRef.current.paused
+        ) {
+          kumbhalgarhWindAudioRef.current.play().catch(() => {});
+        }
+      };
+
+      window.addEventListener("click", triggerOnGesture, { once: true });
+      window.addEventListener("keydown", triggerOnGesture, { once: true });
+
+      return () => {
+        window.removeEventListener("click", triggerOnGesture);
+        window.removeEventListener("keydown", triggerOnGesture);
+      };
+    } else {
+      // Smooth fade-out on exiting Kumbhalgarh open-air wall sections
+      if (kumbhalgarhWindAudioRef.current && !kumbhalgarhWindAudioRef.current.paused) {
+        if (windFadeIntervalRef.current) {
+          clearInterval(windFadeIntervalRef.current);
+        }
+        const step = 0.03;
+        windFadeIntervalRef.current = setInterval(() => {
+          if (!kumbhalgarhWindAudioRef.current) {
+            if (windFadeIntervalRef.current) clearInterval(windFadeIntervalRef.current);
+            return;
+          }
+          if (kumbhalgarhWindAudioRef.current.volume > step) {
+            kumbhalgarhWindAudioRef.current.volume = Math.max(
+              0,
+              kumbhalgarhWindAudioRef.current.volume - step
+            );
+          } else {
+            kumbhalgarhWindAudioRef.current.volume = 0;
+            kumbhalgarhWindAudioRef.current.pause();
+            kumbhalgarhWindAudioRef.current.currentTime = 0;
+            if (windFadeIntervalRef.current) {
+              clearInterval(windFadeIntervalRef.current);
+              windFadeIntervalRef.current = null;
+            }
+          }
+        }, 40);
+      }
+    }
+  }, [stage, scene, isCampaignComplete, isSoundMuted, isMusicMuted]);
+
+  // Pause all background audio on unmount
   useEffect(() => {
     return () => {
+      if (windFadeIntervalRef.current) {
+        clearInterval(windFadeIntervalRef.current);
+        windFadeIntervalRef.current = null;
+      }
       if (chittorgarhAudioRef.current) {
         chittorgarhAudioRef.current.pause();
         chittorgarhAudioRef.current.currentTime = 0;
@@ -621,6 +737,10 @@ export default function RajasthanGameScreen() {
       if (bhangarhAudioRef.current) {
         bhangarhAudioRef.current.pause();
         bhangarhAudioRef.current.currentTime = 0;
+      }
+      if (kumbhalgarhWindAudioRef.current) {
+        kumbhalgarhWindAudioRef.current.pause();
+        kumbhalgarhWindAudioRef.current.currentTime = 0;
       }
     };
   }, []);
@@ -655,6 +775,10 @@ export default function RajasthanGameScreen() {
     if (bhangarhAudioRef.current) {
       bhangarhAudioRef.current.pause();
       bhangarhAudioRef.current.currentTime = 0;
+    }
+    if (kumbhalgarhWindAudioRef.current) {
+      kumbhalgarhWindAudioRef.current.pause();
+      kumbhalgarhWindAudioRef.current.currentTime = 0;
     }
     setShowKuldharaNarratorBanner(false);
     setHasKuldharaNarrationFinished(false);
@@ -2431,7 +2555,7 @@ export default function RajasthanGameScreen() {
       case "vijay_stambh":
         return "Gaze upon the majestic Vijay Stambh. Press E to go inside, or walk to the right path towards the Passage of Broken Walls.";
       case "vijay_stambh_interior":
-        return "Explore the carved sandstone chamber of Vijay Stambh. Walk near architectural carvings and press E to inspect with Shilpa Drishti (शिल्प दृष्टि).";
+        return "Search the sandstone architecture to visually find the target glyph, approach it, and press E to use Shilpa Drishti (शिल्प दृष्टि).";
       case "jauhar_passage":
         return "Traverse the Passage of Broken Walls. Move straight ahead towards the archway to enter Jauhar Kund.";
       case "jauhar_kund":
@@ -2640,6 +2764,10 @@ export default function RajasthanGameScreen() {
               if (bhangarhAudioRef.current) {
                 bhangarhAudioRef.current.pause();
                 bhangarhAudioRef.current.currentTime = 0;
+              }
+              if (kumbhalgarhWindAudioRef.current) {
+                kumbhalgarhWindAudioRef.current.pause();
+                kumbhalgarhWindAudioRef.current.currentTime = 0;
               }
               router.push("/dashboard");
             }}

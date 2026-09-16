@@ -1,21 +1,23 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { soundFx } from "../../../../services/soundService";
 import { recordGameWinToDatabase } from "../../../../services/gameProgressService";
 import {
   CarvingHotspotDef,
   CARVING_HOTSPOTS,
+  TARGET_HUNT_SEQUENCE,
   CANONICAL_SOLUTION_SEQUENCE,
+  CANONICAL_JOLLY_INTRO,
   CANONICAL_JOLLY_ALL_FOUND,
-  CANONICAL_JOLLY_WRONG_HINT,
 } from "../data/vijayStambhData";
+import VijayStambhGlyphArt from "./VijayStambhGlyphArt";
 
 interface VijayStambhCarvingSystemProps {
   playerPos: { x: number; y: number };
   onTriggerJollySpeech: (text: string, badge?: "normal" | "glowing" | "shaking" | "doubt") => void;
-  onPuzzleSolved: () => void;
-  onExitInterior: () => void;
+  onPuzzleSolved?: () => void;
+  onExitInterior?: () => void;
 }
 
 export default function VijayStambhCarvingSystem({
@@ -37,56 +39,46 @@ export default function VijayStambhCarvingSystem({
     return [];
   });
 
-  const [activeHotspot, setActiveHotspot] = useState<CarvingHotspotDef | null>(null);
-  const [isShilpaDrishtiActive, setIsShilpaDrishtiActive] = useState<boolean>(false);
-  const [showJournal, setShowJournal] = useState<boolean>(false);
+  // Shilpa Drishti modal state
+  const [isShilpaDrishtiActive, setIsShilpaDrishtiActive] = useState(false);
+  const [activeGlyph, setActiveGlyph] = useState<CarvingHotspotDef | null>(null);
+  const [revealingGlyphId, setRevealingGlyphId] = useState<string | null>(null);
 
-  // Final Inscription Puzzle state
-  const [showFinalPuzzle, setShowFinalPuzzle] = useState<boolean>(false);
-  const [placedSlots, setPlacedSlots] = useState<Array<CarvingHotspotDef | null>>(Array(9).fill(null));
+  // Journal & Final Puzzle state
+  const [showJournal, setShowJournal] = useState(false);
+  const [showFinalPuzzle, setShowFinalPuzzle] = useState(false);
+  const [placedSlots, setPlacedSlots] = useState<(CarvingHotspotDef | null)[]>(
+    Array(9).fill(null)
+  );
   const [availableGlyphs, setAvailableGlyphs] = useState<CarvingHotspotDef[]>([]);
-  const [isPuzzleSolvedState, setIsPuzzleSolvedState] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("sculptors_testament_solved") === "true";
-    }
-    return false;
-  });
   const [puzzleFeedback, setPuzzleFeedback] = useState<string | null>(null);
-  const [isVictoryAnim, setIsVictoryAnim] = useState<boolean>(false);
-  const [showHistoricalCard, setShowHistoricalCard] = useState<boolean>(false);
+  const [isPuzzleSolvedState, setIsPuzzleSolvedState] = useState(false);
 
-  // Proximity detection to undiscovered hotspots
-  const [nearbyHotspot, setNearbyHotspot] = useState<CarvingHotspotDef | null>(null);
-
-  // Proximity detection to interior exit door
-  const isNearInteriorExit =
-    playerPos.x >= 38.0 &&
-    playerPos.x <= 62.0 &&
-    playerPos.y >= 78.0 &&
-    playerPos.y <= 84.0;
-
-  useEffect(() => {
-    if (isShilpaDrishtiActive || showFinalPuzzle || showJournal) {
-      setNearbyHotspot(null);
-      return;
-    }
-
-    let found: CarvingHotspotDef | null = null;
-    for (const spot of CARVING_HOTSPOTS) {
-      // Discovered hotspots are permanently non-interactive in the world
-      if (discoveredGlyphIds.includes(spot.glyphId)) {
-        continue;
-      }
-      const dx = playerPos.x - spot.x;
-      const dy = playerPos.y - spot.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist <= spot.radius) {
-        found = spot;
-        break;
+  // Determine current target glyph in the sequential hunt
+  const currentTargetId = useMemo(() => {
+    for (const id of TARGET_HUNT_SEQUENCE) {
+      if (!discoveredGlyphIds.includes(id)) {
+        return id;
       }
     }
-    setNearbyHotspot(found);
-  }, [playerPos, isShilpaDrishtiActive, showFinalPuzzle, showJournal, discoveredGlyphIds]);
+    return null; // All 9 discovered
+  }, [discoveredGlyphIds]);
+
+  const currentTargetDef = useMemo(() => {
+    if (!currentTargetId) return null;
+    return CARVING_HOTSPOTS.find((h) => h.glyphId === currentTargetId) || null;
+  }, [currentTargetId]);
+
+  // Check proximity STRICTLY to the CURRENT TARGET GLYPH only (Anti-Brute-Force)
+  const isNearTargetGlyph = useMemo(() => {
+    if (!currentTargetDef) return false;
+    if (isShilpaDrishtiActive || showFinalPuzzle || showJournal) return false;
+
+    const dx = playerPos.x - currentTargetDef.playerX;
+    const dy = playerPos.y - currentTargetDef.playerY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    return dist <= currentTargetDef.radius;
+  }, [playerPos, currentTargetDef, isShilpaDrishtiActive, showFinalPuzzle, showJournal]);
 
   // Persist discovered glyphs
   const saveDiscoveredGlyphs = (ids: string[]) => {
@@ -98,76 +90,68 @@ export default function VijayStambhCarvingSystem({
     }
   };
 
-  // Open Shilpa Drishti Inspection
-  const handleOpenShilpaDrishti = useCallback(
-    (spot: CarvingHotspotDef) => {
-      // Discovered hotspots cannot be inspected again in the world
-      if (discoveredGlyphIds.includes(spot.glyphId)) {
-        return;
-      }
-      soundFx.playKeyboardClick();
-      setActiveHotspot(spot);
-      setIsShilpaDrishtiActive(true);
+  // Inspect & Discover Handler (Activates Shilpa Drishti)
+  const handleInspectTarget = useCallback(() => {
+    if (!currentTargetDef) return;
+    if (discoveredGlyphIds.includes(currentTargetDef.glyphId)) return;
 
-      const updated = [...discoveredGlyphIds, spot.glyphId];
-      saveDiscoveredGlyphs(updated);
+    soundFx.playClueChime();
+    setRevealingGlyphId(currentTargetDef.glyphId);
+    setActiveGlyph(currentTargetDef);
+    setIsShilpaDrishtiActive(true);
 
-      if (updated.length === 9) {
-        onTriggerJollySpeech(CANONICAL_JOLLY_ALL_FOUND, "glowing");
-      }
-    },
-    [discoveredGlyphIds, onTriggerJollySpeech]
-  );
+    const updated = [...discoveredGlyphIds, currentTargetDef.glyphId];
+    saveDiscoveredGlyphs(updated);
 
-  // Authoritative Keyboard Shortcut Handler for E & J keys inside Vijay Stambh Interior
+    if (updated.length === 9) {
+      onTriggerJollySpeech(CANONICAL_JOLLY_ALL_FOUND, "glowing");
+    } else {
+      onTriggerJollySpeech(
+        `Shilpa Drishti revealed the ${currentTargetDef.name}! ${updated.length} of 9 discovered.`,
+        "normal"
+      );
+    }
+
+    setTimeout(() => {
+      setRevealingGlyphId(null);
+    }, 1200);
+  }, [currentTargetDef, discoveredGlyphIds, onTriggerJollySpeech]);
+
+  // Keyboard handler for E key (Authoritative inside Vijay Stambh)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key.toLowerCase() === "e") {
-        if (nearbyHotspot && !isShilpaDrishtiActive && !showFinalPuzzle && !showJournal) {
+        if (isNearTargetGlyph && !isShilpaDrishtiActive && !showFinalPuzzle && !showJournal) {
           e.preventDefault();
           e.stopPropagation();
-          handleOpenShilpaDrishti(nearbyHotspot);
-        } else if (isNearInteriorExit && !isShilpaDrishtiActive && !showFinalPuzzle && !showJournal) {
-          e.preventDefault();
-          e.stopPropagation();
-          onExitInterior();
-        }
-      } else if (e.key.toLowerCase() === "j") {
-        if (!isShilpaDrishtiActive && !showFinalPuzzle) {
-          setShowJournal((prev) => !prev);
+          handleInspectTarget();
         }
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [
-    nearbyHotspot,
-    isNearInteriorExit,
-    isShilpaDrishtiActive,
-    showFinalPuzzle,
-    showJournal,
-    handleOpenShilpaDrishti,
-    onExitInterior,
-  ]);
+  }, [isNearTargetGlyph, isShilpaDrishtiActive, showFinalPuzzle, showJournal, handleInspectTarget]);
 
-  // Initialize Final Puzzle tray
-  const handleOpenFinalPuzzle = () => {
-    soundFx.playKeyboardClick();
-    const discoveredHotspots = CARVING_HOTSPOTS.filter((h) =>
-      discoveredGlyphIds.includes(h.glyphId)
-    );
-    setAvailableGlyphs(discoveredHotspots);
-    setPlacedSlots(Array(9).fill(null));
-    setPuzzleFeedback(null);
-    setShowFinalPuzzle(true);
-  };
+  // Setup Final Puzzle available pieces when modal opens
+  useEffect(() => {
+    if (showFinalPuzzle) {
+      const discoveredHotspots = CARVING_HOTSPOTS.filter((h) =>
+        discoveredGlyphIds.includes(h.glyphId)
+      );
+      setAvailableGlyphs(discoveredHotspots);
+      setPlacedSlots(Array(9).fill(null));
+      setPuzzleFeedback(null);
+    }
+  }, [showFinalPuzzle, discoveredGlyphIds]);
 
+  // Slot placement logic for final puzzle
   const handlePlaceGlyphInSlot = (glyph: CarvingHotspotDef, slotIndex: number) => {
-    soundFx.playKeyboardClick();
+    if (isPuzzleSolvedState) return;
+    soundFx.playSelect();
+
     setPlacedSlots((prev) => {
       const next = [...prev];
-      // If glyph is already in another slot, remove it from there
       const existingIdx = next.findIndex((item) => item?.glyphId === glyph.glyphId);
       if (existingIdx !== -1) {
         next[existingIdx] = null;
@@ -180,211 +164,264 @@ export default function VijayStambhCarvingSystem({
   };
 
   const handleRemoveFromSlot = (slotIndex: number) => {
-    soundFx.playKeyboardClick();
+    if (isPuzzleSolvedState) return;
     const item = placedSlots[slotIndex];
     if (!item) return;
 
+    soundFx.playTileSwap();
     setPlacedSlots((prev) => {
       const next = [...prev];
       next[slotIndex] = null;
       return next;
     });
-
     setAvailableGlyphs((prev) => [...prev, item]);
   };
 
-  const handleVerifySequence = async () => {
-    soundFx.playKeyboardClick();
-
-    // Check if all 9 slots filled
-    if (placedSlots.some((s) => s === null)) {
+  const handleVerifyFinalSequence = async () => {
+    const isFull = placedSlots.every((s) => s !== null);
+    if (!isFull) {
+      soundFx.playClose();
       setPuzzleFeedback("Place all nine discovered glyphs into the inscription slots.");
       return;
     }
 
     const currentSeq = placedSlots.map((s) => s!.glyphId);
     const isCorrect = currentSeq.every(
-      (id, idx) => id === CANONICAL_SOLUTION_SEQUENCE[idx]
+      (val, idx) => val === CANONICAL_SOLUTION_SEQUENCE[idx]
     );
 
     if (isCorrect) {
-      setIsVictoryAnim(true);
-      setPuzzleFeedback(null);
       soundFx.playClueFound();
       setIsPuzzleSolvedState(true);
-
-      if (typeof window !== "undefined") {
-        localStorage.setItem("sculptors_testament_solved", "true");
-      }
-
-      // Record victory via gameProgressService
-      await recordGameWinToDatabase({
-        era: "rajputana",
-        gameType: "sculptors_testament",
-        prizeUnlocked: "sculptors_testament_master",
-        score: 1000,
-        metadata: {
-          solution: CANONICAL_SOLUTION_SEQUENCE,
-          discoveredCount: 9,
-        },
-      });
-
+      setPuzzleFeedback("✨ Sculptor's Inscription Deciphered! Mewar's heritage lives forever.");
       onTriggerJollySpeech(
-        "✨ Mere aaka! The hidden Sculptor's Testament shines forth in pure gold! The secret of Chittorgarh's master builders is restored!",
+        "Wah mere aaka! The true testament of Sutradhara Jaita has been revealed!",
         "glowing"
       );
 
-      setTimeout(() => {
-        setIsVictoryAnim(false);
-        setShowFinalPuzzle(false);
-        setShowHistoricalCard(true);
-        onPuzzleSolved();
-      }, 2400);
+      await recordGameWinToDatabase({
+        era: "rajputana",
+        gameType: "vijay_stambh_carvings",
+        prizeUnlocked: "architect_inscription_seal",
+        score: 1000,
+        metadata: {
+          discoveredCount: 9,
+          solvedOrder: currentSeq,
+        },
+      });
+
+      onPuzzleSolved?.();
     } else {
-      onTriggerJollySpeech(CANONICAL_JOLLY_WRONG_HINT, "shaking");
-      setPuzzleFeedback(
-        "The inscription does not read naturally. Re-read the clues in your Sculptor's Testament Journal to deduce the true order."
+      soundFx.playClose();
+      setPuzzleFeedback("The harmony of the testament is broken. Review the architectural clues!");
+      onTriggerJollySpeech(
+        "Something feels out of place, mere aaka. Match the bedrock to the sky.",
+        "doubt"
       );
     }
   };
 
   return (
     <>
-      {/* --- HUD PROGRESS CAPSULE (SINGLE-SCREEN PUZZLE STYLE) --- */}
-      <div className="fixed top-24 left-6 z-20 flex flex-col gap-2">
-        <div className="bg-[#fff9ea] border-2 border-black rounded-xl p-3 shadow-[4px_4px_0_0_rgba(0,0,0,1)] w-80">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] font-black text-amber-900 uppercase tracking-widest">
-              THE SCULPTOR&apos;S TESTAMENT
+      {/* --- TOP HUD: TARGET GLYPH SEARCH OBJECTIVE --- */}
+      <div className="fixed top-20 left-6 z-20 flex flex-col gap-2 pointer-events-none">
+        <div className="bg-[#fff9ea] border-2 border-black rounded-xl p-3 shadow-[4px_4px_0_0_rgba(0,0,0,1)] w-80 pointer-events-auto">
+          <div className="flex items-center justify-between mb-1.5 border-b border-amber-900/30 pb-1">
+            <span className="text-[10px] font-black text-amber-950 uppercase tracking-widest flex items-center gap-1.5">
+              <span>🏛️</span>
+              <span>THE SCULPTOR&apos;S TESTAMENT</span>
             </span>
-            <span className="text-[11px] font-black bg-amber-400 border border-black px-2 py-0.5 rounded shadow-sm">
+            <span className="text-[11px] font-black bg-amber-400 text-amber-950 border border-black px-2 py-0.5 rounded shadow-sm font-mono">
               {discoveredGlyphIds.length} / 9 GLYPHS
             </span>
           </div>
 
-          <div className="w-full bg-amber-200/60 rounded-full h-2 border border-amber-800/40 overflow-hidden mb-2">
-            <div
-              className="bg-amber-600 h-full transition-all duration-500"
-              style={{ width: `${(discoveredGlyphIds.length / 9) * 100}%` }}
-            ></div>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => {
-                soundFx.playKeyboardClick();
-                setShowJournal(true);
-              }}
-              className="text-[11px] font-bold text-amber-950 underline hover:text-amber-700 flex items-center gap-1 cursor-pointer"
-            >
-              📖 Open Journal [J]
-            </button>
-
-            {discoveredGlyphIds.length === 9 && !isPuzzleSolvedState && (
-              <button
-                onClick={handleOpenFinalPuzzle}
-                className="bg-amber-500 hover:bg-amber-400 text-black border border-black px-2.5 py-1 rounded text-[11px] font-extrabold shadow-[2px_2px_0_0_rgba(0,0,0,1)] animate-bounce cursor-pointer"
-              >
-                📜 Reconstruct Inscription
-              </button>
-            )}
-
-            {isPuzzleSolvedState && (
-              <span className="text-[11px] font-extrabold text-emerald-800 flex items-center gap-1">
-                ✓ Solved
+          {/* Target Glyph Display or Completed Banner */}
+          {currentTargetDef ? (
+            <div className="flex items-center gap-3 bg-amber-100/90 border border-amber-800/40 rounded-lg p-2">
+              <div className="w-12 h-12 rounded-lg bg-[#2a1d13] border-2 border-amber-600 flex items-center justify-center shadow-inner shrink-0">
+                <VijayStambhGlyphArt
+                  glyphId={currentTargetDef.glyphId}
+                  size={38}
+                  mode="target"
+                />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[9px] font-black text-amber-800 uppercase tracking-wider">
+                  FIND THIS GLYPH IN THE ROOM:
+                </span>
+                <span className="text-xs font-mono font-black text-amber-950 tracking-wider">
+                  {currentTargetDef.glyphId}
+                </span>
+                <span className="text-[10px] text-amber-900/80 italic font-serif">
+                  Search the sandstone architecture
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-1.5 bg-emerald-100 border border-emerald-700 rounded-lg p-2">
+              <span className="text-xs font-extrabold text-emerald-950 flex items-center gap-1">
+                ✓ ALL 9 GLYPHS DISCOVERED!
               </span>
-            )}
+              <button
+                onClick={() => setShowFinalPuzzle(true)}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs py-1.5 px-3 rounded-md border border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)] cursor-pointer"
+              >
+                🧩 Assemble Testament
+              </button>
+            </div>
+          )}
+
+          {/* Progress Bar & Journal Button */}
+          <div className="mt-2 flex items-center gap-2">
+            <div className="flex-1 bg-amber-200/60 rounded-full h-2 border border-amber-800/40 overflow-hidden">
+              <div
+                className="bg-amber-600 h-full transition-all duration-500"
+                style={{ width: `${(discoveredGlyphIds.length / 9) * 100}%` }}
+              />
+            </div>
+            <button
+              onClick={() => setShowJournal(true)}
+              className="bg-[#fff9ea] hover:bg-amber-200 text-amber-950 font-extrabold text-[10px] px-2 py-0.5 rounded border border-black shadow-xs cursor-pointer flex items-center gap-1"
+            >
+              📖 Journal
+            </button>
           </div>
         </div>
       </div>
 
-      {/* --- PROXIMITY INTERACTION PROMPTS --- */}
-      {nearbyHotspot && !isShilpaDrishtiActive && !showFinalPuzzle && !showJournal && (
+      {/* --- ALL 9 ENVIRONMENTAL CAMOUFLAGED GLYPHS IN THE ROOM --- */}
+      <div className="fixed inset-0 pointer-events-none z-15">
+        {CARVING_HOTSPOTS.map((hotspot) => {
+          const isDiscovered = discoveredGlyphIds.includes(hotspot.glyphId);
+          const isTarget = currentTargetId === hotspot.glyphId;
+          const isRevealing = revealingGlyphId === hotspot.glyphId;
+
+          return (
+            <div
+              key={hotspot.id}
+              className="absolute transform -translate-x-1/2 -translate-y-1/2 select-none pointer-events-auto cursor-pointer"
+              style={{
+                left: `${hotspot.renderX}%`,
+                top: `${hotspot.renderY}%`,
+              }}
+              onClick={() => {
+                if (isTarget && isNearTargetGlyph) {
+                  handleInspectTarget();
+                }
+              }}
+              title={
+                isDiscovered
+                  ? `${hotspot.glyphId} (Discovered)`
+                  : isTarget
+                  ? `Target: ${hotspot.glyphId} (Approach & Press E to use Shilpa Drishti)`
+                  : "Ancient Wall Carving"
+              }
+            >
+              <div
+                className={`transition-all duration-500 flex items-center justify-center ${
+                  isRevealing
+                    ? "scale-150 animate-pulse drop-shadow-[0_0_16px_rgba(251,191,36,1)]"
+                    : isDiscovered
+                    ? "opacity-40 grayscale-[30%] brightness-90 scale-95"
+                    : isTarget && isNearTargetGlyph
+                    ? "opacity-95 scale-110 drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]"
+                    : "opacity-65 hover:opacity-90 transition-opacity"
+                }`}
+              >
+                <VijayStambhGlyphArt
+                  glyphId={hotspot.glyphId}
+                  size={hotspot.renderSize}
+                  mode={
+                    isRevealing
+                      ? "revealing"
+                      : isDiscovered
+                      ? "collected"
+                      : "camouflaged"
+                  }
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* --- AUTHORITATIVE PROXIMITY PROMPT (CURRENT TARGET ONLY) --- */}
+      {isNearTargetGlyph && currentTargetDef && (
         <div
-          className="fixed bottom-[16%] left-1/2 -translate-x-1/2 z-30 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2.5 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-extrabold text-black flex items-center gap-2 animate-bounce cursor-pointer"
-          onClick={() => handleOpenShilpaDrishti(nearbyHotspot)}
+          className="fixed bottom-[16%] left-1/2 -translate-x-1/2 z-30 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2.5 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-extrabold text-black flex items-center gap-2 animate-bounce cursor-pointer pointer-events-auto"
+          onClick={handleInspectTarget}
         >
-          <span className="bg-amber-400 border border-black rounded px-2 py-0.5 text-[11px]">
+          <span className="bg-amber-400 border border-black rounded px-2 py-0.5 text-[11px] font-mono">
             E
           </span>
-          <span>[E] INSPECT WITH SHILPA DRISHTI (शिल्प दृष्टि)</span>
+          <span className="flex items-center gap-1.5">
+            <span>👁️</span>
+            <span>USE SHILPA DRISHTI</span>
+          </span>
         </div>
       )}
 
-      {!nearbyHotspot && isNearInteriorExit && !isShilpaDrishtiActive && !showFinalPuzzle && !showJournal && (
-        <div
-          className="fixed bottom-[16%] left-1/2 -translate-x-1/2 z-30 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2.5 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce cursor-pointer"
-          onClick={onExitInterior}
-        >
-          <span className="bg-amber-400 border border-black rounded px-2 py-0.5 text-[11px]">
-            E
-          </span>
-          <span>[E] EXIT TO PLAZA</span>
-        </div>
-      )}
-
-      {/* --- SHILPA DRISHTI INSPECTION OVERLAY --- */}
-      {isShilpaDrishtiActive && activeHotspot && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-300">
-          <div className="relative bg-[#fff9ea] border-4 border-amber-900 rounded-2xl max-w-2xl w-full p-6 shadow-[10px_10px_0_0_rgba(0,0,0,1)] flex flex-col gap-4 text-black">
-            {/* Header */}
-            <div className="flex items-center justify-between border-b-2 border-amber-800/30 pb-3">
+      {/* --- SHILPA DRISHTI INSPECTION REVEAL MODAL --- */}
+      {isShilpaDrishtiActive && activeGlyph && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in zoom-in-95 duration-200">
+          <div className="relative bg-[#fff9ea] border-4 border-amber-900 rounded-2xl max-w-lg w-full p-5 shadow-[10px_10px_0_0_rgba(0,0,0,1)] flex flex-col gap-3 text-black">
+            {/* Header Bar */}
+            <div className="flex items-center justify-between border-b-2 border-amber-800/30 pb-2">
               <div className="flex items-center gap-2">
-                <span className="bg-amber-400 text-amber-950 font-mono font-bold text-xs px-2.5 py-1 rounded border border-black shadow-sm">
-                  SHILPA DRISHTI (शिल्प दृष्टि)
-                </span>
-                <span className="text-xs font-bold text-amber-800">
-                  {activeHotspot.featureName}
+                <span className="text-lg">👁️</span>
+                <span className="text-xs font-black text-amber-950 uppercase tracking-widest">
+                  SHILPA DRISHTI REVEAL
                 </span>
               </div>
               <button
                 onClick={() => setIsShilpaDrishtiActive(false)}
-                className="w-8 h-8 rounded-full bg-red-600 text-white font-extrabold border border-black shadow flex items-center justify-center hover:bg-red-700 cursor-pointer"
+                className="w-7 h-7 rounded-full bg-red-600 text-white font-black text-xs border border-black shadow flex items-center justify-center hover:bg-red-700 cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            {/* Lens View Component */}
-            <div className="relative w-full h-56 bg-[#2a1d13] rounded-xl border-2 border-amber-900/60 overflow-hidden flex items-center justify-center shadow-inner">
-              {/* Subtle Warm Torch Vignette Lens */}
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_30%,_rgba(0,0,0,0.85)_80%)] pointer-events-none" />
-
-              {/* Faint Golden Chisel Marks & SVG Glyph Artwork */}
-              <div className="relative flex flex-col items-center gap-2 text-center z-10 p-4 animate-in zoom-in-95 duration-500">
-                <div className="w-20 h-20 rounded-full bg-amber-500/20 border-2 border-amber-400/80 flex items-center justify-center shadow-[0_0_20px_rgba(251,191,36,0.6)]">
-                  <svg className="w-12 h-12 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                    <circle cx="12" cy="12" r="9" strokeDasharray="3 3" />
-                    <path d="M12 6v12M6 12h12" />
-                    <path d="M8 8l8 8M8 16l8-8" strokeOpacity="0.5" />
-                  </svg>
-                </div>
-                <div className="text-amber-300 font-mono font-black text-xl tracking-widest uppercase shadow-sm">
-                  {activeHotspot.glyphId}
-                </div>
-                <div className="text-amber-100/90 text-xs italic max-w-md">
-                  {activeHotspot.motifDescription}
-                </div>
-              </div>
+            {/* Chiseled Lens Window */}
+            <div className="relative w-full h-44 bg-[#20150d] rounded-xl border-2 border-amber-800/80 overflow-hidden flex flex-col items-center justify-center shadow-inner p-3">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(251,191,36,0.15)_0%,_transparent_70%)]" />
+              <VijayStambhGlyphArt
+                glyphId={activeGlyph.glyphId}
+                size={64}
+                mode="target"
+                className="drop-shadow-[0_0_12px_rgba(251,191,36,0.9)] animate-pulse"
+              />
+              <span className="text-amber-300 font-mono font-black text-lg tracking-widest uppercase mt-2">
+                {activeGlyph.glyphId}
+              </span>
+              <span className="text-amber-200/80 text-[11px] font-bold text-center">
+                {activeGlyph.featureName}
+              </span>
             </div>
 
-            {/* Poetic Contextual Clue Card */}
-            <div className="bg-[#fff3d4] border-2 border-amber-800/40 rounded-xl p-4 shadow-sm">
-              <div className="text-[10px] font-extrabold text-amber-900 uppercase tracking-widest mb-1">
-                DISCOVERED CONTEXTUAL CLUE
+            {/* Contextual Carved Clue */}
+            <div className="bg-[#fff3d4] border-2 border-amber-800/40 rounded-xl p-3 shadow-xs">
+              <div className="text-[10px] font-black text-amber-900 uppercase tracking-wider mb-1">
+                ANCIENT ARCHITECTURAL VERSE
               </div>
-              <div className="text-sm font-serif italic font-bold text-amber-950 leading-relaxed">
-                &ldquo;{activeHotspot.clue}&rdquo;
-              </div>
+              <p className="text-xs font-serif italic font-bold text-amber-950 leading-relaxed">
+                &ldquo;{activeGlyph.clue}&rdquo;
+              </p>
             </div>
 
-            {/* Actions */}
-            <div className="flex items-center justify-end gap-3 pt-2">
+            {/* Lore Note */}
+            <div className="bg-amber-100/70 rounded-lg p-2 border border-amber-700/30 text-[10px] text-amber-900 leading-tight">
+              <span className="font-bold">Historical Fact: </span>
+              {activeGlyph.historicalContext}
+            </div>
+
+            {/* Action Button */}
+            <div className="flex items-center justify-end pt-1">
               <button
                 onClick={() => setIsShilpaDrishtiActive(false)}
-                className="bg-amber-500 hover:bg-amber-400 text-black border-2 border-black font-extrabold text-xs px-5 py-2 rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] cursor-pointer"
+                className="bg-amber-500 hover:bg-amber-400 text-black border-2 border-black font-black text-xs px-5 py-2 rounded-xl shadow-[3px_3px_0_0_rgba(0,0,0,1)] cursor-pointer"
               >
-                Collect Glyph & Close
+                Collect Glyph & Continue Hunt
               </button>
             </div>
           </div>
@@ -393,240 +430,225 @@ export default function VijayStambhCarvingSystem({
 
       {/* --- SCULPTOR'S TESTAMENT JOURNAL MODAL --- */}
       {showJournal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-300">
-          <div className="relative bg-[#fff9ea] border-4 border-amber-900 rounded-2xl max-w-3xl w-full max-h-[85vh] p-6 shadow-[10px_10px_0_0_rgba(0,0,0,1)] flex flex-col gap-4 text-black overflow-hidden">
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="relative bg-[#fff9ea] border-4 border-amber-900 rounded-2xl max-w-2xl w-full max-h-[85vh] p-5 shadow-[10px_10px_0_0_rgba(0,0,0,1)] flex flex-col gap-3 text-black overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between border-b-2 border-amber-800/30 pb-3">
+            <div className="flex items-center justify-between border-b-2 border-amber-800/30 pb-2">
               <div>
-                <h2 className="text-lg font-black text-amber-950 uppercase tracking-wide">
-                  SCULPTOR&apos;S TESTAMENT JOURNAL
+                <h2 className="text-base font-black text-amber-950 uppercase tracking-wide">
+                  📖 SCULPTOR&apos;S TESTAMENT JOURNAL
                 </h2>
-                <div className="text-xs font-bold text-amber-800">
-                  Discovered {discoveredGlyphIds.length} of 9 Ancient Carvings
+                <div className="text-xs font-bold text-amber-800 font-mono">
+                  {discoveredGlyphIds.length} of 9 Ancient Carvings Discovered
                 </div>
               </div>
               <button
                 onClick={() => setShowJournal(false)}
-                className="w-8 h-8 rounded-full bg-red-600 text-white font-extrabold border border-black shadow flex items-center justify-center hover:bg-red-700 cursor-pointer"
+                className="w-7 h-7 rounded-full bg-red-600 text-white font-black text-xs border border-black shadow flex items-center justify-center hover:bg-red-700 cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
             {/* Discovered Clues Grid */}
-            <div className="flex-1 overflow-y-auto pr-2 grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="flex-1 overflow-y-auto pr-1 grid grid-cols-1 md:grid-cols-2 gap-2.5">
               {CARVING_HOTSPOTS.map((spot) => {
                 const isDiscovered = discoveredGlyphIds.includes(spot.glyphId);
                 return (
                   <div
                     key={spot.id}
-                    className={`border-2 rounded-xl p-3 flex flex-col gap-1 transition-all ${
+                    className={`border-2 rounded-xl p-3 flex gap-3 transition-all ${
                       isDiscovered
-                        ? "bg-[#fff5d6] border-amber-800/60 shadow-sm"
-                        : "bg-amber-900/10 border-amber-900/20 opacity-60"
+                        ? "bg-[#fff5d6] border-amber-800/70 shadow-sm"
+                        : "bg-amber-900/10 border-amber-900/20 opacity-50"
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono font-black text-xs text-amber-950 tracking-wider">
-                        {isDiscovered ? spot.glyphId : "?????"}
-                      </span>
-                      <span
-                        className={`text-[10px] font-extrabold px-2 py-0.5 rounded border ${
-                          isDiscovered
-                            ? "bg-amber-400 text-black border-black"
-                            : "bg-gray-300 text-gray-700 border-gray-400"
-                        }`}
-                      >
-                        {isDiscovered ? "DISCOVERED" : "UNDISCOVERED"}
-                      </span>
+                    <div className="w-12 h-12 rounded-lg bg-[#26190e] border border-amber-700 flex items-center justify-center shrink-0">
+                      {isDiscovered ? (
+                        <VijayStambhGlyphArt
+                          glyphId={spot.glyphId}
+                          size={32}
+                          mode="target"
+                        />
+                      ) : (
+                        <span className="text-amber-700/50 font-mono text-xs">?</span>
+                      )}
                     </div>
-
-                    {isDiscovered ? (
-                      <>
-                        <div className="text-[11px] font-bold text-amber-900">
-                          {spot.featureName}
-                        </div>
-                        <div className="text-xs font-serif italic text-amber-950 border-t border-amber-800/20 pt-1.5 mt-1">
-                          &ldquo;{spot.clue}&rdquo;
-                        </div>
-                      </>
-                    ) : (
-                      <div className="text-xs font-mono text-amber-900/60 italic py-2">
-                        Explore Vijay Stambh to inspect this carved feature with Shilpa Drishti.
+                    <div className="flex flex-col flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono font-black text-xs text-amber-950">
+                          {isDiscovered ? spot.glyphId : "Undiscovered"}
+                        </span>
+                        <span
+                          className={`text-[9px] font-black px-1.5 py-0.5 rounded border ${
+                            isDiscovered
+                              ? "bg-amber-400 text-black border-black"
+                              : "bg-gray-300 text-gray-700 border-gray-400"
+                          }`}
+                        >
+                          {isDiscovered ? "DISCOVERED" : "LOCKED"}
+                        </span>
                       </div>
-                    )}
+                      {isDiscovered ? (
+                        <p className="text-[11px] font-serif italic text-amber-950 mt-1 leading-snug">
+                          &ldquo;{spot.clue}&rdquo;
+                        </p>
+                      ) : (
+                        <span className="text-[10px] text-amber-900/60 italic mt-1">
+                          Search the Vijay Stambh architecture.
+                        </span>
+                      )}
+                    </div>
                   </div>
                 );
               })}
             </div>
 
-            {/* Bottom Actions */}
-            <div className="flex items-center justify-between border-t border-amber-800/30 pt-3">
-              <span className="text-xs text-amber-900 font-bold">
-                Read and compare the discovered clues to deduce the secret sequence.
-              </span>
-              {discoveredGlyphIds.length === 9 && !isPuzzleSolvedState && (
-                <button
-                  onClick={() => {
-                    setShowJournal(false);
-                    handleOpenFinalPuzzle();
-                  }}
-                  className="bg-amber-500 hover:bg-amber-400 text-black border-2 border-black font-extrabold text-xs px-4 py-2 rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] cursor-pointer"
-                >
-                  📜 Proceed to Reconstruct Inscription
-                </button>
-              )}
+            {/* Footer */}
+            <div className="flex justify-end pt-1 border-t border-amber-800/20">
+              <button
+                onClick={() => setShowJournal(false)}
+                className="bg-amber-600 hover:bg-amber-500 text-white font-extrabold text-xs px-4 py-2 rounded-xl border-2 border-black cursor-pointer"
+              >
+                Close Journal
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* --- FINAL INSCRIPTION RECONSTRUCTION PUZZLE OVERLAY --- */}
+      {/* --- FINAL SCULPTOR'S TESTAMENT ASSEMBLY PUZZLE MODAL --- */}
       {showFinalPuzzle && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in duration-300">
-          <div className="relative bg-[#fff9ea] border-4 border-amber-900 rounded-2xl max-w-4xl w-full p-6 shadow-[12px_12px_0_0_rgba(0,0,0,1)] flex flex-col gap-5 text-black">
-            {/* Header */}
-            <div className="flex items-center justify-between border-b-2 border-amber-800/30 pb-3">
+        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-in zoom-in-95 duration-200">
+          <div className="relative bg-[#fff9ea] border-4 border-amber-950 rounded-3xl max-w-3xl w-full max-h-[90vh] p-6 shadow-[14px_14px_0_0_rgba(0,0,0,1)] flex flex-col gap-4 text-black overflow-hidden">
+            {/* Header Bar */}
+            <div className="flex items-center justify-between border-b-2 border-amber-800/40 pb-3">
               <div>
-                <h2 className="text-xl font-black text-amber-950 uppercase tracking-wide">
-                  RECONSTRUCT THE SCULPTOR&apos;S TESTAMENT
+                <h2 className="text-lg font-black text-amber-950 uppercase tracking-widest flex items-center gap-2">
+                  <span>🏛️</span>
+                  <span>THE SCULPTOR&apos;S TESTAMENT — INSCRIPTION BOARD</span>
                 </h2>
-                <div className="text-xs font-bold text-amber-800">
-                  Arrange the 9 discovered glyphs into their true logical sequence.
-                </div>
+                <span className="text-xs font-serif text-amber-900 font-semibold italic">
+                  Order the 9 glyphs from Bedrock (Bhoomi) to the Celestial Sky (Akasha).
+                </span>
               </div>
               <button
                 onClick={() => setShowFinalPuzzle(false)}
-                className="w-8 h-8 rounded-full bg-red-600 text-white font-extrabold border border-black shadow flex items-center justify-center hover:bg-red-700 cursor-pointer"
+                className="w-8 h-8 rounded-full bg-red-600 text-white font-black border border-black shadow flex items-center justify-center hover:bg-red-700 cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            {/* 9 Inscription Slots */}
-            <div className="bg-[#fff5d6] border-2 border-amber-900/40 rounded-xl p-4 shadow-inner flex flex-col gap-2">
-              <div className="text-[11px] font-black text-amber-900 uppercase tracking-widest text-center mb-1">
-                INSCRIPTION SLOTS
-              </div>
-              <div className="grid grid-cols-3 sm:grid-cols-9 gap-2">
-                {placedSlots.map((slot, idx) => (
-                  <div
-                    key={idx}
-                    onClick={() => slot && handleRemoveFromSlot(idx)}
-                    className={`h-20 rounded-xl border-2 flex flex-col items-center justify-center p-1 cursor-pointer transition-all ${
-                      slot
-                        ? "bg-amber-400 border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)] hover:bg-amber-300"
-                        : "bg-amber-900/10 border-dashed border-amber-800/40 hover:border-amber-700"
-                    } ${isVictoryAnim ? "animate-pulse border-emerald-600 bg-emerald-300" : ""}`}
-                  >
-                    {slot ? (
-                      <>
-                        <span className="font-mono font-black text-xs text-amber-950 tracking-wider">
-                          {slot.glyphId}
-                        </span>
-                        <span className="text-[9px] text-amber-900/80 font-bold truncate max-w-full">
-                          {slot.name.split(" ")[0]}
-                        </span>
-                      </>
-                    ) : (
-                      <span className="font-mono font-bold text-xs text-amber-900/40">
-                        [ ? ]
+            {/* 9 Inscription Sequence Slots */}
+            <div className="grid grid-cols-3 sm:grid-cols-9 gap-2">
+              {placedSlots.map((slot, index) => (
+                <div
+                  key={index}
+                  onClick={() => slot && handleRemoveFromSlot(index)}
+                  className={`h-24 rounded-xl border-2 flex flex-col items-center justify-between p-1.5 transition-all cursor-pointer ${
+                    slot
+                      ? "bg-amber-100 border-amber-800 shadow-sm hover:border-red-600"
+                      : "bg-[#25170d]/10 border-dashed border-amber-900/40 hover:bg-amber-100/50"
+                  }`}
+                >
+                  <span className="text-[10px] font-black text-amber-900 font-mono">
+                    #{index + 1}
+                  </span>
+                  {slot ? (
+                    <>
+                      <VijayStambhGlyphArt glyphId={slot.glyphId} size={36} mode="target" />
+                      <span className="text-[9px] font-mono font-black text-amber-950 truncate max-w-full">
+                        {slot.glyphId}
                       </span>
-                    )}
-                  </div>
-                ))}
-              </div>
+                    </>
+                  ) : (
+                    <span className="text-[9px] text-amber-900/40 font-mono my-auto">
+                      Empty
+                    </span>
+                  )}
+                </div>
+              ))}
             </div>
 
-            {/* Feedback Banner */}
-            {puzzleFeedback && (
-              <div className="bg-amber-100 border border-amber-400 text-amber-900 text-xs font-bold p-3 rounded-lg text-center animate-shake">
-                ⚠️ {puzzleFeedback}
-              </div>
-            )}
-
             {/* Available Glyphs Tray */}
-            <div className="flex flex-col gap-2">
-              <div className="text-[11px] font-black text-amber-900 uppercase tracking-widest">
-                AVAILABLE DISCOVERED GLYPHS ({availableGlyphs.length} REMAINING)
-              </div>
-              <div className="flex flex-wrap gap-2 min-h-[50px] p-3 bg-amber-900/5 rounded-xl border border-amber-900/20">
-                {availableGlyphs.map((glyph) => (
-                  <button
-                    key={glyph.glyphId}
-                    onClick={() => {
-                      const emptyIdx = placedSlots.findIndex((s) => s === null);
-                      if (emptyIdx !== -1) {
-                        handlePlaceGlyphInSlot(glyph, emptyIdx);
-                      }
-                    }}
-                    className="bg-[#fff9ea] hover:bg-amber-300 text-amber-950 border-2 border-black px-3 py-2 rounded-lg font-mono font-black text-xs shadow-[2px_2px_0_0_rgba(0,0,0,1)] transition-transform hover:-translate-y-0.5 cursor-pointer"
-                  >
-                    {glyph.glyphId}
-                  </button>
-                ))}
-                {availableGlyphs.length === 0 && (
-                  <div className="text-xs text-amber-900/60 font-bold italic py-1">
-                    All glyphs have been placed into the slots above. Click any slot to remove or reposition a glyph.
-                  </div>
+            <div className="bg-[#24170d]/15 border-2 border-amber-900/40 rounded-2xl p-3 flex flex-col gap-2">
+              <span className="text-[11px] font-black text-amber-950 uppercase tracking-wider">
+                AVAILABLE GLYPH PIECES (Click to place in next empty slot):
+              </span>
+              <div className="flex flex-wrap gap-2 min-h-[50px]">
+                {availableGlyphs.length === 0 && !isPuzzleSolvedState ? (
+                  <span className="text-xs text-amber-900/60 font-mono italic my-auto">
+                    All glyphs placed. Press Verify Inscription below!
+                  </span>
+                ) : (
+                  availableGlyphs.map((glyph) => (
+                    <button
+                      key={glyph.id}
+                      onClick={() => {
+                        const emptyIdx = placedSlots.findIndex((s) => s === null);
+                        if (emptyIdx !== -1) {
+                          handlePlaceGlyphInSlot(glyph, emptyIdx);
+                        }
+                      }}
+                      className="bg-[#fff9ea] hover:bg-amber-200 border-2 border-black rounded-xl p-2 flex items-center gap-2 shadow-[2px_2px_0_0_rgba(0,0,0,1)] cursor-pointer active:translate-x-0.5 active:translate-y-0.5"
+                    >
+                      <VijayStambhGlyphArt glyphId={glyph.glyphId} size={28} mode="target" />
+                      <span className="text-xs font-mono font-black text-amber-950">
+                        {glyph.glyphId}
+                      </span>
+                    </button>
+                  ))
                 )}
               </div>
             </div>
 
-            {/* Submit Action */}
-            <div className="flex items-center justify-end gap-3 border-t border-amber-800/30 pt-3">
-              <button
-                onClick={handleVerifySequence}
-                className="bg-amber-500 hover:bg-amber-400 text-black border-2 border-black font-extrabold text-sm px-6 py-2.5 rounded-lg shadow-[4px_4px_0_0_rgba(0,0,0,1)] cursor-pointer active:translate-y-0.5"
+            {/* Feedback & Actions */}
+            {puzzleFeedback && (
+              <div
+                className={`p-2.5 rounded-xl border-2 font-bold text-xs text-center ${
+                  isPuzzleSolvedState
+                    ? "bg-emerald-100 text-emerald-950 border-emerald-700"
+                    : "bg-amber-100 text-amber-950 border-amber-800"
+                }`}
               >
-                📜 Submit Reconstruction
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* --- REAL HISTORICAL CONTEXT CARD (SHOWN POST-SOLVE) --- */}
-      {showHistoricalCard && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in duration-300">
-          <div className="relative bg-[#fff9ea] border-4 border-amber-900 rounded-2xl max-w-2xl w-full p-6 shadow-[10px_10px_0_0_rgba(0,0,0,1)] flex flex-col gap-4 text-black">
-            <div className="flex items-center justify-between border-b-2 border-amber-800/30 pb-2">
-              <h2 className="text-lg font-black text-amber-950 uppercase tracking-wide">
-                HISTORICAL CONTEXT — VIJAY STAMBH
-              </h2>
-              <button
-                onClick={() => setShowHistoricalCard(false)}
-                className="w-8 h-8 rounded-full bg-red-600 text-white font-extrabold border border-black shadow flex items-center justify-center hover:bg-red-700 cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="space-y-3 text-xs leading-relaxed text-amber-950 font-serif">
-              <div className="bg-amber-100 border border-amber-300 p-3 rounded-lg text-amber-900 font-sans font-bold">
-                🏛️ <strong>REAL HISTORY vs GAME FICTION:</strong> The &ldquo;Sculptor&apos;s Testament&rdquo; cipher is a fictional narrative layer created for <em>Bharat Gatha</em>. The historical Vijay Stambh itself stands as one of India&apos;s greatest victory monuments.
+                {puzzleFeedback}
               </div>
+            )}
 
-              <p>
-                <strong>Construction & Purpose:</strong> Vijay Stambh (Tower of Victory) at Chittorgarh Fort was built by <strong>Maharana Kumbha</strong> in 1448 AD to commemorate his military victory over the combined armies of Malwa and Gujarat at the Battle of Sarangpur in 1437 AD.
-              </p>
-
-              <p>
-                <strong>Architects:</strong> The tower was designed by the chief master architect <strong>Sutradhara Jaita</strong> and his three sons: <strong>Napa, Poma, and Puja</strong>. Their names are inscribed on the 5th floor of the tower.
-              </p>
-
-              <p>
-                <strong>Architecture:</strong> Standing 9 storeys (37.2 meters) high, it is dedicated to Lord Vishnu and decorated with thousands of intricate Hindu deity carvings, musical instruments, season motifs, and royal emblems.
-              </p>
-            </div>
-
-            <div className="flex justify-end pt-2">
+            <div className="flex items-center justify-between border-t border-amber-800/20 pt-2">
               <button
-                onClick={() => setShowHistoricalCard(false)}
-                className="bg-amber-500 hover:bg-amber-400 text-black border-2 border-black font-extrabold text-xs px-5 py-2 rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] cursor-pointer"
+                onClick={() => {
+                  setPlacedSlots(Array(9).fill(null));
+                  setAvailableGlyphs(CARVING_HOTSPOTS);
+                  setPuzzleFeedback(null);
+                }}
+                className="text-amber-900 font-bold text-xs hover:underline cursor-pointer"
+                disabled={isPuzzleSolvedState}
               >
-                Continue Adventure
+                Reset Slots
               </button>
+
+              <div className="flex items-center gap-3">
+                {!isPuzzleSolvedState ? (
+                  <button
+                    onClick={handleVerifyFinalSequence}
+                    className="bg-amber-500 hover:bg-amber-400 text-black border-2 border-black font-black text-xs px-6 py-2.5 rounded-xl shadow-[3px_3px_0_0_rgba(0,0,0,1)] cursor-pointer"
+                  >
+                    Verify Inscription
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setShowFinalPuzzle(false);
+                      onExitInterior?.();
+                    }}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white border-2 border-black font-black text-xs px-6 py-2.5 rounded-xl shadow-[3px_3px_0_0_rgba(0,0,0,1)] cursor-pointer"
+                  >
+                    Complete Stage & Exit
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
