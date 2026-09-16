@@ -167,6 +167,97 @@ class CharacterVoiceManager {
 
     // 2. Jolly Local Canonical Pre-recorded Files
     if (char === "jolly" || char.includes("genie")) {
+      // Vijay Stambh Carving & Shilpa Drishti Lines
+      if (
+        lower.includes("some secrets are hiding in these stones") ||
+        lower.includes("shilpa drishti and see what the eyes cannot") ||
+        lower.includes("see what the eyes cannot")
+      ) {
+        return "/jolly_vijay_secrets.wav";
+      }
+      if (
+        lower.includes("ancient carved glyphs are hidden") ||
+        lower.includes("find the target glyph with your eyes") ||
+        lower.includes("find the target glyph")
+      ) {
+        return "/jolly_vijay_glyphs_hint.wav";
+      }
+      if (
+        (lower.includes("now we have all nine") || lower.includes("have all nine")) &&
+        (lower.includes("assemble the sculptor's testament") || lower.includes("sculptor's testament!"))
+      ) {
+        return "/jolly_vijay_all_nine.wav";
+      }
+      if (
+        (lower.includes("now we have all nine") || lower.includes("have all nine")) &&
+        (lower.includes("order is yours to uncover") || lower.includes("the order is yours"))
+      ) {
+        return "/jolly_vijay_all_nine_v2.wav";
+      }
+      if (
+        lower.includes("something feels out of place") &&
+        (lower.includes("match the bedrock to the sky") || lower.includes("bedrock to the sky"))
+      ) {
+        return "/jolly_vijay_out_of_place.wav";
+      }
+      if (
+        lower.includes("something feels out of place") &&
+        (lower.includes("earlier stones were saying") || lower.includes("earlier stones"))
+      ) {
+        return "/jolly_vijay_earlier_stones.wav";
+      }
+      if (
+        lower.includes("hidden sculptor's testament shines forth") ||
+        lower.includes("sculptor's testament shines forth in pure gold") ||
+        lower.includes("secret of chittorgarh's master builders is restored") ||
+        lower.includes("chittorgarh's master builders is restored")
+      ) {
+        return "/jolly_vijay_testament_shines.wav";
+      }
+      if (
+        lower.includes("true testament of sutradhara jaita") ||
+        lower.includes("testament of sutradhara jaita has been revealed") ||
+        lower.includes("sutradhara jaita")
+      ) {
+        return "/jolly_vijay_jaita_revealed.wav";
+      }
+      if (
+        lower.includes("keep searching the architecture") ||
+        lower.includes("match the exact symbol shown on your target card") ||
+        lower.includes("target card")
+      ) {
+        return "/jolly_vijay_target_card.wav";
+      }
+
+      // Badal Mahal 3 Lamps & Terrace Lines
+      if (
+        lower.includes("royal lamps have gone dark") ||
+        lower.includes("light all three and bring badal mahal back to life") ||
+        lower.includes("bring badal mahal back to life")
+      ) {
+        return "/jolly_badal_lamps_dark.wav";
+      }
+      if (
+        lower.includes("way to the cloud terrace is shrouded in shadows") ||
+        lower.includes("cloud terrace is shrouded in shadows") ||
+        lower.includes("light all three royal lamps in the room to continue")
+      ) {
+        return "/jolly_badal_cloud_terrace.wav";
+      }
+      if (
+        lower.includes("two lamps glowing") ||
+        lower.includes("just one more")
+      ) {
+        return "/jolly_badal_two_lamps.wav";
+      }
+      if (
+        lower.includes("badal mahal shines again") ||
+        lower.includes("wah, mere aaka! badal mahal shines again")
+      ) {
+        return "/jolly_badal_shines_again.wav";
+      }
+
+      // Kuldhara & Rajputana Canonical Lines
       if (lower.includes("kuldhara wasn't alone") || lower.includes("83 nearby villages") || lower.includes("abandoned together") || lower.includes("biggest mystery")) {
         return "/kuldhara_84_villages_genie.wav";
       }
@@ -449,25 +540,41 @@ class CharacterVoiceManager {
               charKey.includes("artisan") ||
               charKey.includes("assessor");
             const isGuard = charKey.includes("guard") || charKey.includes("sentry");
+            const isJolly = charKey.includes("jolly") || charKey.includes("genie");
 
-            utterance.rate = isElderlyMale ? 0.84 : isGuard ? 1.05 : 0.95;
-            utterance.pitch = isElderlyMale ? 0.76 : isGuard ? 0.8 : 1.0;
-            utterance.volume = 0.9;
+            utterance.rate = isElderlyMale ? 0.84 : isGuard ? 1.10 : isJolly ? 1.05 : 1.00;
+            utterance.pitch = isElderlyMale ? 0.76 : isGuard ? 0.85 : isJolly ? 1.05 : 1.00;
+            utterance.volume = 0.90;
 
             const voices = window.speechSynthesis.getVoices();
-            if (isElderlyMale && voices.length > 0) {
-              const elderlyVoice = voices.find(
-                (v) =>
-                  (v.lang === "en-IN" || v.lang.startsWith("en")) &&
-                  (v.name.toLowerCase().includes("male") ||
-                    v.name.toLowerCase().includes("david") ||
-                    v.name.toLowerCase().includes("george") ||
-                    v.name.toLowerCase().includes("prabhat") ||
+            if (voices.length > 0) {
+              if (isElderlyMale) {
+                const elderlyVoice = voices.find(
+                  (v) =>
+                    (v.lang === "en-IN" || v.lang.startsWith("en")) &&
+                    (v.name.toLowerCase().includes("male") ||
+                      v.name.toLowerCase().includes("david") ||
+                      v.name.toLowerCase().includes("george") ||
+                      v.name.toLowerCase().includes("prabhat") ||
+                      v.name.toLowerCase().includes("rishi") ||
+                      v.name.toLowerCase().includes("ravi"))
+                );
+                if (elderlyVoice) {
+                  utterance.voice = elderlyVoice;
+                }
+              } else {
+                const inVoice = voices.find(
+                  (v) =>
+                    v.lang === "en-IN" ||
+                    v.lang === "hi-IN" ||
+                    v.name.toLowerCase().includes("india") ||
                     v.name.toLowerCase().includes("rishi") ||
-                    v.name.toLowerCase().includes("ravi"))
-              );
-              if (elderlyVoice) {
-                utterance.voice = elderlyVoice;
+                    v.name.toLowerCase().includes("veena") ||
+                    v.name.toLowerCase().includes("neerja")
+                );
+                if (inVoice) {
+                  utterance.voice = inVoice;
+                }
               }
             }
 
@@ -591,9 +698,24 @@ class CharacterVoiceManager {
               if (this.currentSessionId !== sessionId) return null;
 
               const utterance = new SpeechSynthesisUtterance(trimmed);
-              utterance.rate = character.toLowerCase() === "guard" ? 1.05 : 0.95;
-              utterance.pitch = character.toLowerCase() === "guard" ? 0.8 : 1.1;
-              utterance.volume = 0.85;
+              const isGuard = character.toLowerCase().includes("guard") || character.toLowerCase().includes("sentry");
+              const isElder = character.toLowerCase().includes("chacha") || character.toLowerCase().includes("elder");
+              utterance.rate = isGuard ? 1.10 : isElder ? 0.92 : 1.05;
+              utterance.pitch = isGuard ? 0.85 : isElder ? 0.90 : 1.05;
+              utterance.volume = 0.90;
+
+              const voices = window.speechSynthesis.getVoices();
+              const inVoice = voices.find(
+                (v) =>
+                  v.lang === "en-IN" ||
+                  v.lang === "hi-IN" ||
+                  v.name.toLowerCase().includes("india") ||
+                  v.name.toLowerCase().includes("rishi") ||
+                  v.name.toLowerCase().includes("veena") ||
+                  v.name.toLowerCase().includes("neerja")
+              );
+              if (inVoice) utterance.voice = inVoice;
+
               utterance.onstart = () => {
                 if (this.currentSessionId === sessionId) {
                   this.updateState({ isPlaying: true, isLoading: false });

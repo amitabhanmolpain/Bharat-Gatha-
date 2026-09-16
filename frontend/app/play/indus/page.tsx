@@ -1608,7 +1608,9 @@ function IndusValleyGameComponent() {
         clearInterval(timer);
         setScene(targetScene);
         setPlayerPos(targetPos);
-        setStage(targetStage);
+        if (targetStage) {
+          setStage(targetStage);
+        }
         setIsLoadingToHarappa(false);
       }
     }, 50);

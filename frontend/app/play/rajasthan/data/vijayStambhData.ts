@@ -4,8 +4,12 @@ export interface CarvingHotspotDef {
   id: string;
   glyphId: string;
   name: string;
-  x: number; // percentage (0 - 100)
-  y: number; // percentage (0 - 100)
+  targetOrder: number; // 1 to 9 in sequential hunt
+  renderX: number; // percentage (0 - 100) where glyph is camouflaged in room
+  renderY: number; // percentage (0 - 100) where glyph is camouflaged in room
+  renderSize: number; // pixel width & height (e.g. 36)
+  playerX: number; // target player walking position X
+  playerY: number; // target player walking position Y
   radius: number; // interaction radius percentage
   featureName: string; // Architectural feature description
   motifDescription: string;
@@ -15,13 +19,25 @@ export interface CarvingHotspotDef {
 }
 
 export const CANONICAL_JOLLY_INTRO =
-  "Mere aaka, some secrets are hiding in these stones… use the Shilpa Drishti and see what the eyes cannot.";
+  "Mere aaka, ancient carved glyphs are hidden in these sandstone walls! Find the target glyph with your eyes, then use Shilpa Drishti.";
 
 export const CANONICAL_JOLLY_ALL_FOUND =
-  "Now we have all nine, mere aaka. The stones gave us the pieces. The order is yours to uncover.";
+  "Now we have all nine, mere aaka! The stones gave us the pieces. Now assemble the Sculptor's Testament!";
 
 export const CANONICAL_JOLLY_WRONG_HINT =
-  "Something feels out of place, mere aaka. Listen to what the earlier stones were saying.";
+  "Keep searching the architecture, mere aaka. Match the exact symbol shown on your target card!";
+
+export const TARGET_HUNT_SEQUENCE: string[] = [
+  "BHOOMI",
+  "JALA",
+  "AGNI",
+  "VAYU",
+  "SUTRA",
+  "SANGEET",
+  "DHARMA",
+  "KUMBHA",
+  "AKASHA",
+];
 
 export const CANONICAL_SOLUTION_SEQUENCE: string[] = [
   "BHOOMI",
@@ -37,118 +53,55 @@ export const CANONICAL_SOLUTION_SEQUENCE: string[] = [
 
 export const CARVING_HOTSPOTS: CarvingHotspotDef[] = [
   {
-    id: "hotspot_sutra",
-    glyphId: "SUTRA",
-    name: "Architect's Compass Motif",
-    x: 25.0,
-    y: 62.0,
-    radius: 10.0,
-    featureName: "Upper-Left Carved Sandstone Pillar",
-    motifDescription: "Chiseled geometric straightedge, plumb-line, and architect's compass motif.",
-    clue: "Wind and flame remain untamed until the architect’s compass brings order to the elements.",
+    id: "hotspot_bhoomi",
+    glyphId: "BHOOMI",
+    name: "Bhoomi (Foundation Bedrock)",
+    targetOrder: 1,
+    renderX: 52.0,
+    renderY: 89.0,
+    renderSize: 40,
+    playerX: 52.0,
+    playerY: 86.0,
+    radius: 12.0,
+    featureName: "Center Floor Bedrock Flagstone",
+    motifDescription: "Deep earth strata and Kurma foundation lines chiseled into the central floor slab.",
+    clue: "Before any tower can touch the sky, something must first bear its weight upon the bedrock.",
     historicalContext:
-      "Historical Fact: Vijay Stambh was designed by Sutradhara Jaita (chief architect) and his sons Napa, Poma, and Puja. Their names are carved into stone on the monument.",
+      "Historical Fact: Vijay Stambh is anchored directly into the solid hill bedrock of Chittorgarh Fort, with base moldings honoring Kurma (the cosmic tortoise).",
     fictionalLore:
-      "Game Legend: In Bharat Gatha's tale, Sutradhara Jaita embedded a central architectural cipher to ensure the true history of Mewar's artisans would never be forgotten.",
-  },
-  {
-    id: "hotspot_akasha",
-    glyphId: "AKASHA",
-    name: "Celestial Vault Motif",
-    x: 50.0,
-    y: 56.0,
-    radius: 10.0,
-    featureName: "Central Ceiling Arch Vault",
-    motifDescription: "Faint star constellation chisel lines surrounding a carved Kalasha pinnacle.",
-    clue: "The sovereign ruler’s testament concludes where stone dissolves into the infinite sky.",
-    historicalContext:
-      "Historical Fact: The top storey of Vijay Stambh offers panoramic views of Chittorgarh and is crowned with a celestial Kalasha pinnacle.",
-    fictionalLore:
-      "Game Legend: The final verse of the hidden testament was carved facing the open sky at the apex of the tower.",
+      "Game Legend: The bedrock glyph represents the steadfast resolve of Chittorgarh's defenders.",
   },
   {
     id: "hotspot_jala",
     glyphId: "JALA",
-    name: "Sacred Water Motif",
-    x: 40.0,
-    y: 70.0,
-    radius: 10.0,
+    name: "Jala (Sacred Waters)",
+    targetOrder: 2,
+    renderX: 36.5,
+    renderY: 73.5,
+    renderSize: 36,
+    playerX: 36.5,
+    playerY: 78.0,
+    radius: 11.0,
     featureName: "Lower Central Sandstone Wall Frieze",
-    motifDescription: "Flowing wave line carvings and lotus petals etched into the lower molding.",
+    motifDescription: "Flowing wave line carvings and sacred 8-petaled lotus ripples etched into the lower molding.",
     clue: "The foundation stone stands dry until life-giving waters flow across its base.",
     historicalContext:
-      "Historical Fact: Vijay Stambh overlooks Gaumukh Kund, the primary natural spring reservoir that sustained Chittorgarh Fort through historical sieges.",
+      "Historical Fact: Vijay Stambh overlooks Gaumukh Kund, the primary spring reservoir that sustained Chittorgarh Fort through historical sieges.",
     fictionalLore:
-      "Game Legend: The second glyph honors the sacred waters of Gaumukh Kund that fed the fort's defenders.",
-  },
-  {
-    id: "hotspot_kumbha",
-    glyphId: "KUMBHA",
-    name: "Sovereign Royal Crest",
-    x: 75.0,
-    y: 62.0,
-    radius: 10.0,
-    featureName: "Upper-Right Statue Niche & Royal Emblem",
-    motifDescription: "Royal Rajput sword relief and victory umbrella (Chhatri) emblem.",
-    clue: "Under the watchful eyes of the divine preserver, the victorious ruler claims his mantle.",
-    historicalContext:
-      "Historical Fact: Maharana Kumbha (ruled 1433–1468 AD) was a great warrior king, scholar, and patron of arts who commissioned Vijay Stambh in 1448 AD.",
-    fictionalLore:
-      "Game Legend: The royal seal of Maharana Kumbha marks the culmination of Mewar's sovereign lineage.",
-  },
-  {
-    id: "hotspot_bhoomi",
-    glyphId: "BHOOMI",
-    name: "Foundation Bedrock Motif",
-    x: 50.0,
-    y: 84.0,
-    radius: 10.0,
-    featureName: "Center Floor Bedrock Paving Stone",
-    motifDescription: "Deep earth roots and Kurma (tortoise) foundation lines chiseled into floor flagstone.",
-    clue: "Before any tower can touch the sky, something must first bear its weight upon the bedrock.",
-    historicalContext:
-      "Historical Fact: Vijay Stambh is anchored directly into the solid rock hill of Chittorgarh Fort, with heavy base moldings carved with Kurma motifs.",
-    fictionalLore:
-      "Game Legend: The bedrock glyph represents the steadfast resolve of the people of Chittorgarh.",
-  },
-  {
-    id: "hotspot_vayu",
-    glyphId: "VAYU",
-    name: "Victory Banner Motif",
-    x: 65.0,
-    y: 72.0,
-    radius: 10.0,
-    featureName: "Spiral Staircase Stone Balustrade",
-    motifDescription: "Swirling wind chisel lines and fluttering crimson banner motifs along the railing.",
-    clue: "From the blazing fire rises the wind, carrying royal banners high above the battlements.",
-    historicalContext:
-      "Historical Fact: The spiral staircase inside Vijay Stambh has 157 steps leading through illuminated stone balconies.",
-    fictionalLore:
-      "Game Legend: The wind glyph was chiseled into the staircase banister where the breeze from the balconies whistles through.",
-  },
-  {
-    id: "hotspot_sangeet",
-    glyphId: "SANGEET",
-    name: "Celestial Music Motif",
-    x: 18.0,
-    y: 74.0,
-    radius: 10.0,
-    featureName: "Lower-Left Musical Frieze Relief",
-    motifDescription: "Sarangi string instrument, cymbals, and musical note carvings.",
-    clue: "Once the architect sets the stone, sweet music rings out to celebrate the peace.",
-    historicalContext:
-      "Historical Fact: Maharana Kumbha authored *Sangita-Raja*, a celebrated treatise on music and dance. Floor reliefs portray court musicians.",
-    fictionalLore:
-      "Game Legend: This glyph commemorates the royal court musicians who celebrated victory through ragas.",
+      "Game Legend: The water glyph honors the sacred waters of Gaumukh Kund that nourished the fort.",
   },
   {
     id: "hotspot_agni",
     glyphId: "AGNI",
-    name: "Sacred Altar Flame Motif",
-    x: 32.0,
-    y: 78.0,
-    radius: 10.0,
-    featureName: "Sandstone Wall Adjacent to Left Torch",
+    name: "Agni (Sacred Altar Flame)",
+    targetOrder: 3,
+    renderX: 18.5,
+    renderY: 61.5,
+    renderSize: 36,
+    playerX: 22.0,
+    playerY: 74.0,
+    radius: 12.0,
+    featureName: "Sandstone Wall Beside Left Torch Sconce",
     motifDescription: "Yajna sacrificial fire altar flames chiseled into the wall beside the torch sconce.",
     clue: "When water meets the sacred altar, the fires of Sarangpur ignite in response.",
     historicalContext:
@@ -157,18 +110,117 @@ export const CARVING_HOTSPOTS: CarvingHotspotDef[] = [
       "Game Legend: The fire glyph represents the sacrificial fervor and martial courage of Sarangpur.",
   },
   {
+    id: "hotspot_vayu",
+    glyphId: "VAYU",
+    name: "Vayu (Victory Wind & Banner)",
+    targetOrder: 4,
+    renderX: 70.0,
+    renderY: 78.5,
+    renderSize: 38,
+    playerX: 68.0,
+    playerY: 80.0,
+    radius: 11.0,
+    featureName: "Spiral Staircase Stone Balustrade",
+    motifDescription: "Swirling wind chisel lines and fluttering crimson banner motifs along the railing.",
+    clue: "From the blazing fire rises the wind, carrying royal banners high above the battlements.",
+    historicalContext:
+      "Historical Fact: The spiral staircase inside Vijay Stambh has 157 steps leading through illuminated stone balconies.",
+    fictionalLore:
+      "Game Legend: The wind glyph was chiseled into the staircase banister where the breeze whistles through.",
+  },
+  {
+    id: "hotspot_sutra",
+    glyphId: "SUTRA",
+    name: "Sutra (Architect's Compass)",
+    targetOrder: 5,
+    renderX: 15.5,
+    renderY: 35.0,
+    renderSize: 40,
+    playerX: 18.0,
+    playerY: 68.0,
+    radius: 13.0,
+    featureName: "Upper-Left Carved Sandstone Pillar Capital",
+    motifDescription: "Chiseled geometric straightedge, plumb-line, and architect's compass mandala.",
+    clue: "Wind and flame remain untamed until the architect’s compass brings order to the elements.",
+    historicalContext:
+      "Historical Fact: Vijay Stambh was designed by Sutradhara Jaita (chief architect) and his sons Napa, Poma, and Puja. Their names are carved into the monument.",
+    fictionalLore:
+      "Game Legend: Sutradhara Jaita embedded an architectural cipher so the true history of Mewar's artisans would live forever.",
+  },
+  {
+    id: "hotspot_sangeet",
+    glyphId: "SANGEET",
+    name: "Sangeet (Celestial Music)",
+    targetOrder: 6,
+    renderX: 9.5,
+    renderY: 76.0,
+    renderSize: 36,
+    playerX: 14.0,
+    playerY: 80.0,
+    radius: 11.0,
+    featureName: "Lower-Left Musician & Dancer Frieze",
+    motifDescription: "Sarangi string instrument, cymbals, and musical swara resonance carvings.",
+    clue: "Once the architect sets the stone, sweet music rings out to celebrate the peace.",
+    historicalContext:
+      "Historical Fact: Maharana Kumbha authored *Sangita-Raja*, a celebrated treatise on music and dance. Reliefs portray court musicians.",
+    fictionalLore:
+      "Game Legend: This glyph commemorates the royal court musicians who celebrated victory through ragas.",
+  },
+  {
     id: "hotspot_dharma",
     glyphId: "DHARMA",
-    name: "Divine Preservation Motif",
-    x: 82.0,
-    y: 76.0,
-    radius: 10.0,
+    name: "Dharma (Divine Preservation)",
+    targetOrder: 7,
+    renderX: 89.5,
+    renderY: 74.0,
+    renderSize: 38,
+    playerX: 86.0,
+    playerY: 78.0,
+    radius: 12.0,
     featureName: "Right Wall Relief of Lord Vishnu",
-    motifDescription: "Sudarshana Chakra and sacred lotus preserver emblem.",
+    motifDescription: "Sudarshana Chakra 12-spoked solar wheel and sacred preservation emblem.",
     clue: "Mortal songs fall quiet before the divine preserver who safeguards eternal truth.",
     historicalContext:
-      "Historical Fact: Vijay Stambh is dedicated to Lord Vishnu (also known as Vishnu Stambh) and features extensive iconography of Vishnu's avatars.",
+      "Historical Fact: Vijay Stambh is dedicated to Lord Vishnu and features extensive iconography of Vishnu's avatars.",
     fictionalLore:
       "Game Legend: The divine glyph guards the eternal order and justice of the realm.",
+  },
+  {
+    id: "hotspot_kumbha",
+    glyphId: "KUMBHA",
+    name: "Kumbha (Sovereign Royal Crest)",
+    targetOrder: 8,
+    renderX: 50.0,
+    renderY: 52.0,
+    renderSize: 42,
+    playerX: 50.0,
+    playerY: 70.0,
+    radius: 12.0,
+    featureName: "Central Archway Ornamental Lintel Crest",
+    motifDescription: "Royal Rajput crossed talwar swords and victory umbrella (Chhatri) emblem.",
+    clue: "Under the watchful eyes of the divine preserver, the victorious ruler claims his mantle.",
+    historicalContext:
+      "Historical Fact: Maharana Kumbha (ruled 1433–1468 AD) was a great warrior king, scholar, and patron of arts who commissioned Vijay Stambh in 1448 AD.",
+    fictionalLore:
+      "Game Legend: The royal seal of Maharana Kumbha marks the culmination of Mewar's sovereign lineage.",
+  },
+  {
+    id: "hotspot_akasha",
+    glyphId: "AKASHA",
+    name: "Akasha (Celestial Sky Vault)",
+    targetOrder: 9,
+    renderX: 40.5,
+    renderY: 19.5,
+    renderSize: 42,
+    playerX: 40.0,
+    playerY: 56.0,
+    radius: 14.0,
+    featureName: "Upper Ceiling Dome Arch Vault",
+    motifDescription: "Celestial 8-pointed star constellation lines crowned above the spiral stairwell.",
+    clue: "The sovereign ruler’s testament concludes where stone dissolves into the infinite sky.",
+    historicalContext:
+      "Historical Fact: The top storey of Vijay Stambh offers panoramic views of Chittorgarh and is crowned with a celestial Kalasha pinnacle.",
+    fictionalLore:
+      "Game Legend: The final verse of the hidden testament was carved facing the open sky at the apex of the tower.",
   },
 ];

@@ -70,6 +70,8 @@ export default function RajasthanGameScreen() {
   const chittorgarhAudioRef = useRef<HTMLAudioElement | null>(null);
   // --- BHANGARH KILA THEME MUSIC REF ---
   const bhangarhAudioRef = useRef<HTMLAudioElement | null>(null);
+  // --- KUMBHALGARH MOUNTAIN WIND AMBIENCE REF ---
+  const kumbhalgarhWindAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // --- NOW PLAYING SONG BANNER STATE (Image 1: 3s Display & Click-to-Mute) ---
   const [showSongBanner, setShowSongBanner] = useState<boolean>(true);
@@ -378,6 +380,17 @@ export default function RajasthanGameScreen() {
   // --- STAGE 2 -> STAGE 3 TRANSITION (Elephant Journey) ---
   const [isElephantTravelling, setIsElephantTravelling] = useState(false);
   const [elephantTravelPhase, setElephantTravelPhase] = useState<1 | 2 | 3 | 4>(1);
+  const [badalMahalLampsLitCount, setBadalMahalLampsLitCount] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("badal_mahal_lit_lamps");
+        return saved ? JSON.parse(saved).length : 0;
+      } catch (e) {
+        return 0;
+      }
+    }
+    return 0;
+  });
 
   // --- STAGE 3 STATE (Kuldhara 2-Min Clue Challenge) ---
   const [kuldharaTimer, setKuldharaTimer] = useState(120); // 2-minute countdown timer (120s)
@@ -600,9 +613,123 @@ export default function RajasthanGameScreen() {
     }
   }, [stage, isTransitioning, isCampaignComplete, isMusicMuted]);
 
-  // Pause all background music on unmount
+  // --- KUMBHALGARH MOUNTAIN WIND AMBIENCE (OPEN-AIR FORT WALL SECTIONS ONLY) ---
+  const windFadeIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const isKumbhalgarhWallOutdoor =
+      stage === 2 &&
+      (scene === "kumbhalgarh_gate" ||
+        scene === "kumbhalgarh_great_wall" ||
+        scene === "kumbhalgarh_zigzag_gates") &&
+      !isCampaignComplete;
+
+    if (isKumbhalgarhWallOutdoor) {
+      if (windFadeIntervalRef.current) {
+        clearInterval(windFadeIntervalRef.current);
+        windFadeIntervalRef.current = null;
+      }
+
+      if (!kumbhalgarhWindAudioRef.current) {
+        const audio = new Audio("/audio/kumbhalgarh_wind_ambience.wav");
+        audio.loop = true;
+        audio.volume = 0;
+        audio.onended = () => {
+          audio.currentTime = 0;
+          audio.play().catch(() => {});
+        };
+        kumbhalgarhWindAudioRef.current = audio;
+      }
+
+      const audio = kumbhalgarhWindAudioRef.current;
+
+      if (isSoundMuted || isMusicMuted) {
+        audio.pause();
+      } else {
+        if (audio.paused) {
+          audio.volume = 0;
+          audio.play().catch((err) => {
+            console.log("Kumbhalgarh wind autoplay pending player gesture:", err?.message || err);
+          });
+        }
+        // Smooth fade-in to target volume 0.22
+        const targetVol = 0.22;
+        const step = 0.02;
+        windFadeIntervalRef.current = setInterval(() => {
+          if (!kumbhalgarhWindAudioRef.current) return;
+          if (kumbhalgarhWindAudioRef.current.volume < targetVol) {
+            kumbhalgarhWindAudioRef.current.volume = Math.min(
+              targetVol,
+              kumbhalgarhWindAudioRef.current.volume + step
+            );
+          } else {
+            if (windFadeIntervalRef.current) {
+              clearInterval(windFadeIntervalRef.current);
+              windFadeIntervalRef.current = null;
+            }
+          }
+        }, 40);
+      }
+
+      const triggerOnGesture = () => {
+        if (
+          isKumbhalgarhWallOutdoor &&
+          !isSoundMuted &&
+          !isMusicMuted &&
+          kumbhalgarhWindAudioRef.current &&
+          kumbhalgarhWindAudioRef.current.paused
+        ) {
+          kumbhalgarhWindAudioRef.current.play().catch(() => {});
+        }
+      };
+
+      window.addEventListener("click", triggerOnGesture, { once: true });
+      window.addEventListener("keydown", triggerOnGesture, { once: true });
+
+      return () => {
+        window.removeEventListener("click", triggerOnGesture);
+        window.removeEventListener("keydown", triggerOnGesture);
+      };
+    } else {
+      // Smooth fade-out on exiting Kumbhalgarh open-air wall sections
+      if (kumbhalgarhWindAudioRef.current && !kumbhalgarhWindAudioRef.current.paused) {
+        if (windFadeIntervalRef.current) {
+          clearInterval(windFadeIntervalRef.current);
+        }
+        const step = 0.03;
+        windFadeIntervalRef.current = setInterval(() => {
+          if (!kumbhalgarhWindAudioRef.current) {
+            if (windFadeIntervalRef.current) clearInterval(windFadeIntervalRef.current);
+            return;
+          }
+          if (kumbhalgarhWindAudioRef.current.volume > step) {
+            kumbhalgarhWindAudioRef.current.volume = Math.max(
+              0,
+              kumbhalgarhWindAudioRef.current.volume - step
+            );
+          } else {
+            kumbhalgarhWindAudioRef.current.volume = 0;
+            kumbhalgarhWindAudioRef.current.pause();
+            kumbhalgarhWindAudioRef.current.currentTime = 0;
+            if (windFadeIntervalRef.current) {
+              clearInterval(windFadeIntervalRef.current);
+              windFadeIntervalRef.current = null;
+            }
+          }
+        }, 40);
+      }
+    }
+  }, [stage, scene, isCampaignComplete, isSoundMuted, isMusicMuted]);
+
+  // Pause all background audio on unmount
   useEffect(() => {
     return () => {
+      if (windFadeIntervalRef.current) {
+        clearInterval(windFadeIntervalRef.current);
+        windFadeIntervalRef.current = null;
+      }
       if (chittorgarhAudioRef.current) {
         chittorgarhAudioRef.current.pause();
         chittorgarhAudioRef.current.currentTime = 0;
@@ -610,6 +737,10 @@ export default function RajasthanGameScreen() {
       if (bhangarhAudioRef.current) {
         bhangarhAudioRef.current.pause();
         bhangarhAudioRef.current.currentTime = 0;
+      }
+      if (kumbhalgarhWindAudioRef.current) {
+        kumbhalgarhWindAudioRef.current.pause();
+        kumbhalgarhWindAudioRef.current.currentTime = 0;
       }
     };
   }, []);
@@ -644,6 +775,10 @@ export default function RajasthanGameScreen() {
     if (bhangarhAudioRef.current) {
       bhangarhAudioRef.current.pause();
       bhangarhAudioRef.current.currentTime = 0;
+    }
+    if (kumbhalgarhWindAudioRef.current) {
+      kumbhalgarhWindAudioRef.current.pause();
+      kumbhalgarhWindAudioRef.current.currentTime = 0;
     }
     setShowKuldharaNarratorBanner(false);
     setHasKuldharaNarrationFinished(false);
@@ -1377,6 +1512,11 @@ export default function RajasthanGameScreen() {
       setIsWalking,
       setFacingLeft,
       setWalkPhase,
+      badalMahalLampsLitCount,
+      setBadalMahalLampsLitCount,
+      setJollySpeechText,
+      setJollyStatusBadge,
+      setJollyOptions,
     };
   });
 
@@ -1492,12 +1632,19 @@ export default function RajasthanGameScreen() {
             state.setIsTransitioning(false);
           }, 400);
         } else if (state.isNearBadalMahalInteriorExit) {
-          state.setIsTransitioning(true);
-          setTimeout(() => {
-            state.setScene("badal_mahal_terrace");
-            state.setPlayerPos({ x: 50.0, y: 78.0 });
-            state.setIsTransitioning(false);
-          }, 400);
+          if (state.badalMahalLampsLitCount < 3) {
+            state.setJollySpeechText?.("Mere aaka, the way to the Cloud Terrace is shrouded in shadows! Light all three royal lamps in the room to continue.");
+            state.setJollyStatusBadge?.("doubt");
+            state.setJollyOptions?.([{ id: 99, text: "I will light all 3 lamps!" }]);
+            state.setShowJollyDialogue?.(true);
+          } else {
+            state.setIsTransitioning(true);
+            setTimeout(() => {
+              state.setScene("badal_mahal_terrace");
+              state.setPlayerPos({ x: 50.0, y: 78.0 });
+              state.setIsTransitioning(false);
+            }, 400);
+          }
         } else if (state.isNearTerraceElephant) {
           state.startElephantJourney();
         }
@@ -2408,7 +2555,7 @@ export default function RajasthanGameScreen() {
       case "vijay_stambh":
         return "Gaze upon the majestic Vijay Stambh. Press E to go inside, or walk to the right path towards the Passage of Broken Walls.";
       case "vijay_stambh_interior":
-        return "Explore the carved sandstone chamber of Vijay Stambh. Walk near architectural carvings and press E to inspect with Shilpa Drishti (शिल्प दृष्टि).";
+        return "Search the sandstone architecture to visually find the target glyph, approach it, and press E to use Shilpa Drishti (शिल्प दृष्टि).";
       case "jauhar_passage":
         return "Traverse the Passage of Broken Walls. Move straight ahead towards the archway to enter Jauhar Kund.";
       case "jauhar_kund":
@@ -2617,6 +2764,10 @@ export default function RajasthanGameScreen() {
               if (bhangarhAudioRef.current) {
                 bhangarhAudioRef.current.pause();
                 bhangarhAudioRef.current.currentTime = 0;
+              }
+              if (kumbhalgarhWindAudioRef.current) {
+                kumbhalgarhWindAudioRef.current.pause();
+                kumbhalgarhWindAudioRef.current.currentTime = 0;
               }
               router.push("/dashboard");
             }}
@@ -3097,10 +3248,46 @@ export default function RajasthanGameScreen() {
             ]);
             setShowJollyDialogue(true);
           }}
+          onLampsCountChange={(count) => {
+            setBadalMahalLampsLitCount(count);
+          }}
           onGameComplete={() => {
             // Completed 3 lamps
           }}
         />
+      )}
+
+      {/* Badal Mahal Interior Terrace Door / Stairs Prompt */}
+      {isNearBadalMahalInteriorExit && (
+        <div
+          className={`absolute bottom-[16%] left-1/2 -translate-x-1/2 border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold flex items-center gap-2 z-30 animate-bounce cursor-pointer pointer-events-auto ${
+            badalMahalLampsLitCount < 3
+              ? "bg-[#fff9ea] text-amber-950 border-amber-900"
+              : "bg-amber-400 text-black border-black"
+          }`}
+          onClick={() => {
+            if (badalMahalLampsLitCount < 3) {
+              setJollySpeechText("Mere aaka, the way to the Cloud Terrace is shrouded in shadows! Light all three royal lamps in the room to continue.");
+              setJollyStatusBadge("doubt");
+              setJollyOptions([{ id: 99, text: "I will light all 3 lamps!" }]);
+              setShowJollyDialogue(true);
+            } else {
+              setIsTransitioning(true);
+              setTimeout(() => {
+                setScene("badal_mahal_terrace");
+                setPlayerPos({ x: 50.0, y: 78.0 });
+                setIsTransitioning(false);
+              }, 400);
+            }
+          }}
+        >
+          <span className="bg-amber-400 text-black border border-black rounded px-1.5 text-[11px]">
+            {badalMahalLampsLitCount < 3 ? "🔒" : "E"}
+          </span>
+          {badalMahalLampsLitCount < 3
+            ? `Light all three lamps to continue (${badalMahalLampsLitCount}/3)`
+            : "Ascend to Badal Mahal Cloud Terrace"}
+        </div>
       )}
 
       {isNearCamel && (
