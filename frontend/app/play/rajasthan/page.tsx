@@ -378,6 +378,17 @@ export default function RajasthanGameScreen() {
   // --- STAGE 2 -> STAGE 3 TRANSITION (Elephant Journey) ---
   const [isElephantTravelling, setIsElephantTravelling] = useState(false);
   const [elephantTravelPhase, setElephantTravelPhase] = useState<1 | 2 | 3 | 4>(1);
+  const [badalMahalLampsLitCount, setBadalMahalLampsLitCount] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("badal_mahal_lit_lamps");
+        return saved ? JSON.parse(saved).length : 0;
+      } catch (e) {
+        return 0;
+      }
+    }
+    return 0;
+  });
 
   // --- STAGE 3 STATE (Kuldhara 2-Min Clue Challenge) ---
   const [kuldharaTimer, setKuldharaTimer] = useState(120); // 2-minute countdown timer (120s)
@@ -1377,6 +1388,11 @@ export default function RajasthanGameScreen() {
       setIsWalking,
       setFacingLeft,
       setWalkPhase,
+      badalMahalLampsLitCount,
+      setBadalMahalLampsLitCount,
+      setJollySpeechText,
+      setJollyStatusBadge,
+      setJollyOptions,
     };
   });
 
@@ -1492,12 +1508,19 @@ export default function RajasthanGameScreen() {
             state.setIsTransitioning(false);
           }, 400);
         } else if (state.isNearBadalMahalInteriorExit) {
-          state.setIsTransitioning(true);
-          setTimeout(() => {
-            state.setScene("badal_mahal_terrace");
-            state.setPlayerPos({ x: 50.0, y: 78.0 });
-            state.setIsTransitioning(false);
-          }, 400);
+          if (state.badalMahalLampsLitCount < 3) {
+            state.setJollySpeechText?.("Mere aaka, the way to the Cloud Terrace is shrouded in shadows! Light all three royal lamps in the room to continue.");
+            state.setJollyStatusBadge?.("doubt");
+            state.setJollyOptions?.([{ id: 99, text: "I will light all 3 lamps!" }]);
+            state.setShowJollyDialogue?.(true);
+          } else {
+            state.setIsTransitioning(true);
+            setTimeout(() => {
+              state.setScene("badal_mahal_terrace");
+              state.setPlayerPos({ x: 50.0, y: 78.0 });
+              state.setIsTransitioning(false);
+            }, 400);
+          }
         } else if (state.isNearTerraceElephant) {
           state.startElephantJourney();
         }
@@ -3097,10 +3120,46 @@ export default function RajasthanGameScreen() {
             ]);
             setShowJollyDialogue(true);
           }}
+          onLampsCountChange={(count) => {
+            setBadalMahalLampsLitCount(count);
+          }}
           onGameComplete={() => {
             // Completed 3 lamps
           }}
         />
+      )}
+
+      {/* Badal Mahal Interior Terrace Door / Stairs Prompt */}
+      {isNearBadalMahalInteriorExit && (
+        <div
+          className={`absolute bottom-[16%] left-1/2 -translate-x-1/2 border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold flex items-center gap-2 z-30 animate-bounce cursor-pointer pointer-events-auto ${
+            badalMahalLampsLitCount < 3
+              ? "bg-[#fff9ea] text-amber-950 border-amber-900"
+              : "bg-amber-400 text-black border-black"
+          }`}
+          onClick={() => {
+            if (badalMahalLampsLitCount < 3) {
+              setJollySpeechText("Mere aaka, the way to the Cloud Terrace is shrouded in shadows! Light all three royal lamps in the room to continue.");
+              setJollyStatusBadge("doubt");
+              setJollyOptions([{ id: 99, text: "I will light all 3 lamps!" }]);
+              setShowJollyDialogue(true);
+            } else {
+              setIsTransitioning(true);
+              setTimeout(() => {
+                setScene("badal_mahal_terrace");
+                setPlayerPos({ x: 50.0, y: 78.0 });
+                setIsTransitioning(false);
+              }, 400);
+            }
+          }}
+        >
+          <span className="bg-amber-400 text-black border border-black rounded px-1.5 text-[11px]">
+            {badalMahalLampsLitCount < 3 ? "🔒" : "E"}
+          </span>
+          {badalMahalLampsLitCount < 3
+            ? `Light all three lamps to continue (${badalMahalLampsLitCount}/3)`
+            : "Ascend to Badal Mahal Cloud Terrace"}
+        </div>
       )}
 
       {isNearCamel && (

@@ -13,12 +13,14 @@ interface BadalMahalLampGameProps {
   playerPos: { x: number; y: number };
   onTriggerJollySpeech: (text: string, badge?: "normal" | "glowing" | "shaking" | "doubt") => void;
   onGameComplete?: () => void;
+  onLampsCountChange?: (count: number) => void;
 }
 
 export default function BadalMahalLampGame({
   playerPos,
   onTriggerJollySpeech,
   onGameComplete,
+  onLampsCountChange,
 }: BadalMahalLampGameProps) {
   // Lit lamps state persisted in LocalStorage
   const [litLampIds, setLitLampIds] = useState<string[]>(() => {
@@ -34,7 +36,12 @@ export default function BadalMahalLampGame({
   });
 
   const [nearbyUnlitLamp, setNearbyUnlitLamp] = useState<LampDef | null>(null);
-  const [isCompleted, setIsCompleted] = useState<boolean>(() => litLampIds.length === 3);
+  const isCompleted = litLampIds.length === 3;
+
+  // Synchronize count with parent
+  useEffect(() => {
+    onLampsCountChange?.(litLampIds.length);
+  }, [litLampIds, onLampsCountChange]);
 
   // Proximity detection for unlit lamps
   useEffect(() => {
@@ -75,11 +82,10 @@ export default function BadalMahalLampGame({
       saveLitLamps(nextLit);
 
       if (nextLit.length === 1) {
-        onTriggerJollySpeech("One flame restored!", "normal");
+        onTriggerJollySpeech("One flame restored! The shadows recede.", "normal");
       } else if (nextLit.length === 2) {
-        onTriggerJollySpeech("Two to go, mere aaka!", "normal");
+        onTriggerJollySpeech("Two lamps glowing, mere aaka! Just one more!", "normal");
       } else if (nextLit.length === 3) {
-        setIsCompleted(true);
         soundFx.playClueFound();
         onTriggerJollySpeech("Wah, mere aaka! Badal Mahal shines again!", "glowing");
 
@@ -119,7 +125,7 @@ export default function BadalMahalLampGame({
   return (
     <>
       {/* --- HUD OBJECTIVE CAPSULE --- */}
-      <div className="fixed top-24 left-6 z-20 flex flex-col gap-2">
+      <div className="fixed top-24 left-6 z-20 flex flex-col gap-2 pointer-events-none">
         <div className="bg-[#fff9ea] border-2 border-black rounded-xl p-3 shadow-[4px_4px_0_0_rgba(0,0,0,1)] w-72">
           <div className="flex items-center justify-between mb-1">
             <span className="text-[10px] font-black text-amber-900 uppercase tracking-widest">
@@ -147,29 +153,37 @@ export default function BadalMahalLampGame({
         </div>
       </div>
 
-      {/* --- VISUAL LAMP FLAME INDICATORS OVERLAY --- */}
+      {/* --- ENVIRONMENTAL LAMPS (SWAPPING OFF -> ON IMAGE ASSETS) --- */}
       <div className="fixed inset-0 pointer-events-none z-15">
         {BADAL_MAHAL_LAMPS.map((lamp) => {
           const isLit = litLampIds.includes(lamp.id);
+          const isNearby = nearbyUnlitLamp?.id === lamp.id;
+
           return (
             <div
               key={lamp.id}
-              className="absolute transform -translate-x-1/2 -translate-y-1/2 transition-all duration-500"
-              style={{ left: `${lamp.x}%`, top: `${lamp.y}%` }}
+              className="absolute transform -translate-x-1/2 -translate-y-1/2 pointer-events-auto select-none transition-all duration-300 cursor-pointer"
+              style={{
+                left: `${lamp.renderX}%`,
+                top: `${lamp.renderY}%`,
+                width: `${lamp.renderWidth}%`,
+              }}
+              onClick={() => !isLit && handleLightLamp(lamp)}
+              title={isLit ? `${lamp.name} (Lit)` : `${lamp.name} (Unlit - Press E to light)`}
             >
-              {isLit ? (
-                /* Lit Diya Flame Effect */
-                <div className="flex flex-col items-center animate-pulse">
-                  <div className="w-5 h-5 rounded-full bg-amber-400/80 shadow-[0_0_16px_rgba(251,191,36,0.95)] border border-amber-300 flex items-center justify-center">
-                    <div className="w-2.5 h-2.5 rounded-full bg-orange-500 animate-ping opacity-75" />
-                  </div>
-                </div>
-              ) : (
-                /* Unlit Diya Bracket Indicator */
-                <div className="w-4 h-4 rounded-full border border-amber-800/50 bg-amber-950/20 shadow-inner flex items-center justify-center">
-                  <div className="w-1.5 h-1.5 rounded-full bg-amber-700/40" />
-                </div>
-              )}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={isLit ? "/badal-mahal-lamp-on.png" : "/badal-mahal-lamp-off.png"}
+                alt={lamp.name}
+                className={`w-full h-auto object-contain transition-all duration-300 ${
+                  isLit
+                    ? "filter drop-shadow-[0_0_12px_rgba(251,191,36,0.85)] scale-105"
+                    : isNearby
+                    ? "filter brightness-110 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)] scale-105"
+                    : "filter brightness-95 opacity-90"
+                }`}
+                style={{ imageRendering: "pixelated" }}
+              />
             </div>
           );
         })}
@@ -184,7 +198,7 @@ export default function BadalMahalLampGame({
           <span className="bg-amber-400 border border-black rounded px-2 py-0.5 text-[11px]">
             E
           </span>
-          <span>[E] LIGHT LAMP ({nearbyUnlitLamp.name})</span>
+          <span>[E] LIGHT DIYA</span>
         </div>
       )}
     </>
