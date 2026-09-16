@@ -26,6 +26,8 @@ export interface DialoguePanelProps {
   onClose: () => void;
   audioUrl?: string;
   autoPlayVoice?: boolean;
+  sceneId?: string;
+  currentSceneId?: string;
 }
 
 export default function DialoguePanel({
@@ -44,7 +46,15 @@ export default function DialoguePanel({
   onClose,
   audioUrl,
   autoPlayVoice = true,
+  sceneId,
+  currentSceneId,
 }: DialoguePanelProps) {
+  // MANDATORY FINAL RENDER SAFETY GUARD:
+  // Dialogue belongs strictly to its owning scene. If current scene diverged, do not render.
+  if (sceneId !== undefined && currentSceneId !== undefined && sceneId !== currentSceneId) {
+    return null;
+  }
+
   const [inputText, setInputText] = useState("");
   const [displayedText, setDisplayedText] = useState(dialogueText);
   const [activeBadge, setActiveBadge] = useState(statusBadge || "normal");

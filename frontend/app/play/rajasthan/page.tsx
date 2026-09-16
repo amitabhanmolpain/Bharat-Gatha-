@@ -7,7 +7,7 @@ import DialoguePanel from "../../components/DialoguePanel";
 import ChauparGame from "./components/ChauparGame";
 import VijayStambhCarvingSystem from "./components/VijayStambhCarvingSystem";
 import BadalMahalLampGame from "./components/BadalMahalLampGame";
-import { playCharacterDialogue, stopCharacterDialogue } from "../../../services/characterVoiceService";
+import { playCharacterDialogue, stopCharacterDialogue, stopAllCharacterVoice } from "../../../services/characterVoiceService";
 import { playNarration, stopNarration } from "../../../services/narratorService";
 import { soundFx } from "../../../services/soundService";
 
@@ -134,6 +134,7 @@ export default function RajasthanGameScreen() {
   const [chachaSpeechText, setChachaSpeechText] = useState("");
   const [chachaOptions, setChachaOptions] = useState<Array<{ id: number | string; text: string }>>([]);
   const [chachaAudioUrl, setChachaAudioUrl] = useState<string | undefined>(undefined);
+  const [chachaDialogueScene, setChachaDialogueScene] = useState<RajasthanSceneType | null>(null);
 
   // --- JOLLY BHAI GENIE COMPANION STATE ---
   const [showJollyDialogue, setShowJollyDialogue] = useState(false);
@@ -141,7 +142,12 @@ export default function RajasthanGameScreen() {
   const [jollyOptions, setJollyOptions] = useState<Array<{ id: number | string; text: string }>>([]);
   const [jollyStatusBadge, setJollyStatusBadge] = useState<"normal" | "glowing" | "shaking" | "doubt">("normal");
   const [jollyAudioUrl, setJollyAudioUrl] = useState<string | undefined>(undefined);
+  const [jollyDialogueScene, setJollyDialogueScene] = useState<RajasthanSceneType | null>(null);
   const [hasHeardKuldharaSecretLore, setHasHeardKuldharaSecretLore] = useState(false);
+
+  // Synchronous scene reference for async callback validation
+  const sceneRef = useRef<RajasthanSceneType>(scene);
+  sceneRef.current = scene;
 
   // --- RESTART CONFIRMATION STATE ---
   const [showRestartConfirmModal, setShowRestartConfirmModal] = useState(false);
@@ -151,8 +157,46 @@ export default function RajasthanGameScreen() {
   const hasPlayedChachaIntroRef = useRef(false);
   const hasPlayedVijayStambhIntroRef = useRef(false);
   const hasPlayedBadalMahalIntroRef = useRef(false);
+  const chachaTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const vijayStambhTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const badalMahalTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const jollyShakeTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // =========================================================================
+  // GLOBAL DIALOGUE & AUDIO LIFECYCLE CLEANUP ON SCENE / STAGE TRANSITION
+  // =========================================================================
+  useEffect(() => {
+    // 1. Invalidate all pending dialogue timers immediately
+    if (chachaTimerRef.current) {
+      clearTimeout(chachaTimerRef.current);
+      chachaTimerRef.current = null;
+    }
+    if (vijayStambhTimerRef.current) {
+      clearTimeout(vijayStambhTimerRef.current);
+      vijayStambhTimerRef.current = null;
+    }
+    if (badalMahalTimerRef.current) {
+      clearTimeout(badalMahalTimerRef.current);
+      badalMahalTimerRef.current = null;
+    }
+    if (jollyShakeTimerRef.current) {
+      clearTimeout(jollyShakeTimerRef.current);
+      jollyShakeTimerRef.current = null;
+    }
+
+    // 2. Invalidate dialogue session & halt active character voice audio immediately
+    stopAllCharacterVoice();
+    stopCharacterDialogue();
+
+    // 3. Immediately close active dialogue panels & clear ownership
+    setShowChachaDialogue(false);
+    setShowJollyDialogue(false);
+    setChachaDialogueScene(null);
+    setJollyDialogueScene(null);
+  }, [scene, stage]);
 
   const triggerBuzurgChachaDialogue = (isAutoIntro: boolean = false) => {
+    setChachaDialogueScene(scene);
     if (!hasPlayedChachaIntroRef.current) {
       hasPlayedChachaIntroRef.current = true;
       setHasPlayedChachaIntro(true);
@@ -184,6 +228,7 @@ export default function RajasthanGameScreen() {
   };
 
   const triggerJollyDialogue = (overrideMode?: string) => {
+    setJollyDialogueScene(scene);
     let speech = "Mere aaka! I am Jolly Bhai, your time-traveling genie companion. We are in the legendary realm of Rajputana! What wisdom do you seek?";
     let options: Array<{ id: number | string; text: string }> = [
       { id: 1, text: "Tell me about this historic fort." },
@@ -303,7 +348,8 @@ export default function RajasthanGameScreen() {
 
     setJollyStatusBadge(badge);
     if (badge === "shaking") {
-      setTimeout(() => {
+      if (jollyShakeTimerRef.current) clearTimeout(jollyShakeTimerRef.current);
+      jollyShakeTimerRef.current = setTimeout(() => {
         setJollyStatusBadge("normal");
       }, 3000);
     }
@@ -314,7 +360,6 @@ export default function RajasthanGameScreen() {
   };
 
   // Auto-play Buzurg Chacha dialogue when first entering inner_courtyard (exactly once)
-  const chachaTimerRef = useRef<NodeJS.Timeout | null>(null);
   useEffect(() => {
     if (scene === "inner_courtyard" && !hasPlayedChachaIntroRef.current) {
       hasPlayedChachaIntroRef.current = true;
@@ -325,7 +370,9 @@ export default function RajasthanGameScreen() {
 
       if (chachaTimerRef.current) clearTimeout(chachaTimerRef.current);
       chachaTimerRef.current = setTimeout(() => {
-        triggerBuzurgChachaDialogue(true);
+        if (sceneRef.current === "inner_courtyard") {
+          triggerBuzurgChachaDialogue(true);
+        }
       }, 500);
     }
     return () => {
@@ -340,30 +387,50 @@ export default function RajasthanGameScreen() {
   useEffect(() => {
     if (scene === "vijay_stambh_interior" && !hasPlayedVijayStambhIntroRef.current) {
       hasPlayedVijayStambhIntroRef.current = true;
-      setTimeout(() => {
-        setJollySpeechText("Mere aaka, some secrets are hiding in these stones… use the Shilpa Drishti and see what the eyes cannot.");
-        setJollyStatusBadge("glowing");
-        setJollyOptions([
-          { id: 99, text: "I will examine the stones with Shilpa Drishti." }
-        ]);
-        setShowJollyDialogue(true);
+      if (vijayStambhTimerRef.current) clearTimeout(vijayStambhTimerRef.current);
+      vijayStambhTimerRef.current = setTimeout(() => {
+        if (sceneRef.current === "vijay_stambh_interior") {
+          setJollySpeechText("Mere aaka, some secrets are hiding in these stones… use the Shilpa Drishti and see what the eyes cannot.");
+          setJollyStatusBadge("glowing");
+          setJollyOptions([
+            { id: 99, text: "I will examine the stones with Shilpa Drishti." }
+          ]);
+          setJollyDialogueScene("vijay_stambh_interior");
+          setShowJollyDialogue(true);
+        }
       }, 400);
     }
+    return () => {
+      if (vijayStambhTimerRef.current) {
+        clearTimeout(vijayStambhTimerRef.current);
+        vijayStambhTimerRef.current = null;
+      }
+    };
   }, [scene]);
 
   // Auto-play Jolly Bhai intro dialogue when entering badal_mahal_interior (exactly once)
   useEffect(() => {
     if (scene === "badal_mahal_interior" && !hasPlayedBadalMahalIntroRef.current) {
       hasPlayedBadalMahalIntroRef.current = true;
-      setTimeout(() => {
-        setJollySpeechText("Mere aaka, these royal lamps have gone dark. Light all three and bring Badal Mahal back to life!");
-        setJollyStatusBadge("glowing");
-        setJollyOptions([
-          { id: 99, text: "I will light the 3 royal lamps!" }
-        ]);
-        setShowJollyDialogue(true);
+      if (badalMahalTimerRef.current) clearTimeout(badalMahalTimerRef.current);
+      badalMahalTimerRef.current = setTimeout(() => {
+        if (sceneRef.current === "badal_mahal_interior") {
+          setJollySpeechText("Mere aaka, these royal lamps have gone dark. Light all three and bring Badal Mahal back to life!");
+          setJollyStatusBadge("glowing");
+          setJollyOptions([
+            { id: 99, text: "I will light the 3 royal lamps!" }
+          ]);
+          setJollyDialogueScene("badal_mahal_interior");
+          setShowJollyDialogue(true);
+        }
       }, 400);
     }
+    return () => {
+      if (badalMahalTimerRef.current) {
+        clearTimeout(badalMahalTimerRef.current);
+        badalMahalTimerRef.current = null;
+      }
+    };
   }, [scene]);
 
   const [showChauparGame, setShowChauparGame] = useState(false);
@@ -1541,6 +1608,7 @@ export default function RajasthanGameScreen() {
       setIsTransitioning,
       setShowChachaDialogue,
       setShowJollyDialogue,
+      setJollyDialogueScene,
       triggerBuzurgChachaDialogue,
       triggerJollyDialogue,
       setShowChauparGame,
@@ -1699,6 +1767,7 @@ export default function RajasthanGameScreen() {
             state.setJollySpeechText?.("Mere aaka, the way to the Cloud Terrace is shrouded in shadows! Light all three royal lamps in the room to continue.");
             state.setJollyStatusBadge?.("doubt");
             state.setJollyOptions?.([{ id: 99, text: "I will light all 3 lamps!" }]);
+            state.setJollyDialogueScene?.("badal_mahal_interior");
             state.setShowJollyDialogue?.(true);
           } else {
             state.setIsTransitioning(true);
@@ -3275,6 +3344,7 @@ export default function RajasthanGameScreen() {
             setJollyOptions([
               { id: 99, text: "Understood, Jolly Bhai!" }
             ]);
+            setJollyDialogueScene("vijay_stambh_interior");
             setShowJollyDialogue(true);
           }}
           onPuzzleSolved={() => {
@@ -3301,6 +3371,7 @@ export default function RajasthanGameScreen() {
             setJollyOptions([
               { id: 99, text: "Understood, Jolly Bhai!" }
             ]);
+            setJollyDialogueScene("badal_mahal_interior");
             setShowJollyDialogue(true);
           }}
           onLampsCountChange={(count) => {
@@ -3325,6 +3396,7 @@ export default function RajasthanGameScreen() {
               setJollySpeechText("Mere aaka, the way to the Cloud Terrace is shrouded in shadows! Light all three royal lamps in the room to continue.");
               setJollyStatusBadge("doubt");
               setJollyOptions([{ id: 99, text: "I will light all 3 lamps!" }]);
+              setJollyDialogueScene("badal_mahal_interior");
               setShowJollyDialogue(true);
             } else {
               setIsTransitioning(true);
@@ -3693,8 +3765,10 @@ export default function RajasthanGameScreen() {
       )}
 
       {/* --- BUZURG CHACHA HISTORICAL DIALOGUE PANEL (STAGE 1) --- */}
-      {showChachaDialogue && (
+      {showChachaDialogue && chachaDialogueScene === scene && (
         <DialoguePanel
+          sceneId={chachaDialogueScene || undefined}
+          currentSceneId={scene}
           characterName="Buzurg Chacha"
           characterTitle="Chaupar Master & Royal Elder of Chittorgarh"
           dialogueText={chachaSpeechText}
@@ -3735,8 +3809,10 @@ export default function RajasthanGameScreen() {
       )}
 
       {/* --- JOLLY BHAI COMPANION HISTORICAL DIALOGUE PANEL --- */}
-      {showJollyDialogue && (
+      {showJollyDialogue && jollyDialogueScene === scene && (
         <DialoguePanel
+          sceneId={jollyDialogueScene || undefined}
+          currentSceneId={scene}
           characterName="Jolly Bhai"
           characterTitle="Ancient Time-Traveling Genie Companion"
           dialogueText={jollySpeechText}

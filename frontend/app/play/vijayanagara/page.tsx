@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { playNarration, stopNarration } from "../../../services/narratorService";
-import { playCharacterDialogue, stopAllCharacterVoice } from "../../../services/characterVoiceService";
+import { playCharacterDialogue, stopCharacterDialogue, stopAllCharacterVoice } from "../../../services/characterVoiceService";
 import { soundFx } from "../../../services/soundService";
 import Link from "next/link";
 import {
@@ -95,6 +95,7 @@ export default function VijayanagaraGameScreen() {
   const [showJollyDialogue, setShowJollyDialogue] = useState(false);
   const [jollySpeechText, setJollySpeechText] = useState<string>("");
   const [jollyOptions, setJollyOptions] = useState<Array<{ id: number; text: string }>>([]);
+  const [jollyDialogueScene, setJollyDialogueScene] = useState<VijayanagaraSceneType | null>(null);
   const [hasTalkedToJolly, setHasTalkedToJolly] = useState<boolean>(false);
   const [heardClueScenes, setHeardClueScenes] = useState<string[]>([]);
 
@@ -130,6 +131,27 @@ export default function VijayanagaraGameScreen() {
   const [showTalikotaModal, setShowTalikotaModal] = useState(false);
   const [showKeeperDialogue, setShowKeeperDialogue] = useState(false);
   const [showCampaignCompletionModal, setShowCampaignCompletionModal] = useState(false);
+
+  // =========================================================================
+  // GLOBAL DIALOGUE & AUDIO LIFECYCLE CLEANUP ON SCENE / STAGE CHANGE
+  // =========================================================================
+  useEffect(() => {
+    // 1. Invalidate active voice & stop dialogue audio immediately
+    stopAllCharacterVoice();
+    stopCharacterDialogue();
+
+    // 2. Immediately close active dialogue panels & clear ownership
+    setShowVidyaranyaDialogue(false);
+    setIsVidyaranyaVoiceActive(false);
+    setShowGemAssessorDialogue(false);
+    setShowToymakerDialogue(false);
+    setShowForeignTravelerDialogue(false);
+    setShowRaghavendraDialogue(false);
+    setShowKeeperDialogue(false);
+    setShowCoracleNotice(false);
+    setShowJollyDialogue(false);
+    setJollyDialogueScene(null);
+  }, [scene, stage]);
 
   // --- PERSISTENCE: LOAD ON MOUNT ---
   useEffect(() => {
@@ -2016,6 +2038,7 @@ export default function VijayanagaraGameScreen() {
                 setJollySpeechText(speechText);
                 setJollyOptions(customOptions);
                 if (typeof soundFx.playDialogueOpen === "function") soundFx.playDialogueOpen();
+                setJollyDialogueScene(scene);
                 setShowJollyDialogue(true);
                 if (isShaking) {
                   setHeardClueScenes((prev) => [...prev, scene]);
@@ -2228,8 +2251,10 @@ export default function VijayanagaraGameScreen() {
         />
 
         {/* --- KEEPER OF MEMORY CLOSING DIALOGUE MODAL --- */}
-        {showKeeperDialogue && (
+        {showKeeperDialogue && scene === "closing_reflection" && (
           <DialoguePanel
+            sceneId="closing_reflection"
+            currentSceneId={scene}
             characterName="Keeper of Memory"
             characterTitle="Guardian of Pushkarani Traditions • Hampi"
             characterId="keeper"
@@ -2325,8 +2350,10 @@ export default function VijayanagaraGameScreen() {
         )}
 
         {/* --- TEMPLE MUSICIAN RAGHAVENDRA DIALOGUE MODAL --- */}
-        {showRaghavendraDialogue && (
+        {showRaghavendraDialogue && scene === "musical_pillars" && (
           <DialoguePanel
+            sceneId="musical_pillars"
+            currentSceneId={scene}
             characterName="Maestoso Raghavendra"
             characterTitle="Royal Court Musician & Scholar • Vittala Temple (c. 1540 AD)"
             characterId="raghavendra"
@@ -2377,8 +2404,10 @@ export default function VijayanagaraGameScreen() {
           />
         )}
 
-        {showVidyaranyaDialogue && (
+        {showVidyaranyaDialogue && (scene === "anegundi_river_crossing" || scene === "anegundi_old_fort") && (
           <DialoguePanel
+            sceneId={scene}
+            currentSceneId={scene}
             characterName="Sage Vidyaranya"
             characterTitle="Spiritual Guide & Scholar • Sringeri Tradition (1336 AD)"
             characterId="vidyaranya"
@@ -2428,8 +2457,10 @@ export default function VijayanagaraGameScreen() {
         )}
 
         {/* --- MASTER GEM ASSESSOR DIALOGUE MODAL (IMAGE 2 DESIGN) --- */}
-        {showGemAssessorDialogue && (
+        {showGemAssessorDialogue && (scene === "gem_traders_row" || scene === "hampi_bazaar_entry") && (
           <DialoguePanel
+            sceneId={scene}
+            currentSceneId={scene}
             characterName="Setti Somappa"
             characterTitle="ROYAL MERCHANT GUILD ASSESSOR"
             characterId="somappa"
@@ -2470,8 +2501,10 @@ export default function VijayanagaraGameScreen() {
         )}
 
         {/* --- MASTER TOYMAKER DIALOGUE MODAL (IMAGE 2 DESIGN) --- */}
-        {showToymakerDialogue && (
+        {showToymakerDialogue && scene === "toymaker_stall" && (
           <DialoguePanel
+            sceneId="toymaker_stall"
+            currentSceneId={scene}
             characterName="Master Kallappa"
             characterTitle="KINHAL CRAFT GUILD ARTISAN"
             characterId="kallappa"
@@ -2503,8 +2536,10 @@ export default function VijayanagaraGameScreen() {
         )}
 
         {/* --- FOREIGN TRAVELER DIALOGUE MODAL (OPTIONAL) --- */}
-        {showForeignTravelerDialogue && (
+        {showForeignTravelerDialogue && scene === "hampi_bazaar_entry" && (
           <DialoguePanel
+            sceneId="hampi_bazaar_entry"
+            currentSceneId={scene}
             characterName="Senhor Duarte"
             characterTitle="Overseas Chronicler & Emissary"
             characterId="duarte"
@@ -2798,8 +2833,10 @@ export default function VijayanagaraGameScreen() {
         )}
 
         {/* --- CORACLE FERRY INSPECTION MODAL (STAGE 1 LOCKED STATE) --- */}
-        {showCoracleNotice && (
+        {showCoracleNotice && scene === "anegundi_river_crossing" && (
           <DialoguePanel
+            sceneId="anegundi_river_crossing"
+            currentSceneId={scene}
             characterName="Oracle Ferry"
             characterTitle="Travel Requirement"
             dialogueText="You need the shell to row the boat to the Hampi Market."
@@ -2810,8 +2847,10 @@ export default function VijayanagaraGameScreen() {
         )}
 
         {/* --- JOLLY BHAI DIALOGUE MODAL --- */}
-        {showJollyDialogue && (
+        {showJollyDialogue && jollyDialogueScene === scene && (
           <DialoguePanel 
+            sceneId={jollyDialogueScene || undefined}
+            currentSceneId={scene}
             characterName="Jolly Bhai"
             characterTitle="Ancient Time-Traveling Genie Companion"
             characterId="jolly"
