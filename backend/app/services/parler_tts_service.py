@@ -58,6 +58,19 @@ CHARACTER_VOICE_PROFILES = {
         "fallback_pace": 1.12,
         "language_code": "en-IN"
     },
+    "vidyaranya": {
+        "id": "vidyaranya",
+        "name": "Sage Vidyaranya",
+        "role": "14th-Century Sringeri Scholar and Founding Advisor of Vijayanagara",
+        "description": (
+            "An elderly Indian male speaking moderately slow, calm, reassuring, and thoughtful Indian English. "
+            "He sounds like a wise teacher and historical sage, delivering clear pronunciation with slight pauses between important ideas. "
+            "His voice is authoritative but not aggressive, mature, and gentle."
+        ),
+        "fallback_speaker": "ratan",
+        "fallback_pace": 0.78,
+        "language_code": "en-IN"
+    },
     "chacha": {
         "id": "chacha",
         "name": "Buzurg Chacha",
@@ -85,6 +98,30 @@ CHARACTER_VOICE_PROFILES = {
         "fallback_pace": 0.94,
         "language_code": "en-IN"
     },
+    "kallappa": {
+        "id": "kallappa",
+        "name": "Master Kallappa",
+        "role": "Kinhal Craft Guild Artisan",
+        "description": (
+            "An old man's voice. A warm, very elderly Indian male artisan speaking slow, gentle, dignified Indian English with a soft South Indian accent. "
+            "His voice is aged, gravelly, respectful, and slightly raspy, speaking like a 16th-century master woodcraft artisan with wisdom, humility, and calm patience."
+        ),
+        "fallback_speaker": "ratan",
+        "fallback_pace": 0.80,
+        "language_code": "en-IN"
+    },
+    "somappa": {
+        "id": "somappa",
+        "name": "Setti Somappa",
+        "role": "Royal Merchant Guild Assessor",
+        "description": (
+            "A dignified, elderly Indian male merchant speaking measured, warm Indian English with a South Indian accent. "
+            "His voice is mature, seasoned, slightly deep, and authoritative yet cordial, speaking like a 16th-century royal gemstone assessor in Hampi Bazaar."
+        ),
+        "fallback_speaker": "ratan",
+        "fallback_pace": 0.82,
+        "language_code": "en-IN"
+    },
     "narrator": {
         "id": "narrator",
         "name": "Historical Chronicler",
@@ -92,6 +129,33 @@ CHARACTER_VOICE_PROFILES = {
         "description": "A deep, resonant, cinematic Indian male voice delivering historical lore.",
         "fallback_speaker": "ratan",
         "fallback_pace": 0.88,
+        "language_code": "en-IN"
+    },
+    "duarte": {
+        "id": "duarte",
+        "name": "Senhor Duarte",
+        "role": "Overseas Chronicler & Emissary",
+        "description": "An adult male speaking clear Indian English with a slight formal, measured tone. He sounds like a scholarly foreign emissary recounting his observations of a grand empire.",
+        "fallback_speaker": "rahul",
+        "fallback_pace": 0.95,
+        "language_code": "en-IN"
+    },
+    "raghavendra": {
+        "id": "raghavendra",
+        "name": "Raghavendra",
+        "role": "Temple Musician",
+        "description": "A calm, devoted Indian male voice speaking softly but clearly in Indian English. He sounds like a traditional temple artist immersed in his craft.",
+        "fallback_speaker": "ratan",
+        "fallback_pace": 0.90,
+        "language_code": "en-IN"
+    },
+    "keeper": {
+        "id": "keeper",
+        "name": "Lotus Mahal Keeper",
+        "role": "Keeper of the Records",
+        "description": "An elderly Indian male speaking moderately slow, calm Indian English. He sounds like a wise, secretive librarian guarding ancient royal documents.",
+        "fallback_speaker": "ratan",
+        "fallback_pace": 0.80,
         "language_code": "en-IN"
     }
 }
@@ -128,12 +192,27 @@ def get_character_profile(character_id: str) -> dict:
     key = (character_id or "jolly").lower().strip()
     if "guard" in key or "sentry" in key or "soldier" in key:
         return CHARACTER_VOICE_PROFILES["guard"]
+    # Explicit match for Master Kallappa (elderly artisan)
+    if "kallappa" in key or "toymaker" in key or "artisan" in key:
+        return CHARACTER_VOICE_PROFILES["kallappa"]
+    # Explicit match for Setti Somappa (elderly merchant assessor)
+    if "somappa" in key or "gem" in key or "assessor" in key or "setti" in key:
+        return CHARACTER_VOICE_PROFILES["somappa"]
+    # Explicit match for Sage Vidyaranya before the generic elder/sage catch-all
+    if "vidyaranya" in key:
+        return CHARACTER_VOICE_PROFILES["vidyaranya"]
     if "elder" in key or "sage" in key or "priest" in key:
         return CHARACTER_VOICE_PROFILES["elder"]
     if "archaeologist" in key or "scholar" in key or "ananya" in key:
         return CHARACTER_VOICE_PROFILES["archaeologist"]
     if "narrator" in key or "story" in key or "chronicler" in key:
         return CHARACTER_VOICE_PROFILES["narrator"]
+    if "duarte" in key or "traveler" in key:
+        return CHARACTER_VOICE_PROFILES["duarte"]
+    if "raghavendra" in key or "musician" in key:
+        return CHARACTER_VOICE_PROFILES["raghavendra"]
+    if "keeper" in key or "librarian" in key:
+        return CHARACTER_VOICE_PROFILES["keeper"]
     return CHARACTER_VOICE_PROFILES.get(key, CHARACTER_VOICE_PROFILES["jolly"])
 
 
@@ -214,8 +293,9 @@ def generate_character_speech(character: str, text: str) -> dict:
         }
 
     # 0. Check persistent disk cache for exact acoustic consistency
-    cache_key = hashlib.md5(f"canonical_{profile['id']}_{clean_text}".encode('utf-8')).hexdigest()
-    cached_file = os.path.join(AUDIO_CACHE_DIR, f"jolly_{cache_key}.wav")
+    safe_character = profile["id"]
+    cache_key = hashlib.md5(f"canonical_{safe_character}_{clean_text}".encode('utf-8')).hexdigest()
+    cached_file = os.path.join(AUDIO_CACHE_DIR, f"{safe_character}_{cache_key}.wav")
     if os.path.exists(cached_file) and os.path.getsize(cached_file) > 1000:
         try:
             with open(cached_file, "rb") as f:
@@ -225,7 +305,7 @@ def generate_character_speech(character: str, text: str) -> dict:
                 "character": profile["id"],
                 "character_name": profile["name"],
                 "audio_base64": base64.b64encode(cached_bytes).decode("utf-8"),
-                "audio_url": f"/audio_cache/jolly_{cache_key}.wav",
+                "audio_url": f"/audio_cache/{safe_character}_{cache_key}.wav",
                 "format": "wav",
                 "engine": "canonical_tts_cached",
                 "status_code": 200
@@ -239,7 +319,7 @@ def generate_character_speech(character: str, text: str) -> dict:
         try:
             with open(cached_file, "wb") as f:
                 f.write(base64.b64decode(result["audio_base64"]))
-            result["audio_url"] = f"/audio_cache/jolly_{cache_key}.wav"
+            result["audio_url"] = f"/audio_cache/{safe_character}_{cache_key}.wav"
         except Exception:
             pass
         return result
@@ -283,7 +363,7 @@ def generate_character_speech(character: str, text: str) -> dict:
                             "character": profile["id"],
                             "character_name": profile["name"],
                             "audio_base64": audio_b64,
-                            "audio_url": f"/audio_cache/jolly_{cache_key}.wav",
+                            "audio_url": f"/audio_cache/{safe_character}_{cache_key}.wav",
                             "format": "wav",
                             "engine": "indic_parler_tts",
                             "status_code": 200

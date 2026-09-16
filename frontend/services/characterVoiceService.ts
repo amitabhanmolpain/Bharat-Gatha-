@@ -26,6 +26,24 @@ export interface CharacterVoiceState {
 
 type CharacterVoiceListener = (state: CharacterVoiceState) => void;
 
+type ExternalVoiceStopper = () => void;
+const externalVoiceStoppers = new Set<ExternalVoiceStopper>();
+
+export const registerExternalVoiceStopper = (stopper: ExternalVoiceStopper): (() => void) => {
+  externalVoiceStoppers.add(stopper);
+  return () => {
+    externalVoiceStoppers.delete(stopper);
+  };
+};
+
+export const notifyExternalVoiceStoppers = (): void => {
+  externalVoiceStoppers.forEach((stopper) => {
+    try {
+      stopper();
+    } catch (e) {}
+  });
+};
+
 class CharacterVoiceManager {
   private activeAudio: HTMLAudioElement | null = null;
   private audioCache: Map<string, string> = new Map();
@@ -81,7 +99,7 @@ class CharacterVoiceManager {
   }
 
   /**
-   * Stop any active character dialogue audio immediately.
+   * Stop any active character dialogue audio immediately and notify all registered voice stoppers.
    */
   public stopCharacterDialogue(): void {
     this.currentSessionId++;
@@ -91,6 +109,7 @@ class CharacterVoiceManager {
       this.abortController = null;
     }
     this.stopCharacterDialogueInternal(true);
+    notifyExternalVoiceStoppers();
   }
 
   private stopCharacterDialogueInternal(resetState: boolean): void {
@@ -105,7 +124,6 @@ class CharacterVoiceManager {
       try {
         audioToStop.pause();
         audioToStop.currentTime = 0;
-        audioToStop.src = "";
       } catch (e) {}
     }
     if (resetState) {
@@ -331,6 +349,65 @@ class CharacterVoiceManager {
       return "/archaeologist_mehtab_bagh.wav";
     }
 
+    // 5. Master Kallappa (Kinhal Craft Guild Artisan - Indic Parler-TTS Elderly Male Voice)
+    if (
+      char.includes("kallappa") ||
+      char.includes("toymaker") ||
+      (char.includes("artisan") && !char.includes("guard"))
+    ) {
+      if (
+        lower.includes("ramayya") ||
+        lower.includes("childhood friend") ||
+        lower.includes("discerning seeker") ||
+        lower.includes("workbench")
+      ) {
+        return "/audio_cache/kallappa_full.wav";
+      }
+      if (
+        lower.includes("namaskara") ||
+        lower.includes("seasoned wood") ||
+        lower.includes("mineral lacquer") ||
+        lower.includes("kinhal") ||
+        lower.includes("toy")
+      ) {
+        return "/audio_cache/kallappa_primary.wav";
+      }
+    }
+
+    // 6. Setti Somappa (Royal Merchant Guild Assessor - Indic Parler-TTS Elderly Male Voice)
+    if (
+      char.includes("somappa") ||
+      char.includes("setti") ||
+      char.includes("assessor") ||
+      char.includes("gem_merchant")
+    ) {
+      if (
+        lower.includes("precious gem") ||
+        lower.includes("nowhere under heaven") ||
+        lower.includes("diamonds from kollur") ||
+        lower.includes("sesame seeds") ||
+        lower.includes("welcome, traveler")
+      ) {
+        return "/audio_cache/somappa_gems.wav";
+      }
+      if (
+        lower.includes("missing merchant") ||
+        lower.includes("royal accounts") ||
+        lower.includes("three ledger fragments") ||
+        lower.includes("rumor")
+      ) {
+        return "/audio_cache/somappa_rumor.wav";
+      }
+      if (
+        lower.includes("why hide") ||
+        lower.includes("gold and stone fade") ||
+        lower.includes("culture last forever") ||
+        lower.includes("wooden toys to learn more")
+      ) {
+        return "/audio_cache/somappa_merchant.wav";
+      }
+    }
+
     return null;
   }
 
@@ -374,6 +451,7 @@ class CharacterVoiceManager {
 
     // 3. Stop currently playing audio or speech synthesis immediately
     this.stopCharacterDialogueInternal(false);
+    notifyExternalVoiceStoppers();
 
     this.updateState({
       isLoading: true,
@@ -453,23 +531,52 @@ class CharacterVoiceManager {
             if (this.currentSessionId !== sessionId) return null;
 
             const utterance = new SpeechSynthesisUtterance(trimmed);
-            const isGuard = character.toLowerCase().includes("guard") || character.toLowerCase().includes("sentry");
-            const isElder = character.toLowerCase().includes("chacha") || character.toLowerCase().includes("elder");
-            utterance.rate = isGuard ? 1.10 : isElder ? 0.92 : 1.05;
-            utterance.pitch = isGuard ? 0.85 : isElder ? 0.90 : 1.05;
+            const isElderlyMale =
+              charKey.includes("kallappa") ||
+              charKey.includes("somappa") ||
+              charKey.includes("vidyaranya") ||
+              charKey.includes("chacha") ||
+              charKey.includes("elder") ||
+              charKey.includes("artisan") ||
+              charKey.includes("assessor");
+            const isGuard = charKey.includes("guard") || charKey.includes("sentry");
+            const isJolly = charKey.includes("jolly") || charKey.includes("genie");
+
+            utterance.rate = isElderlyMale ? 0.84 : isGuard ? 1.10 : isJolly ? 1.05 : 1.00;
+            utterance.pitch = isElderlyMale ? 0.76 : isGuard ? 0.85 : isJolly ? 1.05 : 1.00;
             utterance.volume = 0.90;
 
             const voices = window.speechSynthesis.getVoices();
-            const inVoice = voices.find(
-              (v) =>
-                v.lang === "en-IN" ||
-                v.lang === "hi-IN" ||
-                v.name.toLowerCase().includes("india") ||
-                v.name.toLowerCase().includes("rishi") ||
-                v.name.toLowerCase().includes("veena") ||
-                v.name.toLowerCase().includes("neerja")
-            );
-            if (inVoice) utterance.voice = inVoice;
+            if (voices.length > 0) {
+              if (isElderlyMale) {
+                const elderlyVoice = voices.find(
+                  (v) =>
+                    (v.lang === "en-IN" || v.lang.startsWith("en")) &&
+                    (v.name.toLowerCase().includes("male") ||
+                      v.name.toLowerCase().includes("david") ||
+                      v.name.toLowerCase().includes("george") ||
+                      v.name.toLowerCase().includes("prabhat") ||
+                      v.name.toLowerCase().includes("rishi") ||
+                      v.name.toLowerCase().includes("ravi"))
+                );
+                if (elderlyVoice) {
+                  utterance.voice = elderlyVoice;
+                }
+              } else {
+                const inVoice = voices.find(
+                  (v) =>
+                    v.lang === "en-IN" ||
+                    v.lang === "hi-IN" ||
+                    v.name.toLowerCase().includes("india") ||
+                    v.name.toLowerCase().includes("rishi") ||
+                    v.name.toLowerCase().includes("veena") ||
+                    v.name.toLowerCase().includes("neerja")
+                );
+                if (inVoice) {
+                  utterance.voice = inVoice;
+                }
+              }
+            }
 
             utterance.onstart = () => {
               if (this.currentSessionId === sessionId) {
@@ -661,6 +768,14 @@ export const playCharacterDialogue = (options: CharacterDialogueOptions) =>
   characterVoice.playCharacterDialogue(options);
 
 export const stopCharacterDialogue = () =>
+  characterVoice.stopCharacterDialogue();
+
+/**
+ * Universal voice stop function for Bharat Gatha.
+ * Halts HTML audio, browser speechSynthesis, aborts in-flight TTS,
+ * and clears active voice states across all character and narrator channels.
+ */
+export const stopAllCharacterVoice = () =>
   characterVoice.stopCharacterDialogue();
 
 export const getCharacterVoiceState = () =>

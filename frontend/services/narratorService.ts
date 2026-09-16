@@ -5,6 +5,12 @@
  * Plays from local offline audio files (`/mughal_intro_narration.wav`), with 0 remote latency.
  */
 
+import {
+  registerExternalVoiceStopper,
+  stopCharacterDialogue,
+  stopAllCharacterVoice,
+} from "./characterVoiceService";
+
 export interface NarrationOptions {
   audioUrl?: string;
   speaker?: string;
@@ -90,7 +96,6 @@ class NarratorManager {
       try {
         audioToStop.pause();
         audioToStop.currentTime = 0;
-        audioToStop.src = "";
       } catch (e) {
         // Safe to ignore interruption
       }
@@ -141,6 +146,9 @@ class NarratorManager {
     const trimmed = text.trim();
     if (!trimmed) return null;
 
+    // Stop any active character speech immediately to maintain strict voice exclusivity
+    stopCharacterDialogue();
+
     // Invalidate any in-flight asynchronous operations
     const sessionId = ++this.currentSessionId;
     if (this.abortController) {
@@ -156,7 +164,6 @@ class NarratorManager {
       try {
         this.activeAudio.pause();
         this.activeAudio.currentTime = 0;
-        this.activeAudio.src = "";
       } catch (e) {}
       this.activeAudio = null;
     }
@@ -411,8 +418,17 @@ class NarratorManager {
 // Export singleton instance
 export const narrator = new NarratorManager();
 
+// Register narrator stop with centralized voice coordinator
+if (typeof window !== "undefined") {
+  registerExternalVoiceStopper(() => {
+    narrator.stopNarration(false);
+  });
+}
+
 // Export convenience helper functions
 export const playNarration = (text: string, options?: NarrationOptions) =>
   narrator.playNarration(text, options);
 
 export const stopNarration = (triggerOnEnd: boolean = false) => narrator.stopNarration(triggerOnEnd);
+
+export { stopAllCharacterVoice };
