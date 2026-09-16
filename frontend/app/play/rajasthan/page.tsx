@@ -72,6 +72,9 @@ export default function RajasthanGameScreen() {
   const bhangarhAudioRef = useRef<HTMLAudioElement | null>(null);
   // --- KUMBHALGARH MOUNTAIN WIND AMBIENCE REF ---
   const kumbhalgarhWindAudioRef = useRef<HTMLAudioElement | null>(null);
+  // --- THAR DESERT ELEPHANT TRANSITION AMBIENCE REF ---
+  const elephantAudioRef = useRef<HTMLAudioElement | null>(null);
+  const elephantFadeIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // --- NOW PLAYING SONG BANNER STATE (Image 1: 3s Display & Click-to-Mute) ---
   const [showSongBanner, setShowSongBanner] = useState<boolean>(true);
@@ -723,12 +726,68 @@ export default function RajasthanGameScreen() {
     }
   }, [stage, scene, isCampaignComplete, isSoundMuted, isMusicMuted]);
 
+  // --- THAR DESERT ELEPHANT LOADING SCREEN AMBIENCE LIFECYCLE ---
+  useEffect(() => {
+    if (isElephantTravelling) {
+      if (elephantFadeIntervalRef.current) {
+        clearInterval(elephantFadeIntervalRef.current);
+        elephantFadeIntervalRef.current = null;
+      }
+
+      if (!elephantAudioRef.current) {
+        const audio = new Audio("/audio/elephant_desert_loading.mp3");
+        audio.loop = false; // Short 2-second distant elephant call ambience
+        audio.volume = 0.40;
+        elephantAudioRef.current = audio;
+      }
+
+      const audio = elephantAudioRef.current;
+      audio.volume = 0.40;
+
+      if (isSoundMuted || isMusicMuted) {
+        audio.pause();
+      } else {
+        audio.currentTime = 0;
+        audio.play().catch((err) => {
+          console.log("Elephant transition audio autoplay pending gesture:", err?.message || err);
+        });
+      }
+    } else {
+      // Immediate clean stop when loading screen ends or unmounts
+      if (elephantFadeIntervalRef.current) {
+        clearInterval(elephantFadeIntervalRef.current);
+        elephantFadeIntervalRef.current = null;
+      }
+      if (elephantAudioRef.current) {
+        elephantAudioRef.current.pause();
+        elephantAudioRef.current.currentTime = 0;
+        elephantAudioRef.current = null;
+      }
+    }
+
+    return () => {
+      if (elephantFadeIntervalRef.current) {
+        clearInterval(elephantFadeIntervalRef.current);
+        elephantFadeIntervalRef.current = null;
+      }
+      if (elephantAudioRef.current) {
+        elephantAudioRef.current.pause();
+        elephantAudioRef.current.currentTime = 0;
+        elephantAudioRef.current = null;
+      }
+    };
+  }, [isElephantTravelling, isSoundMuted, isMusicMuted]);
+
   // Pause all background audio on unmount
   useEffect(() => {
     return () => {
       if (windFadeIntervalRef.current) {
         clearInterval(windFadeIntervalRef.current);
         windFadeIntervalRef.current = null;
+      }
+      if (elephantFadeIntervalRef.current) {
+        clearInterval(elephantFadeIntervalRef.current);
+        elephantFadeIntervalRef.current = null;
       }
       if (chittorgarhAudioRef.current) {
         chittorgarhAudioRef.current.pause();
@@ -741,6 +800,10 @@ export default function RajasthanGameScreen() {
       if (kumbhalgarhWindAudioRef.current) {
         kumbhalgarhWindAudioRef.current.pause();
         kumbhalgarhWindAudioRef.current.currentTime = 0;
+      }
+      if (elephantAudioRef.current) {
+        elephantAudioRef.current.pause();
+        elephantAudioRef.current.currentTime = 0;
       }
     };
   }, []);
