@@ -134,9 +134,7 @@ export default function AIExpeditionGeneratorPage() {
       {/* Top Header Navigation */}
       <header className="relative z-10 max-w-5xl mx-auto w-full flex justify-between items-center pb-6 border-b border-[#3a2d1d]">
         <Link href="/dashboard" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 border border-[#b45309] bg-[#16202c] rounded-lg flex items-center justify-center font-serif text-xs font-bold text-[#f59e0b]">
-            BG
-          </div>
+          <img src="/icon.png" alt="Bharat Gatha Logo" className="w-10 h-10 rounded-full border border-[#b45309] object-cover" />
           <div>
             <span className="text-xs font-bold uppercase tracking-widest text-[#d97706] block">BHARAT GATHA</span>
             <span className="text-sm font-serif font-bold text-gray-200 group-hover:text-white transition-colors">AI Historical Expedition</span>
@@ -164,7 +162,7 @@ export default function AIExpeditionGeneratorPage() {
             Where in Indian History do you want to go?
           </h1>
           <p className="text-sm md:text-base text-gray-400 max-w-xl mx-auto font-medium">
-            Type any historical era, event, or moment. Gemini designs the RPG world, quests, and dialogue while the 60 FPS deterministic engine controls gameplay.
+            Type any historical era, event, or moment. Our Personalised Gamified Agent designs the RPG world, quests, and dialogue while the 60 FPS deterministic engine controls gameplay.
           </p>
         </div>
 
@@ -188,7 +186,7 @@ export default function AIExpeditionGeneratorPage() {
           {/* Action Row */}
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-4 pt-4 border-t border-[#2a1e12]">
             <span className="text-xs text-gray-500 font-mono">
-              Free-Tier Engine • Gemini 3.6 Flash
+              Our Personalised Gamified Agent
             </span>
 
             <button
@@ -225,7 +223,7 @@ export default function AIExpeditionGeneratorPage() {
             
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-medium">
               <div className={`p-2 rounded border ${generationStage >= 1 ? "bg-[#d97706]/20 border-[#d97706] text-white" : "bg-[#0a0806] border-gray-800 text-gray-600"}`}>
-                1. Contacting Gemini API
+                1. Contacting AI Agent API
               </div>
               <div className={`p-2 rounded border ${generationStage >= 2 ? "bg-[#d97706]/20 border-[#d97706] text-white" : "bg-[#0a0806] border-gray-800 text-gray-600"}`}>
                 2. Generating Quests & World
@@ -291,6 +289,15 @@ export default function AIExpeditionGeneratorPage() {
         )}
 
       </main>
+
+      {/* Right Side: Genie Design */}
+      <div className="hidden xl:flex fixed right-8 top-1/2 -translate-y-1/2 z-0 pointer-events-none flex-col items-center justify-center">
+        <img 
+          src="/jolly_genie_companion.png" 
+          alt="AI Agent Genie" 
+          className="w-full max-w-[320px] drop-shadow-[0_0_40px_rgba(217,119,6,0.25)] animate-[pulse_4s_ease-in-out_infinite]" 
+        />
+      </div>
 
       {/* Footer */}
       <footer className="relative z-10 text-center text-xs text-gray-600 font-mono py-4 border-t border-[#2a1e12]">
