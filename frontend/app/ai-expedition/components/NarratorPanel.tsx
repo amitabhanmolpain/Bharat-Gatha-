@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useEffect } from "react";
+import { narrationManager } from "../services/narrationManager";
 
 interface NarratorPanelProps {
   text: string;
@@ -7,8 +8,27 @@ interface NarratorPanelProps {
 }
 
 export default function NarratorPanel({ text, tone = "informative", onDismiss }: NarratorPanelProps) {
+  useEffect(() => {
+    if (text) {
+      narrationManager.narrate(`narrator_panel_${text.slice(0, 30)}`, text, { type: "SCENE_INTRO", priority: 85 });
+    }
+    return () => {
+      narrationManager.stopCurrentNarration("narrator-panel-unmount");
+    };
+  }, [text]);
+
+  const handleDismiss = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    narrationManager.unlockAudio();
+    narrationManager.stopCurrentNarration("narrator-panel-dismiss");
+    onDismiss();
+  };
+
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs pointer-events-auto animate-in fade-in duration-200">
+    <div
+      onClick={(e) => e.stopPropagation()}
+      className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs pointer-events-auto animate-in fade-in duration-200"
+    >
       <div className="bg-[#fef3c7] border-4 border-black rounded-xl p-6 max-w-xl w-full shadow-[6px_6px_0_0_rgba(0,0,0,1)] relative overflow-hidden">
         
         {/* Top Decorative Border */}
@@ -27,8 +47,8 @@ export default function NarratorPanel({ text, tone = "informative", onDismiss }:
         {/* Action Button */}
         <div className="flex justify-end">
           <button
-            onClick={onDismiss}
-            className="bg-[#d97706] hover:bg-[#b45309] text-white border-3 border-black rounded-lg px-5 py-2 font-bold text-sm shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[1px_1px_0_0_rgba(0,0,0,1)] transition-all flex items-center gap-2"
+            onClick={handleDismiss}
+            className="bg-[#d97706] hover:bg-[#b45309] text-white border-3 border-black rounded-lg px-5 py-2 font-bold text-sm shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[1px_1px_0_0_rgba(0,0,0,1)] transition-all flex items-center gap-2 cursor-pointer"
           >
             <span>Continue Expedition</span>
             <span>➔</span>

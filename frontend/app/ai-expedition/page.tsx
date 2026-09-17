@@ -7,6 +7,7 @@ import { WorldDefinition } from "./types/expedition";
 import { ExpeditionStorage } from "./services/storage";
 import { geminiImageProvider } from "./services/geminiImageProvider";
 import ExpeditionError from "./components/ExpeditionError";
+import { narrationManager } from "./services/narrationManager";
 
 const SAMPLE_PROMPTS = [
   "From Trade to Territory — Battle of Plassey",
@@ -31,6 +32,7 @@ export default function AIExpeditionGeneratorPage() {
   }, []);
 
   const handleGenerate = async (queryToUse?: string) => {
+    narrationManager.unlockAudio();
     const finalPrompt = (queryToUse || promptInput).trim();
     if (!finalPrompt || finalPrompt.length < 3 || finalPrompt.length > 500) {
       setErrorMessage("Prompt must be between 3 and 500 characters.");

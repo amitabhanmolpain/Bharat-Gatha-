@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { EvidenceItem } from "../types/expedition";
+import { narrationManager } from "../services/narrationManager";
 
 interface EvidenceModalProps {
   evidence: EvidenceItem;
@@ -7,8 +8,29 @@ interface EvidenceModalProps {
 }
 
 export default function EvidenceModal({ evidence, onClose }: EvidenceModalProps) {
+  useEffect(() => {
+    if (evidence) {
+      const evKey = `evidence_${evidence.id}`;
+      const evText = `Primary Source Evidence. ${evidence.title}. ${evidence.description}. ${evidence.historicalFact}`;
+      narrationManager.narrate(evKey, evText, { type: "EVIDENCE", priority: 20 });
+    }
+    return () => {
+      narrationManager.stopCurrentNarration("evidence-unmount");
+    };
+  }, [evidence]);
+
+  const handleClose = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    narrationManager.unlockAudio();
+    narrationManager.stopCurrentNarration("evidence-close");
+    onClose();
+  };
+
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm pointer-events-auto animate-in fade-in duration-200">
+    <div
+      onClick={(e) => e.stopPropagation()}
+      className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm pointer-events-auto animate-in fade-in duration-200"
+    >
       <div className="bg-[#fff9e6] border-4 border-black rounded-xl p-6 max-w-lg w-full shadow-[8px_8px_0_0_rgba(0,0,0,1)] relative">
         
         {/* Header */}
@@ -22,8 +44,8 @@ export default function EvidenceModal({ evidence, onClose }: EvidenceModalProps)
             </h3>
           </div>
           <button
-            onClick={onClose}
-            className="bg-white hover:bg-gray-100 border-2 border-black rounded-lg px-2.5 py-1 text-xs font-bold shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-0.5"
+            onClick={handleClose}
+            className="bg-white hover:bg-gray-100 border-2 border-black rounded-lg px-2.5 py-1 text-xs font-bold shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 cursor-pointer"
           >
             ✕ Esc
           </button>
@@ -60,8 +82,8 @@ export default function EvidenceModal({ evidence, onClose }: EvidenceModalProps)
         {/* Action Button */}
         <div className="flex justify-end">
           <button
-            onClick={onClose}
-            className="bg-[#f59e0b] hover:bg-[#d97706] text-black font-bold text-sm border-3 border-black rounded-lg px-5 py-2 shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[1px_1px_0_0_rgba(0,0,0,1)] transition-all"
+            onClick={handleClose}
+            className="bg-[#f59e0b] hover:bg-[#d97706] text-black font-bold text-sm border-3 border-black rounded-lg px-5 py-2 shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[1px_1px_0_0_rgba(0,0,0,1)] transition-all cursor-pointer"
           >
             Continue Expedition ➔
           </button>

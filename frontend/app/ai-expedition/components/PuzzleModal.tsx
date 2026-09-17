@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { PuzzleDefinition, PuzzleOption } from "../types/expedition";
+import { narrationManager } from "../services/narrationManager";
 
 interface PuzzleModalProps {
   puzzle: PuzzleDefinition;
@@ -12,20 +13,54 @@ export default function PuzzleModal({ puzzle, onSolve, onClose }: PuzzleModalPro
   const [showHint, setShowHint] = useState(false);
   const [isSolved, setIsSolved] = useState(puzzle.isSolved);
 
-  const handleSelectOption = (opt: PuzzleOption) => {
+  useEffect(() => {
+    if (!puzzle.isSolved) {
+      const puzzleKey = `puzzle_question_${puzzle.id}`;
+      const fullText = `Historical reasoning challenge. ${puzzle.title}. ${puzzle.historicalContext}. ${puzzle.question}`;
+      narrationManager.narrate(puzzleKey, fullText, { type: "PUZZLE", priority: 40 });
+    }
+    return () => {
+      narrationManager.stopCurrentNarration("puzzle-unmount");
+    };
+  }, [puzzle.id, puzzle.title, puzzle.historicalContext, puzzle.question, puzzle.isSolved]);
+
+  const handleClose = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    narrationManager.unlockAudio();
+    narrationManager.stopCurrentNarration("puzzle-close");
+    onClose();
+  };
+
+  const handleSelectOption = (opt: PuzzleOption, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    narrationManager.unlockAudio();
+    narrationManager.stopCurrentNarration("puzzle-answer");
     setSelectedOpt(opt);
     if (opt.isCorrect) {
       setIsSolved(true);
+      narrationManager.narrate(
+        `puzzle_correct_${puzzle.id}`,
+        `Correct. HISTORICAL INSIGHT UNLOCKED. ${puzzle.historicalInsightUnlocked}`,
+        { type: "INSIGHT", priority: 70, forceRepeat: true }
+      );
       setTimeout(() => {
         onSolve();
       }, 1800);
     } else {
       setShowHint(true);
+      narrationManager.narrate(
+        `puzzle_hint_${puzzle.id}`,
+        `Not quite. ${opt.explanation || puzzle.hint}`,
+        { type: "INFO", priority: 35, forceRepeat: true }
+      );
     }
   };
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm pointer-events-auto animate-in fade-in duration-200">
+    <div
+      onClick={(e) => e.stopPropagation()}
+      className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm pointer-events-auto animate-in fade-in duration-200"
+    >
       <div className="bg-[#fff9e6] border-4 border-black rounded-xl p-6 max-w-xl w-full shadow-[8px_8px_0_0_rgba(0,0,0,1)] relative">
         
         {/* Header */}
@@ -39,8 +74,8 @@ export default function PuzzleModal({ puzzle, onSolve, onClose }: PuzzleModalPro
             </h3>
           </div>
           <button
-            onClick={onClose}
-            className="bg-white border-2 border-black rounded-lg px-2.5 py-1 text-xs font-bold shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-0.5"
+            onClick={handleClose}
+            className="bg-white border-2 border-black rounded-lg px-2.5 py-1 text-xs font-bold shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 cursor-pointer"
           >
             ✕ Esc
           </button>

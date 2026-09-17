@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useRef, useCallback, use } from "react";
 import { useRouter } from "next/navigation";
-import { WorldDefinition, DialogueOption, SceneExit, NPCDefinition, PuzzleDefinition, NarratorEvent, QuestDefinition } from "../../types/expedition";
+import { WorldDefinition, DialogueOption, SceneExit, SceneDefinition, NPCDefinition, PuzzleDefinition, NarratorEvent, QuestDefinition } from "../../types/expedition";
 import { SCENE_TEMPLATES, SceneTemplateGeometry } from "../../data/sceneTemplates";
 import { ExpeditionStorage } from "../../services/storage";
 import { geminiImageProvider } from "../../services/geminiImageProvider";
 import { updatePlayerPhysics, isWithinProximity, InputState, PlayerPhysicsState, PLASSEY_CHARACTER_SCALE_MULTIPLIER } from "../../engine/physics";
 import { QuestRuntime } from "../../engine/questRuntime";
+import { narrationManager } from "../../services/narrationManager";
 
 import ExpeditionHUD from "../../components/ExpeditionHUD";
 import NarratorPanel from "../../components/NarratorPanel";
@@ -183,8 +184,107 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
     };
   }, [activeSceneId, world, worldId]);
 
+  // 1. Opening Cinematic Narration on Expedition Start
+  useEffect(() => {
+    if (!world || isLoading) return;
+    const openingText =
+      world.narratorOpening ||
+      "1757. Bengal. The East India Company's ambitions are beginning to extend far beyond trade. Your journey starts at a military camp on the edge of the coming conflict.";
+    narrationManager.narrate(openingText, {
+      type: "CRITICAL",
+      key: `world_opening_${world.metadata.id}`,
+    });
+  }, [world, isLoading]);
+
+  // 2. Scene Introduction Narration across all Plassey scenes
+  useEffect(() => {
+    if (!world || !activeSceneId || isLoading) return;
+    const sceneDef = world.scenes.find((s) => s.id === activeSceneId);
+    if (!sceneDef) return;
+
+    const SCENE_INTROS: Record<string, string> = {
+      scene_1: "You have reached the Company's military camp. Behind its trading operations, a more powerful organization is beginning to emerge.",
+      scene_2: "Inside the camp, rumours circulate about loyalties within Bengal's political leadership.",
+      scene_3: "Bengal's wealth is visible everywhere in its markets. Cloth, spices and commerce helped make the region enormously valuable.",
+      scene_4: "Here, trade gives way to politics. Maps, letters and alliances reveal how the Company's influence extended beyond commerce.",
+      scene_5: "The court is where political loyalties become decisive.",
+      scene_6: "At Plassey, the consequences of these alliances become visible.",
+    };
+
+    const introText =
+      sceneDef.visualDescription ||
+      SCENE_INTROS[activeSceneId] ||
+      `You have entered ${sceneDef.name}. Explore the environment to uncover historical insights.`;
+
+    narrationManager.narrate(introText, {
+      type: "SCENE_INTRO",
+      key: `scene_intro_${activeSceneId}`,
+    });
+  }, [activeSceneId, world, isLoading]);
+
+  // 3. Top-Left Objective Narration
+  useEffect(() => {
+    if (!activeQuest || isLoading) return;
+    const currentObj = activeQuest.objectives.find((o) => !o.isCompleted);
+    if (!currentObj) return;
+
+    narrationManager.narrate(`Your objective: ${currentObj.description}`, {
+      type: "OBJECTIVE",
+      key: `objective_${currentObj.id}`,
+    });
+  }, [activeQuest, isLoading]);
+
+
   // Current Scene Definition & Proximity Calculations
   const currentSceneDef = world?.scenes.find((s) => s.id === activeSceneId) || world?.scenes[0];
+  const [disarmedExitIds, setDisarmedExitIds] = useState<string[]>([]);
+  const isSceneTransitioningRef = useRef<boolean>(false);
+  const transitionLockUntilRef = useRef<number>(0);
+  const disarmedExitIdsRef = useRef<Set<string>>(new Set());
+  const eKeyDownHandledRef = useRef<boolean>(false);
+
+  // Development automatic spawn validation helper
+  const validateSpawnPoint = useCallback((scene: SceneDefinition, spawn: { x: number; y: number }) => {
+    if (spawn.x < 0 || spawn.x > 100 || spawn.y < 0 || spawn.y > 100) {
+      console.warn(`[INVALID SPAWN] scene="${scene.id}" spawn=`, spawn, `reason="out of bounds"`);
+    }
+    scene.exits.forEach((ex: SceneExit) => {
+      const inside =
+        spawn.x >= ex.triggerArea.minX &&
+        spawn.x <= ex.triggerArea.maxX &&
+        spawn.y >= ex.triggerArea.minY &&
+        spawn.y <= ex.triggerArea.maxY;
+      if (inside) {
+        console.warn(`[INVALID SPAWN] scene="${scene.id}" spawn=`, spawn, `reason="inside exit trigger ${ex.id}"`);
+      }
+    });
+  }, []);
+
+  // Dynamic Exit Re-arming State Machine
+  useEffect(() => {
+    if (!currentSceneDef || disarmedExitIds.length === 0) return;
+    const buffer = 8.0;
+    const remaining: string[] = [];
+    currentSceneDef.exits.forEach((ex) => {
+      if (disarmedExitIds.includes(ex.id)) {
+        const isOutsideBufferedZone =
+          playerPhysics.x < ex.triggerArea.minX - buffer ||
+          playerPhysics.x > ex.triggerArea.maxX + buffer ||
+          playerPhysics.y < ex.triggerArea.minY - buffer ||
+          playerPhysics.y > ex.triggerArea.maxY + buffer;
+        if (isOutsideBufferedZone) {
+          console.log(`[EXIT REARMED] scene="${activeSceneId}" exit="${ex.id}"`);
+        } else {
+          remaining.push(ex.id);
+        }
+      }
+    });
+    if (remaining.length !== disarmedExitIds.length) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setDisarmedExitIds(remaining);
+      disarmedExitIdsRef.current = new Set(remaining);
+    }
+  }, [playerPhysics.x, playerPhysics.y, currentSceneDef, activeSceneId, disarmedExitIds]);
 
   const getDist = (p1: { x: number; y: number }, p2: { x: number; y: number }) =>
     Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
@@ -199,7 +299,11 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
   );
   const distObj = candidateObj ? getDist(playerPhysics, candidateObj) : Infinity;
 
+  // Candidate Exit proximity check — IGNORES DISARMED EXITS
   const candidateExit = currentSceneDef?.exits.find((ex) => {
+    if (disarmedExitIds.includes(ex.id)) {
+      return false; // Exit is disarmed until player moves away from spawn
+    }
     const insideArea =
       playerPhysics.x >= ex.triggerArea.minX &&
       playerPhysics.x <= ex.triggerArea.maxX &&
@@ -209,7 +313,7 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
       x: (ex.triggerArea.minX + ex.triggerArea.maxX) / 2,
       y: (ex.triggerArea.minY + ex.triggerArea.maxY) / 2
     };
-    const nearCenter = isWithinProximity({ x: playerPhysics.x, y: playerPhysics.y }, centerPos, 18.0);
+    const nearCenter = isWithinProximity({ x: playerPhysics.x, y: playerPhysics.y }, centerPos, 10.0);
     return insideArea || nearCenter;
   });
   const distExit = candidateExit
@@ -226,36 +330,111 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
   const nearObjectPlacement = minDist < Infinity && minDist === distObj ? candidateObj : null;
   const nearExit = minDist < Infinity && minDist === distExit ? candidateExit : null;
 
-  const lastTransitionTimeRef = useRef<number>(0);
-
   // Authoritative Scene Transition Function
   const transitionToScene = useCallback((targetSceneId: string, targetSpawnPoint?: { x: number; y: number }) => {
     if (!world) return;
+
+    if (isSceneTransitioningRef.current) {
+      console.log(`[DUPLICATE TRANSITION IGNORED] Target scene: "${targetSceneId}"`);
+      return;
+    }
+    if (performance.now() < transitionLockUntilRef.current) {
+      console.log(`[STALE TRANSITION IGNORED] Transition cooldown active for target scene: "${targetSceneId}"`);
+      return;
+    }
+    if (targetSceneId === activeSceneId) {
+      return;
+    }
+
     const targetScene = world.scenes.find((s) => s.id === targetSceneId);
     if (!targetScene) return;
 
-    const spawnPoint = targetSpawnPoint || targetScene.spawnPoint || { x: 20, y: 78 };
+    // 1. Lock transition & set cooldown
+    isSceneTransitioningRef.current = true;
+    transitionLockUntilRef.current = performance.now() + 600;
 
+    const spawnPoint = targetSpawnPoint || targetScene.spawnPoint || { x: 30, y: 80 };
+
+    console.log(`[SCENE TRANSITION START] source="${activeSceneId}" target="${targetSceneId}" spawn=`, spawnPoint);
+
+    // 2. Cancel previous scene narration IMMEDIATELY before transition
+    narrationManager.cancelForSceneTransition(targetSceneId);
+
+    // Prepare scene intro audio for target scene
+    const SCENE_INTROS: Record<string, string> = {
+      scene_1: "You have reached the Company's military camp. Behind its trading operations, a more powerful organization is beginning to emerge.",
+      scene_2: "Inside the camp, rumours circulate about loyalties within Bengal's political leadership.",
+      scene_3: "Bengal's wealth is visible everywhere in its markets. Cloth, spices and commerce helped make the region enormously valuable.",
+      scene_4: "Here, trade gives way to politics. Maps, letters and alliances reveal how the Company's influence extended beyond commerce.",
+      scene_5: "The court is where political loyalties become decisive.",
+      scene_6: "At Plassey, the consequences of these alliances become visible.",
+    };
+    const introText = targetScene.visualDescription || SCENE_INTROS[targetSceneId] || `You have entered ${targetScene.name}. Explore the environment to uncover historical insights.`;
+    narrationManager.prepareNarration(`scene_intro_${targetSceneId}`, introText, { type: "SCENE_INTRO", priority: 80, sceneId: targetSceneId }).catch(() => {});
+
+    // 3. Automatic spawn validation
+    validateSpawnPoint(targetScene, spawnPoint);
+
+    // 4. Reset movement key states & E edge-trigger flag
+    setInputs({ left: false, right: false, up: false, down: false });
+    eKeyDownHandledRef.current = true;
+
+    // 5. Disarm exits overlapping or near target spawn point
+    disarmedExitIdsRef.current.clear();
+    const buffer = 8.0;
+    const newlyDisarmed: string[] = [];
+    targetScene.exits.forEach((ex) => {
+      const insideBufferedArea =
+        spawnPoint.x >= ex.triggerArea.minX - buffer &&
+        spawnPoint.x <= ex.triggerArea.maxX + buffer &&
+        spawnPoint.y >= ex.triggerArea.minY - buffer &&
+        spawnPoint.y <= ex.triggerArea.maxY + buffer;
+      if (insideBufferedArea) {
+        newlyDisarmed.push(ex.id);
+        console.log(`[EXIT DISARMED] scene="${targetSceneId}" exit="${ex.id}"`);
+      }
+    });
+    setDisarmedExitIds(newlyDisarmed);
+    disarmedExitIdsRef.current = new Set(newlyDisarmed);
+
+    // 6. Update quest runtime & active scene state
     if (questRuntimeRef.current) {
       questRuntimeRef.current.setSceneId(targetSceneId, spawnPoint);
     }
     setActiveSceneId(targetSceneId);
-    setPlayerPhysics((prev) => ({
-      ...prev,
+    setPlayerPhysics({
       x: spawnPoint.x,
       y: spawnPoint.y,
-      isWalking: false
-    }));
-    lastTransitionTimeRef.current = Date.now();
-  }, [world]);
+      facingLeft: false,
+      isWalking: false,
+      walkPhase: 0
+    });
+
+    console.log(`[SCENE TRANSITION COMPLETE] scene="${targetSceneId}" spawn=`, spawnPoint);
+
+    setTimeout(() => {
+      isSceneTransitioningRef.current = false;
+    }, 100);
+  }, [world, activeSceneId, validateSpawnPoint]);
 
   const executeSceneTransition = useCallback((exit: SceneExit) => {
+    if (disarmedExitIdsRef.current.has(exit.id)) {
+      console.log(`[STALE E IGNORED] Exit "${exit.id}" is disarmed.`);
+      return;
+    }
     transitionToScene(exit.targetSceneId, exit.targetSpawn);
   }, [transitionToScene]);
 
   // Interaction Key Handler
   const handleInteractKey = useCallback(() => {
     if (nearNPCDef) {
+      const dialogueTree = nearNPCDef.dialogueTree || [];
+      const firstNode = dialogueTree[0];
+      const promptText = firstNode ? firstNode.prompt : nearNPCDef.initialDialogue;
+      if (promptText) {
+        const dialogueKey = `dialogue_${nearNPCDef.id}_init_${promptText.slice(0, 20)}`;
+        narrationManager.prepareNarration(dialogueKey, promptText, { type: "DIALOGUE", priority: 50 }).catch(() => {});
+      }
       setActiveNPC(nearNPCDef);
       setActiveDialogueNodeId(undefined);
       return;
@@ -272,7 +451,9 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
         }
         const evItem = world.evidence.find((e) => e.id === nearObjectPlacement.clueId);
         if (evItem) {
-          setActiveEvidenceItem(evItem);
+          narrationManager.openEvidenceWithAudio(evItem, (item) => {
+            setActiveEvidenceItem(item);
+          });
           return;
         }
       }
@@ -288,6 +469,9 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
     if (world) {
       const puzzle = world.puzzles.find((p) => !p.isSolved);
       if (puzzle && !activePuzzle) {
+        const puzzleKey = `puzzle_question_${puzzle.id}`;
+        const fullText = `Historical reasoning challenge. ${puzzle.title}. ${puzzle.historicalContext}. ${puzzle.question}`;
+        narrationManager.prepareNarration(puzzleKey, fullText, { type: "PUZZLE", priority: 40 }).catch(() => {});
         setActivePuzzle(puzzle);
       }
     }
@@ -297,7 +481,7 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
     activeNPC || activePuzzle || activeNarratorEvent || activeEvidenceItem || showCodex || showExpeditionComplete
   );
 
-  // Keydown / Keyup Event Listeners
+  // Keydown / Keyup Event Listeners with Edge-Triggered E Key
   useEffect(() => {
     if (isLoading || !world || errorMessage) return;
 
@@ -309,11 +493,14 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
         setActivePuzzle(null);
         setActiveNarratorEvent(null);
         setShowCodex(false);
+        setInputs({ left: false, right: false, up: false, down: false });
+        eKeyDownHandledRef.current = true;
         return;
       }
 
       if (isModalOpen) {
         setInputs({ left: false, right: false, up: false, down: false });
+        eKeyDownHandledRef.current = true;
         return;
       }
 
@@ -323,13 +510,19 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
       if (key === "s" || key === "arrowdown") setInputs((p) => ({ ...p, down: true }));
 
       if (key === "e") {
-        handleInteractKey();
+        if (!eKeyDownHandledRef.current) {
+          eKeyDownHandledRef.current = true;
+          handleInteractKey();
+        }
       }
     };
 
     const onKeyUp = (e: KeyboardEvent) => {
-      if (isModalOpen) return;
       const key = e.key.toLowerCase();
+      if (key === "e") {
+        eKeyDownHandledRef.current = false;
+      }
+      if (isModalOpen) return;
       if (key === "a" || key === "arrowleft") setInputs((p) => ({ ...p, left: false }));
       if (key === "d" || key === "arrowright") setInputs((p) => ({ ...p, right: false }));
       if (key === "w" || key === "arrowup") setInputs((p) => ({ ...p, up: false }));
@@ -367,9 +560,12 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
           questRuntimeRef.current.setPlayerPos(computed.nextPos);
         }
 
-        // Physical exit collision check: trigger transition when walking into exit zone
+        // Physical exit collision check: trigger transition ONLY IF exit is ARMED and transition lock is clear
         const currentExits = sceneDef?.exits || [];
         const triggeredExit = currentExits.find((ex) => {
+          if (disarmedExitIdsRef.current.has(ex.id)) {
+            return false; // Ignore disarmed exit until player moves away from spawn
+          }
           return (
             computed.nextPos.x >= ex.triggerArea.minX &&
             computed.nextPos.x <= ex.triggerArea.maxX &&
@@ -378,11 +574,8 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
           );
         });
 
-        if (triggeredExit && Date.now() - lastTransitionTimeRef.current > 1000) {
-          lastTransitionTimeRef.current = Date.now();
-          setTimeout(() => {
-            executeSceneTransition(triggeredExit);
-          }, 0);
+        if (triggeredExit && !isSceneTransitioningRef.current && performance.now() >= transitionLockUntilRef.current) {
+          executeSceneTransition(triggeredExit);
         }
 
         return {
@@ -419,6 +612,7 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
 
   const handleDialogueOptionSelect = (option: DialogueOption) => {
     if (!questRuntimeRef.current) return;
+    narrationManager.stopCurrentNarration("dialogue-option-select");
 
     if (option.grantsEvidenceId) {
       questRuntimeRef.current.discoverEvidence(option.grantsEvidenceId);
@@ -461,6 +655,7 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
 
   const handlePuzzleSolved = () => {
     if (!activePuzzle || !questRuntimeRef.current) return;
+    narrationManager.stopCurrentNarration("puzzle-solved");
     const res = questRuntimeRef.current.solvePuzzle(activePuzzle.id);
     setActivePuzzle(null);
     setActiveQuest(questRuntimeRef.current.getActiveQuest());

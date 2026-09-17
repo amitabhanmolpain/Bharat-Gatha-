@@ -69,7 +69,7 @@ export const PLASSEY_1757_BLUEPRINT: ExpeditionBlueprint = {
         templateId: "fort_gate",
         visualDescription: "The fortified wooden and brick entrance to the East India Company's encampment in Bengal, guarded by sentries holding muskets near stacks of shipping crates.",
         imagePrompt: "Create a historically grounded 2.5D Indian RPG environment of an 18th-century East India Company military camp entrance in Bengal 1757, earthen ground, wooden defensive structures, period tents, Company soldiers in redcoat uniforms holding period muskets, supply crates, cloth banners without readable text, humid Bengal atmosphere with lush tropical vegetation beyond camp, clear playable foreground, open movement area, 2.5D side perspective, no modern objects, no text",
-        spawnPoint: { x: 30, y: 82 },
+        spawnPoint: { x: 12, y: 80 },
         npcs: [
           { npcId: "char_company_guard", x: 36, y: 66 },
           { npcId: "char_camp_clerk", x: 74, y: 68 }
@@ -90,7 +90,7 @@ export const PLASSEY_1757_BLUEPRINT: ExpeditionBlueprint = {
             targetSceneId: "scene_camp_rumours",
             label: "Enter Camp Courtyard",
             triggerArea: { minX: 24, maxX: 36, minY: 55, maxY: 72 },
-            targetSpawn: { x: 12, y: 80 }
+            targetSpawn: { x: 30, y: 80 }
           }
         ],
         narratorEvents: [
@@ -108,7 +108,7 @@ export const PLASSEY_1757_BLUEPRINT: ExpeditionBlueprint = {
         templateId: "fort_courtyard",
         visualDescription: "An inner courtyard filled with supply wagons, rain-drenched tents, and soldiers huddled in conversation about the coming confrontation with Siraj-ud-Daulah.",
         imagePrompt: "Create a historically grounded 2.5D Indian RPG environment of an 18th-century military camp interior in Bengal 1757, soldiers, supply wagons, rain-drenched canvas tents, wooden palisades, period firearms, merchant activity, messenger movement, humid tropical monsoon rain environment, military preparation and political tension, clear playable foreground, open movement area, 2.5D side perspective, no modern objects, no text",
-        spawnPoint: { x: 15, y: 80 },
+        spawnPoint: { x: 30, y: 80 },
         npcs: [
           { npcId: "char_company_soldier", x: 30, y: 75 },
           { npcId: "char_bengal_merchant", x: 55, y: 70 },
@@ -130,14 +130,14 @@ export const PLASSEY_1757_BLUEPRINT: ExpeditionBlueprint = {
             targetSceneId: "scene_company_camp",
             label: "Return to Camp Entrance",
             triggerArea: { minX: 0, maxX: 16, minY: 40, maxY: 95 },
-            targetSpawn: { x: 30, y: 82 }
+            targetSpawn: { x: 12, y: 80 }
           },
           {
             id: "ex_scene2_to_scene3",
             targetSceneId: "scene_bengal_bazaar",
             label: "Walk to Bengal Market",
             triggerArea: { minX: 84, maxX: 100, minY: 40, maxY: 95 },
-            targetSpawn: { x: 12, y: 80 }
+            targetSpawn: { x: 30, y: 80 }
           }
         ],
         narratorEvents: [
@@ -155,7 +155,7 @@ export const PLASSEY_1757_BLUEPRINT: ExpeditionBlueprint = {
         templateId: "bazaar",
         visualDescription: "A bustling 18th-century Bengal market square with thatched awnings, vibrant silk bolts, spice sacks, and merchants conducting commerce.",
         imagePrompt: "Create a historically grounded 2.5D Indian RPG environment of a busy 18th-century Bengal bazaar market around 1757, silk textiles hanging from wooden stalls, cloth merchants, spice sacks, metal vessels, account books, weighing equipment, local traders in period attire, 18th-century Bengal brick and plaster architecture, clear playable central movement area, 2.5D side perspective, no modern objects, no readable signs, no text",
-        spawnPoint: { x: 15, y: 80 },
+        spawnPoint: { x: 30, y: 80 },
         npcs: [
           { npcId: "char_bengal_merchant", x: 35, y: 75 },
           { npcId: "char_artisan", x: 70, y: 72 }
@@ -176,14 +176,14 @@ export const PLASSEY_1757_BLUEPRINT: ExpeditionBlueprint = {
             targetSceneId: "scene_camp_rumours",
             label: "Return to Military Camp",
             triggerArea: { minX: 0, maxX: 16, minY: 40, maxY: 95 },
-            targetSpawn: { x: 88, y: 80 }
+            targetSpawn: { x: 70, y: 80 }
           },
           {
             id: "ex_scene3_to_scene4",
             targetSceneId: "scene_political_investigation",
             label: "Enter Political Chamber",
             triggerArea: { minX: 84, maxX: 100, minY: 40, maxY: 95 },
-            targetSpawn: { x: 12, y: 80 }
+            targetSpawn: { x: 30, y: 80 }
           }
         ],
         narratorEvents: [
@@ -201,7 +201,7 @@ export const PLASSEY_1757_BLUEPRINT: ExpeditionBlueprint = {
         templateId: "palace_interior",
         visualDescription: "An administrative hall with Persian carpets, carved archways, diplomatic letters, and maps of Bengal spread across low teak tables.",
         imagePrompt: "Create a historically grounded 2.5D Indian RPG environment of an 18th-century Bengal elite administrative interior in 1757, arched Mughal-style architecture, carved stone pillars, Persian carpets, low wooden furniture, parchment diplomatic documents, brass oil lamps, period textiles, view into quiet courtyard, formal quiet atmosphere of political tension, 2.5D side perspective, no modern objects, no text",
-        spawnPoint: { x: 50, y: 88 },
+        spawnPoint: { x: 30, y: 80 },
         npcs: [
           { npcId: "char_camp_clerk", x: 25, y: 65 },
           { npcId: "char_court_official", x: 50, y: 54 },
@@ -231,14 +231,14 @@ export const PLASSEY_1757_BLUEPRINT: ExpeditionBlueprint = {
             targetSceneId: "scene_bengal_bazaar",
             label: "Walk to Return to Market",
             triggerArea: { minX: 0, maxX: 16, minY: 40, maxY: 95 },
-            targetSpawn: { x: 88, y: 80 }
+            targetSpawn: { x: 70, y: 80 }
           },
           {
             id: "ex_scene4_to_scene5",
             targetSceneId: "scene_court_investigation",
             label: "Walk to Enter Royal Court ➔",
             triggerArea: { minX: 84, maxX: 100, minY: 40, maxY: 95 },
-            targetSpawn: { x: 12, y: 80 }
+            targetSpawn: { x: 30, y: 80 }
           }
         ],
         narratorEvents: [
@@ -256,7 +256,7 @@ export const PLASSEY_1757_BLUEPRINT: ExpeditionBlueprint = {
         templateId: "throne_room",
         visualDescription: "The grand audience hall of Bengal in Murshidabad, with silk drapery, velvet cushions, and marble columns where Nawab Siraj-ud-Daulah and his generals deliberate.",
         imagePrompt: "Create a historically grounded 2.5D Indian RPG environment of an 18th-century Bengal court interior in 1757, Nawab-era architecture, ornamental carved pillars, crimson carpets, low velvet throne cushion, brass lamps, court furniture, administrative documents, plausible historical realism, 2.5D side perspective, no modern objects, no text",
-        spawnPoint: { x: 50, y: 88 },
+        spawnPoint: { x: 30, y: 80 },
         npcs: [
           { npcId: "char_siraj", x: 50, y: 60 },
           { npcId: "char_jafar", x: 50, y: 72 },
@@ -287,14 +287,14 @@ export const PLASSEY_1757_BLUEPRINT: ExpeditionBlueprint = {
             targetSceneId: "scene_political_investigation",
             label: "Walk to Return to Political Chamber",
             triggerArea: { minX: 0, maxX: 16, minY: 40, maxY: 95 },
-            targetSpawn: { x: 88, y: 80 }
+            targetSpawn: { x: 70, y: 80 }
           },
           {
             id: "ex_scene5_to_scene6",
             targetSceneId: "scene_aftermath",
             label: "Walk to Proceed to Plassey ➔",
             triggerArea: { minX: 84, maxX: 100, minY: 40, maxY: 95 },
-            targetSpawn: { x: 12, y: 80 }
+            targetSpawn: { x: 30, y: 80 }
           }
         ],
         narratorEvents: [
@@ -312,7 +312,7 @@ export const PLASSEY_1757_BLUEPRINT: ExpeditionBlueprint = {
         templateId: "garden",
         visualDescription: "The quiet mango groves of Palashi after the confrontation, damp from monsoon rain, with historic flags fluttering as rain mist settles over the field.",
         imagePrompt: "Create a historically grounded 2.5D Indian RPG environment of the quiet Bengal landscape after the Battle of Plassey in 1757, humid Bengal environment, ancient mango orchard trees, open field, distant rain haze, remnants of period military tents, late afternoon light, reflective historical mood, no graphic violence, no corpses, no modern objects, no text, 2.5D side perspective",
-        spawnPoint: { x: 15, y: 80 },
+        spawnPoint: { x: 30, y: 80 },
         npcs: [
           { npcId: "char_company_soldier", x: 35, y: 75 },
           { npcId: "char_narrator_observer", x: 65, y: 72 }
@@ -333,7 +333,7 @@ export const PLASSEY_1757_BLUEPRINT: ExpeditionBlueprint = {
             targetSceneId: "scene_court_investigation",
             label: "Return to Royal Court",
             triggerArea: { minX: 0, maxX: 16, minY: 40, maxY: 95 },
-            targetSpawn: { x: 88, y: 80 }
+            targetSpawn: { x: 70, y: 80 }
           }
         ],
         narratorEvents: [

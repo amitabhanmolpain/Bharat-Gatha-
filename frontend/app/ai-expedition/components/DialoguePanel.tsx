@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { NPCDefinition, DialogueOption } from "../types/expedition";
+import { narrationManager } from "../services/narrationManager";
 
 interface DialoguePanelProps {
   npc: NPCDefinition;
@@ -40,8 +41,46 @@ export default function DialoguePanel({
   const options = currentNode ? currentNode.options : [];
   const characterPortrait = portraitUrl || npc.portraitAsset || npc.spriteAsset || STATIC_CHARACTER_PORTRAITS[npc.id];
 
+  useEffect(() => {
+    if (promptText) {
+      const dialogueKey = `dialogue_${npc.id}_${currentNodeId || "init"}_${promptText.slice(0, 20)}`;
+      narrationManager.narrate(dialogueKey, promptText, { type: "DIALOGUE", priority: 50 });
+
+      // Preload next dialogue option lines in the background
+      options.forEach((opt) => {
+        if (opt.nextDialogueId) {
+          const nextNode = dialogueTree.find((n) => n.id === opt.nextDialogueId);
+          if (nextNode && nextNode.prompt) {
+            const nextKey = `dialogue_${npc.id}_${opt.nextDialogueId}_${nextNode.prompt.slice(0, 20)}`;
+            narrationManager.preloadNext(nextKey, nextNode.prompt, { type: "DIALOGUE", priority: 50 });
+          }
+        }
+      });
+    }
+    return () => {
+      narrationManager.stopCurrentNarration("dialogue-unmount");
+    };
+  }, [npc.id, currentNodeId, promptText]);
+
+  const handleClose = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    narrationManager.unlockAudio();
+    narrationManager.stopCurrentNarration("dialogue-close");
+    onClose();
+  };
+
+  const handleOptionSelect = (opt: DialogueOption, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    narrationManager.unlockAudio();
+    narrationManager.stopCurrentNarration("dialogue-option-select");
+    onOptionSelect(opt);
+  };
+
   return (
-    <div className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-xs flex items-end justify-center pb-6 px-4 pointer-events-auto animate-in fade-in duration-200">
+    <div
+      onClick={(e) => e.stopPropagation()}
+      className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-xs flex items-end justify-center pb-6 px-4 pointer-events-auto animate-in fade-in duration-200"
+    >
       <div className="bg-[#fff9e6] border-4 border-black rounded-xl p-5 w-full max-w-3xl shadow-[6px_6px_0_0_rgba(0,0,0,1)] animate-in slide-in-from-bottom-8 duration-200 relative z-[1100]">
         
         {/* Top Header */}
@@ -68,8 +107,8 @@ export default function DialoguePanel({
           </div>
 
           <button
-            onClick={onClose}
-            className="bg-white hover:bg-gray-100 border-2 border-black rounded-lg px-3 py-1 font-bold text-xs shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[0px_0px_0_0_rgba(0,0,0,1)] transition-all"
+            onClick={handleClose}
+            className="bg-white hover:bg-gray-100 border-2 border-black rounded-lg px-3 py-1 font-bold text-xs shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[0px_0px_0_0_rgba(0,0,0,1)] transition-all cursor-pointer"
           >
             Esc - Leave
           </button>
@@ -88,8 +127,8 @@ export default function DialoguePanel({
             {options.map((opt, idx) => (
               <button
                 key={opt.id}
-                onClick={() => onOptionSelect(opt)}
-                className="bg-white hover:bg-[#fef3c7] border-3 border-black rounded-lg px-4 py-2.5 font-bold text-sm text-left shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[1px_1px_0_0_rgba(0,0,0,1)] transition-all flex items-start gap-2"
+                onClick={() => handleOptionSelect(opt)}
+                className="bg-white hover:bg-[#fef3c7] border-3 border-black rounded-lg px-4 py-2.5 font-bold text-sm text-left shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[1px_1px_0_0_rgba(0,0,0,1)] transition-all flex items-start gap-2 cursor-pointer"
               >
                 <span className="text-[#d97706] font-mono font-extrabold">{idx + 1}.</span>
                 <span className="text-black">{opt.text}</span>
@@ -99,8 +138,8 @@ export default function DialoguePanel({
         ) : (
           <div className="flex justify-end">
             <button
-              onClick={onClose}
-              className="bg-[#ffdc5e] hover:bg-[#ffcf33] border-3 border-black rounded-lg px-4 py-2 font-bold text-sm shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[1px_1px_0_0_rgba(0,0,0,1)] transition-all"
+              onClick={handleClose}
+              className="bg-[#ffdc5e] hover:bg-[#ffcf33] border-3 border-black rounded-lg px-4 py-2 font-bold text-sm shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[1px_1px_0_0_rgba(0,0,0,1)] transition-all cursor-pointer"
             >
               Continue Exploring
             </button>
