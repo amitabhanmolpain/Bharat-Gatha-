@@ -190,6 +190,8 @@ def clean_text_for_speech(raw_text: str) -> str:
 def get_character_profile(character_id: str) -> dict:
     """Retrieve the voice profile configuration for any character or NPC."""
     key = (character_id or "jolly").lower().strip()
+    if "chacha" in key or "buzurg" in key:
+        return CHARACTER_VOICE_PROFILES["chacha"]
     if "guard" in key or "sentry" in key or "soldier" in key:
         return CHARACTER_VOICE_PROFILES["guard"]
     # Explicit match for Master Kallappa (elderly artisan)

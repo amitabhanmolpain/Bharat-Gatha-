@@ -6,7 +6,7 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Suspense } from "react";
 import { soundFx } from "../../../services/soundService";
 import { playNarration, stopNarration } from "../../../services/narratorService";
-import { playCharacterDialogue, stopCharacterDialogue } from "../../../services/characterVoiceService";
+import { playCharacterDialogue, stopCharacterDialogue, stopAllCharacterVoice } from "../../../services/characterVoiceService";
 import { recordGameWinToDatabase } from "../../../services/gameProgressService";
 
 import {
@@ -668,10 +668,18 @@ function IndusValleyGameComponent() {
     saveState();
   }, [saveState]);
 
+  // GLOBAL AUDIO & DIALOGUE LIFECYCLE CLEANUP ON SCENE / STAGE TRANSITIONS
+  useEffect(() => {
+    stopNarration();
+    stopAllCharacterVoice();
+    stopCharacterDialogue();
+  }, [scene, stage]);
+
   // Cleanup voices on unmount
   useEffect(() => {
     return () => {
       stopNarration();
+      stopAllCharacterVoice();
       stopCharacterDialogue();
     };
   }, []);

@@ -311,17 +311,45 @@ class CharacterVoiceManager {
       }
     }
 
-    // Buzurg Chacha (Rajasthan elder mentor)
+    // Buzurg Chacha (Rajasthan elder mentor - canonical speaker Ratan)
     if (char.includes("chacha") || char.includes("buzurg")) {
-      if (lower.includes("mahabharata") || lower.includes("no ordinary board game") || lower.includes("golden goti") || lower.includes("history of chaupar")) {
+      if (
+        lower.includes("mahabharata") ||
+        lower.includes("no ordinary board game") ||
+        lower.includes("golden goti") ||
+        lower.includes("history of chaupar")
+      ) {
         return "/buzurg_chacha_chaupar_lore.wav";
       }
       if (
-        (lower.includes("khamma ghani") && lower.includes("buzurg chacha")) ||
         lower.includes("keeper of ancient rajput tales") ||
-        (lower.includes("khamma ghani") && lower.includes("royal courtyard of chittorgarh"))
+        (lower.includes("khamma ghani") && lower.includes("royal courtyard of chittorgarh")) ||
+        lower.includes("welcome to the royal courtyard of chittorgarh") ||
+        lower.includes("prove your patience")
       ) {
         return "/buzurg_chacha_intro.wav";
+      }
+      if (
+        lower.includes("are you ready to roll the wooden pasa dice") ||
+        lower.includes("challenge me in royal chaupar") ||
+        (lower.includes("khamma ghani") && lower.includes("wooden pasa dice"))
+      ) {
+        return "/buzurg_chacha_return.wav";
+      }
+      if (
+        lower.includes("beta, go towards the staircase") ||
+        lower.includes("go towards the staircase") ||
+        lower.includes("ascend the steps to the upper passage") ||
+        lower.includes("glorious vijay stambh")
+      ) {
+        return "/buzurg_chacha_stairs.wav";
+      }
+      if (
+        lower.includes("shabash, young warrior") ||
+        lower.includes("triumphed in royal chaupar") ||
+        lower.includes("proven your wisdom and patience")
+      ) {
+        return "/buzurg_chacha_win.wav";
       }
     }
 
@@ -428,12 +456,12 @@ class CharacterVoiceManager {
     const now = Date.now();
 
     // 1. Deduplication guard:
-    // If the exact same character and speech was requested within the last 1800ms,
-    // or if the service is currently actively playing or loading this exact sentence,
-    // ignore the duplicate call.
+    // If the exact same character and speech is actively playing, don't interrupt it.
     if (
       this.lastPlayKey === lookupKey &&
-      (now - this.lastPlayTime < 1800 || this.state.isPlaying || this.state.isLoading)
+      this.state.isPlaying &&
+      this.activeAudio &&
+      now - this.lastPlayTime < 1000
     ) {
       return this.activeAudio;
     }
@@ -469,6 +497,15 @@ class CharacterVoiceManager {
         audioSrc = audioUrl;
       } else {
         audioSrc = this.resolveAudioSource(character, trimmed);
+      }
+
+      if (charKey.includes("chacha") || charKey.includes("buzurg")) {
+        console.log(`[BuzurgVoice] Resolving audio for: "${trimmed.slice(0, 50)}..."`);
+        if (audioSrc) {
+          console.log(`[BuzurgVoice] Local audio found: ${audioSrc}`);
+        } else {
+          console.log(`[BuzurgVoice] Local audio not found, checking cache/backend TTS...`);
+        }
       }
 
       // If not a static local track, fetch from backend dynamic TTS
@@ -638,6 +675,64 @@ class CharacterVoiceManager {
       audio.onerror = (e) => {
         if (this.activeAudio === audio) {
           this.activeAudio = null;
+          if (charKey.includes("chacha") || charKey.includes("buzurg")) {
+            console.warn(`[BuzurgVoice] Audio load failed for ${audioSrc}, falling back to speech synthesis`);
+          }
+          if (typeof window !== "undefined" && "speechSynthesis" in window) {
+            try {
+              window.speechSynthesis.cancel();
+              if (this.currentSessionId !== sessionId) return;
+
+              const utterance = new SpeechSynthesisUtterance(trimmed);
+              const isElderlyMale =
+                charKey.includes("chacha") ||
+                charKey.includes("elder") ||
+                charKey.includes("kallappa") ||
+                charKey.includes("somappa") ||
+                charKey.includes("vidyaranya");
+              utterance.rate = isElderlyMale ? 0.84 : 1.0;
+              utterance.pitch = isElderlyMale ? 0.76 : 1.0;
+              utterance.volume = 0.90;
+
+              const voices = window.speechSynthesis.getVoices();
+              const elderlyVoice = voices.find(
+                (v) =>
+                  (v.lang === "en-IN" || v.lang.startsWith("en")) &&
+                  (v.name.toLowerCase().includes("male") ||
+                    v.name.toLowerCase().includes("prabhat") ||
+                    v.name.toLowerCase().includes("rishi") ||
+                    v.name.toLowerCase().includes("david"))
+              );
+              if (elderlyVoice) utterance.voice = elderlyVoice;
+
+              utterance.onstart = () => {
+                if (this.currentSessionId === sessionId) {
+                  this.updateState({ isPlaying: true, isLoading: false });
+                  onStart?.();
+                }
+              };
+              utterance.onend = () => {
+                if (this.currentSessionId === sessionId) {
+                  this.updateState({
+                    isPlaying: false,
+                    isLoading: false,
+                    activeCharacter: null,
+                    currentText: null,
+                  });
+                  onEnd?.();
+                }
+              };
+              utterance.onerror = (synthErr) => {
+                if (this.currentSessionId === sessionId) {
+                  this.updateState({ isPlaying: false, isLoading: false });
+                  onError?.(synthErr);
+                }
+              };
+              window.speechSynthesis.speak(utterance);
+              return;
+            } catch (synthErr) {}
+          }
+
           this.updateState({
             isPlaying: false,
             isLoading: false,
