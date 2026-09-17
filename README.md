@@ -10,11 +10,9 @@
 
 ---
 
-## 📖 Complete Documentation
-
-For the full architectural breakdown, game engine physics, collision detection formulas, scene traversal graph, and puzzle mechanics, please refer to:
-
-👉 **[DOCUMENTATION.md](./DOCUMENTATION.md)**
+### 📚 Team Documentation & Codebase Guide
+> Looking to understand the architecture, game mechanics, AI agents, and code structure in simple words?  
+> 📖 **Read our [Team Codebase Guide (TEAM_CODEBASE_GUIDE.md)](TEAM_CODEBASE_GUIDE.md)**!
 
 ---
 

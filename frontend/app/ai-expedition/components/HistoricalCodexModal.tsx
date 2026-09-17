@@ -118,6 +118,9 @@ export default function HistoricalCodexModal({
                     )}
                   </div>
                 ))
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <div className="text-3xl mb-2">🔍</div>
               )}
             </div>
           )}
@@ -152,12 +155,19 @@ export default function HistoricalCodexModal({
                     <h5 className="font-black text-xs text-[#b91c1c] uppercase tracking-wider">Debunked Misconception #{idx + 1}</h5>
                     <p className="text-xs text-black font-extrabold mt-1">{myth}</p>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
+        {/* Modal Footer */}
+        <div className="bg-[#251d16] border-t border-[#3a2d1d] p-4 flex justify-between items-center text-xs">
+          <span className="text-[#91714b] font-medium">
+            Expedition Progress: {discoveredEvidence.length}/{world.quest.cluesRequired || 1} Evidence Discovered
+          </span>
+          <button
+            onClick={onClose}
+            className="bg-[#91714b] hover:bg-[#a68257] text-black font-bold py-2 px-5 rounded-lg transition-all uppercase tracking-wider text-[11px]"
+          >
+            Resume Investigation
+          </button>
         </div>
-
+>>>>>>> origin/main
       </div>
     </div>
   );

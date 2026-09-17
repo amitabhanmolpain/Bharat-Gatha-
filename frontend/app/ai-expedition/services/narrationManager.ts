@@ -704,6 +704,23 @@ export class NarrationManager {
     return () => this.listeners.delete(listener);
   }
 
+  public subscribe(
+    listener: (state: { isSpeaking: boolean; activeText: string | null; isUnavailable: boolean; isEnabled: boolean }) => void
+  ): () => void {
+    const wrapper = (_state: NarrationLifecycleState, isSpeaking: boolean, _key?: string, text?: string, isUnavailable?: boolean) => {
+      listener({
+        isSpeaking,
+        activeText: text || null,
+        isUnavailable: Boolean(isUnavailable),
+        isEnabled: this.enabled
+      });
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    this.listeners.add(wrapper as any);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return () => this.listeners.delete(wrapper as any);
+  }
+
   private setState(state: NarrationLifecycleState): void {
     this.currentState = state;
     const isSpeaking = state === "PLAYING" || Boolean(this.currentAudio && !this.currentAudio.paused);

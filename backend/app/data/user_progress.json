@@ -1,0 +1,32 @@
+{
+  "default_traveller_mughal": {
+    "user_id": "default_traveller",
+    "era": "mughal",
+    "solved_puzzles": [
+      "sheesh_mahal_reflection",
+      "test_ping",
+      "mughal_campaign",
+      "pietra_dura_flower_art"
+    ],
+    "prizes_unlocked": [
+      "Permission to Khas Mahal",
+      "test",
+      "companion_rescued",
+      "Sheesh Mahal Corridor Clearance"
+    ],
+    "total_score": 4150
+  },
+  "default_traveller_indus": {
+    "user_id": "default_traveller",
+    "era": "indus",
+    "solved_puzzles": [
+      "great_bath_drainage",
+      "steatite_seal_decryption"
+    ],
+    "prizes_unlocked": [
+      "Corbelled Terracotta Sluice Fragment",
+      "Ekasringa Unicorn Steatite Seal"
+    ],
+    "total_score": 350
+  }
+}

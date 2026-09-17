@@ -24,3 +24,14 @@ instance/
 dist/
 build/
 *.egg-info/
+
+# Local Vector Database & Caches
+app/data/vector_db/
+*.sqlite3
+*.bin
+checksums.json
+
+# Scratch test scripts
+test_api_endpoints.py
+test_rag_pipeline.py
+

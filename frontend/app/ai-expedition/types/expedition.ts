@@ -38,6 +38,8 @@ export interface WorldMetadata {
   fallbackReason?: string;
 }
 
+export type ExpeditionMetadata = WorldMetadata;
+
 export interface HistoricalContext {
   factualBackground: string;
   keyFigures: string[];
@@ -218,10 +220,13 @@ export interface SavedGameState {
   worldId: string;
   currentSceneId: string;
   playerPos: { x: number; y: number };
-  activeQuestId: string;
-  completedObjectiveIds: string[];
-  discoveredEvidenceIds: string[];
-  solvedPuzzleIds: string[];
-  readNarratorEventIds: string[];
+  activeQuestId?: string;
+  completedObjectiveIds?: string[];
+  discoveredEvidenceIds?: string[];
+  solvedPuzzleIds?: string[];
+  readNarratorEventIds?: string[];
   updatedAt: string;
+  discoveredClueIds?: string[];
+  currentStageIndex?: number;
+  isCompleted?: boolean;
 }

@@ -1,29 +1,8 @@
-from flask import Flask
-from flask_cors import CORS
-from flask_jwt_extended import JWTManager
-import os
-from dotenv import load_dotenv
+"""Main application entry point re-exporting create_app from the app package."""
 
-from controllers.main_controller import main_bp
+from app import create_app
 
-# Load environment variables
-load_dotenv()
-
-def create_app():
-    app = Flask(__name__)
-    
-    # Configure CORS (allow requests from frontend)
-    CORS(app)
-    
-    # Configure JWT for authentication
-    app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "super-secret-key-change-in-production")
-    jwt = JWTManager(app)
-    
-    # Register Blueprints (Routes)
-    app.register_blueprint(main_bp, url_prefix='/api')
-    
-    return app
+app = create_app()
 
 if __name__ == '__main__':
-    app = create_app()
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5001, debug=True)

@@ -34,11 +34,13 @@ export class ExpeditionStorage {
     }
   }
 
-  static saveRecentWorld(world: WorldDefinition): void {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  static saveRecentWorld(world: any): void {
     if (typeof window === "undefined") return;
     try {
       const recent = this.getRecentWorlds();
-      const filtered = recent.filter((w) => w.metadata.id !== world.metadata.id);
+      const worldId = world.metadata?.id || world.worldId;
+      const filtered = recent.filter((w) => (w.metadata?.id || (w as unknown as { worldId?: string }).worldId) !== worldId);
       const updated = [world, ...filtered].slice(0, 5); // keep max 5 recent worlds
       localStorage.setItem(RECENT_WORLDS_KEY, JSON.stringify(updated));
     } catch (e) {
@@ -72,4 +74,9 @@ export class ExpeditionStorage {
     return recent.find((w) => w.metadata.id === worldId) || null;
   }
 }
+
+export const saveGameState = ExpeditionStorage.saveGameState.bind(ExpeditionStorage);
+export const getGameState = ExpeditionStorage.getGameState.bind(ExpeditionStorage);
+export const saveWorldDefinition = ExpeditionStorage.saveRecentWorld.bind(ExpeditionStorage);
+export const getWorldById = ExpeditionStorage.getWorldById.bind(ExpeditionStorage);
 

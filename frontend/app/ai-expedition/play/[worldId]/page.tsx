@@ -929,4 +929,20 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
 
     </div>
   );
+          <p className="text-xs text-[#a89985] mb-6">
+            The requested AI expedition world definition could not be found or loaded.
+          </p>
+          <button
+            onClick={() => router.push("/ai-expedition")}
+            className="w-full bg-[#91714b] text-black font-bold py-3 rounded-lg text-xs uppercase"
+          >
+            Return to AI Expedition Portal
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return <IsolatedGameEngine world={world} />;
+>>>>>>> origin/main
 }
