@@ -71,7 +71,7 @@ export default function ChowkaBaraGame({
   );
   const [turnCount, setTurnCount] = useState(0);
   const [showTutorial, setShowTutorial] = useState(false);
-  const [tutorialStep, setTutorialStep] = useState(0);
+  const [tutorialPage, setTutorialPage] = useState(0);
 
   // Tutorial / Learning Mode State
   const [tutorialStep, setTutorialStep] = useState<TutorialStep>("inactive");
@@ -291,24 +291,35 @@ export default function ChowkaBaraGame({
     }, 1000);
   };
 
+  const handleMovePawn = (pawnIndex: number) => {
     setAwaitingPawnSelection(false);
     setSelectablePawns([]);
 
-    const roll = lastRoll;
-    const p1 = playerPieces[0];
-    const p2 = playerPieces[1];
-
-    let nextPieces: [number, number] = [p1, p2];
-    if (pawnIndex === 0) {
-      nextPieces = [p1 + roll, p2];
+    const roll = lastRoll as number;
+    let nextPieces = [...playerPieces];
+    
+    if (nextPieces[pawnIndex] === -1) {
+      nextPieces[pawnIndex] = 0;
     } else {
-      nextPieces = [p1, p2 + roll];
+      nextPieces[pawnIndex] += roll;
     }
 
     soundFx.playTileSwap();
 
     // Check collision / capture on AI
-    setAiPieces((prevAi) => checkCollisionAndCapture("player", nextPieces, prevAi));
+    const { updatedOpponent, captured } = checkCollisionAndCapture("player", nextPieces, aiPieces);
+    let pKadi = playerHasKadi;
+    let getsExtraThrow = roll === 4 || roll === 8;
+
+    const finalAiPieces = captured ? updatedOpponent : aiPieces;
+
+    if (captured) {
+      setAiPieces(finalAiPieces);
+      pKadi = true;
+      getsExtraThrow = true;
+      setPlayerHasKadi(true);
+    }
+    
     setPlayerPieces(nextPieces);
 
     // If Tutorial is active, advance to next tutorial step
@@ -325,11 +336,11 @@ export default function ChowkaBaraGame({
     }
 
     // CHECK WIN CONDITION IMMEDIATELY
-    if (nextPieces[0] === 24 && nextPieces[1] === 24) {
+    if (nextPieces.every(p => p === 24)) {
       clearAllTimers();
       setGameStatus("player_won");
       setDialogueMessage(
-        "🏆 Splendid match! Both your Golden Gotis have reached the Sanctuary. You have won Vidyaranya's blessing!"
+        "🏆 Splendid match! All your Golden Gotis have reached the Sanctuary. You have won Vidyaranya's blessing!"
       );
       stopAllCharacterVoice();
       playNarration(
@@ -339,18 +350,17 @@ export default function ChowkaBaraGame({
       return;
     }
 
-    // Turn passes to AI
-    setCurrentTurn("ai");
-    const rollSpoken =
-      roll === 8
-        ? "Ashta! You rolled an eight! Your pawn leaps forward."
-        : roll === 4
-        ? "Chowka! You rolled a four! Your pawn surges ahead."
-        : `You rolled a ${roll}! Your pawn advances.`;
+    if (getsExtraThrow) {
+      const rollSpoken = roll === 8 ? "Ashta" : roll === 4 ? "Chowka" : "A capture";
+      setDialogueMessage(`You scored ${rollSpoken} and get an extra throw!`);
+      return; 
+    }
 
+    setCurrentTurn("ai");
+    const rollSpoken = roll === 8 ? "Ashta" : roll === 4 ? "Chowka" : `a ${roll}`;
     setDialogueMessage(`You moved Pawn ${pawnIndex + 1}. Vidyaranya prepares his move...`);
     stopAllCharacterVoice();
-    playNarration(rollSpoken, {
+    playNarration(`You scored ${rollSpoken}. Now it is Vidyaranya's turn.`, {
       speaker: "ratan",
       pace: 0.88,
       language_code: "en-IN",
@@ -358,7 +368,7 @@ export default function ChowkaBaraGame({
     });
 
     aiTimeoutRef.current = setTimeout(() => {
-      executeAiTurn();
+      executeAiTurn(finalAiPieces, nextPieces, aiHasKadi);
     }, 1800);
   };
 
@@ -440,10 +450,6 @@ export default function ChowkaBaraGame({
             { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
           );
 
-          setCurrentTurn("ai");
-          aiTimeoutRef.current = setTimeout(() => {
-            executeAiTurn();
-          }, 2000);
           return;
         } else if (currentTurnCount >= 30) {
           setGameStatus("player_won");
@@ -759,30 +765,6 @@ export default function ChowkaBaraGame({
 
         {/* Action Controls */}
         {gameStatus === "playing" ? (
-          <button
-            type="button"
-            onClick={handlePlayerRoll}
-            disabled={isRolling || currentTurn !== "player"}
-            className={`px-4 py-2 rounded-lg font-serif font-bold text-[10px] uppercase tracking-wider transition-all shadow-md cursor-pointer ${
-              currentTurn === "player" && !isRolling
-                ? "bg-gradient-to-r from-[#8b6528] to-[#d4a359] hover:from-[#a07430] hover:to-[#e5b56a] text-[#141210] active:translate-y-0.5"
-                : "bg-[#222e20] text-[#71856c] border border-[#31422f] cursor-not-allowed"
-            }`}
-          >
-            <div className="flex items-center gap-1 justify-center">
-              {isRolling ? "Casting Shells..." : currentTurn === "player" ? "Cast Cowrie Shells" : "Sage's Turn..."}
-              {!isRolling && currentTurn === "player" && <GameIcon name="dice" size={12} />}
-            </div>
-          </button>
-        ) : (
-          <div className="flex gap-2">
-            {gameStatus === "ai_won" && gameAttempts < 2 && (
-              <button
-                type="button"
-                onClick={handleRestartMatch}
-                className="bg-[#222e20] hover:bg-[#2d422a] border border-[#d4a359] text-[#e8f1e6] font-serif font-bold px-3 py-1.5 rounded-lg text-[10px] uppercase tracking-wider transition-all cursor-pointer"
-              >
-                Try Again (#{gameAttempts + 1})
           <div className="flex items-center gap-2">
             {awaitingPawnSelection ? (
               <div className="flex items-center gap-2">
@@ -837,9 +819,6 @@ export default function ChowkaBaraGame({
             <button
               type="button"
               onClick={handleFinish}
-              className="bg-gradient-to-r from-[#8b6528] to-[#d4a359] hover:from-[#a07430] hover:to-[#e5b56a] text-[#141210] font-serif font-bold px-4 py-1.5 rounded-lg text-[10px] uppercase tracking-wider transition-all cursor-pointer shadow-md"
-            >
-              Receive Blessing 📿
               className={`font-serif font-bold px-5 py-2 rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md ${
                 gameStatus === "player_won"
                   ? "bg-gradient-to-r from-[#8b6528] to-[#d4a359] hover:from-[#a07430] hover:to-[#e5b56a] text-[#141210]"
@@ -854,12 +833,9 @@ export default function ChowkaBaraGame({
         )}
       </div>
 
-      <div className="flex items-center justify-between text-[9px] font-mono text-[#71856c] pt-1 border-t border-[#31422f]">
-        <span>Attempts: {gameAttempts} (Turns: {turnCount}/30 soft limit)</span>
-        <span>Karnataka Traditional Game • 1336 AD</span>
       {/* --- FOOTER STATUS --- */}
       <div className="flex items-center justify-between text-[10px] font-mono text-[#71856c] pt-2 border-t border-[#31422f]">
-        <span>Attempts Logged: {gameAttempts}</span>
+        <span>Attempts: {gameAttempts} (Turns: {turnCount}/30 soft limit)</span>
         <span>Karnataka Traditional Strategy Game &bull; 1336 AD</span>
       </div>
 
@@ -869,32 +845,32 @@ export default function ChowkaBaraGame({
             <h3 className="text-lg font-serif font-bold text-[#e8f1e6] mb-3 border-b border-[#31422f] pb-1">Authentic Chowka Bara</h3>
             
             <div className="text-xs text-[#cde0cb] space-y-2 mb-4 min-h-[120px]">
-              {tutorialStep === 0 && <p><strong>Goal:</strong> Move all 4 of your gold pawns to the center square (Sanctuary) before Sage Vidyaranya does.</p>}
-              {tutorialStep === 1 && <p><strong>Entering the Board:</strong> Pawns start off-board. You MUST roll a 4 (Chowka) or 8 (Ashta/Bara) to bring a new pawn onto the start square.</p>}
-              {tutorialStep === 2 && <p><strong>Kadi (Kill) Rule:</strong> A pawn cannot enter the inner path until your team has made at least ONE capture (Kadi) against the opponent. Crossed squares are safe zones.</p>}
-              {tutorialStep === 3 && <p><strong>Extra Throws:</strong> If you roll a 4 or 8, OR if you land on an opponent and capture them, you get an extra throw immediately!</p>}
-              {tutorialStep === 4 && <p><strong>Game Length:</strong> This authentic version can take a long time! If the game goes over 30 turns, Vidyaranya will acknowledge your skill and grant his blessing anyway.</p>}
+              {tutorialPage === 0 && <p><strong>Goal:</strong> Move all 4 of your gold pawns to the center square (Sanctuary) before Sage Vidyaranya does.</p>}
+              {tutorialPage === 1 && <p><strong>Entering the Board:</strong> Pawns start off-board. You MUST roll a 4 (Chowka) or 8 (Ashta/Bara) to bring a new pawn onto the start square.</p>}
+              {tutorialPage === 2 && <p><strong>Kadi (Kill) Rule:</strong> A pawn cannot enter the inner path until your team has made at least ONE capture (Kadi) against the opponent. Crossed squares are safe zones.</p>}
+              {tutorialPage === 3 && <p><strong>Extra Throws:</strong> If you roll a 4 or 8, OR if you land on an opponent and capture them, you get an extra throw immediately!</p>}
+              {tutorialPage === 4 && <p><strong>Game Length:</strong> This authentic version can take a long time! If the game goes over 30 turns, Vidyaranya will acknowledge your skill and grant his blessing anyway.</p>}
             </div>
 
             <div className="flex justify-between items-center">
               <button 
-                onClick={() => setTutorialStep(prev => Math.max(0, prev - 1))}
-                disabled={tutorialStep === 0}
+                onClick={() => setTutorialPage(prev => Math.max(0, prev - 1))}
+                disabled={tutorialPage === 0}
                 className="px-3 py-1.5 bg-[#222e20] text-[#96a992] text-xs rounded-md disabled:opacity-50 hover:bg-[#2b3a2a] transition-colors"
               >
                 Previous
               </button>
-              <span className="text-[10px] font-bold tracking-widest text-[#71856c]">{tutorialStep + 1} / 5</span>
-              {tutorialStep < 4 ? (
+              <span className="text-[10px] font-bold tracking-widest text-[#71856c]">{tutorialPage + 1} / 5</span>
+              {tutorialPage < 4 ? (
                 <button 
-                  onClick={() => setTutorialStep(prev => Math.min(4, prev + 1))}
+                  onClick={() => setTutorialPage(prev => Math.min(4, prev + 1))}
                   className="px-3 py-1.5 bg-gradient-to-r from-[#8b6528] to-[#d4a359] text-[#141210] text-xs rounded-md font-bold hover:brightness-110 transition-all shadow-md"
                 >
                   Next
                 </button>
               ) : (
                 <button 
-                  onClick={() => { setShowTutorial(false); setTutorialStep(0); }}
+                  onClick={() => { setShowTutorial(false); setTutorialPage(0); }}
                   className="px-3 py-1.5 bg-gradient-to-r from-[#8b6528] to-[#d4a359] text-[#141210] text-xs rounded-md font-bold hover:brightness-110 transition-all shadow-md"
                 >
                   Got it!
