@@ -279,5 +279,30 @@
     "solved_at": "2026-09-10T16:28:44.850651",
     "metadata": {},
     "_id": "6aa2dabc97549bcb9367b258"
+  },
+  {
+    "user_id": "default_traveller",
+    "era": "mughal",
+    "game_type": "mughal_campaign",
+    "solved": true,
+    "is_solved": true,
+    "status": "solved",
+    "prize_unlocked": "companion_rescued",
+    "clues_found": [
+      "guard_permit",
+      "calligraphy_scroll",
+      "charbagh_paradise_map",
+      "mehtab_bagh_journal",
+      "red_fort_imperial_key"
+    ],
+    "score": 500,
+    "moves": 0,
+    "created_at": "2026-09-13T19:01:05.588606",
+    "solved_at": "2026-09-13T19:01:05.588606",
+    "metadata": {
+      "companionRescued": true,
+      "completedAt": "2026-09-13T19:01:05.566Z"
+    },
+    "_id": "6aa6f2f159634ba64965c222"
   }
 ]
