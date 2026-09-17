@@ -53,11 +53,9 @@ export default function ChowkaBaraGame({
   attempts,
   onComplete,
 }: ChowkaBaraGameProps) {
-  const [playerPieces, setPlayerPieces] = useState<number[]>([-1, -1, -1, -1]);
-  const [aiPieces, setAiPieces] = useState<number[]>([-1, -1, -1, -1]);
-  const [playerHasKadi, setPlayerHasKadi] = useState(false);
-  const [aiHasKadi, setAiHasKadi] = useState(false);
-
+  // Track pieces by their path index: 0 to 24 (24 is Home/Sanctuary)
+  const [playerPieces, setPlayerPieces] = useState<[number, number]>([0, 0]);
+  const [aiPieces, setAiPieces] = useState<[number, number]>([0, 0]);
   const [currentTurn, setCurrentTurn] = useState<"player" | "ai">("player");
   const [lastRoll, setLastRoll] = useState<number | null>(null);
   const [cowries, setCowries] = useState<boolean[]>([true, false, true, false]);
@@ -67,11 +65,8 @@ export default function ChowkaBaraGame({
   const [awaitingPawnSelection, setAwaitingPawnSelection] = useState(false);
   const [selectablePawns, setSelectablePawns] = useState<number[]>([]);
   const [dialogueMessage, setDialogueMessage] = useState<string>(
-    "Roll the four cowrie shells. A roll of 4 or 8 lets a pawn enter the board!"
+    "Roll the four cowrie shells to advance your pawns toward the center."
   );
-  const [turnCount, setTurnCount] = useState(0);
-  const [showTutorial, setShowTutorial] = useState(false);
-  const [tutorialStep, setTutorialStep] = useState(0);
 
   // Tutorial / Learning Mode State
   const [tutorialStep, setTutorialStep] = useState<TutorialStep>("inactive");
@@ -90,19 +85,18 @@ export default function ChowkaBaraGame({
   }, []);
 
   const resetMatchState = useCallback(() => {
-    setPlayerPieces([-1, -1, -1, -1]);
-    setAiPieces([-1, -1, -1, -1]);
-    setPlayerHasKadi(false);
-    setAiHasKadi(false);
+    clearAllTimers();
+    setPlayerPieces([0, 0]);
+    setAiPieces([0, 0]);
     setCurrentTurn("player");
     setLastRoll(null);
     setIsRolling(false);
     setAwaitingPawnSelection(false);
     setSelectablePawns([]);
     setGameStatus("playing");
-    setTurnCount(0);
+    setTutorialStep("inactive");
     setDialogueMessage(
-      "Roll the four cowrie shells. A roll of 4 or 8 lets a pawn enter the board!"
+      "Roll the four cowrie shells to advance your pawns toward the center."
     );
   }, [clearAllTimers]);
 
@@ -114,7 +108,7 @@ export default function ChowkaBaraGame({
     } else {
       stopAllCharacterVoice();
       playNarration(
-        "Roll the four cowrie shells. A roll of 4 or 8 lets a pawn enter the board!",
+        "Roll the four cowrie shells to advance your pawns toward the center.",
         { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
       );
     }
@@ -140,89 +134,38 @@ export default function ChowkaBaraGame({
 
   const checkCollisionAndCapture = (
     movingTeam: "player" | "ai",
-    nextPathIndices: number[],
-    opponentPathIndices: number[]
-  ) => {
+    nextPathIndices: [number, number],
+    opponentPathIndices: [number, number]
+  ): [number, number] => {
     const movedPath = movingTeam === "player" ? PLAYER_PATH : AI_PATH;
     const oppPath = movingTeam === "player" ? AI_PATH : PLAYER_PATH;
 
-    let updatedOpponent = [...opponentPathIndices];
-    let captured = false;
+    let updatedOpponent = [...opponentPathIndices] as [number, number];
 
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 2; i++) {
       const pIdx = nextPathIndices[i];
-      if (pIdx >= 0 && pIdx < 24) { 
+      if (pIdx > 0 && pIdx < 24) {
         const boardCell = movedPath[pIdx];
         if (!SAFE_SQUARES.has(boardCell)) {
-          for (let j = 0; j < 4; j++) {
+          for (let j = 0; j < 2; j++) {
             const oppIdx = updatedOpponent[j];
-            if (oppIdx >= 0 && oppIdx < 24) {
+            if (oppIdx > 0 && oppIdx < 24) {
               if (oppPath[oppIdx] === boardCell) {
-                updatedOpponent[j] = -1; // sent off-board
-                captured = true;
+                updatedOpponent[j] = 0; // Captured! Sent back to starting square
+                soundFx.playTileSwap();
               }
             }
           }
         }
       }
     }
-    if (captured) {
-      soundFx.playTileSwap(); 
-    }
-    return { updatedOpponent, captured };
+    return updatedOpponent;
   };
 
-  const executeMove = (team: "player" | "ai", pieces: number[], oppPieces: number[], roll: number, hasKadi: boolean) => {
-    const oppPath = team === "player" ? AI_PATH : PLAYER_PATH;
-    const myPath = team === "player" ? PLAYER_PATH : AI_PATH;
-    
-    let bestMove = -1; 
-    let bestScore = -100;
-    
-    for (let i = 0; i < 4; i++) {
-      const pos = pieces[i];
-      if (pos === -1) {
-        if (roll === 4 || roll === 8) {
-          const score = 50; // Entering is good
-          if (score > bestScore) { bestScore = score; bestMove = i; }
-        }
-        continue;
-      }
-      
-      if (pos >= 24) continue;
-      
-      const nextPos = pos + roll;
-      if (nextPos > 24) continue;
-      
-      // Kadi (Kill) Requirement
-      if (pos <= 15 && nextPos >= 16 && !hasKadi) continue;
-      
-      let score = nextPos; // Progress score
-      
-      const boardCell = myPath[nextPos];
-      let captures = false;
-      if (!SAFE_SQUARES.has(boardCell)) {
-        for(let j=0; j<4; j++) {
-          if (oppPieces[j] >= 0 && oppPieces[j] < 24 && oppPath[oppPieces[j]] === boardCell) {
-            captures = true;
-          }
-        }
-      }
-      
-      if (captures) score += 1000;
-      if (nextPos === 24) score += 500;
-      if (SAFE_SQUARES.has(boardCell)) score += 10;
-      
-      if (score > bestScore) {
-        bestScore = score;
-        bestMove = i;
-      }
-    }
-    
-    return bestMove;
-  };
+  // AI Turn Execution
+  const executeAiTurn = useCallback(() => {
+    if (gameStatus !== "playing") return;
 
-  const executeAiTurn = (currentAi: number[], currentPlayer: number[], currentKadi: boolean) => {
     soundFx.playCowrieShellsSound();
     setDialogueMessage("Vidyaranya is casting the cowrie shells...");
 
@@ -231,54 +174,79 @@ export default function ChowkaBaraGame({
     setLastRoll(roll);
 
     aiTimeoutRef.current = setTimeout(() => {
-      let aPieces = [...currentAi];
-      let pPieces = [...currentPlayer];
-      let aKadi = currentKadi;
-      let getsExtraThrow = roll === 4 || roll === 8;
+      aiTimeoutRef.current = null;
+      if (gameStatus !== "playing") return;
 
-      const moveIdx = executeMove("ai", aPieces, pPieces, roll, aKadi);
-      if (moveIdx !== -1) {
-        if (aPieces[moveIdx] === -1) {
-          aPieces[moveIdx] = 0;
-        } else {
-          aPieces[moveIdx] += roll;
+      setAiPieces((prevAi) => {
+        const a1 = prevAi[0];
+        const a2 = prevAi[1];
+
+        // Determine legal moves for AI
+        const a1CanMove = a1 < 24 && a1 + roll <= 24;
+        const a2CanMove = a2 < 24 && a2 + roll <= 24;
+
+        let nextAiPieces: [number, number] = [a1, a2];
+        let aiMoved = false;
+
+        if (a1CanMove && a2CanMove) {
+          // AI strategy: move the piece that advances closer to finish or balances progression
+          if (a1 <= a2) {
+            nextAiPieces = [a1 + roll, a2];
+          } else {
+            nextAiPieces = [a1, a2 + roll];
+          }
+          aiMoved = true;
+        } else if (a1CanMove) {
+          nextAiPieces = [a1 + roll, a2];
+          aiMoved = true;
+        } else if (a2CanMove) {
+          nextAiPieces = [a1, a2 + roll];
+          aiMoved = true;
         }
-        
-        soundFx.playTileSwap();
-        const { updatedOpponent, captured } = checkCollisionAndCapture("ai", aPieces, pPieces);
-        if (captured) {
-          aKadi = true;
-          getsExtraThrow = true;
-          for(let i=0; i<4; i++) pPieces[i] = updatedOpponent[i];
+
+        if (aiMoved) {
+          soundFx.playTileSwap();
+          setPlayerPieces((prevPlayer) =>
+            checkCollisionAndCapture("ai", nextAiPieces, prevPlayer)
+          );
         }
-      }
 
-      setAiPieces(aPieces);
-      setPlayerPieces(pPieces);
-      setAiHasKadi(aKadi);
+        // Check if AI Won
+        if (nextAiPieces[0] === 24 && nextAiPieces[1] === 24) {
+          clearAllTimers();
+          setGameStatus("ai_won");
+          setGameAttempts((prevAtt) => {
+            const nextAtt = prevAtt + 1;
+            const endMsg =
+              nextAtt >= 2
+                ? "Vidyaranya smiles warmly: 'True leadership comes from resilience. You have proven your spirit.'"
+                : "Vidyaranya's pawns reach the sanctuary first. 'A wise strategist learns from each turn. Try again!'";
+            setDialogueMessage(endMsg);
+            stopAllCharacterVoice();
+            playNarration(endMsg, {
+              speaker: "ratan",
+              pace: 0.88,
+              language_code: "en-IN",
+              hideSubtitle: true,
+            });
+            return nextAtt;
+          });
+          return nextAiPieces;
+        }
 
-      if (aPieces.every(p => p === 24)) {
-        setGameStatus("ai_won");
-        setGameAttempts((prevAtt) => {
-          const nextAtt = prevAtt + 1;
-          const endMsg =
-            nextAtt >= 2
-              ? "Vidyaranya smiles warmly: 'True leadership comes from resilience. You have proven your spirit.'"
-              : "Vidyaranya's pawns reach the sanctuary first. 'A wise strategist learns from each turn. Try again!'";
-          setDialogueMessage(endMsg);
-          stopAllCharacterVoice();
-          playNarration(endMsg, { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true });
-          return nextAtt;
-        });
-      } else if (getsExtraThrow) {
-        const rollSpoken = roll === 8 ? "Ashta" : roll === 4 ? "Chowka" : "A capture";
-        setDialogueMessage(`Vidyaranya scored ${rollSpoken} and gets an extra throw!`);
-        aiTimeoutRef.current = setTimeout(() => {
-          executeAiTurn(aPieces, pPieces, aKadi);
-        }, 2000);
-      } else {
+        // If not won, hand turn back to player
         setCurrentTurn("player");
-        const aiMsg = `Vidyaranya rolled ${roll}. Your turn to cast!`;
+        const rollDesc =
+          roll === 8
+            ? "Vidyaranya rolled an 8 (Ashta!)"
+            : roll === 4
+            ? "Vidyaranya rolled a 4 (Chowka!)"
+            : `Vidyaranya rolled ${roll}`;
+
+        const aiMsg = aiMoved
+          ? `${rollDesc} and moved his pawn. Your turn to cast!`
+          : `${rollDesc} but had no legal move. Your turn to cast!`;
+
         setDialogueMessage(aiMsg);
         stopAllCharacterVoice();
         playNarration(`Vidyaranya rolled a ${roll}. Your turn to cast!`, {
@@ -287,9 +255,16 @@ export default function ChowkaBaraGame({
           language_code: "en-IN",
           hideSubtitle: true,
         });
-      }
-    }, 1000);
-  };
+
+        return nextAiPieces;
+      });
+    }, 1200);
+  }, [clearAllTimers, gameStatus]);
+
+  // Execute Player Pawn Move
+  const handleMovePawn = (pawnIndex: number) => {
+    if (gameStatus !== "playing" || currentTurn !== "player" || lastRoll === null) return;
+    if (!selectablePawns.includes(pawnIndex)) return;
 
     setAwaitingPawnSelection(false);
     setSelectablePawns([]);
@@ -396,47 +371,35 @@ export default function ChowkaBaraGame({
         setIsRolling(false);
         soundFx.playCowrieShellsSound();
 
-        const pPieces = [...playerPieces];
-        const aPieces = [...aiPieces];
-        let pKadi = playerHasKadi;
-        let moved = false;
-        let getsExtraThrow = roll === 4 || roll === 8;
-        
-        const currentTurnCount = turnCount + 1;
-        if (!getsExtraThrow) setTurnCount(currentTurnCount);
+        // Evaluate legal moves for Player
+        const p1 = playerPieces[0];
+        const p2 = playerPieces[1];
 
-        const moveIdx = executeMove("player", pPieces, aPieces, roll, pKadi);
-        if (moveIdx !== -1) {
-          moved = true;
-          if (pPieces[moveIdx] === -1) {
-            pPieces[moveIdx] = 0;
-          } else {
-            pPieces[moveIdx] += roll;
-          }
-          
-          soundFx.playTileSwap();
-          const { updatedOpponent, captured } = checkCollisionAndCapture("player", pPieces, aPieces);
-          if (captured) {
-            pKadi = true;
-            getsExtraThrow = true;
-            for(let i=0; i<4; i++) aPieces[i] = updatedOpponent[i];
-          }
-        } else {
-          setDialogueMessage(`Rolled ${roll}! No valid moves available.`);
-        }
+        const p1Legal = p1 < 24 && p1 + roll <= 24;
+        const p2Legal = p2 < 24 && p2 + roll <= 24;
 
-        setPlayerPieces(pPieces);
-        setAiPieces(aPieces);
-        setPlayerHasKadi(pKadi);
-
-        if (pPieces.every(p => p === 24)) {
-          setGameStatus("player_won");
+        if (tutorialStep === "roll_cowries") {
+          setTutorialStep("roll_result");
+          const rollName =
+            roll === 8 ? "an Ashta (8 points)" : roll === 4 ? "a Chowka (4 points)" : `${roll} points`;
           setDialogueMessage(
-            "Splendid match! You navigated all pawns to the Sanctuary with patience and skill."
+            `You cast ${rollName}! In Chowka Bara, cowrie mouths facing upward count as points (all down = 8, all up = 4).`
           );
           stopAllCharacterVoice();
           playNarration(
-            "Splendid match! You navigated all pawns to the sanctuary with patience and skill, winning Vidyaranya's blessing!",
+            `You cast ${rollName}! Now choose your pawn to advance.`,
+            { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
+          );
+        }
+
+        if (!p1Legal && !p2Legal) {
+          // No legal moves possible (e.g. overshoots sanctuary)
+          setDialogueMessage(
+            `Rolled ${roll}! A leap beyond the sanctuary (no legal moves). Vidyaranya takes his turn.`
+          );
+          stopAllCharacterVoice();
+          playNarration(
+            `Rolled a ${roll}! A leap beyond the sanctuary — turn passes to Vidyaranya.`,
             { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
           );
 
@@ -445,30 +408,28 @@ export default function ChowkaBaraGame({
             executeAiTurn();
           }, 2000);
           return;
-        } else if (currentTurnCount >= 30) {
-          setGameStatus("player_won");
-          setDialogueMessage(
-            "We have played long enough! You have grasped the authentic rules of the game. I grant you my blessing."
-          );
-          stopAllCharacterVoice();
-          playNarration(
-            "We have played long enough! You have grasped the authentic rules of the game. I grant you my blessing.",
-            { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
-          );
-          return;
         }
 
-        if (getsExtraThrow) {
-          const rollSpoken = roll === 8 ? "Ashta! (8)" : roll === 4 ? "Chowka! (4)" : "A capture!";
-          setDialogueMessage(`${rollSpoken} You get an extra throw!`);
+        // Identify legal pawns
+        const legalList: number[] = [];
+        if (p1Legal) legalList.push(0);
+        if (p2Legal) legalList.push(1);
+
+        setSelectablePawns(legalList);
+        setAwaitingPawnSelection(true);
+
+        if (tutorialStep === "roll_result") {
+          setTutorialStep("move_pawn");
+        }
+
+        if (legalList.length === 1) {
+          setDialogueMessage(
+            `Rolled ${roll}! Click the highlighted Golden Goti (Pawn ${legalList[0] + 1}) to move.`
+          );
         } else {
-          setCurrentTurn("ai");
-          const rollSpoken = `You rolled a ${roll}! Vidyaranya observes and prepares his counter-move.`;
-          if (moved) setDialogueMessage(rollSpoken);
-          
-          aiTimeoutRef.current = setTimeout(() => {
-            executeAiTurn(aPieces, pPieces, aiHasKadi);
-          }, 2500); 
+          setDialogueMessage(
+            `Rolled ${roll}! Choose which Golden Goti (Pawn 1 or Pawn 2) to advance.`
+          );
         }
       }
     }, 80);
@@ -593,100 +554,224 @@ export default function ChowkaBaraGame({
       onClose={handleModalClose}
       titleId="chowka-bara-title"
       maxWidthClass="max-w-2xl"
-      containerClassName="p-4 sm:p-5"
+      containerClassName="p-6"
     >
-      <div className="flex items-center justify-between pb-2 border-b-2 border-[#3d4b3b] mb-3">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-[#2b3a2a] border border-[#a8c3a6] flex items-center justify-center shadow-inner">
-            <GameIcon name="sage" size={16} className="text-[#a8c3a6]" />
+      {/* --- HEADER --- */}
+      <div className="flex items-center justify-between pb-3 border-b-2 border-[#3d4b3b] mb-4">
+        <div className="flex items-center gap-2.5">
+          <div className="w-10 h-10 rounded-xl bg-[#2b3a2a] border border-[#a8c3a6] flex items-center justify-center shadow-inner">
+            <GameIcon name="sage" size={20} className="text-[#a8c3a6]" />
           </div>
           <div>
-            <div className="text-[9px] font-mono text-[#a8c3a6] uppercase tracking-[0.2em]">
+            <div className="text-[10px] font-mono text-[#a8c3a6] uppercase tracking-[0.2em]">
               Traditional Karnataka Board Match
             </div>
-            <h2 id="chowka-bara-title" className="text-lg font-serif font-bold text-[#e8f1e6]">
+            <h2 id="chowka-bara-title" className="text-xl font-serif font-bold text-[#e8f1e6]">
               Chowka Bara with Sage Vidyaranya
             </h2>
           </div>
         </div>
 
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setShowTutorial(true)}
-            className="text-[#96a992] hover:text-[#e8f1e6] text-xs bg-[#1c291b] hover:bg-[#2b3a2a] border border-[#3d4b3b] px-2 py-1 rounded-lg transition-all cursor-pointer"
-          >
-            ❓ How to Play
-          </button>
+        <div className="flex items-center gap-2">
+          {tutorialStep === "inactive" ? (
+            <button
+              type="button"
+              onClick={startLearningMode}
+              className="text-[#d4a359] hover:text-[#fff] text-xs font-serif font-bold bg-[#292215] hover:bg-[#3d321d] border border-[#d4a359]/60 px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+              title="Learn Chowka Bara rules step-by-step with Sage Vidyaranya"
+            >
+              <span>📖</span>
+              <span>Learn How to Play</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setTutorialStep("inactive");
+                resetMatchState();
+              }}
+              className="text-amber-300 hover:text-amber-100 text-xs font-mono bg-neutral-900 border border-amber-600/50 px-2.5 py-1.5 rounded-lg transition-all cursor-pointer"
+            >
+              Skip Tutorial ✕
+            </button>
+          )}
+
           <button
             type="button"
             onClick={handleModalClose}
-            className="text-[#96a992] hover:text-[#e8f1e6] text-xs bg-[#1c291b] hover:bg-[#2b3a2a] border border-[#3d4b3b] px-2 py-1 rounded-lg transition-all cursor-pointer"
+            className="text-[#96a992] hover:text-[#e8f1e6] text-sm bg-[#1c291b] hover:bg-[#2b3a2a] border border-[#3d4b3b] px-3 py-1.5 rounded-lg transition-all cursor-pointer"
           >
             ✕ Exit
           </button>
         </div>
       </div>
 
-      <div className="p-2.5 rounded-lg bg-[#1c241a] border border-[#31422f] text-xs font-serif leading-relaxed text-[#cde0cb] mb-3 flex items-start gap-2">
-        <span className="text-xl mt-0.5">📿</span>
-        <p className="flex-1 italic">{dialogueMessage}</p>
+      {/* --- SAGE DIALOGUE & TUTOR PANEL --- */}
+      <div
+        className={`p-3.5 rounded-xl border text-xs font-serif leading-relaxed mb-4 flex items-start gap-3 transition-all ${
+          tutorialStep !== "inactive"
+            ? "bg-[#292215] border-[#d4a359] text-[#f4ecd8] shadow-[0_0_15px_rgba(212,163,89,0.15)]"
+            : "bg-[#1c241a] border-[#31422f] text-[#cde0cb]"
+        }`}
+      >
+        <span className="text-2xl mt-0.5">{tutorialStep !== "inactive" ? "🧘‍♂️" : "📿"}</span>
+        <div className="flex-1">
+          {tutorialStep !== "inactive" && (
+            <div className="text-[10px] font-mono font-bold text-[#d4a359] uppercase tracking-widest mb-1">
+              SAGE VIDYARANYA &bull; TUTORIAL GUIDE
+            </div>
+          )}
+          <p className="italic">{dialogueMessage}</p>
+        </div>
+
+        {tutorialStep !== "inactive" &&
+          tutorialStep !== "roll_cowries" &&
+          tutorialStep !== "move_pawn" && (
+            <button
+              type="button"
+              onClick={advanceTutorial}
+              className="px-3 py-1.5 rounded-lg bg-[#d4a359] hover:bg-[#e5b56a] text-[#141210] font-mono text-[11px] font-bold tracking-wide transition-all cursor-pointer shrink-0 shadow"
+            >
+              {tutorialStep === "summary" ? "Start Game →" : "Got It →"}
+            </button>
+          )}
       </div>
 
-      <div className="grid grid-cols-2 gap-2 mb-3">
-        <div className="p-2 rounded-lg bg-[#222e20] border border-[#d4a359] flex flex-col justify-between shadow-md">
-          <div className="flex justify-between items-start w-full">
-            <div className="text-[9px] font-mono uppercase tracking-wider text-[#d4a359]">
+      {/* --- PAWN SCOREBOARDS --- */}
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        {/* Player Pawns */}
+        <div
+          className={`p-3 rounded-xl bg-[#222e20] border-2 flex items-center justify-between shadow-md transition-all ${
+            awaitingPawnSelection
+              ? "border-amber-400 ring-2 ring-amber-400/40 shadow-[0_0_12px_rgba(245,158,11,0.3)]"
+              : "border-[#d4a359]"
+          }`}
+        >
+          <div>
+            <div className="text-[10px] font-mono uppercase tracking-wider text-[#d4a359]">
               Your Pawns (Gold)
             </div>
-            <div className="flex gap-0.5">
-              {playerPieces.map((p, idx) => (
-                <span key={idx} className={`text-xs ${p === 24 ? "opacity-30" : ""}`}>🟡</span>
-              ))}
+            <div className="text-xs sm:text-sm font-serif font-bold text-[#e8f1e6] mt-0.5">
+              Pawn 1: {playerPieces[0]}/24 • Pawn 2: {playerPieces[1]}/24
             </div>
           </div>
-          <div className="text-[10px] font-serif font-bold text-[#e8f1e6] mt-1 flex justify-between w-full">
-            <span>{playerPieces.filter(p => p===24).length}/4 Home</span>
-            <span className={playerHasKadi ? "text-[#a8c3a6]" : "text-[#d4a359] opacity-70"}>
-              {playerHasKadi ? "✓ Kadi (Kill)" : "Kadi Required"}
-            </span>
+          <div className="flex gap-2">
+            {/* Pawn 1 Button */}
+            <button
+              type="button"
+              onClick={() => handleMovePawn(0)}
+              disabled={!awaitingPawnSelection || !selectablePawns.includes(0)}
+              className={`px-2 py-1 rounded-lg flex items-center gap-1 transition-all ${
+                awaitingPawnSelection && selectablePawns.includes(0)
+                  ? "bg-amber-500/30 border-2 border-amber-400 animate-pulse cursor-pointer hover:scale-105"
+                  : playerPieces[0] === 24
+                  ? "opacity-40 cursor-default"
+                  : "opacity-80"
+              }`}
+              title={selectablePawns.includes(0) ? "Click to move Pawn 1" : "Pawn 1"}
+            >
+              <span className="text-base sm:text-lg">🟡</span>
+              <span className="text-[10px] font-mono font-bold text-amber-200">#1</span>
+            </button>
+
+            {/* Pawn 2 Button */}
+            <button
+              type="button"
+              onClick={() => handleMovePawn(1)}
+              disabled={!awaitingPawnSelection || !selectablePawns.includes(1)}
+              className={`px-2 py-1 rounded-lg flex items-center gap-1 transition-all ${
+                awaitingPawnSelection && selectablePawns.includes(1)
+                  ? "bg-amber-500/30 border-2 border-amber-400 animate-pulse cursor-pointer hover:scale-105"
+                  : playerPieces[1] === 24
+                  ? "opacity-40 cursor-default"
+                  : "opacity-80"
+              }`}
+              title={selectablePawns.includes(1) ? "Click to move Pawn 2" : "Pawn 2"}
+            >
+              <span className="text-base sm:text-lg">🟡</span>
+              <span className="text-[10px] font-mono font-bold text-amber-200">#2</span>
+            </button>
           </div>
         </div>
 
-        <div className="p-2 rounded-lg bg-[#222e20] border border-[#c86446] flex flex-col justify-between shadow-md">
-          <div className="flex justify-between items-start w-full">
-            <div className="text-[9px] font-mono uppercase tracking-wider text-[#c86446]">
+        {/* AI Pawns */}
+        <div className="p-3 rounded-xl bg-[#222e20] border-2 border-[#c86446] flex items-center justify-between shadow-md">
+          <div>
+            <div className="text-[10px] font-mono uppercase tracking-wider text-[#c86446]">
               Vidyaranya (Terracotta)
             </div>
-            <div className="flex gap-0.5">
-              {aiPieces.map((p, idx) => (
-                <span key={idx} className={`text-xs ${p === 24 ? "opacity-30" : ""}`}>🔴</span>
-              ))}
+            <div className="text-xs sm:text-sm font-serif font-bold text-[#e8f1e6] mt-0.5">
+              Pawn 1: {aiPieces[0]}/24 • Pawn 2: {aiPieces[1]}/24
             </div>
           </div>
-          <div className="text-[10px] font-serif font-bold text-[#e8f1e6] mt-1 flex justify-between w-full">
-            <span>{aiPieces.filter(p => p===24).length}/4 Home</span>
-            <span className={aiHasKadi ? "text-[#a8c3a6]" : "text-[#c86446] opacity-70"}>
-              {aiHasKadi ? "✓ Kadi (Kill)" : "Kadi Required"}
+          <div className="flex gap-1.5">
+            <span
+              className={`px-2 py-1 rounded bg-red-950/40 border border-red-800/40 text-xs font-mono font-bold text-red-300 flex items-center gap-1 ${
+                aiPieces[0] === 24 ? "opacity-40" : ""
+              }`}
+            >
+              <span>🔴</span>
+              <span>#1</span>
+            </span>
+            <span
+              className={`px-2 py-1 rounded bg-red-950/40 border border-red-800/40 text-xs font-mono font-bold text-red-300 flex items-center gap-1 ${
+                aiPieces[1] === 24 ? "opacity-40" : ""
+              }`}
+            >
+              <span>🔴</span>
+              <span>#2</span>
             </span>
           </div>
         </div>
       </div>
 
-      <div className="flex justify-center mb-3">
-        <div className="grid grid-cols-5 gap-0.5 p-2 bg-[#1e2a1d] rounded-lg border-2 border-[#121c11] shadow-xl w-fit">
+      {/* --- 5x5 BOARD --- */}
+      <div className="flex justify-center mb-4">
+        <div className="grid grid-cols-5 gap-1 p-3 bg-[#1e2a1d] rounded-xl border-4 border-[#121c11] shadow-xl w-fit">
           {Array.from({ length: 25 }).map((_, i) => {
             const isSafe = SAFE_SQUARES.has(i);
             const isHome = i === 12;
-            
-            const pCount = playerPieces.filter(p => p >= 0 && PLAYER_PATH[p] === i).length;
-            const aCount = aiPieces.filter(p => p >= 0 && AI_PATH[p] === i).length;
-            
+
+            const p1Here = PLAYER_PATH[playerPieces[0]] === i && playerPieces[0] > 0;
+            const p2Here = PLAYER_PATH[playerPieces[1]] === i && playerPieces[1] > 0;
+            const a1Here = AI_PATH[aiPieces[0]] === i && aiPieces[0] > 0;
+            const a2Here = AI_PATH[aiPieces[1]] === i && aiPieces[1] > 0;
+
+            const p1Start = playerPieces[0] === 0 && i === 20;
+            const p2Start = playerPieces[1] === 0 && i === 20;
+            const a1Start = aiPieces[0] === 0 && i === 4;
+            const a2Start = aiPieces[1] === 0 && i === 4;
+
+            const showP1 = p1Here || p1Start;
+            const showP2 = p2Here || p2Start;
+            const showA1 = a1Here || a1Start;
+            const showA2 = a2Here || a2Start;
+
+            // Check if this square has a movable player piece
+            const isP1Movable =
+              awaitingPawnSelection && selectablePawns.includes(0) && showP1;
+            const isP2Movable =
+              awaitingPawnSelection && selectablePawns.includes(1) && showP2;
+
+            // Tutorial highlights
+            const isTutorialHighlight =
+              (tutorialStep === "pawns_board" && (i === 20 || i === 12)) ||
+              (tutorialStep === "safe_spaces" && isSafe) ||
+              (tutorialStep === "center_goal" && isHome);
+
             return (
               <div
                 key={i}
-                className={`w-12 h-12 sm:w-14 sm:h-14 flex flex-wrap items-center justify-center p-0.5 rounded-sm border border-[#2b3a2a] relative overflow-hidden ${
-                  isHome
+                onClick={() => {
+                  if (isP1Movable) handleMovePawn(0);
+                  else if (isP2Movable) handleMovePawn(1);
+                }}
+                className={`w-14 h-14 sm:w-16 sm:h-16 flex flex-wrap items-center justify-center p-1 rounded-sm border relative overflow-hidden transition-all ${
+                  isP1Movable || isP2Movable
+                    ? "cursor-pointer ring-2 ring-amber-400 bg-amber-950/40 animate-pulse border-amber-400"
+                    : isTutorialHighlight
+                    ? "ring-2 ring-[#d4a359] bg-[#2d422a] border-[#d4a359]"
+                    : isHome
                     ? "bg-[#2d422a] border-2 border-[#d4a359]"
                     : isSafe
                     ? "bg-[#283827] border-[#2b3a2a]"
@@ -716,13 +801,38 @@ export default function ChowkaBaraGame({
                   </svg>
                 )}
 
-                <div className="z-10 flex gap-0.5 mt-0.5 flex-wrap justify-center">
-                  {Array.from({ length: pCount }).map((_, idx) => (
-                    <span key={`p-${idx}`} className="text-xs sm:text-sm drop-shadow-md">🟡</span>
-                  ))}
-                  {Array.from({ length: aCount }).map((_, idx) => (
-                    <span key={`a-${idx}`} className="text-xs sm:text-sm drop-shadow-md">🔴</span>
-                  ))}
+                {/* Pawns */}
+                <div className="z-10 flex gap-1 flex-wrap justify-center items-center">
+                  {showP1 && (
+                    <span
+                      className={`text-sm sm:text-base drop-shadow-md transition-transform ${
+                        isP1Movable ? "scale-125 animate-bounce" : ""
+                      }`}
+                      title="Player Pawn 1"
+                    >
+                      🟡
+                    </span>
+                  )}
+                  {showP2 && (
+                    <span
+                      className={`text-sm sm:text-base drop-shadow-md transition-transform ${
+                        isP2Movable ? "scale-125 animate-bounce" : ""
+                      }`}
+                      title="Player Pawn 2"
+                    >
+                      🟡
+                    </span>
+                  )}
+                  {showA1 && (
+                    <span className="text-sm sm:text-base drop-shadow-md" title="Vidyaranya Pawn 1">
+                      🔴
+                    </span>
+                  )}
+                  {showA2 && (
+                    <span className="text-sm sm:text-base drop-shadow-md" title="Vidyaranya Pawn 2">
+                      🔴
+                    </span>
+                  )}
                 </div>
               </div>
             );
@@ -730,16 +840,18 @@ export default function ChowkaBaraGame({
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row items-center justify-between gap-3 p-3 rounded-lg bg-[#1c241a] border border-[#2b3a2a] mb-2">
-        <div className="flex items-center gap-2">
-          <div className="text-[9px] font-mono uppercase tracking-wider text-[#96a992]">
-            Cowrie Shells:
+      {/* --- COWRIE SHELLS & ACTION BAR --- */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-xl bg-[#1c241a] border border-[#2b3a2a] mb-3">
+        {/* Cowrie Display */}
+        <div className="flex items-center gap-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#96a992]">
+            Cowries:
           </div>
-          <div className="flex gap-1.5">
+          <div className="flex gap-2">
             {cowries.map((openFace, idx) => (
               <div
                 key={idx}
-                className={`w-8 h-8 rounded-lg border flex items-center justify-center text-sm shadow-inner transition-transform ${
+                className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl border-2 flex items-center justify-center text-lg shadow-inner transition-transform ${
                   openFace
                     ? "bg-[#e0e8de] border-[#d4a359] text-[#1c241a] -translate-y-0.5"
                     : "bg-[#2d422a] border-[#3d4b3b] text-[#d4a359]"
@@ -751,38 +863,14 @@ export default function ChowkaBaraGame({
             ))}
           </div>
           {lastRoll !== null && (
-            <div className="ml-1 px-2 py-0.5 rounded bg-[#151c14] border border-[#d4a359] text-[10px] font-mono font-bold text-[#d4a359]">
-              Roll: {lastRoll} {lastRoll === 8 ? "(Ashta!)" : lastRoll === 4 ? "(Chowka!)" : ""}
+            <div className="ml-1 px-2.5 py-1 rounded bg-[#151c14] border border-[#d4a359] text-xs font-mono font-bold text-[#d4a359]">
+              Roll: {lastRoll} {lastRoll === 8 ? "(Ashta!)" : lastRoll === 4 ? "(Chowka!)" : "steps"}
             </div>
           )}
         </div>
 
         {/* Action Controls */}
         {gameStatus === "playing" ? (
-          <button
-            type="button"
-            onClick={handlePlayerRoll}
-            disabled={isRolling || currentTurn !== "player"}
-            className={`px-4 py-2 rounded-lg font-serif font-bold text-[10px] uppercase tracking-wider transition-all shadow-md cursor-pointer ${
-              currentTurn === "player" && !isRolling
-                ? "bg-gradient-to-r from-[#8b6528] to-[#d4a359] hover:from-[#a07430] hover:to-[#e5b56a] text-[#141210] active:translate-y-0.5"
-                : "bg-[#222e20] text-[#71856c] border border-[#31422f] cursor-not-allowed"
-            }`}
-          >
-            <div className="flex items-center gap-1 justify-center">
-              {isRolling ? "Casting Shells..." : currentTurn === "player" ? "Cast Cowrie Shells" : "Sage's Turn..."}
-              {!isRolling && currentTurn === "player" && <GameIcon name="dice" size={12} />}
-            </div>
-          </button>
-        ) : (
-          <div className="flex gap-2">
-            {gameStatus === "ai_won" && gameAttempts < 2 && (
-              <button
-                type="button"
-                onClick={handleRestartMatch}
-                className="bg-[#222e20] hover:bg-[#2d422a] border border-[#d4a359] text-[#e8f1e6] font-serif font-bold px-3 py-1.5 rounded-lg text-[10px] uppercase tracking-wider transition-all cursor-pointer"
-              >
-                Try Again (#{gameAttempts + 1})
           <div className="flex items-center gap-2">
             {awaitingPawnSelection ? (
               <div className="flex items-center gap-2">
@@ -837,9 +925,6 @@ export default function ChowkaBaraGame({
             <button
               type="button"
               onClick={handleFinish}
-              className="bg-gradient-to-r from-[#8b6528] to-[#d4a359] hover:from-[#a07430] hover:to-[#e5b56a] text-[#141210] font-serif font-bold px-4 py-1.5 rounded-lg text-[10px] uppercase tracking-wider transition-all cursor-pointer shadow-md"
-            >
-              Receive Blessing 📿
               className={`font-serif font-bold px-5 py-2 rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md ${
                 gameStatus === "player_won"
                   ? "bg-gradient-to-r from-[#8b6528] to-[#d4a359] hover:from-[#a07430] hover:to-[#e5b56a] text-[#141210]"
@@ -854,56 +939,11 @@ export default function ChowkaBaraGame({
         )}
       </div>
 
-      <div className="flex items-center justify-between text-[9px] font-mono text-[#71856c] pt-1 border-t border-[#31422f]">
-        <span>Attempts: {gameAttempts} (Turns: {turnCount}/30 soft limit)</span>
-        <span>Karnataka Traditional Game • 1336 AD</span>
       {/* --- FOOTER STATUS --- */}
       <div className="flex items-center justify-between text-[10px] font-mono text-[#71856c] pt-2 border-t border-[#31422f]">
         <span>Attempts Logged: {gameAttempts}</span>
         <span>Karnataka Traditional Strategy Game &bull; 1336 AD</span>
       </div>
-
-      {showTutorial && (
-        <div className="absolute inset-0 bg-[#121c11]/90 z-50 flex items-center justify-center p-3 rounded-xl">
-          <div className="bg-[#1c241a] border border-[#d4a359] p-4 rounded-xl max-w-sm w-full shadow-2xl relative">
-            <h3 className="text-lg font-serif font-bold text-[#e8f1e6] mb-3 border-b border-[#31422f] pb-1">Authentic Chowka Bara</h3>
-            
-            <div className="text-xs text-[#cde0cb] space-y-2 mb-4 min-h-[120px]">
-              {tutorialStep === 0 && <p><strong>Goal:</strong> Move all 4 of your gold pawns to the center square (Sanctuary) before Sage Vidyaranya does.</p>}
-              {tutorialStep === 1 && <p><strong>Entering the Board:</strong> Pawns start off-board. You MUST roll a 4 (Chowka) or 8 (Ashta/Bara) to bring a new pawn onto the start square.</p>}
-              {tutorialStep === 2 && <p><strong>Kadi (Kill) Rule:</strong> A pawn cannot enter the inner path until your team has made at least ONE capture (Kadi) against the opponent. Crossed squares are safe zones.</p>}
-              {tutorialStep === 3 && <p><strong>Extra Throws:</strong> If you roll a 4 or 8, OR if you land on an opponent and capture them, you get an extra throw immediately!</p>}
-              {tutorialStep === 4 && <p><strong>Game Length:</strong> This authentic version can take a long time! If the game goes over 30 turns, Vidyaranya will acknowledge your skill and grant his blessing anyway.</p>}
-            </div>
-
-            <div className="flex justify-between items-center">
-              <button 
-                onClick={() => setTutorialStep(prev => Math.max(0, prev - 1))}
-                disabled={tutorialStep === 0}
-                className="px-3 py-1.5 bg-[#222e20] text-[#96a992] text-xs rounded-md disabled:opacity-50 hover:bg-[#2b3a2a] transition-colors"
-              >
-                Previous
-              </button>
-              <span className="text-[10px] font-bold tracking-widest text-[#71856c]">{tutorialStep + 1} / 5</span>
-              {tutorialStep < 4 ? (
-                <button 
-                  onClick={() => setTutorialStep(prev => Math.min(4, prev + 1))}
-                  className="px-3 py-1.5 bg-gradient-to-r from-[#8b6528] to-[#d4a359] text-[#141210] text-xs rounded-md font-bold hover:brightness-110 transition-all shadow-md"
-                >
-                  Next
-                </button>
-              ) : (
-                <button 
-                  onClick={() => { setShowTutorial(false); setTutorialStep(0); }}
-                  className="px-3 py-1.5 bg-gradient-to-r from-[#8b6528] to-[#d4a359] text-[#141210] text-xs rounded-md font-bold hover:brightness-110 transition-all shadow-md"
-                >
-                  Got it!
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </AccessibleModal>
   );
 }
