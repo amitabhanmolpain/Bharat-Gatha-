@@ -31,8 +31,8 @@ import NarratorSubtitle from "../../../components/NarratorSubtitle";
 import GameIcon from "./components/GameIcon";
 import HistoricalNPCDialogueCard from "./components/HistoricalNPCDialogueCard";
 
-// 10% visual increase requested by user
-const PLAYER_VISUAL_SCALE = 1.925;
+// Visual scale for player character (enlarged for prominent, clear hero presence)
+const PLAYER_VISUAL_SCALE = 1.7;
 
 export default function VijayanagaraGameScreen() {
   const [isLoading, setIsLoading] = useState(true);
@@ -480,20 +480,21 @@ export default function VijayanagaraGameScreen() {
   // Stage 2 Proximities
   const isNearBazaarNorthExit =
     scene === "hampi_bazaar_entry" &&
-    playerPos.x <= 25.0 &&
-    playerPos.y >= 75.0;
+    playerPos.x >= 25.0 &&
+    playerPos.x <= 40.0 &&
+    playerPos.y >= 36.0 &&
+    playerPos.y <= 48.0;
 
   const isNearBazaarGemRow =
     scene === "hampi_bazaar_entry" &&
-    playerPos.x >= 70.0 &&
-    playerPos.y <= 74.0;
+    playerPos.x >= 78.0 &&
+    playerPos.y >= 80.0;
 
   const isNearBazaarToymaker =
     scene === "hampi_bazaar_entry" &&
-    playerPos.x >= 38.0 &&
-    playerPos.x <= 52.0 &&
-    playerPos.y >= 68.0 &&
-    playerPos.y <= 78.0;
+    playerPos.x <= 22.0 &&
+    playerPos.y >= 64.0 &&
+    playerPos.y <= 80.0;
 
   const isNearBazaarForeignTraveler =
     scene === "hampi_bazaar_entry" &&
@@ -504,8 +505,10 @@ export default function VijayanagaraGameScreen() {
 
   const isNearBazaarStage3Road =
     scene === "hampi_bazaar_entry" &&
-    playerPos.x >= 74.0 &&
-    playerPos.y >= 78.0;
+    playerPos.x >= 68.0 &&
+    playerPos.x <= 82.0 &&
+    playerPos.y >= 60.0 &&
+    playerPos.y <= 74.0;
 
   const isNearGemRowExit =
     scene === "gem_traders_row" &&
@@ -652,9 +655,17 @@ export default function VijayanagaraGameScreen() {
 
       // Stage 2 Physics
       if (activeScene === "hampi_bazaar_entry") {
-        if (targetY < 52.0) return false;
-        if (targetX > 78.0 && targetY > 80.0) return false;
-        if (targetX < 22.0 && targetY < 64.0) return false;
+        if (targetY < 37.0) return false;
+        // Pathway heading back towards the golden temple entrance
+        if (targetY < 52.0) {
+          if (targetX < 26.0 || targetX > 42.0) return false;
+        } else {
+          // Main street area
+          if (targetX < 11.0) return false;
+          if (targetX > 89.0) return false;
+          // Upper-left colonnade wall/stairs
+          if (targetX < 18.0 && targetY < 64.0) return false;
+        }
       }
 
       if (activeScene === "gem_traders_row") {
@@ -859,7 +870,7 @@ export default function VijayanagaraGameScreen() {
           if (hasVidyaranyaBlessing) {
             triggerTransition(
               "hampi_bazaar_entry",
-              { x: 35.0, y: 80.0 },
+              { x: 33.0, y: 45.0 },
               "Crossing Tungabhadra to Hampi Bazaar (Stage 2)",
               "Skimming across the swirling river rapids as the morning mist parts to reveal the grand Car Street of Virupaksha.",
               "coracle"
@@ -927,7 +938,7 @@ export default function VijayanagaraGameScreen() {
         } else if (isNearGemRowExit) {
           triggerTransition(
             "hampi_bazaar_entry",
-            { x: 70.0, y: 72.0 },
+            { x: 84.0, y: 86.0 },
             "Returning to Virupaksha Car Street",
             "Stepping back out into the bustling main market thoroughfare.",
             "stone_road"
@@ -942,7 +953,7 @@ export default function VijayanagaraGameScreen() {
         } else if (isNearToymakerExit) {
           triggerTransition(
             "hampi_bazaar_entry",
-            { x: 45.0, y: 76.0 },
+            { x: 18.0, y: 72.0 },
             "Returning to Virupaksha Car Street",
             "Exiting the artisan stall back into the sunlight of the grand bazaar.",
             "stone_road"
@@ -1436,9 +1447,10 @@ export default function VijayanagaraGameScreen() {
         {/* --- STAGE 2 SCENE 1: HAMPI BAZAAR ENTRY HOTSPOTS --- */}
         {scene === "hampi_bazaar_entry" && (
           <>
+            {/* River Ferry (Next to Golden Area as shown in 2nd image) */}
             <div
               className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
-              style={{ left: "22%", top: "80%" }}
+              style={{ left: "32%", top: "40%" }}
             >
               {isNearBazaarNorthExit && (
                 <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
@@ -1454,9 +1466,10 @@ export default function VijayanagaraGameScreen() {
               </span>
             </div>
 
+            {/* Gem Arcade (Bottom Right near Spices as shown in 4th image) */}
             <div
               className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
-              style={{ left: "75%", top: "70%" }}
+              style={{ left: "87%", top: "89%" }}
             >
               {isNearBazaarGemRow && (
                 <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
@@ -1472,9 +1485,10 @@ export default function VijayanagaraGameScreen() {
               </span>
             </div>
 
+            {/* Kinhal Toys (Bottom Left near Steps/Plant as shown in 3rd image) */}
             <div
               className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
-              style={{ left: "45%", top: "74%" }}
+              style={{ left: "13%", top: "71%" }}
             >
               {isNearBazaarToymaker && (
                 <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
@@ -1490,6 +1504,7 @@ export default function VijayanagaraGameScreen() {
               </span>
             </div>
 
+            {/* Overseas Traveler */}
             <div
               className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
               style={{ left: "65%", top: "58%" }}
@@ -1508,10 +1523,11 @@ export default function VijayanagaraGameScreen() {
               </span>
             </div>
 
+            {/* Path to Stage 3: Vittala Temple Road */}
             {(isStage2Complete || hasFirstLedgerFragment) && (
               <div
                 className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
-                style={{ left: "80%", top: "82%" }}
+                style={{ left: "75%", top: "66%" }}
               >
                 {isNearBazaarStage3Road && (
                   <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
@@ -1930,7 +1946,7 @@ export default function VijayanagaraGameScreen() {
             <img
               src="/player.png"
               alt="Player Character"
-              className="w-12 h-16 object-contain object-bottom drop-shadow-[0_8px_12px_rgba(0,0,0,0.9)]"
+              className="w-20 h-28 object-contain object-bottom drop-shadow-[0_8px_12px_rgba(0,0,0,0.9)]"
               style={{
                 transform: facingLeft ? "scaleX(-1)" : "scaleX(1)",
                 imageRendering: "pixelated",
