@@ -271,17 +271,31 @@ export default function ChowkaBaraGame({
           return nextAtt;
         });
       } else if (getsExtraThrow) {
-        const rollSpoken = roll === 8 ? "Ashta" : roll === 4 ? "Chowka" : "A capture";
-        setDialogueMessage(`Vidyaranya scored ${rollSpoken} and gets an extra throw!`);
+        let msg = "";
+        if (captured) {
+          msg = "I have captured your pawn! The extra throw is mine.";
+        } else {
+          const rollSpoken = roll === 8 ? "Ashta" : roll === 4 ? "Chowka" : "A capture";
+          msg = `Vidyaranya scored ${rollSpoken} and gets an extra throw!`;
+        }
+        setDialogueMessage(msg);
+        stopAllCharacterVoice();
+        playNarration(msg, { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true });
+        
         aiTimeoutRef.current = setTimeout(() => {
           executeAiTurn(aPieces, pPieces, aKadi);
         }, 2000);
       } else {
         setCurrentTurn("player");
-        const aiMsg = `Vidyaranya rolled ${roll}. Your turn to cast!`;
+        let aiMsg = "";
+        if (aPieces[moveIdx] === 24) {
+            aiMsg = "My pawn has reached the sanctuary safely. Your turn to cast!";
+        } else {
+            aiMsg = `Vidyaranya rolled a ${roll}. Your turn to cast!`;
+        }
         setDialogueMessage(aiMsg);
         stopAllCharacterVoice();
-        playNarration(`Vidyaranya rolled a ${roll}. Your turn to cast!`, {
+        playNarration(aiMsg, {
           speaker: "ratan",
           pace: 0.88,
           language_code: "en-IN",
@@ -351,16 +365,30 @@ export default function ChowkaBaraGame({
     }
 
     if (getsExtraThrow) {
-      const rollSpoken = roll === 8 ? "Ashta" : roll === 4 ? "Chowka" : "A capture";
-      setDialogueMessage(`You scored ${rollSpoken} and get an extra throw!`);
+      let msg = "";
+      if (captured) {
+        msg = "Excellent! You have captured my pawn. The extra throw is yours!";
+      } else {
+        const rollSpoken = roll === 8 ? "Ashta" : roll === 4 ? "Chowka" : "A capture";
+        msg = `You scored ${rollSpoken} and get an extra throw!`;
+      }
+      setDialogueMessage(msg);
+      stopAllCharacterVoice();
+      playNarration(msg, { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true });
       return; 
     }
 
     setCurrentTurn("ai");
-    const rollSpoken = roll === 8 ? "Ashta" : roll === 4 ? "Chowka" : `a ${roll}`;
+    let msg = "";
+    if (nextPieces[pawnIndex] === 24) {
+      msg = "Your pawn has reached the sanctuary safely! Now it is my turn.";
+    } else {
+      const rollSpoken = roll === 8 ? "Ashta" : roll === 4 ? "Chowka" : `a ${roll}`;
+      msg = `You scored ${rollSpoken}. Now it is Vidyaranya's turn.`;
+    }
     setDialogueMessage(`You moved Pawn ${pawnIndex + 1}. Vidyaranya prepares his move...`);
     stopAllCharacterVoice();
-    playNarration(`You scored ${rollSpoken}. Now it is Vidyaranya's turn.`, {
+    playNarration(msg, {
       speaker: "ratan",
       pace: 0.88,
       language_code: "en-IN",
@@ -619,7 +647,7 @@ export default function ChowkaBaraGame({
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => setShowTutorial(true)}
+            onClick={startLearningMode}
             className="text-[#96a992] hover:text-[#e8f1e6] text-xs bg-[#1c291b] hover:bg-[#2b3a2a] border border-[#3d4b3b] px-2 py-1 rounded-lg transition-all cursor-pointer"
           >
             ❓ How to Play
