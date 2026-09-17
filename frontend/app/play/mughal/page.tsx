@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import DialoguePanel from "../../components/DialoguePanel";
 import { playNarration, stopNarration, narrator } from "../../../services/narratorService";
-import { playCharacterDialogue, stopCharacterDialogue, subscribeCharacterVoice } from "../../../services/characterVoiceService";
+import { playCharacterDialogue, stopCharacterDialogue, stopAllCharacterVoice, subscribeCharacterVoice } from "../../../services/characterVoiceService";
 import NarratorSubtitle from "../../../components/NarratorSubtitle";
 
 import CluesModal, { MUGHAL_HISTORICAL_CLUES } from "./components/CluesModal";
@@ -204,6 +204,7 @@ export default function MughalGameScreen() {
   const [jewelTraderOptions, setJewelTraderOptions] = useState<Array<{ id: number; text: string }>>([]);
   const [jewelTraderSpeech, setJewelTraderSpeech] = useState<string | null>(null);
   const [showPermissionDecreeModal, setShowPermissionDecreeModal] = useState(false);
+  const [jollyDialogueScene, setJollyDialogueScene] = useState<SceneType | null>(null);
 
   const [showMausoleumModal, setShowMausoleumModal] = useState(false);
   const [isMausoleumExplored, setIsMausoleumExplored] = useState(false);
@@ -690,6 +691,7 @@ export default function MughalGameScreen() {
       { id: 1, text: "How do I reach the other chamber?" },
       { id: 2, text: "I will go rescue him right away!" }
     ]);
+    setJollyDialogueScene("red_fort_diwani_khas");
     setShowJollyDialogue(true);
     playCharacterDialogue({
       character: "jolly",
@@ -708,6 +710,7 @@ export default function MughalGameScreen() {
       { id: 1, text: "Where is the King's personal palace?" },
       { id: 2, text: "I will search for the key!" }
     ]);
+    setJollyDialogueScene(scene);
     setShowJollyDialogue(true);
     playCharacterDialogue({
       character: "jolly",
@@ -724,9 +727,15 @@ export default function MughalGameScreen() {
     });
   };
 
-  // Clean up all character audio and speech bubbles when scene changes
+  // =========================================================================
+  // GLOBAL DIALOGUE & AUDIO LIFECYCLE CLEANUP ON SCENE CHANGE
+  // =========================================================================
   useEffect(() => {
+    // 1. Invalidate active voice and stop audio immediately
+    stopAllCharacterVoice();
     stopCharacterDialogue();
+
+    // 2. Clear speech bubbles & active dialogue modals immediately
     setTraderSpeech(null);
     setJewelTraderSpeech(null);
     setCourtyardGuardSpeech(null);
@@ -734,7 +743,9 @@ export default function MughalGameScreen() {
     setShowDialogue(false);
     setShowKhasGuardDialogue(false);
     setShowJewelTraderDialogue(false);
+    setShowArchaeologistDialogue(false);
     setShowJollyDialogue(false);
+    setJollyDialogueScene(null);
     setShowPermissionDecreeModal(false);
   }, [scene]);
 
@@ -2196,6 +2207,7 @@ export default function MughalGameScreen() {
 
               setJollySpeechText(speechText);
               setJollyOptions(customOptions);
+              setJollyDialogueScene(scene);
               setShowJollyDialogue(true);
               if (isShaking) {
                 setHeardClueScenes((prev) => [...prev, scene]);
@@ -2668,6 +2680,8 @@ export default function MughalGameScreen() {
       {/* --- GUARD DIALOGUE MODAL --- */}
       {showDialogue && scene === "gate" && (
         <DialoguePanel 
+          sceneId="gate"
+          currentSceneId={scene}
           characterName="Amar Singh Gate Sentry"
           characterTitle="Agra Fort Royal Guard"
           characterId="guard"
@@ -2716,6 +2730,8 @@ export default function MughalGameScreen() {
       {/* --- KHAS MAHAL & RED FORT GUARD DIALOGUE MODAL WITH TTS INPUT BOX --- */}
       {showKhasGuardDialogue && (scene === "courtyard" || scene === "red_fort_lahori" || scene === "red_fort_plaza") && (
         <DialoguePanel 
+          sceneId={scene}
+          currentSceneId={scene}
           characterName="Royal Palace Guard"
           characterTitle="Imperial Palace Sentry"
           characterId="guard"
@@ -2772,6 +2788,8 @@ export default function MughalGameScreen() {
       {/* --- JEWEL TRADER (BADSHAH'S KHAS) DIALOGUE MODAL --- */}
       {showJewelTraderDialogue && scene === "red_fort_interior" && (
         <DialoguePanel 
+          sceneId="red_fort_interior"
+          currentSceneId={scene}
           characterName="Royal Jewellery Merchant"
           characterTitle="Khas Confidant of the Badshah"
           characterId="trader_jewels"
@@ -2873,8 +2891,10 @@ export default function MughalGameScreen() {
       )}
 
       {/* --- JOLLY BHAI (GENIE) DIALOGUE MODAL WITH GROQ & LANGCHAIN ASK AI --- */}
-      {showJollyDialogue && (
+      {showJollyDialogue && jollyDialogueScene === scene && (
         <DialoguePanel 
+          sceneId={jollyDialogueScene || undefined}
+          currentSceneId={scene}
           characterName="Jolly Bhai"
           characterTitle="Ancient Time-Traveling Genie Companion"
           characterId="jolly"
@@ -3946,6 +3966,8 @@ export default function MughalGameScreen() {
       {/* --- ARCHAEOLOGIST DIALOGUE MODAL --- */}
       {showArchaeologistDialogue && scene === "taj_mehtab_bagh" && (
         <DialoguePanel 
+          sceneId="taj_mehtab_bagh"
+          currentSceneId={scene}
           characterName="Mehtab Bagh Caretaker"
           characterTitle="Archaeologist"
           historicalContext={{

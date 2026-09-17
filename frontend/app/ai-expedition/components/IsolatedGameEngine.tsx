@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import DialoguePanel from "../../components/DialoguePanel";
+import { stopAllCharacterVoice, stopCharacterDialogue } from "../../../services/characterVoiceService";
 import { WorldDefinition, Position2D, NPCDefinition, NPCDialogueNode, SceneDefinition } from "../types/world";
 import ExpeditionHUD from "./ExpeditionHUD";
 import HistoricalCodexModal from "./HistoricalCodexModal";
@@ -29,6 +30,14 @@ export default function IsolatedGameEngine({ world }: IsolatedGameEngineProps) {
   const [facingLeft, setFacingLeft] = useState<boolean>(false);
   const [isWalking, setIsWalking] = useState<boolean>(false);
   const [walkPhase, setWalkPhase] = useState<number>(0);
+
+  // GLOBAL DIALOGUE & AUDIO LIFECYCLE CLEANUP ON SCENE TRANSITION
+  useEffect(() => {
+    setActiveNPC(null);
+    setActiveDialogueNode(null);
+    stopAllCharacterVoice();
+    stopCharacterDialogue();
+  }, [currentSceneId]);
   const [isTransitioning, setIsTransitioning] = useState<boolean>(false);
 
   // Background visual image state
@@ -543,6 +552,8 @@ export default function IsolatedGameEngine({ world }: IsolatedGameEngineProps) {
       {/* Dialogue Panel Overlay */}
       {activeNPC && activeDialogueNode && (
         <DialoguePanel
+          sceneId={currentSceneId}
+          currentSceneId={currentSceneId}
           characterName={activeDialogueNode.speakerName}
           characterTitle={activeDialogueNode.speakerTitle}
           dialogueText={activeDialogueNode.text}

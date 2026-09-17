@@ -15,9 +15,10 @@ import { playNarration, stopNarration } from "../../../../services/narratorServi
  * - 2 independent Gold Gotis (Player) vs 2 Ruby Gotis (Buzurg Chacha).
  * - Animated long wooden pasa dice physics (rotational wobble, roll SFX, compact non-overflowing size).
  * - Step-by-step bouncing hop animation across intermediate board squares.
- * - Unified movement & legal-move calculation engine for both Player and Chacha AI.
- * - Safe castle squares, capturing mechanics, extra turns on doubles/captures.
- * - Fully offline capable with IndexedDB persistence via gameProgressService.
+ * - Authoritative Game Loop: Strictly prevents infinite loops and halts all async events on game end.
+ * - In-Game Completion Overlay with [PLAY AGAIN] and [EXIT GAME].
+ * - Interactive Beginner "Learn How to Play" Mode guided by elder Buzurg Chacha.
+ * - 100% Offline-ready with local narration fallbacks and IndexedDB persistence.
  */
 
 export type PieceState = "home" | "circuit" | "home-lane" | "finished";
@@ -42,6 +43,19 @@ export interface LegalMove {
   isCapture: boolean;
   capturedPieceId: string | null;
 }
+
+export type TutorialStep =
+  | "inactive"
+  | "intro"
+  | "gotis"
+  | "roll_pasa"
+  | "move_goti"
+  | "movement_path"
+  | "safe_spaces"
+  | "captures"
+  | "extra_turns"
+  | "home_sanctuary"
+  | "winning";
 
 // -------------------------------------------------------------
 // CENTRALIZED BOARD CONFIGURATION (Exact 1:1 map for chaupar-board.jpg)
@@ -221,6 +235,14 @@ export default function ChauparGame({
     piecesRef.current = pieces;
   }, [pieces]);
 
+  // Authoritative Match State
+  const [matchState, setMatchState] = useState<"playing" | "player_won" | "chacha_won">("playing");
+  const matchStateRef = useRef<"playing" | "player_won" | "chacha_won">("playing");
+
+  useEffect(() => {
+    matchStateRef.current = matchState;
+  }, [matchState]);
+
   const [currentTurn, setCurrentTurn] = useState<"player" | "chacha">("player");
   const [diceRoll1, setDiceRoll1] = useState<number>(3);
   const [diceRoll2, setDiceRoll2] = useState<number>(4);
@@ -236,11 +258,20 @@ export default function ChauparGame({
   );
   const [winner, setWinner] = useState<"player" | "chacha" | null>(null);
 
+  // Tutorial / Learning Mode State
+  const [tutorialStep, setTutorialStep] = useState<TutorialStep>("inactive");
+  const tutorialStepRef = useRef<TutorialStep>("inactive");
+
+  useEffect(() => {
+    tutorialStepRef.current = tutorialStep;
+  }, [tutorialStep]);
+
   // Timers and cancellation refs
   const aiTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const animIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const rollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const turnTransitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const tutorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const hasWonReportedRef = useRef<boolean>(false);
 
   const clearAllTimers = useCallback(() => {
@@ -260,12 +291,19 @@ export default function ChauparGame({
       clearTimeout(turnTransitionTimeoutRef.current);
       turnTransitionTimeoutRef.current = null;
     }
+    if (tutorTimeoutRef.current) {
+      clearTimeout(tutorTimeoutRef.current);
+      tutorTimeoutRef.current = null;
+    }
   }, []);
 
   const resetMatchState = useCallback(() => {
     clearAllTimers();
     stopNarration();
     hasWonReportedRef.current = false;
+    matchStateRef.current = "playing";
+    setMatchState("playing");
+    setWinner(null);
     setPieces([
       {
         id: "gold-1",
@@ -314,7 +352,6 @@ export default function ChauparGame({
     setLegalMoves([]);
     setGameScore({ player: 0, chacha: 0 });
     setChauparRound(1);
-    setWinner(null);
     setChauparMessage("Match reset! Roll the pasa dice to challenge Buzurg Chacha.");
   }, [clearAllTimers]);
 
@@ -323,6 +360,7 @@ export default function ChauparGame({
       clearAllTimers();
       stopNarration();
       resetMatchState();
+      setTutorialStep("inactive");
     }
     return () => {
       clearAllTimers();
@@ -351,11 +389,9 @@ export default function ChauparGame({
       for (const piece of playerPieces) {
         // 1. Piece in 'home' base entering the board
         if (piece.state === "home") {
-          // Entry rule: Entering places goti on Start Cell, then advances to target (roll steps from base)
           const targetTotalSteps = roll;
           const targetCircuitIndex = (startIndex + targetTotalSteps) % 32;
 
-          // Build intermediate animation path from base -> start cell -> ... -> target cell
           const animationPath: { x: number; y: number }[] = [];
           animationPath.push(CHAUPAR_BOARD_CONFIG.circuit[startIndex]);
           for (let s = 1; s <= targetTotalSteps; s++) {
@@ -363,7 +399,6 @@ export default function ChauparGame({
             animationPath.push(CHAUPAR_BOARD_CONFIG.circuit[stepIdx]);
           }
 
-          // Check capture at destination
           const targetCell = CHAUPAR_BOARD_CONFIG.circuit[targetCircuitIndex];
           let capturedPieceId: string | null = null;
           let isCapture = false;
@@ -528,10 +563,90 @@ export default function ChauparGame({
   );
 
   // -------------------------------------------------------------
+  // BUZURG CHACHA AI ENGINE (Forward declaration for execution)
+  // -------------------------------------------------------------
+  const executeAiTurn = useCallback(() => {
+    if (matchStateRef.current !== "playing" || tutorialStepRef.current !== "inactive") return;
+    setIsDiceRolling(true);
+    soundFx.playCowrieShellsSound();
+
+    // Animate dice roll
+    aiTimeoutRef.current = setTimeout(() => {
+      if (matchStateRef.current !== "playing") {
+        setIsDiceRolling(false);
+        return;
+      }
+
+      const possibleFaces = [1, 2, 3, 4, 6];
+      const d1 = possibleFaces[Math.floor(Math.random() * possibleFaces.length)];
+      const d2 = possibleFaces[Math.floor(Math.random() * possibleFaces.length)];
+      const total = d1 + d2;
+      const rolledDoubles = d1 === d2;
+
+      setDiceRoll1(d1);
+      setDiceRoll2(d2);
+      setLastRollTotal(total);
+      setIsDiceRolling(false);
+
+      const currentPieces = piecesRef.current;
+      const aiMoves = calculateLegalMoves("chacha", total, currentPieces);
+
+      if (aiMoves.length === 0) {
+        setChauparMessage(`Chacha rolled ${d1} & ${d2} (${total}), but has no legal moves! Turn passes to you.`);
+        aiTimeoutRef.current = setTimeout(() => {
+          if (matchStateRef.current !== "playing") return;
+          setCurrentTurn("player");
+          setChauparMessage("Your turn, mere aaka! Roll the wooden pasa dice!");
+          setChauparRound((prev) => prev + 1);
+        }, 1400);
+        return;
+      }
+
+      // Chacha AI Decision Hierarchy:
+      // 1. Capture player piece if possible
+      // 2. Finish piece into Home if possible
+      // 3. Enter piece from base onto board
+      // 4. Advance piece closest to Home
+      let selectedMove: LegalMove | null = null;
+
+      const captureMove = aiMoves.find((m) => m.isCapture);
+      const finishMove = aiMoves.find((m) => m.nextState === "finished");
+      const entryMove = aiMoves.find((m) => {
+        const piece = currentPieces.find((p) => p.id === m.pieceId);
+        return piece && piece.state === "home";
+      });
+
+      if (captureMove) {
+        selectedMove = captureMove;
+      } else if (finishMove) {
+        selectedMove = finishMove;
+      } else if (entryMove) {
+        selectedMove = entryMove;
+      } else {
+        selectedMove = aiMoves.reduce((prev, curr) =>
+          curr.nextStepsTaken > prev.nextStepsTaken ? curr : prev
+        );
+      }
+
+      const moveName = selectedMove.pieceId === "ruby-1" ? "Ruby Goti 1" : "Ruby Goti 2";
+      setChauparMessage(`👳 Chacha rolled ${d1} & ${d2} (${total}) and advances ${moveName}!`);
+
+      aiTimeoutRef.current = setTimeout(() => {
+        if (selectedMove && matchStateRef.current === "playing") {
+          // eslint-disable-next-line @typescript-eslint/no-use-before-define
+          executeMove(selectedMove, rolledDoubles);
+        }
+      }, 500);
+    }, 600);
+  }, [calculateLegalMoves]);
+
+  // -------------------------------------------------------------
   // EXECUTE MOVE WITH CELL-BY-CELL BOUNCING HOP ANIMATION
   // -------------------------------------------------------------
   const executeMove = useCallback(
     (move: LegalMove, rolledDoubles: boolean) => {
+      if (matchStateRef.current !== "playing") return;
+
       setIsPawnMoving(true);
       setActiveHoppingPieceId(move.pieceId);
       setLegalMoves([]);
@@ -616,6 +731,8 @@ export default function ChauparGame({
 
           // Check Win Conditions & Transition Turns
           turnTransitionTimeoutRef.current = setTimeout(() => {
+            if (matchStateRef.current !== "playing") return;
+
             const latestPieces = piecesRef.current;
             const playerFinished = latestPieces.filter(
               (p) => p.player === "player" && p.state === "finished"
@@ -626,9 +743,15 @@ export default function ChauparGame({
 
             setGameScore({ player: playerFinished, chacha: chachaFinished });
 
+            // 1. AUTHORITATIVE WIN CHECK - STOP EVERYTHING
             if (playerFinished === 2) {
+              clearAllTimers();
+              matchStateRef.current = "player_won";
+              setMatchState("player_won");
               setWinner("player");
               setIsPawnMoving(false);
+              setIsDiceRolling(false);
+              setLegalMoves([]);
               setChauparMessage("🏆 Royal Victory! Both Golden Gotis reached the Home Sanctuary! You have won the Chaupar match!");
               playNarration(
                 "Shabash, mere aaka! Both your Golden Gotis have safely reached the Home Sanctuary! You have mastered the royal Rajput game of Chaupar!",
@@ -649,8 +772,13 @@ export default function ChauparGame({
             }
 
             if (chachaFinished === 2) {
+              clearAllTimers();
+              matchStateRef.current = "chacha_won";
+              setMatchState("chacha_won");
               setWinner("chacha");
               setIsPawnMoving(false);
+              setIsDiceRolling(false);
+              setLegalMoves([]);
               setChauparMessage("Buzurg Chacha's Ruby Gotis have both reached Home and won this match! Reset to challenge him again!");
               playNarration(
                 "Khamma Ghani! Buzurg Chacha has brought both Ruby Gotis to the Home Sanctuary. Reset to challenge the master elder again!",
@@ -659,7 +787,19 @@ export default function ChauparGame({
               return;
             }
 
-            // Extra Turn Logic
+            // 2. TUTORIAL INTERACTIVE TRANSITION
+            if (tutorialStepRef.current === "move_goti") {
+              setIsPawnMoving(false);
+              setTutorialStep("movement_path");
+              setChauparMessage("Excellent move! Your Golden Goti has stepped out along the board's royal perimeter track.");
+              playNarration(
+                "Excellent move! Your Golden Goti has stepped out along the board's royal perimeter track.",
+                { speaker: "ratan", pace: 0.9, language_code: "en-IN", hideSubtitle: true }
+              );
+              return;
+            }
+
+            // 3. NORMAL EXTRA TURN / SWITCH TURN
             const hasExtraTurn = rolledDoubles || move.isCapture;
             if (hasExtraTurn) {
               const reason = rolledDoubles && move.isCapture ? "doubles & capture" : rolledDoubles ? "doubles" : "capture";
@@ -672,7 +812,9 @@ export default function ChauparGame({
                 setIsPawnMoving(false);
                 setChauparMessage(`Buzurg Chacha earned an extra turn (${reason})!`);
                 aiTimeoutRef.current = setTimeout(() => {
-                  executeAiTurn();
+                  if (matchStateRef.current === "playing") {
+                    executeAiTurn();
+                  }
                 }, 1000);
               }
             } else {
@@ -682,7 +824,9 @@ export default function ChauparGame({
                 setIsPawnMoving(false);
                 setChauparMessage("Buzurg Chacha is contemplating his tactical roll...");
                 aiTimeoutRef.current = setTimeout(() => {
-                  executeAiTurn();
+                  if (matchStateRef.current === "playing") {
+                    executeAiTurn();
+                  }
                 }, 1000);
               } else {
                 setCurrentTurn("player");
@@ -695,87 +839,22 @@ export default function ChauparGame({
         }
       }, 110);
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [onComplete]
+    [clearAllTimers, executeAiTurn, onComplete]
   );
-
-  // -------------------------------------------------------------
-  // BUZURG CHACHA AI ENGINE
-  // -------------------------------------------------------------
-  const executeAiTurn = useCallback(() => {
-    if (winner) return;
-    setIsDiceRolling(true);
-    soundFx.playCowrieShellsSound();
-
-    // Animate dice roll
-    aiTimeoutRef.current = setTimeout(() => {
-      const possibleFaces = [1, 2, 3, 4, 6];
-      const d1 = possibleFaces[Math.floor(Math.random() * possibleFaces.length)];
-      const d2 = possibleFaces[Math.floor(Math.random() * possibleFaces.length)];
-      const total = d1 + d2;
-      const rolledDoubles = d1 === d2;
-
-      setDiceRoll1(d1);
-      setDiceRoll2(d2);
-      setLastRollTotal(total);
-      setIsDiceRolling(false);
-
-      const currentPieces = piecesRef.current;
-      const aiMoves = calculateLegalMoves("chacha", total, currentPieces);
-
-      if (aiMoves.length === 0) {
-        setChauparMessage(`Chacha rolled ${d1} & ${d2} (${total}), but has no legal moves! Turn passes to you.`);
-        aiTimeoutRef.current = setTimeout(() => {
-          setCurrentTurn("player");
-          setChauparMessage("Your turn, mere aaka! Roll the wooden pasa dice!");
-          setChauparRound((prev) => prev + 1);
-        }, 1400);
-        return;
-      }
-
-      // Chacha AI Decision Hierarchy:
-      // 1. Capture player piece if possible
-      // 2. Finish piece into Home if possible
-      // 3. Enter piece from base onto board
-      // 4. Advance piece closest to Home
-      let selectedMove: LegalMove | null = null;
-
-      const captureMove = aiMoves.find((m) => m.isCapture);
-      const finishMove = aiMoves.find((m) => m.nextState === "finished");
-      const entryMove = aiMoves.find((m) => {
-        const piece = currentPieces.find((p) => p.id === m.pieceId);
-        return piece && piece.state === "home";
-      });
-
-      if (captureMove) {
-        selectedMove = captureMove;
-      } else if (finishMove) {
-        selectedMove = finishMove;
-      } else if (entryMove) {
-        selectedMove = entryMove;
-      } else {
-        // Maximize steps taken towards home
-        selectedMove = aiMoves.reduce((prev, curr) =>
-          curr.nextStepsTaken > prev.nextStepsTaken ? curr : prev
-        );
-      }
-
-      const moveName = selectedMove.pieceId === "ruby-1" ? "Ruby Goti 1" : "Ruby Goti 2";
-      setChauparMessage(`👳 Chacha rolled ${d1} & ${d2} (${total}) and advances ${moveName}!`);
-
-      aiTimeoutRef.current = setTimeout(() => {
-        if (selectedMove) {
-          executeMove(selectedMove, rolledDoubles);
-        }
-      }, 500);
-    }, 600);
-  }, [calculateLegalMoves, executeMove, winner]);
 
   // -------------------------------------------------------------
   // PLAYER ROLL & SELECTION HANDLERS
   // -------------------------------------------------------------
   const handleRollDice = () => {
-    if (isDiceRolling || isPawnMoving || currentTurn !== "player" || legalMoves.length > 0 || winner) return;
+    if (
+      matchStateRef.current !== "playing" ||
+      isDiceRolling ||
+      isPawnMoving ||
+      currentTurn !== "player" ||
+      legalMoves.length > 0
+    ) {
+      return;
+    }
 
     setIsDiceRolling(true);
     soundFx.playButtonClick();
@@ -783,6 +862,11 @@ export default function ChauparGame({
     stopNarration();
 
     rollTimeoutRef.current = setTimeout(() => {
+      if (matchStateRef.current !== "playing") {
+        setIsDiceRolling(false);
+        return;
+      }
+
       const possibleFaces = [1, 2, 3, 4, 6];
       const d1 = possibleFaces[Math.floor(Math.random() * possibleFaces.length)];
       const d2 = possibleFaces[Math.floor(Math.random() * possibleFaces.length)];
@@ -799,16 +883,31 @@ export default function ChauparGame({
       if (calculatedMoves.length === 0) {
         setChauparMessage(`You rolled ${d1} & ${d2} (${total} pips), but have no legal moves! Turn passes to Chacha.`);
         turnTransitionTimeoutRef.current = setTimeout(() => {
+          if (matchStateRef.current !== "playing") return;
           setCurrentTurn("chacha");
           setChauparMessage("Buzurg Chacha is taking his turn...");
           aiTimeoutRef.current = setTimeout(() => {
-            executeAiTurn();
+            if (matchStateRef.current === "playing") {
+              executeAiTurn();
+            }
           }, 1100);
         }, 1400);
         return;
       }
 
       setLegalMoves(calculatedMoves);
+
+      // Handle Tutorial Step Hook
+      if (tutorialStepRef.current === "roll_pasa") {
+        setTutorialStep("move_goti");
+        const pieceName = calculatedMoves[0].pieceId === "gold-1" ? "Gold Goti 1" : "Gold Goti 2";
+        setChauparMessage(`🎲 Shabash! You rolled ${d1} and ${d2} (${total} steps)! Click your highlighted ${pieceName} to advance.`);
+        playNarration(
+          `Shabash! You rolled ${d1} and ${d2}, giving you ${total} steps. Click your highlighted Gold Goti to advance it.`,
+          { speaker: "ratan", pace: 0.9, language_code: "en-IN", hideSubtitle: true }
+        );
+        return;
+      }
 
       if (calculatedMoves.length === 1) {
         const pieceName = calculatedMoves[0].pieceId === "gold-1" ? "Gold Goti 1" : "Gold Goti 2";
@@ -820,7 +919,14 @@ export default function ChauparGame({
   };
 
   const handleSelectGoti = (pieceId: string) => {
-    if (isPawnMoving || isDiceRolling || currentTurn !== "player" || winner) return;
+    if (
+      matchStateRef.current !== "playing" ||
+      isPawnMoving ||
+      isDiceRolling ||
+      currentTurn !== "player"
+    ) {
+      return;
+    }
 
     const move = legalMoves.find((m) => m.pieceId === pieceId);
     if (!move) return;
@@ -828,6 +934,101 @@ export default function ChauparGame({
     setLegalMoves([]);
     const rolledDoubles = diceRoll1 === diceRoll2;
     executeMove(move, rolledDoubles);
+  };
+
+  // -------------------------------------------------------------
+  // BEGINNER LEARNING MODE (BUZURG CHACHA TUTORIAL)
+  // -------------------------------------------------------------
+  const startLearningMode = () => {
+    clearAllTimers();
+    stopNarration();
+    resetMatchState();
+    setTutorialStep("intro");
+    setChauparMessage("Khamma Ghani! I am Buzurg Chacha. Welcome to Chaupar — the ancient Rajput board of kings!");
+    playNarration(
+      "Khamma Ghani! I am Buzurg Chacha. Welcome to Chaupar — the ancient Rajput board of kings. Let me guide you step by step.",
+      { speaker: "ratan", pace: 0.9, language_code: "en-IN", hideSubtitle: true }
+    );
+  };
+
+  const advanceTutorial = () => {
+    stopNarration();
+    switch (tutorialStep) {
+      case "intro":
+        setTutorialStep("gotis");
+        setChauparMessage("These two Gold Gotis (👑) at the southern base belong to you. Chacha commands the Ruby Gotis (👳) at the north.");
+        playNarration(
+          "These two Gold Gotis at the southern base belong to you. Chacha commands the Ruby Gotis at the north.",
+          { speaker: "ratan", pace: 0.9, language_code: "en-IN", hideSubtitle: true }
+        );
+        break;
+      case "gotis":
+        setTutorialStep("roll_pasa");
+        setChauparMessage("Each turn begins by rolling the two wooden pasa dice. Press the pulsing [Roll Pasa Dice] button below!");
+        playNarration(
+          "Each turn begins by rolling the two wooden pasa dice. Press the Roll Pasa Dice button below.",
+          { speaker: "ratan", pace: 0.9, language_code: "en-IN", hideSubtitle: true }
+        );
+        break;
+      case "movement_path":
+        setTutorialStep("safe_spaces");
+        setChauparMessage("Notice the squares with cross marks (like your start square and the arm tips)? Those are SAFE CASTLES where gotis cannot be captured!");
+        playNarration(
+          "Cross-marked squares are Safe Castles where gotis are completely protected and can never be captured.",
+          { speaker: "ratan", pace: 0.9, language_code: "en-IN", hideSubtitle: true }
+        );
+        break;
+      case "safe_spaces":
+        setTutorialStep("captures");
+        setChauparMessage("On any unmarked square, if your goti lands on Chacha's Ruby goti, you CAPTURE it, sending it back to base, and you earn an EXTRA turn!");
+        playNarration(
+          "Landing on an opponent on an unmarked square captures them back to base and awards you an extra turn.",
+          { speaker: "ratan", pace: 0.9, language_code: "en-IN", hideSubtitle: true }
+        );
+        break;
+      case "captures":
+        setTutorialStep("extra_turns");
+        setChauparMessage("Rolling DOUBLES on your pasa dice (like 3 & 3, or 4 & 4) also grants you an instant extra roll!");
+        playNarration(
+          "Rolling doubles on your wooden pasa dice also grants you an instant extra roll.",
+          { speaker: "ratan", pace: 0.9, language_code: "en-IN", hideSubtitle: true }
+        );
+        break;
+      case "extra_turns":
+        setTutorialStep("home_sanctuary");
+        setChauparMessage("After completing the 32-square circuit, your gotis climb up the middle Home Lane into the central Charkoni (HOME).");
+        playNarration(
+          "After traveling around the board, your gotis enter the middle Home Lane and reach the central Charkoni sanctuary.",
+          { speaker: "ratan", pace: 0.9, language_code: "en-IN", hideSubtitle: true }
+        );
+        break;
+      case "home_sanctuary":
+        setTutorialStep("winning");
+        setChauparMessage("The first player to guide BOTH gotis safely into the central Home Sanctuary wins the match! You are ready to play!");
+        playNarration(
+          "The first player to bring both gotis into the central Home wins. You are now ready to play!",
+          { speaker: "ratan", pace: 0.9, language_code: "en-IN", hideSubtitle: true }
+        );
+        break;
+      case "winning":
+        try {
+          localStorage.setItem("chaupar_tutorial_completed", "true");
+        } catch {
+          // Ignore storage restrictions
+        }
+        setTutorialStep("inactive");
+        resetMatchState();
+        break;
+      default:
+        break;
+    }
+  };
+
+  const skipTutorial = () => {
+    clearAllTimers();
+    stopNarration();
+    setTutorialStep("inactive");
+    resetMatchState();
   };
 
   if (!isOpen) return null;
@@ -858,7 +1059,8 @@ export default function ChauparGame({
 
   return (
     <div className="absolute inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 z-50 pointer-events-auto">
-      <div className="bg-[#fff9ea] border-4 border-amber-950 rounded-3xl p-5 shadow-[16px_16px_0_0_rgba(0,0,0,1)] max-w-xl w-full flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-[#fff9ea] border-4 border-amber-950 rounded-3xl p-5 shadow-[16px_16px_0_0_rgba(0,0,0,1)] max-w-xl w-full flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-200 relative overflow-hidden">
+        
         {/* Header Bar */}
         <div className="flex items-center justify-between border-b-2 border-amber-800/40 pb-2.5">
           <div className="flex items-center gap-2">
@@ -873,6 +1075,24 @@ export default function ChauparGame({
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {tutorialStep === "inactive" ? (
+              <button
+                onClick={startLearningMode}
+                className="text-amber-900 hover:text-white bg-amber-200/80 hover:bg-amber-800 font-bold text-[11px] px-2.5 py-1 rounded-lg border border-amber-800 cursor-pointer transition-colors flex items-center gap-1 shadow-sm"
+                title="Learn how to play Chaupar step by step"
+              >
+                <span>📖</span>
+                <span>Learn How to Play</span>
+              </button>
+            ) : (
+              <button
+                onClick={skipTutorial}
+                className="text-amber-950 hover:bg-amber-300 font-bold text-[11px] px-2.5 py-1 rounded-lg border border-amber-900 bg-amber-200 cursor-pointer transition-colors"
+              >
+                Skip Tutorial ✕
+              </button>
+            )}
+
             <button
               onClick={resetMatchState}
               className="text-amber-900 hover:bg-amber-200 font-bold text-[11px] px-2.5 py-1 rounded-lg border border-amber-800 cursor-pointer transition-colors"
@@ -926,7 +1146,7 @@ export default function ChauparGame({
 
         {/* Visual Chaupar Cross Board (Strict 1:1 Aspect Square Container) */}
         <div className="relative w-72 h-72 sm:w-80 sm:h-80 mx-auto rounded-2xl overflow-hidden border-4 border-amber-950 shadow-2xl bg-[#1e0e07] flex items-center justify-center">
-          {/* Traditional Cloth Chaupar Board Artwork (100% Fill matching coordinate space) */}
+          {/* Traditional Cloth Chaupar Board Artwork */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/chaupar-board.jpg"
@@ -934,9 +1154,29 @@ export default function ChauparGame({
             className="w-full h-full object-fill pointer-events-none select-none opacity-95"
           />
 
+          {/* Safe Squares Overlay Indicator for Tutorial Mode */}
+          {tutorialStep === "safe_spaces" && (
+            <>
+              {CHAUPAR_BOARD_CONFIG.safeCellIndices.map((idx) => {
+                const cell = CHAUPAR_BOARD_CONFIG.circuit[idx];
+                return (
+                  <div
+                    key={`safe-${idx}`}
+                    className="absolute w-7 h-7 rounded-full border-2 border-amber-400 bg-amber-400/30 animate-pulse pointer-events-none transform -translate-x-1/2 -translate-y-1/2 shadow-[0_0_12px_rgba(251,191,36,0.9)]"
+                    style={{ left: `${cell.x}%`, top: `${cell.y}%` }}
+                  />
+                );
+              })}
+            </>
+          )}
+
           {/* Central Home (Charkoni) Highlight Sanctuary */}
           <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-            <div className="w-14 h-14 rounded-full border-2 border-yellow-400/90 bg-yellow-500/25 backdrop-blur-[1px] animate-pulse flex items-center justify-center shadow-[0_0_20px_rgba(234,179,8,0.7)]">
+            <div
+              className={`w-14 h-14 rounded-full border-2 border-yellow-400/90 bg-yellow-500/25 backdrop-blur-[1px] flex items-center justify-center shadow-[0_0_20px_rgba(234,179,8,0.7)] ${
+                tutorialStep === "home_sanctuary" || tutorialStep === "winning" ? "animate-ping scale-110" : "animate-pulse"
+              }`}
+            >
               <span className="text-[10px] font-serif font-black text-yellow-100 drop-shadow-md uppercase tracking-wider">
                 HOME
               </span>
@@ -953,6 +1193,11 @@ export default function ChauparGame({
               : getPieceAuthoritativeCoordinate(piece);
             const { offsetX, offsetY } = getRenderOffsets(piece);
 
+            // Tutorial Highlight condition
+            const isTutorialHighlighted =
+              (tutorialStep === "gotis" && isPlayer) ||
+              (tutorialStep === "move_goti" && isLegalToMove);
+
             return (
               <div
                 key={piece.id}
@@ -960,6 +1205,8 @@ export default function ChauparGame({
                 className={`absolute w-7 h-7 sm:w-8 sm:h-8 z-30 transition-all duration-100 ease-out transform -translate-x-1/2 -translate-y-1/2 ${
                   isLegalToMove
                     ? "cursor-pointer scale-110 ring-4 ring-yellow-400 shadow-[0_0_15px_rgba(250,204,21,1)] animate-bounce"
+                    : isTutorialHighlighted
+                    ? "ring-4 ring-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.9)] animate-pulse"
                     : isHopping
                     ? "scale-125 -translate-y-2.5 shadow-2xl"
                     : "scale-100 shadow-md"
@@ -967,7 +1214,7 @@ export default function ChauparGame({
                 style={{
                   left: `${visualCoords.x + offsetX}%`,
                   top: `${visualCoords.y + offsetY}%`,
-                  zIndex: isLegalToMove || isHopping ? 40 : 30,
+                  zIndex: isLegalToMove || isHopping || isTutorialHighlighted ? 40 : 30,
                 }}
                 title={
                   isPlayer
@@ -1032,18 +1279,63 @@ export default function ChauparGame({
           </div>
         </div>
 
-        {/* Message / Status Bar */}
-        <div className="bg-amber-200/70 border border-amber-400 p-2 rounded-xl text-center text-xs font-serif font-bold text-amber-950 leading-relaxed shadow-inner min-h-[36px] flex items-center justify-center">
-          {chauparMessage}
-        </div>
+        {/* Message / Tutorial Dialogue Box */}
+        {tutorialStep !== "inactive" ? (
+          <div className="bg-[#fcf5e5] border-2 border-amber-900/80 p-3 rounded-xl shadow-md flex items-start gap-3">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-amber-700 to-amber-900 border-2 border-amber-950 flex items-center justify-center text-lg flex-shrink-0 shadow-inner">
+              👳
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase tracking-widest text-amber-900">
+                  Buzurg Chacha (Elder Tutor)
+                </span>
+                <span className="text-[9px] font-mono text-amber-800 bg-amber-200/70 px-1.5 py-0.5 rounded">
+                  {tutorialStep.replace("_", " ").toUpperCase()}
+                </span>
+              </div>
+              <p className="text-xs font-serif font-semibold text-amber-950 mt-1 leading-relaxed">
+                {chauparMessage}
+              </p>
+              {tutorialStep !== "roll_pasa" && tutorialStep !== "move_goti" && (
+                <div className="mt-2 flex justify-end">
+                  <button
+                    onClick={advanceTutorial}
+                    className="bg-amber-800 hover:bg-amber-900 text-amber-50 font-bold text-[11px] px-3 py-1 rounded-md border border-amber-950 shadow-sm cursor-pointer transition-colors"
+                  >
+                    {tutorialStep === "winning" ? "Start Playing ✦" : "Next ➔"}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="bg-amber-200/70 border border-amber-400 p-2 rounded-xl text-center text-xs font-serif font-bold text-amber-950 leading-relaxed shadow-inner min-h-[36px] flex items-center justify-center">
+            {chauparMessage}
+          </div>
+        )}
 
         {/* Roll Action Button */}
         <button
           onClick={handleRollDice}
-          disabled={isDiceRolling || isPawnMoving || currentTurn !== "player" || legalMoves.length > 0 || winner !== null}
+          disabled={
+            matchState !== "playing" ||
+            isDiceRolling ||
+            isPawnMoving ||
+            currentTurn !== "player" ||
+            legalMoves.length > 0 ||
+            (tutorialStep !== "inactive" && tutorialStep !== "roll_pasa")
+          }
           className={`font-extrabold py-2.5 px-6 rounded-xl border-3 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-xs uppercase tracking-widest cursor-pointer transition-all active:translate-y-0.5 flex items-center justify-center gap-2 ${
-            isDiceRolling || isPawnMoving || currentTurn !== "player" || legalMoves.length > 0 || winner !== null
+            matchState !== "playing" ||
+            isDiceRolling ||
+            isPawnMoving ||
+            currentTurn !== "player" ||
+            legalMoves.length > 0 ||
+            (tutorialStep !== "inactive" && tutorialStep !== "roll_pasa")
               ? "bg-gray-400 text-gray-200 cursor-not-allowed"
+              : tutorialStep === "roll_pasa"
+              ? "bg-amber-600 hover:bg-amber-700 text-white ring-4 ring-yellow-400 animate-pulse"
               : "bg-amber-600 hover:bg-amber-700 text-white"
           }`}
         >
@@ -1057,11 +1349,48 @@ export default function ChauparGame({
               ? "Select Highlighted Goti"
               : currentTurn === "chacha"
               ? "Chacha's Turn..."
-              : winner
+              : matchState !== "playing"
               ? "Match Concluded"
               : "Roll Pasa Dice"}
           </span>
         </button>
+
+        {/* IN-GAME COMPLETION OVERLAY (AUTHORITATIVE VICTORY / DEFEAT) */}
+        {matchState !== "playing" && (
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-md rounded-3xl flex items-center justify-center p-6 z-50 animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-[#fff9ea] border-4 border-amber-950 rounded-2xl p-6 shadow-2xl max-w-sm w-full text-center flex flex-col items-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-yellow-500 via-amber-400 to-yellow-200 border-3 border-amber-950 flex items-center justify-center text-3xl shadow-lg">
+                {matchState === "player_won" ? "🏆" : "👳"}
+              </div>
+
+              <div>
+                <h3 className="text-lg font-black uppercase tracking-wider text-amber-950 font-serif">
+                  {matchState === "player_won" ? "Royal Chaupar Victory!" : "Chaupar Complete"}
+                </h3>
+                <p className="text-xs font-serif text-amber-900 mt-1 font-semibold leading-relaxed">
+                  {matchState === "player_won"
+                    ? "You brought both royal gotis safely home! The royal court of Chittorgarh celebrates your mastery."
+                    : "Chacha has brought his gotis home first. Reset the board to challenge the elder master again!"}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3 w-full mt-2">
+                <button
+                  onClick={resetMatchState}
+                  className="flex-1 py-2.5 px-4 bg-amber-700 hover:bg-amber-800 text-white font-extrabold text-xs rounded-xl border-2 border-amber-950 shadow-[3px_3px_0_0_rgba(0,0,0,1)] uppercase tracking-wider cursor-pointer transition-all active:translate-y-0.5"
+                >
+                  🔄 Play Again
+                </button>
+                <button
+                  onClick={onClose}
+                  className="flex-1 py-2.5 px-4 bg-amber-100 hover:bg-amber-200 text-amber-950 font-extrabold text-xs rounded-xl border-2 border-amber-950 shadow-[3px_3px_0_0_rgba(0,0,0,1)] uppercase tracking-wider cursor-pointer transition-all active:translate-y-0.5"
+                >
+                  ✕ Exit Game
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

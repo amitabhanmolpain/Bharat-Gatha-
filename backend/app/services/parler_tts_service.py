@@ -39,11 +39,11 @@ CHARACTER_VOICE_PROFILES = {
         "role": "Ancient Time-Traveling Genie Companion",
         "description": (
             "A friendly Indian male speaking natural Indian English, conversational and warm, "
-            "with clear pronunciation, moderate pace, slightly playful personality, "
-            "like a knowledgeable Indian friend guiding someone through a historical adventure game."
+            "with clear pronunciation, energetic natural pace, playful personality, "
+            "like a knowledgeable Indian companion guiding someone through historical Bharat."
         ),
         "fallback_speaker": "rahul",
-        "fallback_pace": 0.88,
+        "fallback_pace": 1.00,
         "language_code": "en-IN"
     },
     "guard": {
@@ -190,6 +190,8 @@ def clean_text_for_speech(raw_text: str) -> str:
 def get_character_profile(character_id: str) -> dict:
     """Retrieve the voice profile configuration for any character or NPC."""
     key = (character_id or "jolly").lower().strip()
+    if "chacha" in key or "buzurg" in key:
+        return CHARACTER_VOICE_PROFILES["chacha"]
     if "guard" in key or "sentry" in key or "soldier" in key:
         return CHARACTER_VOICE_PROFILES["guard"]
     # Explicit match for Master Kallappa (elderly artisan)
@@ -217,7 +219,7 @@ def get_character_profile(character_id: str) -> dict:
 
 
 def _synthesize_neural_fallback(profile: dict, text: str) -> dict:
-    """Synthesize speech using high-fidelity Indian English neural fallback."""
+    """Synthesize speech using high-fidelity Indian English neural engine."""
     api_key = os.getenv("SARVAM_API_KEY")
     if not api_key:
         return {
@@ -235,12 +237,14 @@ def _synthesize_neural_fallback(profile: dict, text: str) -> dict:
         "inputs": [text],
         "target_language_code": profile.get("language_code", "en-IN"),
         "speaker": profile.get("fallback_speaker", "rahul"),
-        "pace": profile.get("fallback_pace", 0.90),
+        "pace": float(profile.get("fallback_pace", 1.00)),
+        "speech_sample_rate": 22050,
+        "enable_preprocessing": True,
         "model": "bulbul:v3"
     }
 
     try:
-        res = requests.post(url, headers=headers, json=payload, timeout=12)
+        res = requests.post(url, headers=headers, json=payload, timeout=15)
         if res.status_code == 200:
             data = res.json()
             audios = data.get("audios", [])
@@ -270,6 +274,9 @@ def _synthesize_neural_fallback(profile: dict, text: str) -> dict:
 def generate_character_speech(character: str, text: str) -> dict:
     """Dynamically synthesize speech for any type of text or character.
 
+    Uses canonical voice profiles (e.g. Rahul for Jolly Bhai at pace 1.0)
+    to guarantee identical tone, accent, pitch, and energy across all game scenes.
+
     Args:
         character (str): 'jolly', 'guard', 'elder', 'archaeologist', 'narrator', etc.
         text (str): Dialogue or text line to synthesize.
@@ -287,9 +294,9 @@ def generate_character_speech(character: str, text: str) -> dict:
             "status_code": 400
         }
 
-    # 0. Check persistent disk cache for exact accent consistency
+    # 0. Check persistent disk cache for exact acoustic consistency
     safe_character = profile["id"]
-    cache_key = hashlib.md5(f"parler_{safe_character}_{clean_text}".encode('utf-8')).hexdigest()
+    cache_key = hashlib.md5(f"canonical_{safe_character}_{clean_text}".encode('utf-8')).hexdigest()
     cached_file = os.path.join(AUDIO_CACHE_DIR, f"{safe_character}_{cache_key}.wav")
     if os.path.exists(cached_file) and os.path.getsize(cached_file) > 1000:
         try:
@@ -302,29 +309,38 @@ def generate_character_speech(character: str, text: str) -> dict:
                 "audio_base64": base64.b64encode(cached_bytes).decode("utf-8"),
                 "audio_url": f"/audio_cache/{safe_character}_{cache_key}.wav",
                 "format": "wav",
-                "engine": "indic_parler_tts_cached",
+                "engine": "canonical_tts_cached",
                 "status_code": 200
             }
         except Exception:
             pass
 
-    # 1. Attempt AI4Bharat Indic Parler-TTS Space (if available)
-    call_url = f"{PARLER_SPACE_BASE}/gradio_api/call/generate_base"
-    payload = {
-        "data": [
-            clean_text,
-            profile["description"]
-        ]
-    }
+    # 1. Canonical Neural Synthesis (High-fidelity Indian English synthesis)
+    result = _synthesize_neural_fallback(profile, clean_text)
+    if result.get("status") == "success" and result.get("audio_base64"):
+        try:
+            with open(cached_file, "wb") as f:
+                f.write(base64.b64decode(result["audio_base64"]))
+            result["audio_url"] = f"/audio_cache/{safe_character}_{cache_key}.wav"
+        except Exception:
+            pass
+        return result
 
+    # 2. Parler Space Secondary Attempt (if neural API is unreachable)
     try:
+        call_url = f"{PARLER_SPACE_BASE}/gradio_api/call/generate_base"
+        payload = {
+            "data": [
+                clean_text,
+                profile["description"]
+            ]
+        }
         call_res = requests.post(call_url, json=payload, timeout=5)
         if call_res.status_code == 200:
             event_id = call_res.json().get("event_id")
             if event_id:
                 stream_url = f"{PARLER_SPACE_BASE}/gradio_api/call/generate_base/{event_id}"
                 stream_res = requests.get(stream_url, timeout=8)
-                
                 file_path = None
                 for line in stream_res.text.strip().split("\n"):
                     if line.startswith("data:"):
@@ -334,7 +350,6 @@ def generate_character_speech(character: str, text: str) -> dict:
                                 file_path = data[0].get("path")
                         except Exception:
                             pass
-
                 if file_path:
                     audio_download_url = f"{PARLER_SPACE_BASE}/gradio_api/file={file_path}"
                     audio_res = requests.get(audio_download_url, timeout=8)
@@ -358,13 +373,4 @@ def generate_character_speech(character: str, text: str) -> dict:
     except Exception:
         pass
 
-    # 2. Resilient Neural Fallback (Instant Indian English synthesis for any text)
-    result = _synthesize_neural_fallback(profile, clean_text)
-    if result.get("status") == "success" and result.get("audio_base64"):
-        try:
-            with open(cached_file, "wb") as f:
-                f.write(base64.b64decode(result["audio_base64"]))
-            result["audio_url"] = f"/audio_cache/{safe_character}_{cache_key}.wav"
-        except Exception:
-            pass
     return result

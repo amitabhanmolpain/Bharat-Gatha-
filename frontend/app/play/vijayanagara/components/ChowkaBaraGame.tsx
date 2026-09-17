@@ -34,6 +34,19 @@ const AI_PATH = [
 
 const SAFE_SQUARES = new Set([0, 4, 12, 20, 24]);
 
+type TutorialStep =
+  | "inactive"
+  | "intro"
+  | "pawns_board"
+  | "roll_cowries"
+  | "roll_result"
+  | "move_pawn"
+  | "opponent_turn"
+  | "safe_spaces"
+  | "captures"
+  | "center_goal"
+  | "summary";
+
 export default function ChowkaBaraGame({
   isOpen,
   onClose,
@@ -51,12 +64,17 @@ export default function ChowkaBaraGame({
   const [isRolling, setIsRolling] = useState(false);
   const [gameStatus, setGameStatus] = useState<"playing" | "player_won" | "ai_won">("playing");
   const [gameAttempts, setGameAttempts] = useState(attempts);
+  const [awaitingPawnSelection, setAwaitingPawnSelection] = useState(false);
+  const [selectablePawns, setSelectablePawns] = useState<number[]>([]);
   const [dialogueMessage, setDialogueMessage] = useState<string>(
     "Roll the four cowrie shells. A roll of 4 or 8 lets a pawn enter the board!"
   );
   const [turnCount, setTurnCount] = useState(0);
   const [showTutorial, setShowTutorial] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(0);
+
+  // Tutorial / Learning Mode State
+  const [tutorialStep, setTutorialStep] = useState<TutorialStep>("inactive");
 
   const spinIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const aiTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -79,12 +97,14 @@ export default function ChowkaBaraGame({
     setCurrentTurn("player");
     setLastRoll(null);
     setIsRolling(false);
+    setAwaitingPawnSelection(false);
+    setSelectablePawns([]);
     setGameStatus("playing");
     setTurnCount(0);
     setDialogueMessage(
       "Roll the four cowrie shells. A roll of 4 or 8 lets a pawn enter the board!"
     );
-  }, []);
+  }, [clearAllTimers]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -113,8 +133,8 @@ export default function ChowkaBaraGame({
     ];
     const openCount = faces.filter(Boolean).length;
     let roll = openCount;
-    if (openCount === 0) roll = 8;
-    else if (openCount === 4) roll = 4;
+    if (openCount === 0) roll = 8; // Ashta!
+    else if (openCount === 4) roll = 4; // Chowka!
     return { roll, faces };
   };
 
@@ -271,21 +291,99 @@ export default function ChowkaBaraGame({
     }, 1000);
   };
 
+    setAwaitingPawnSelection(false);
+    setSelectablePawns([]);
+
+    const roll = lastRoll;
+    const p1 = playerPieces[0];
+    const p2 = playerPieces[1];
+
+    let nextPieces: [number, number] = [p1, p2];
+    if (pawnIndex === 0) {
+      nextPieces = [p1 + roll, p2];
+    } else {
+      nextPieces = [p1, p2 + roll];
+    }
+
+    soundFx.playTileSwap();
+
+    // Check collision / capture on AI
+    setAiPieces((prevAi) => checkCollisionAndCapture("player", nextPieces, prevAi));
+    setPlayerPieces(nextPieces);
+
+    // If Tutorial is active, advance to next tutorial step
+    if (tutorialStep === "move_pawn") {
+      setTutorialStep("opponent_turn");
+      setDialogueMessage(
+        "Well done! Now Vidyaranya will cast his shells and move his Terracotta pawns from the opposite corner."
+      );
+      stopAllCharacterVoice();
+      playNarration(
+        "Well done! Now watch Vidyaranya respond with his move from the upper corner.",
+        { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
+      );
+    }
+
+    // CHECK WIN CONDITION IMMEDIATELY
+    if (nextPieces[0] === 24 && nextPieces[1] === 24) {
+      clearAllTimers();
+      setGameStatus("player_won");
+      setDialogueMessage(
+        "🏆 Splendid match! Both your Golden Gotis have reached the Sanctuary. You have won Vidyaranya's blessing!"
+      );
+      stopAllCharacterVoice();
+      playNarration(
+        "Splendid match! You navigated the board with patience and skill, winning Vidyaranya's blessing!",
+        { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
+      );
+      return;
+    }
+
+    // Turn passes to AI
+    setCurrentTurn("ai");
+    const rollSpoken =
+      roll === 8
+        ? "Ashta! You rolled an eight! Your pawn leaps forward."
+        : roll === 4
+        ? "Chowka! You rolled a four! Your pawn surges ahead."
+        : `You rolled a ${roll}! Your pawn advances.`;
+
+    setDialogueMessage(`You moved Pawn ${pawnIndex + 1}. Vidyaranya prepares his move...`);
+    stopAllCharacterVoice();
+    playNarration(rollSpoken, {
+      speaker: "ratan",
+      pace: 0.88,
+      language_code: "en-IN",
+      hideSubtitle: true,
+    });
+
+    aiTimeoutRef.current = setTimeout(() => {
+      executeAiTurn();
+    }, 1800);
+  };
+
+  // Player Cast Cowrie Shells
   const handlePlayerRoll = () => {
     if (isRolling || currentTurn !== "player" || gameStatus !== "playing") return;
+    if (awaitingPawnSelection) return;
 
     clearAllTimers();
     setIsRolling(true);
+    setSelectablePawns([]);
 
     stopAllCharacterVoice();
     soundFx.playCowrieShellsSound();
-    
-    let spins = 0;
 
+    let spins = 0;
     spinIntervalRef.current = setInterval(() => {
-      setCowries([Math.random() > 0.5, Math.random() > 0.5, Math.random() > 0.5, Math.random() > 0.5]);
+      setCowries([
+        Math.random() > 0.5,
+        Math.random() > 0.5,
+        Math.random() > 0.5,
+        Math.random() > 0.5,
+      ]);
       spins++;
-      
+
       if (spins > 6) {
         if (spinIntervalRef.current) {
           clearInterval(spinIntervalRef.current);
@@ -296,7 +394,6 @@ export default function ChowkaBaraGame({
         setCowries(faces);
         setLastRoll(roll);
         setIsRolling(false);
-
         soundFx.playCowrieShellsSound();
 
         const pPieces = [...playerPieces];
@@ -342,6 +439,11 @@ export default function ChowkaBaraGame({
             "Splendid match! You navigated all pawns to the sanctuary with patience and skill, winning Vidyaranya's blessing!",
             { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
           );
+
+          setCurrentTurn("ai");
+          aiTimeoutRef.current = setTimeout(() => {
+            executeAiTurn();
+          }, 2000);
           return;
         } else if (currentTurnCount >= 30) {
           setGameStatus("player_won");
@@ -396,6 +498,93 @@ export default function ChowkaBaraGame({
     stopAllCharacterVoice();
     resetMatchState();
     onClose();
+  };
+
+  // Start Beginner Learning Mode
+  const startLearningMode = () => {
+    clearAllTimers();
+    stopAllCharacterVoice();
+    resetMatchState();
+    setTutorialStep("intro");
+    setDialogueMessage(
+      "Namaste, seeker. I am Sage Vidyaranya. Welcome to Chowka Bara — the ancient 5x5 strategic race of Karnataka."
+    );
+    playNarration(
+      "Namaste, seeker. I am Sage Vidyaranya. Let us learn Chowka Bara together step by step.",
+      { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
+    );
+  };
+
+  const advanceTutorial = () => {
+    stopAllCharacterVoice();
+    switch (tutorialStep) {
+      case "intro":
+        setTutorialStep("pawns_board");
+        setDialogueMessage(
+          "You command the two Golden Gotis (🟡) starting at the bottom-left corner. Your goal is to guide both into the Center Sanctuary (Cell 12)."
+        );
+        playNarration(
+          "You command the Golden Gotis at the bottom corner. Your goal is to guide both into the Center Sanctuary.",
+          { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
+        );
+        break;
+      case "pawns_board":
+        setTutorialStep("roll_cowries");
+        setDialogueMessage(
+          "Each turn, cast the 4 cowrie shells to determine your movement. Click the pulsing [Cast Cowrie Shells] button now!"
+        );
+        playNarration(
+          "Click the Cast Cowrie Shells button to roll your distance.",
+          { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
+        );
+        break;
+      case "opponent_turn":
+        setTutorialStep("safe_spaces");
+        setDialogueMessage(
+          "Notice the cross-marked squares (✖) on the four corners and the center. These are Safe Sanctuaries where pawns can never be captured."
+        );
+        playNarration(
+          "Cross-marked squares are Safe Sanctuaries where your pawns are protected from captures.",
+          { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
+        );
+        break;
+      case "safe_spaces":
+        setTutorialStep("captures");
+        setDialogueMessage(
+          "On regular unmarked squares, if your pawn lands on an opponent's pawn, it captures it and sends it all the way back to the start!"
+        );
+        playNarration(
+          "Landing on an opponent on regular squares captures them and sends them back to the start.",
+          { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
+        );
+        break;
+      case "captures":
+        setTutorialStep("center_goal");
+        setDialogueMessage(
+          "Pawns move around the outer ring, then spiral into the inner track, and finally enter the Center Sanctuary with an exact roll."
+        );
+        playNarration(
+          "Pawns move along the outer perimeter, spiral inside, and enter the center with an exact count.",
+          { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
+        );
+        break;
+      case "center_goal":
+        setTutorialStep("summary");
+        setDialogueMessage(
+          "The first player to bring BOTH pawns safely into the Center Sanctuary wins the match and receives my royal blessing!"
+        );
+        playNarration(
+          "The first player to bring both pawns into the Center Sanctuary wins. You are now ready to play!",
+          { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
+        );
+        break;
+      case "summary":
+        setTutorialStep("inactive");
+        resetMatchState();
+        break;
+      default:
+        break;
+    }
   };
 
   return (
@@ -500,19 +689,28 @@ export default function ChowkaBaraGame({
                   isHome
                     ? "bg-[#2d422a] border-2 border-[#d4a359]"
                     : isSafe
-                    ? "bg-[#283827]"
-                    : "bg-[#182417]"
+                    ? "bg-[#283827] border-[#2b3a2a]"
+                    : "bg-[#182417] border-[#2b3a2a]"
                 }`}
               >
+                {/* Safe cross markers */}
                 {isSafe && !isHome && (
-                  <svg className="absolute inset-0 w-full h-full opacity-20 pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
+                  <svg
+                    className="absolute inset-0 w-full h-full opacity-25 pointer-events-none"
+                    viewBox="0 0 100 100"
+                    preserveAspectRatio="none"
+                  >
                     <line x1="0" y1="0" x2="100" y2="100" stroke="#d4a359" strokeWidth="4" />
                     <line x1="100" y1="0" x2="0" y2="100" stroke="#d4a359" strokeWidth="4" />
                   </svg>
                 )}
-                
+
+                {/* Sanctuary Center Icon */}
                 {isHome && (
-                  <svg className="absolute inset-0 w-full h-full opacity-30 pointer-events-none" viewBox="0 0 100 100">
+                  <svg
+                    className="absolute inset-0 w-full h-full opacity-35 pointer-events-none"
+                    viewBox="0 0 100 100"
+                  >
                     <circle cx="50" cy="50" r="30" stroke="#d4a359" strokeWidth="4" fill="none" />
                     <circle cx="50" cy="50" r="15" fill="#d4a359" />
                   </svg>
@@ -559,6 +757,7 @@ export default function ChowkaBaraGame({
           )}
         </div>
 
+        {/* Action Controls */}
         {gameStatus === "playing" ? (
           <button
             type="button"
@@ -584,14 +783,72 @@ export default function ChowkaBaraGame({
                 className="bg-[#222e20] hover:bg-[#2d422a] border border-[#d4a359] text-[#e8f1e6] font-serif font-bold px-3 py-1.5 rounded-lg text-[10px] uppercase tracking-wider transition-all cursor-pointer"
               >
                 Try Again (#{gameAttempts + 1})
+          <div className="flex items-center gap-2">
+            {awaitingPawnSelection ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-serif italic text-amber-300 animate-pulse">
+                  Select Pawn to Move:
+                </span>
+                {selectablePawns.map((pIdx) => (
+                  <button
+                    key={pIdx}
+                    type="button"
+                    onClick={() => handleMovePawn(pIdx)}
+                    className="px-3.5 py-1.5 rounded-lg font-mono font-bold text-xs bg-amber-500 hover:bg-amber-400 text-black border-2 border-black shadow cursor-pointer transition-transform active:scale-95"
+                  >
+                    Move Pawn #{pIdx + 1}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={handlePlayerRoll}
+                disabled={isRolling || currentTurn !== "player"}
+                className={`px-5 py-2.5 rounded-xl font-serif font-bold text-xs uppercase tracking-wider transition-all shadow-md cursor-pointer ${
+                  currentTurn === "player" && !isRolling
+                    ? tutorialStep === "roll_cowries"
+                      ? "bg-gradient-to-r from-amber-500 to-yellow-400 text-black ring-4 ring-amber-400/50 animate-bounce"
+                      : "bg-gradient-to-r from-[#8b6528] to-[#d4a359] hover:from-[#a07430] hover:to-[#e5b56a] text-[#141210] active:translate-y-0.5"
+                    : "bg-[#222e20] text-[#71856c] border border-[#31422f] cursor-not-allowed"
+                }`}
+              >
+                <div className="flex items-center gap-1.5 justify-center">
+                  {isRolling
+                    ? "Casting Shells..."
+                    : currentTurn === "player"
+                    ? "Cast Cowrie Shells"
+                    : "Sage's Turn..."}
+                  {!isRolling && currentTurn === "player" && <GameIcon name="dice" size={14} />}
+                </div>
               </button>
             )}
+          </div>
+        ) : (
+          /* WIN / LOSS STATE OVERLAY BUTTONS */
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              onClick={handleRestartMatch}
+              className="bg-[#222e20] hover:bg-[#2d422a] border border-[#d4a359] text-[#e8f1e6] font-serif font-bold px-4 py-2 rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer shadow-sm"
+            >
+              Play Again ↺
+            </button>
             <button
               type="button"
               onClick={handleFinish}
               className="bg-gradient-to-r from-[#8b6528] to-[#d4a359] hover:from-[#a07430] hover:to-[#e5b56a] text-[#141210] font-serif font-bold px-4 py-1.5 rounded-lg text-[10px] uppercase tracking-wider transition-all cursor-pointer shadow-md"
             >
               Receive Blessing 📿
+              className={`font-serif font-bold px-5 py-2 rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md ${
+                gameStatus === "player_won"
+                  ? "bg-gradient-to-r from-[#8b6528] to-[#d4a359] hover:from-[#a07430] hover:to-[#e5b56a] text-[#141210]"
+                  : "bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border border-neutral-600"
+              }`}
+            >
+              {gameStatus === "player_won"
+                ? "Receive Vidyaranya's Blessing 📿"
+                : "Proceed ➜"}
             </button>
           </div>
         )}
@@ -600,6 +857,10 @@ export default function ChowkaBaraGame({
       <div className="flex items-center justify-between text-[9px] font-mono text-[#71856c] pt-1 border-t border-[#31422f]">
         <span>Attempts: {gameAttempts} (Turns: {turnCount}/30 soft limit)</span>
         <span>Karnataka Traditional Game • 1336 AD</span>
+      {/* --- FOOTER STATUS --- */}
+      <div className="flex items-center justify-between text-[10px] font-mono text-[#71856c] pt-2 border-t border-[#31422f]">
+        <span>Attempts Logged: {gameAttempts}</span>
+        <span>Karnataka Traditional Strategy Game &bull; 1336 AD</span>
       </div>
 
       {showTutorial && (
@@ -646,3 +907,4 @@ export default function ChowkaBaraGame({
     </AccessibleModal>
   );
 }
+
