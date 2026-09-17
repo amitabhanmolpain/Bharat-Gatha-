@@ -75,7 +75,12 @@ export default function BadalMahalLampGame({
   // Handler for lighting a lamp
   const handleLightLamp = useCallback(
     async (lamp: LampDef) => {
-      if (litLampIds.includes(lamp.id)) return;
+      if (litLampIds.includes(lamp.id)) {
+        // Toggle OFF
+        const nextLit = litLampIds.filter((id) => id !== lamp.id);
+        saveLitLamps(nextLit);
+        return;
+      }
 
       soundFx.playClueChime();
       const nextLit = [...litLampIds, lamp.id];
@@ -168,7 +173,7 @@ export default function BadalMahalLampGame({
                 top: `${lamp.renderY}%`,
                 width: `${lamp.renderWidth}%`,
               }}
-              onClick={() => !isLit && handleLightLamp(lamp)}
+              onClick={() => handleLightLamp(lamp)}
               title={isLit ? `${lamp.name} (Lit)` : `${lamp.name} (Unlit - Press E to light)`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
