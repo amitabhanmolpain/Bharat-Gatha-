@@ -117,6 +117,25 @@ export default function VijayanagaraGameScreen() {
   const [showToyInspectionModal, setShowToyInspectionModal] = useState(false);
   const [showForeignTravelerDialogue, setShowForeignTravelerDialogue] = useState(false);
   const [showStage2VictoryModal, setShowStage2VictoryModal] = useState(false);
+  const [travelerTalkFrame, setTravelerTalkFrame] = useState(0);
+
+  // Animated speaking frame toggling while Portuguese Traveler is speaking
+  useEffect(() => {
+    if (!showForeignTravelerDialogue) {
+      setTravelerTalkFrame(0);
+      return;
+    }
+    let timeoutId: NodeJS.Timeout;
+    const animateSpeech = () => {
+      setTravelerTalkFrame((prev) => (prev === 0 ? 1 : 0));
+      // Random interval between 100ms and 350ms for more natural talking cadence
+      const nextDelay = 100 + Math.random() * 250;
+      timeoutId = setTimeout(animateSpeech, nextDelay);
+    };
+    timeoutId = setTimeout(animateSpeech, 150);
+    
+    return () => clearTimeout(timeoutId);
+  }, [showForeignTravelerDialogue]);
 
   // Stage 3 Modals
   const [showRaghavendraDialogue, setShowRaghavendraDialogue] = useState(false);
@@ -498,10 +517,10 @@ export default function VijayanagaraGameScreen() {
 
   const isNearBazaarForeignTraveler =
     scene === "hampi_bazaar_entry" &&
-    playerPos.x >= 58.0 &&
+    playerPos.x >= 56.0 &&
     playerPos.x <= 72.0 &&
     playerPos.y >= 52.0 &&
-    playerPos.y <= 62.0;
+    playerPos.y <= 66.0;
 
   const isNearBazaarStage3Road =
     scene === "hampi_bazaar_entry" &&
@@ -1504,23 +1523,66 @@ export default function VijayanagaraGameScreen() {
               </span>
             </div>
 
-            {/* Overseas Traveler */}
+            {/* Portuguese Traveler (Senhor Duarte) Animated NPC */}
             <div
-              className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
-              style={{ left: "65%", top: "58%" }}
+              className="absolute transform -translate-x-1/2 -translate-y-[90%] flex flex-col items-center pointer-events-auto cursor-pointer z-20 group"
+              style={{ left: "64%", top: "61%" }}
+              onClick={() => {
+                if (typeof soundFx.playDialogueOpen === "function") soundFx.playDialogueOpen();
+                setShowForeignTravelerDialogue(true);
+                setTalkedToForeignTraveler(true);
+              }}
+              title="Senhor Duarte — Portuguese Chronicler (Click or Press E to Speak)"
             >
-              {isNearBazaarForeignTraveler && (
-                <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
+              {/* Interaction Bubble when nearby */}
+              {isNearBazaarForeignTraveler && !showForeignTravelerDialogue && (
+                <div className="mb-2 bg-[#1a1714]/95 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-xl text-xs font-serif shadow-[0_4px_20px_rgba(0,0,0,0.85)] animate-bounce flex items-center gap-1.5 whitespace-nowrap pointer-events-none">
                   <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">E</kbd>
-                  <span>Speak with Overseas Traveler (Portuguese Visitor)</span>
+                  <span>Speak with Senhor Duarte (Portuguese Traveler)</span>
                 </div>
               )}
-              <div className="w-12 h-16 md:w-14 md:h-20 bg-[#3d3328]/90 border-2 border-[#d4a359] rounded-2xl flex items-center justify-center shadow-lg animate-pulse">
-                <GameIcon name="traveler" size={24} className="text-[#eedfc8]" />
+
+              {/* Speaking Indicator Bubble when talking */}
+              {showForeignTravelerDialogue && (
+                <div className="mb-2 bg-amber-950/90 border-2 border-[#f59e0b] text-[#fff9ea] px-3 py-1 rounded-full text-[11px] font-mono font-bold tracking-wide flex items-center gap-1.5 shadow-lg animate-pulse pointer-events-none">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                  <span>Speaking...</span>
+                </div>
+              )}
+
+              {/* Character Sprite with Idle / Speaking Animation */}
+              <div
+                className={`relative transition-transform duration-200 group-hover:scale-105 ${
+                  showForeignTravelerDialogue ? "scale-105" : ""
+                }`}
+              >
+                <img
+                  src={
+                    showForeignTravelerDialogue
+                      ? (travelerTalkFrame === 1
+                          ? "/portuguese_traveler_talking.png"
+                          : "/portuguese_traveler_idle.png")
+                      : "/portuguese_traveler_idle.png"
+                  }
+                  alt="Senhor Duarte, Portuguese Traveler"
+                  className={`w-20 h-32 md:w-24 md:h-36 object-contain object-bottom drop-shadow-[0_8px_16px_rgba(0,0,0,0.85)] ${
+                    showForeignTravelerDialogue ? "animate-pulse" : ""
+                  }`}
+                  style={{
+                    imageRendering: "pixelated",
+                    transform: showForeignTravelerDialogue && travelerTalkFrame === 1
+                      ? "translateY(-3px) rotate(1deg)"
+                      : "none",
+                  }}
+                />
+
+                {/* Nameplate below character */}
+                <div className="mt-1 flex items-center justify-center">
+                  <span className="text-[10px] font-serif font-bold text-[#eedfc8] bg-[#1a1714]/90 px-2.5 py-0.5 rounded-full border border-[#5a4d3f] shadow whitespace-nowrap group-hover:border-[#d4a359] group-hover:text-[#f6ede0] transition-colors">
+                    Senhor Duarte
+                  </span>
+                </div>
               </div>
-              <span className="text-[10px] font-serif font-bold text-[#d6c7b2] bg-[#1a1714]/80 px-2 py-0.5 rounded border border-[#5a4d3f] mt-1">
-                Overseas Traveler
-              </span>
             </div>
 
             {/* Path to Stage 3: Vittala Temple Road */}

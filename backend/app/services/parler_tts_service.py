@@ -135,7 +135,7 @@ CHARACTER_VOICE_PROFILES = {
         "id": "duarte",
         "name": "Senhor Duarte",
         "role": "Overseas Chronicler & Emissary",
-        "description": "An adult male speaking clear Indian English with a slight formal, measured tone. He sounds like a scholarly foreign emissary recounting his observations of a grand empire.",
+        "description": "An adult male speaking English with a distinct Portuguese accent. His tone is formal and measured. He sounds like a scholarly foreign emissary recounting his observations of a grand empire.",
         "fallback_speaker": "rahul",
         "fallback_pace": 0.95,
         "language_code": "en-IN"
