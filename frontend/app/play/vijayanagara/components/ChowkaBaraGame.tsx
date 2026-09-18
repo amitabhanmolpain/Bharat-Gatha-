@@ -5,6 +5,7 @@ import AccessibleModal from "./AccessibleModal";
 import GameIcon from "./GameIcon";
 import { soundFx } from "../../../../services/soundService";
 import { playNarration, stopAllCharacterVoice } from "../../../../services/narratorService";
+import { Timer, Infinity as InfinityIcon } from "lucide-react";
 
 interface ChowkaBaraGameProps {
   isOpen: boolean;
@@ -73,6 +74,8 @@ export default function ChowkaBaraGame({
   const [turnCount, setTurnCount] = useState(0);
   const [showTutorial, setShowTutorial] = useState(false);
   const [tutorialPage, setTutorialPage] = useState(0);
+  const [isTurnLimitEnabled, setIsTurnLimitEnabled] = useState(true);
+  const [killAnimation, setKillAnimation] = useState<'player_kill' | 'ai_kill' | null>(null);
 
   // Tutorial / Learning Mode State
   const [tutorialStep, setTutorialStep] = useState<TutorialStep>("inactive");
@@ -253,6 +256,9 @@ export default function ChowkaBaraGame({
           aKadi = true;
           getsExtraThrow = true;
           for(let i=0; i<4; i++) pPieces[i] = collisionResult.updatedOpponent[i];
+          
+          setKillAnimation('ai_kill');
+          setTimeout(() => setKillAnimation(null), 1500);
         }
       }
 
@@ -335,6 +341,9 @@ export default function ChowkaBaraGame({
       pKadi = true;
       getsExtraThrow = true;
       setPlayerHasKadi(true);
+      
+      setKillAnimation('player_kill');
+      setTimeout(() => setKillAnimation(null), 1500);
     }
     
     setPlayerPieces(nextPieces);
@@ -437,6 +446,9 @@ export default function ChowkaBaraGame({
         setIsRolling(false);
         soundFx.playCowrieShellsSound();
 
+        const currentTurnCount = turnCount + 1;
+        setTurnCount(currentTurnCount);
+
         const pPieces = [...playerPieces];
         let pKadi = playerHasKadi;
         
@@ -456,24 +468,22 @@ export default function ChowkaBaraGame({
           }
         }
 
+        if (isTurnLimitEnabled && currentTurnCount >= 30) {
+          setGameStatus("player_won");
+          setDialogueMessage(
+            "We have played long enough! You have grasped the authentic rules of the game. I grant you my blessing."
+          );
+          stopAllCharacterVoice();
+          playNarration(
+            "We have played long enough! You have grasped the authentic rules of the game. I grant you my blessing.",
+            { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
+          );
+          return;
+        }
+
         if (validPawns.length === 0) {
           setDialogueMessage(`Rolled ${roll}! No valid moves available.`);
-          const currentTurnCount = turnCount + 1;
-          setTurnCount(currentTurnCount);
           
-          if (currentTurnCount >= 30) {
-            setGameStatus("player_won");
-            setDialogueMessage(
-              "We have played long enough! You have grasped the authentic rules of the game. I grant you my blessing."
-            );
-            stopAllCharacterVoice();
-            playNarration(
-              "We have played long enough! You have grasped the authentic rules of the game. I grant you my blessing.",
-              { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
-            );
-            return;
-          }
-
           setCurrentTurn("ai");
           if (tutorialStep === "roll_cowries" || tutorialStep === "move_pawn") {
             setTutorialStep("opponent_turn");
@@ -505,14 +515,14 @@ export default function ChowkaBaraGame({
   const handleFinish = () => {
     clearAllTimers();
     stopAllCharacterVoice();
-    const won = gameStatus === "player_won";
-    if (won) {
-      playNarration(
-        "Well done, traveler! You carry Vidyaranya's blessing. Cross the Tungabhadra to enter Hampi Bazaar!",
-        { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
-      );
-    }
-    onComplete(won, gameAttempts);
+    
+    playNarration(
+      "Well done, traveler! You carry Vidyaranya's blessing. Cross the Tungabhadra to enter Hampi Bazaar!",
+      { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
+    );
+    
+    // Always pass 'true' to ensure the parent grants the blessing items
+    onComplete(true, gameAttempts);
   };
 
   const handleModalClose = () => {
@@ -664,6 +674,19 @@ export default function ChowkaBaraGame({
         <div className="flex gap-2">
           <button
             type="button"
+            onClick={() => setIsTurnLimitEnabled(!isTurnLimitEnabled)}
+            className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg transition-all border ${
+              isTurnLimitEnabled
+                ? "bg-[#2d422a] border-[#3d4b3b] text-[#a8c3a6] hover:bg-[#3d5a39]"
+                : "bg-amber-500/20 border-amber-500/40 text-amber-300 hover:bg-amber-500/30"
+            }`}
+            title="Toggle 30-Turn Soft Limit"
+          >
+            {isTurnLimitEnabled ? <Timer size={14} /> : <InfinityIcon size={14} />}
+            <span className="hidden sm:inline">Limit: {isTurnLimitEnabled ? "On" : "Off"}</span>
+          </button>
+          <button
+            type="button"
             onClick={startLearningMode}
             className="text-[#96a992] hover:text-[#e8f1e6] text-xs bg-[#1c291b] hover:bg-[#2b3a2a] border border-[#3d4b3b] px-2 py-1 rounded-lg transition-all cursor-pointer"
           >
@@ -679,13 +702,21 @@ export default function ChowkaBaraGame({
         </div>
       </div>
 
-      <div className="p-2.5 rounded-lg bg-[#1c241a] border border-[#31422f] text-xs font-serif leading-relaxed text-[#cde0cb] mb-3 flex items-start gap-2">
-        <span className="text-xl mt-0.5">📿</span>
+      <div className={`p-2.5 rounded-lg border text-xs font-serif leading-relaxed text-[#cde0cb] mb-3 flex items-start gap-2 transition-all duration-300 ${
+        killAnimation === 'player_kill' ? 'bg-[#3b2a1a] border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.5)] animate-pulse' :
+        killAnimation === 'ai_kill' ? 'bg-[#3b1a1a] border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)] animate-pulse' :
+        'bg-[#1c241a] border-[#31422f]'
+      }`}>
+        <span className={`text-xl mt-0.5 transition-transform duration-300 ${killAnimation ? 'scale-125' : ''}`}>📿</span>
         <p className="flex-1 italic">{dialogueMessage}</p>
       </div>
 
       <div className="grid grid-cols-2 gap-2 mb-3">
-        <div className="p-2 rounded-lg bg-[#222e20] border border-[#d4a359] flex flex-col justify-between shadow-md">
+        <div className={`p-2 rounded-lg border flex flex-col justify-between shadow-md transition-all duration-300 ${
+          killAnimation === 'player_kill' ? 'bg-[#2b251a] border-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.5)] scale-[1.02] z-10' :
+          killAnimation === 'ai_kill' ? 'bg-[#1a1c1a] border-[#3d4b3b] opacity-60 grayscale' :
+          'bg-[#222e20] border-[#d4a359]'
+        }`}>
           <div className="flex justify-between items-start w-full">
             <div className="text-[9px] font-mono uppercase tracking-wider text-[#d4a359]">
               Your Pawns (Gold)
@@ -714,7 +745,11 @@ export default function ChowkaBaraGame({
           </div>
         </div>
 
-        <div className="p-2 rounded-lg bg-[#222e20] border border-[#c86446] flex flex-col justify-between shadow-md">
+        <div className={`p-2 rounded-lg border flex flex-col justify-between shadow-md transition-all duration-300 ${
+          killAnimation === 'ai_kill' ? 'bg-[#3a201c] border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.5)] scale-[1.02] z-10' :
+          killAnimation === 'player_kill' ? 'bg-[#1a1c1a] border-[#3d4b3b] opacity-60 grayscale' :
+          'bg-[#222e20] border-[#c86446]'
+        }`}>
           <div className="flex justify-between items-start w-full">
             <div className="text-[9px] font-mono uppercase tracking-wider text-[#c86446]">
               Vidyaranya (Terracotta)
@@ -880,23 +915,16 @@ export default function ChowkaBaraGame({
             <button
               type="button"
               onClick={handleFinish}
-              className={`font-serif font-bold px-5 py-2 rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md ${
-                gameStatus === "player_won"
-                  ? "bg-gradient-to-r from-[#8b6528] to-[#d4a359] hover:from-[#a07430] hover:to-[#e5b56a] text-[#141210]"
-                  : "bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border border-neutral-600"
-              }`}
+              className="font-serif font-bold px-5 py-2 rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md bg-gradient-to-r from-[#8b6528] to-[#d4a359] hover:from-[#a07430] hover:to-[#e5b56a] text-[#141210]"
             >
-              {gameStatus === "player_won"
-                ? "Receive Vidyaranya's Blessing 📿"
-                : "Proceed ➜"}
+              Receive Vidyaranya's Blessing 📿
             </button>
           </div>
         )}
       </div>
 
-      {/* --- FOOTER STATUS --- */}
       <div className="flex items-center justify-between text-[10px] font-mono text-[#71856c] pt-2 border-t border-[#31422f]">
-        <span>Attempts: {gameAttempts} (Turns: {turnCount}/30 soft limit)</span>
+        <span>Attempts: {gameAttempts} (Turns: {turnCount}{isTurnLimitEnabled ? "/30" : " - Infinite"})</span>
         <span>Karnataka Traditional Strategy Game &bull; 1336 AD</span>
       </div>
 
