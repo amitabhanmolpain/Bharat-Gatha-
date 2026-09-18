@@ -43,6 +43,7 @@ type TutorialStep =
   | "move_pawn"
   | "opponent_turn"
   | "safe_spaces"
+  | "kadi_rule"
   | "captures"
   | "center_goal"
   | "summary";
@@ -235,6 +236,7 @@ export default function ChowkaBaraGame({
       let pPieces = [...currentPlayer];
       let aKadi = currentKadi;
       let getsExtraThrow = roll === 4 || roll === 8;
+      let captured = false;
 
       const moveIdx = executeMove("ai", aPieces, pPieces, roll, aKadi);
       if (moveIdx !== -1) {
@@ -245,11 +247,12 @@ export default function ChowkaBaraGame({
         }
         
         soundFx.playTileSwap();
-        const { updatedOpponent, captured } = checkCollisionAndCapture("ai", aPieces, pPieces);
+        const collisionResult = checkCollisionAndCapture("ai", aPieces, pPieces);
+        captured = collisionResult.captured;
         if (captured) {
           aKadi = true;
           getsExtraThrow = true;
-          for(let i=0; i<4; i++) pPieces[i] = updatedOpponent[i];
+          for(let i=0; i<4; i++) pPieces[i] = collisionResult.updatedOpponent[i];
         }
       }
 
@@ -435,74 +438,59 @@ export default function ChowkaBaraGame({
         soundFx.playCowrieShellsSound();
 
         const pPieces = [...playerPieces];
-        const aPieces = [...aiPieces];
         let pKadi = playerHasKadi;
-        let moved = false;
-        let getsExtraThrow = roll === 4 || roll === 8;
         
-        const currentTurnCount = turnCount + 1;
-        if (!getsExtraThrow) setTurnCount(currentTurnCount);
+        // Find valid pawns
+        const validPawns: number[] = [];
+        for (let i = 0; i < 4; i++) {
+          const pos = pPieces[i];
+          if (pos === -1) {
+            if (roll === 4 || roll === 8) validPawns.push(i);
+          } else if (pos < 24) {
+            const nextPos = pos + roll;
+            if (nextPos <= 24) {
+              if (!(pos <= 15 && nextPos >= 16 && !pKadi)) {
+                validPawns.push(i);
+              }
+            }
+          }
+        }
 
-        const moveIdx = executeMove("player", pPieces, aPieces, roll, pKadi);
-        if (moveIdx !== -1) {
-          moved = true;
-          if (pPieces[moveIdx] === -1) {
-            pPieces[moveIdx] = 0;
-          } else {
-            pPieces[moveIdx] += roll;
-          }
-          
-          soundFx.playTileSwap();
-          const { updatedOpponent, captured } = checkCollisionAndCapture("player", pPieces, aPieces);
-          if (captured) {
-            pKadi = true;
-            getsExtraThrow = true;
-            for(let i=0; i<4; i++) aPieces[i] = updatedOpponent[i];
-          }
-        } else {
+        if (validPawns.length === 0) {
           setDialogueMessage(`Rolled ${roll}! No valid moves available.`);
-        }
-
-        setPlayerPieces(pPieces);
-        setAiPieces(aPieces);
-        setPlayerHasKadi(pKadi);
-
-        if (pPieces.every(p => p === 24)) {
-          setGameStatus("player_won");
-          setDialogueMessage(
-            "Splendid match! You navigated all pawns to the Sanctuary with patience and skill."
-          );
-          stopAllCharacterVoice();
-          playNarration(
-            "Splendid match! You navigated all pawns to the sanctuary with patience and skill, winning Vidyaranya's blessing!",
-            { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
-          );
-
-          return;
-        } else if (currentTurnCount >= 30) {
-          setGameStatus("player_won");
-          setDialogueMessage(
-            "We have played long enough! You have grasped the authentic rules of the game. I grant you my blessing."
-          );
-          stopAllCharacterVoice();
-          playNarration(
-            "We have played long enough! You have grasped the authentic rules of the game. I grant you my blessing.",
-            { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
-          );
-          return;
-        }
-
-        if (getsExtraThrow) {
-          const rollSpoken = roll === 8 ? "Ashta! (8)" : roll === 4 ? "Chowka! (4)" : "A capture!";
-          setDialogueMessage(`${rollSpoken} You get an extra throw!`);
-        } else {
-          setCurrentTurn("ai");
-          const rollSpoken = `You rolled a ${roll}! Vidyaranya observes and prepares his counter-move.`;
-          if (moved) setDialogueMessage(rollSpoken);
+          const currentTurnCount = turnCount + 1;
+          setTurnCount(currentTurnCount);
           
+          if (currentTurnCount >= 30) {
+            setGameStatus("player_won");
+            setDialogueMessage(
+              "We have played long enough! You have grasped the authentic rules of the game. I grant you my blessing."
+            );
+            stopAllCharacterVoice();
+            playNarration(
+              "We have played long enough! You have grasped the authentic rules of the game. I grant you my blessing.",
+              { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
+            );
+            return;
+          }
+
+          setCurrentTurn("ai");
+          if (tutorialStep === "roll_cowries" || tutorialStep === "move_pawn") {
+            setTutorialStep("opponent_turn");
+          }
           aiTimeoutRef.current = setTimeout(() => {
-            executeAiTurn(aPieces, pPieces, aiHasKadi);
-          }, 2500); 
+            executeAiTurn(aiPieces, pPieces, aiHasKadi);
+          }, 2500);
+        } else {
+          setSelectablePawns(validPawns);
+          setAwaitingPawnSelection(true);
+          if (tutorialStep === "roll_cowries") {
+            setTutorialStep("move_pawn");
+            setDialogueMessage(`You rolled ${roll}! Click a pulsing Golden Goti to move it.`);
+            playNarration("Click a pulsing Golden Goti to move it along the path.", { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true });
+          } else {
+            setDialogueMessage(`You rolled ${roll}! Select which Golden Goti to move.`);
+          }
         }
       }
     }, 80);
@@ -533,6 +521,8 @@ export default function ChowkaBaraGame({
     resetMatchState();
     onClose();
   };
+
+
 
   // Start Beginner Learning Mode
   const startLearningMode = () => {
@@ -593,6 +583,16 @@ export default function ChowkaBaraGame({
         );
         break;
       case "captures":
+        setTutorialStep("kadi_rule");
+        setDialogueMessage(
+          "Important Kadi (Kill) Rule: Your pawns cannot enter the inner ring unless your team has made at least one capture! Otherwise, they queue at the end of the outer ring."
+        );
+        playNarration(
+          "You must make at least one capture to enter the inner ring. Otherwise, your pawns will wait in the queue after one round.",
+          { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
+        );
+        break;
+      case "kadi_rule":
         setTutorialStep("center_goal");
         setDialogueMessage(
           "Pawns move around the outer ring, then spiral into the inner track, and finally enter the Center Sanctuary with an exact roll."
@@ -627,8 +627,25 @@ export default function ChowkaBaraGame({
       onClose={handleModalClose}
       titleId="chowka-bara-title"
       maxWidthClass="max-w-2xl"
-      containerClassName="p-4 sm:p-5"
+      containerClassName={`p-4 sm:p-5 transition-all duration-700 ${tutorialStep !== "inactive" ? "border-4 border-amber-500 shadow-[0_0_50px_rgba(245,158,11,0.3)] bg-gradient-to-b from-[#1c241a] to-[#2d1b0a]" : ""}`}
     >
+      {tutorialStep !== "inactive" && (
+        <div className="bg-gradient-to-r from-amber-600 to-amber-500 text-black text-xs font-bold px-4 py-2 rounded-t-lg -mx-4 sm:-mx-5 -mt-4 sm:-mt-5 mb-4 flex justify-between items-center shadow-md animate-pulse-slow">
+          <div className="flex items-center gap-2">
+            <span>📚</span>
+            <span className="uppercase tracking-widest">Interactive Tutorial Mode</span>
+          </div>
+          {(tutorialStep !== "roll_cowries" && tutorialStep !== "move_pawn" && (tutorialStep !== "opponent_turn" || currentTurn === "player")) && (
+            <button 
+              onClick={advanceTutorial} 
+              className="bg-black/20 hover:bg-black/30 px-3 py-1 rounded transition-colors"
+            >
+              Next Step ➜
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="flex items-center justify-between pb-2 border-b-2 border-[#3d4b3b] mb-3">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-[#2b3a2a] border border-[#a8c3a6] flex items-center justify-center shadow-inner">
@@ -674,9 +691,19 @@ export default function ChowkaBaraGame({
               Your Pawns (Gold)
             </div>
             <div className="flex gap-0.5">
-              {playerPieces.map((p, idx) => (
-                <span key={idx} className={`text-xs ${p === 24 ? "opacity-30" : ""}`}>🟡</span>
-              ))}
+              {playerPieces.map((p, idx) => {
+                const isSelectable = awaitingPawnSelection && p === -1 && selectablePawns.includes(idx);
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => { if (isSelectable) handleMovePawn(idx); }}
+                    className={`text-xs transition-all ${p === 24 ? "opacity-30" : ""} ${isSelectable ? "animate-bounce cursor-pointer ring-2 ring-amber-400 rounded-full scale-125" : ""}`}
+                  >
+                    🟡
+                  </button>
+                );
+              })}
             </div>
           </div>
           <div className="text-[10px] font-serif font-bold text-[#e8f1e6] mt-1 flex justify-between w-full">
@@ -751,12 +778,28 @@ export default function ChowkaBaraGame({
                 )}
 
                 <div className="z-10 flex gap-0.5 mt-0.5 flex-wrap justify-center">
-                  {Array.from({ length: pCount }).map((_, idx) => (
-                    <span key={`p-${idx}`} className="text-xs sm:text-sm drop-shadow-md">🟡</span>
-                  ))}
-                  {Array.from({ length: aCount }).map((_, idx) => (
-                    <span key={`a-${idx}`} className="text-xs sm:text-sm drop-shadow-md">🔴</span>
-                  ))}
+                  {playerPieces.map((p, pIdx) => {
+                    if (p >= 0 && PLAYER_PATH[p] === i) {
+                      const isSelectable = awaitingPawnSelection && selectablePawns.includes(pIdx);
+                      return (
+                        <button
+                          key={`p-${pIdx}`}
+                          type="button"
+                          onClick={() => { if (isSelectable) handleMovePawn(pIdx); }}
+                          className={`text-xs sm:text-sm drop-shadow-md transition-all ${isSelectable ? 'animate-bounce cursor-pointer ring-2 ring-amber-400 rounded-full bg-amber-500/20 scale-125 z-20 relative' : ''}`}
+                        >
+                          🟡
+                        </button>
+                      );
+                    }
+                    return null;
+                  })}
+                  {aiPieces.map((a, aIdx) => {
+                    if (a >= 0 && AI_PATH[a] === i) {
+                      return <span key={`a-${aIdx}`} className="text-xs sm:text-sm drop-shadow-md">🔴</span>;
+                    }
+                    return null;
+                  })}
                 </div>
               </div>
             );
@@ -797,18 +840,8 @@ export default function ChowkaBaraGame({
             {awaitingPawnSelection ? (
               <div className="flex items-center gap-2">
                 <span className="text-xs font-serif italic text-amber-300 animate-pulse">
-                  Select Pawn to Move:
+                  Click a pulsing Golden Goti (🟡) to move
                 </span>
-                {selectablePawns.map((pIdx) => (
-                  <button
-                    key={pIdx}
-                    type="button"
-                    onClick={() => handleMovePawn(pIdx)}
-                    className="px-3.5 py-1.5 rounded-lg font-mono font-bold text-xs bg-amber-500 hover:bg-amber-400 text-black border-2 border-black shadow cursor-pointer transition-transform active:scale-95"
-                  >
-                    Move Pawn #{pIdx + 1}
-                  </button>
-                ))}
               </div>
             ) : (
               <button
