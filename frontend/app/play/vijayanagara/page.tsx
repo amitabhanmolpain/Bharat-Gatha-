@@ -1,6 +1,19 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { 
+  setStage1Complete, setStage2Complete, setStage3Complete, setStage4Complete,
+  setHasVidyaranyaBlessing, setHasMetVidyaranya, setIsChowkaBaraComplete,
+  setIsFestivalSceneRestored, setIsLedgerAssembled, setIsCampaignComplete
+} from '../../store/slices/progressionSlice';
+import {
+  addJournalEntry, setJournalEntries, addCollectedFragment,
+  setHasJournalToy, setHasFinalKeepsake,
+  setHasFirstLedgerFragment, setHasSecondLedgerFragment, setHasFinalLedgerFragment
+} from '../../store/slices/inventorySlice';
+import { setIsSoundMuted, setIsMusicMuted, setIsTimerVisible } from '../../store/slices/settingsSlice';
+
 import { playNarration, stopNarration } from "../../../services/narratorService";
 import { playCharacterDialogue, stopCharacterDialogue, stopAllCharacterVoice } from "../../../services/characterVoiceService";
 import { soundFx } from "../../../services/soundService";
@@ -35,6 +48,7 @@ import HistoricalNPCDialogueCard from "./components/HistoricalNPCDialogueCard";
 const PLAYER_VISUAL_SCALE = 1.7;
 
 export default function VijayanagaraGameScreen() {
+  const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [transitionProgress, setTransitionProgress] = useState(0);
@@ -51,45 +65,42 @@ export default function VijayanagaraGameScreen() {
   const [walkPhase, setWalkPhase] = useState(0);
 
   // Stage 1 Story & Interaction State
-  const [hasMetVidyaranya, setHasMetVidyaranya] = useState(false);
+  const hasMetVidyaranya = useAppSelector(state => state.progression.hasMetVidyaranya);
   const [chowkaBaraAttempts, setChowkaBaraAttempts] = useState(0);
-  const [isChowkaBaraComplete, setIsChowkaBaraComplete] = useState(false);
-  const [hasVidyaranyaBlessing, setHasVidyaranyaBlessing] = useState(false);
-  const [isStage1Complete, setIsStage1Complete] = useState(false);
+  const isChowkaBaraComplete = useAppSelector(state => state.progression.isChowkaBaraComplete);
+  const hasVidyaranyaBlessing = useAppSelector(state => state.progression.hasVidyaranyaBlessing);
+  const isStage1Complete = useAppSelector(state => state.progression.isStage1Complete);
   const [showOpeningAtmosphere, setShowOpeningAtmosphere] = useState(true);
 
   // Stage 2 Story & Interaction State
   const [hasEncounteredFirstRumor, setHasEncounteredFirstRumor] = useState(false);
-  const [hasFirstLedgerFragment, setHasFirstLedgerFragment] = useState(false);
+  const hasFirstLedgerFragment = useAppSelector(state => state.inventory.hasFirstLedgerFragment);
   const [inspectedToys, setInspectedToys] = useState<string[]>([]);
-  const [hasJournalToy, setHasJournalToy] = useState(false);
+  const hasJournalToy = useAppSelector(state => state.inventory.hasJournalToy);
   const [talkedToForeignTraveler, setTalkedToForeignTraveler] = useState(false);
-  const [isStage2Complete, setIsStage2Complete] = useState(false);
+  const isStage2Complete = useAppSelector(state => state.progression.isStage2Complete);
   const [showStage2OpeningBanner, setShowStage2OpeningBanner] = useState(true);
 
   // Stage 3 Story & Interaction State
-  const [hasSecondLedgerFragment, setHasSecondLedgerFragment] = useState(false);
+  const hasSecondLedgerFragment = useAppSelector(state => state.inventory.hasSecondLedgerFragment);
   const [isMusicalPillarsComplete, setIsMusicalPillarsComplete] = useState(false);
   const [hasHazaraRamaDiscovery, setHasHazaraRamaDiscovery] = useState(false);
   const [hasMusicianWarning, setHasMusicianWarning] = useState(false);
-  const [isStage3Complete, setIsStage3Complete] = useState(false);
+  const isStage3Complete = useAppSelector(state => state.progression.isStage3Complete);
   const [showStage3OpeningBanner, setShowStage3OpeningBanner] = useState(true);
 
   // Stage 4 Story & Climax State
-  const [isFestivalSceneRestored, setIsFestivalSceneRestored] = useState(false);
-  const [hasFinalLedgerFragment, setHasFinalLedgerFragment] = useState(false);
-  const [isLedgerAssembled, setIsLedgerAssembled] = useState(false);
+  const isFestivalSceneRestored = useAppSelector(state => state.progression.isFestivalSceneRestored);
+  const hasFinalLedgerFragment = useAppSelector(state => state.inventory.hasFinalLedgerFragment);
+  const isLedgerAssembled = useAppSelector(state => state.progression.isLedgerAssembled);
   const [hasTalikotaNarrationViewed, setHasTalikotaNarrationViewed] = useState(false);
   const [isJournalFullyUnlocked, setIsJournalFullyUnlocked] = useState(false);
-  const [hasFinalKeepsake, setHasFinalKeepsake] = useState(false);
-  const [isCampaignComplete, setIsCampaignComplete] = useState(false);
+  const hasFinalKeepsake = useAppSelector(state => state.inventory.hasFinalKeepsake);
+  const isCampaignComplete = useAppSelector(state => state.progression.isCampaignComplete);
   const [showStage4OpeningBanner, setShowStage4OpeningBanner] = useState(true);
 
   // Journal Unlocks State
-  const [unlockedJournalEntries, setUnlockedJournalEntries] = useState<string[]>([
-    "anegundi_origin",
-    "vidyaranya_sage",
-  ]);
+  const unlockedJournalEntries = useAppSelector(state => state.inventory.unlockedJournalEntries);
 
   // Jolly Bhai Companion State
   const [showJollyDialogue, setShowJollyDialogue] = useState(false);
@@ -183,43 +194,43 @@ export default function VijayanagaraGameScreen() {
             if (parsed.stage) setStage(parsed.stage);
             if (parsed.scene) setScene(parsed.scene);
             if (parsed.playerPos) setPlayerPos(parsed.playerPos);
-            if (parsed.hasMetVidyaranya !== undefined) setHasMetVidyaranya(parsed.hasMetVidyaranya);
+            if (parsed.hasMetVidyaranya !== undefined) dispatch(setHasMetVidyaranya(parsed.hasMetVidyaranya));
             if (parsed.chowkaBaraAttempts !== undefined) setChowkaBaraAttempts(parsed.chowkaBaraAttempts);
-            if (parsed.isChowkaBaraComplete !== undefined) setIsChowkaBaraComplete(parsed.isChowkaBaraComplete);
+            if (parsed.isChowkaBaraComplete !== undefined) dispatch(setIsChowkaBaraComplete(parsed.isChowkaBaraComplete));
             if (parsed.hasVidyaranyaBlessing !== undefined) {
-              setHasVidyaranyaBlessing(parsed.hasVidyaranyaBlessing);
-              setIsStage1Complete(parsed.hasVidyaranyaBlessing);
+              dispatch(setHasVidyaranyaBlessing(parsed.hasVidyaranyaBlessing));
+              dispatch(setStage1Complete(parsed.hasVidyaranyaBlessing));
             }
             if (parsed.hasEncounteredFirstRumor !== undefined) setHasEncounteredFirstRumor(parsed.hasEncounteredFirstRumor);
             if (parsed.hasFirstLedgerFragment !== undefined) {
-              setHasFirstLedgerFragment(parsed.hasFirstLedgerFragment);
+              dispatch(setHasFirstLedgerFragment(parsed.hasFirstLedgerFragment));
               if (parsed.hasFirstLedgerFragment && parsed.hasEncounteredFirstRumor) {
-                setIsStage2Complete(true);
+                dispatch(setStage2Complete(true));
               }
             }
             if (parsed.inspectedToys) setInspectedToys(parsed.inspectedToys);
-            if (parsed.hasJournalToy !== undefined) setHasJournalToy(parsed.hasJournalToy);
+            if (parsed.hasJournalToy !== undefined) dispatch(setHasJournalToy(parsed.hasJournalToy));
             if (parsed.talkedToForeignTraveler !== undefined) setTalkedToForeignTraveler(parsed.talkedToForeignTraveler);
             if (parsed.hasSecondLedgerFragment !== undefined) {
-              setHasSecondLedgerFragment(parsed.hasSecondLedgerFragment);
+              dispatch(setHasSecondLedgerFragment(parsed.hasSecondLedgerFragment));
               setIsMusicalPillarsComplete(parsed.isMusicalPillarsComplete || parsed.hasSecondLedgerFragment);
               if (parsed.hasSecondLedgerFragment && parsed.hasMusicianWarning) {
-                setIsStage3Complete(true);
+                dispatch(setStage3Complete(true));
               }
             }
             if (parsed.hasHazaraRamaDiscovery !== undefined) setHasHazaraRamaDiscovery(parsed.hasHazaraRamaDiscovery);
             if (parsed.hasMusicianWarning !== undefined) setHasMusicianWarning(parsed.hasMusicianWarning);
             
             // Stage 4 Loaded Properties
-            if (parsed.isFestivalSceneRestored !== undefined) setIsFestivalSceneRestored(parsed.isFestivalSceneRestored);
-            if (parsed.hasFinalLedgerFragment !== undefined) setHasFinalLedgerFragment(parsed.hasFinalLedgerFragment);
-            if (parsed.isLedgerAssembled !== undefined) setIsLedgerAssembled(parsed.isLedgerAssembled);
+            if (parsed.isFestivalSceneRestored !== undefined) dispatch(setIsFestivalSceneRestored(parsed.isFestivalSceneRestored));
+            if (parsed.hasFinalLedgerFragment !== undefined) dispatch(setHasFinalLedgerFragment(parsed.hasFinalLedgerFragment));
+            if (parsed.isLedgerAssembled !== undefined) dispatch(setIsLedgerAssembled(parsed.isLedgerAssembled));
             if (parsed.hasTalikotaNarrationViewed !== undefined) setHasTalikotaNarrationViewed(parsed.hasTalikotaNarrationViewed);
             if (parsed.isJournalFullyUnlocked !== undefined) setIsJournalFullyUnlocked(parsed.isJournalFullyUnlocked);
-            if (parsed.hasFinalKeepsake !== undefined) setHasFinalKeepsake(parsed.hasFinalKeepsake);
-            if (parsed.isCampaignComplete !== undefined) setIsCampaignComplete(parsed.isCampaignComplete);
+            if (parsed.hasFinalKeepsake !== undefined) dispatch(setHasFinalKeepsake(parsed.hasFinalKeepsake));
+            if (parsed.isCampaignComplete !== undefined) dispatch(setIsCampaignComplete(parsed.isCampaignComplete));
 
-            if (parsed.unlockedJournalEntries) setUnlockedJournalEntries(parsed.unlockedJournalEntries);
+            if (parsed.unlockedJournalEntries) dispatch(setJournalEntries(parsed.unlockedJournalEntries));
           }
         } catch (err) {
           console.error("Failed to load Vijayanagara save state", err);
@@ -440,34 +451,34 @@ export default function VijayanagaraGameScreen() {
       setStage(INITIAL_VIJAYANAGARA_STATE.stage);
       setScene(INITIAL_VIJAYANAGARA_STATE.scene);
       setPlayerPos(INITIAL_VIJAYANAGARA_STATE.playerPos);
-      setHasMetVidyaranya(false);
+      dispatch(setHasMetVidyaranya(false));
       setChowkaBaraAttempts(0);
-      setIsChowkaBaraComplete(false);
-      setHasVidyaranyaBlessing(false);
-      setIsStage1Complete(false);
+      dispatch(setIsChowkaBaraComplete(false));
+      dispatch(setHasVidyaranyaBlessing(false));
+      dispatch(setStage1Complete(false));
       setShowOpeningAtmosphere(true);
       setHasEncounteredFirstRumor(false);
-      setHasFirstLedgerFragment(false);
+      dispatch(setHasFirstLedgerFragment(false));
       setInspectedToys([]);
-      setHasJournalToy(false);
+      dispatch(setHasJournalToy(false));
       setTalkedToForeignTraveler(false);
-      setIsStage2Complete(false);
+      dispatch(setStage2Complete(false));
       setShowStage2OpeningBanner(true);
-      setHasSecondLedgerFragment(false);
+      dispatch(setHasSecondLedgerFragment(false));
       setIsMusicalPillarsComplete(false);
       setHasHazaraRamaDiscovery(false);
       setHasMusicianWarning(false);
-      setIsStage3Complete(false);
+      dispatch(setStage3Complete(false));
       setShowStage3OpeningBanner(true);
-      setIsFestivalSceneRestored(false);
-      setHasFinalLedgerFragment(false);
-      setIsLedgerAssembled(false);
+      dispatch(setIsFestivalSceneRestored(false));
+      dispatch(setHasFinalLedgerFragment(false));
+      dispatch(setIsLedgerAssembled(false));
       setHasTalikotaNarrationViewed(false);
       setIsJournalFullyUnlocked(false);
-      setHasFinalKeepsake(false);
-      setIsCampaignComplete(false);
+      dispatch(setHasFinalKeepsake(false));
+      dispatch(setIsCampaignComplete(false));
       setShowStage4OpeningBanner(true);
-      setUnlockedJournalEntries(INITIAL_VIJAYANAGARA_STATE.unlockedJournalEntries);
+      dispatch(setJournalEntries(INITIAL_VIJAYANAGARA_STATE.unlockedJournalEntries));
     }
   };
 
@@ -880,9 +891,9 @@ export default function VijayanagaraGameScreen() {
           setShowVidyaranyaDialogue(true);
           setDialogueTopic("intro");
           if (!hasMetVidyaranya) {
-            setHasMetVidyaranya(true);
+            dispatch(setHasMetVidyaranya(true));
             if (!unlockedJournalEntries.includes("harihara_bukka_founding")) {
-              setUnlockedJournalEntries((prev) => [...prev, "harihara_bukka_founding"]);
+              dispatch(addJournalEntry("harihara_bukka_founding"));
             }
           }
         } else if (isNearCoracle) {
@@ -896,7 +907,7 @@ export default function VijayanagaraGameScreen() {
             );
             setStage(2);
             if (!unlockedJournalEntries.includes("hampi_bazaar_trade")) {
-              setUnlockedJournalEntries((prev) => [...prev, "hampi_bazaar_trade"]);
+              dispatch(addJournalEntry("hampi_bazaar_trade"));
             }
           } else {
             // Player presses E at the ferry but does not yet have the blessing:
@@ -938,7 +949,7 @@ export default function VijayanagaraGameScreen() {
           setShowForeignTravelerDialogue(true);
           setTalkedToForeignTraveler(true);
           if (!unlockedJournalEntries.includes("foreign_chronicles_paes")) {
-            setUnlockedJournalEntries((prev) => [...prev, "foreign_chronicles_paes"]);
+            dispatch(addJournalEntry("foreign_chronicles_paes"));
           }
         } else if (isNearBazaarStage3Road) {
           if (isStage2Complete || hasFirstLedgerFragment) {
@@ -951,7 +962,7 @@ export default function VijayanagaraGameScreen() {
             );
             setStage(3);
             if (!unlockedJournalEntries.includes("stone_chariot_garuda")) {
-              setUnlockedJournalEntries((prev) => [...prev, "stone_chariot_garuda"]);
+              dispatch(addJournalEntry("stone_chariot_garuda"));
             }
           }
         } else if (isNearGemRowExit) {
@@ -967,7 +978,7 @@ export default function VijayanagaraGameScreen() {
           setShowGemAssessorDialogue(true);
           setGemDialogueTopic("gems");
           if (!unlockedJournalEntries.includes("gem_markets")) {
-            setUnlockedJournalEntries((prev) => [...prev, "gem_markets"]);
+            dispatch(addJournalEntry("gem_markets"));
           }
         } else if (isNearToymakerExit) {
           triggerTransition(
@@ -981,7 +992,7 @@ export default function VijayanagaraGameScreen() {
           if (typeof soundFx.playDialogueOpen === "function") soundFx.playDialogueOpen();
           setShowToymakerDialogue(true);
           if (!unlockedJournalEntries.includes("kinhal_toys")) {
-            setUnlockedJournalEntries((prev) => [...prev, "kinhal_toys"]);
+            dispatch(addJournalEntry("kinhal_toys"));
           }
         }
 
@@ -991,7 +1002,7 @@ export default function VijayanagaraGameScreen() {
           setShowRaghavendraDialogue(true);
           setRaghavendraTopic(hasSecondLedgerFragment ? "warning" : "king");
           if (!unlockedJournalEntries.includes("krishnadevaraya_era")) {
-            setUnlockedJournalEntries((prev) => [...prev, "krishnadevaraya_era"]);
+            dispatch(addJournalEntry("krishnadevaraya_era"));
           }
         } else if (isNearChariotMandapaExit) {
           triggerTransition(
@@ -1020,7 +1031,7 @@ export default function VijayanagaraGameScreen() {
             );
             setStage(4);
             if (!unlockedJournalEntries.includes("mahanavami_dibba_platform")) {
-              setUnlockedJournalEntries((prev) => [...prev, "mahanavami_dibba_platform"]);
+              dispatch(addJournalEntry("mahanavami_dibba_platform"));
             }
           }
         } else if (isNearChariotBazaarReturn) {
@@ -1046,7 +1057,7 @@ export default function VijayanagaraGameScreen() {
           setShowHazaraRamaModal(true);
           setHasHazaraRamaDiscovery(true);
           if (!unlockedJournalEntries.includes("hazara_rama_friezes")) {
-            setUnlockedJournalEntries((prev) => [...prev, "hazara_rama_friezes"]);
+            dispatch(addJournalEntry("hazara_rama_friezes"));
           }
         } else if (isNearHazaraRamaExit) {
           triggerTransition(
@@ -1060,11 +1071,11 @@ export default function VijayanagaraGameScreen() {
 
         // --- STAGE 4 INTERACTIONS ---
         else if (isNearMahanavamiNiche && !hasFinalLedgerFragment) {
-          setHasFinalLedgerFragment(true);
+          dispatch(setHasFinalLedgerFragment(true));
           setShowLedgerAssemblyModal(true);
-          setIsLedgerAssembled(true);
+          dispatch(setIsLedgerAssembled(true));
           if (!unlockedJournalEntries.includes("pushkarani_secret_vault")) {
-            setUnlockedJournalEntries((prev) => [...prev, "pushkarani_secret_vault"]);
+            dispatch(addJournalEntry("pushkarani_secret_vault"));
           }
         } else if (isNearMahanavamiTierTrigger && !isFestivalSceneRestored) {
           setShowFestivalPuzzleModal(true);
@@ -1271,16 +1282,12 @@ export default function VijayanagaraGameScreen() {
     setChowkaBaraAttempts(attempts);
 
     if (won) {
-      setIsChowkaBaraComplete(true);
-      setHasVidyaranyaBlessing(true);
-      setIsStage1Complete(true);
+      dispatch(setIsChowkaBaraComplete(true));
+      dispatch(setHasVidyaranyaBlessing(true));
+      dispatch(setStage1Complete(true));
 
-      setUnlockedJournalEntries((prev) => {
-        const next = [...prev];
-        if (!next.includes("chowka_bara_game")) next.push("chowka_bara_game");
-        if (!next.includes("tungabhadra_defenses")) next.push("tungabhadra_defenses");
-        return next;
-      });
+      dispatch(addJournalEntry("chowka_bara_game"));
+      dispatch(addJournalEntry("tungabhadra_defenses"));
 
       setShowBlessingCutscene(true);
     }
@@ -1288,47 +1295,47 @@ export default function VijayanagaraGameScreen() {
 
   // Stage 2 Handlers
   const handleToyFragmentDiscovery = () => {
-    setHasFirstLedgerFragment(true);
+    dispatch(setHasFirstLedgerFragment(true));
     if (!unlockedJournalEntries.includes("missing_ledger_mystery")) {
-      setUnlockedJournalEntries((prev) => [...prev, "missing_ledger_mystery"]);
+      dispatch(addJournalEntry("missing_ledger_mystery"));
     }
     if (hasEncounteredFirstRumor) {
-      setIsStage2Complete(true);
+      dispatch(setStage2Complete(true));
       setShowStage2VictoryModal(true);
     }
   };
 
   const handleSelectJournalToy = () => {
-    setHasJournalToy(true);
+    dispatch(setHasJournalToy(true));
     if (!unlockedJournalEntries.includes("kinhal_toys")) {
-      setUnlockedJournalEntries((prev) => [...prev, "kinhal_toys"]);
+      dispatch(addJournalEntry("kinhal_toys"));
     }
   };
 
   // Stage 3 Handler
   const handleMusicalPillarsDiscovery = () => {
-    setHasSecondLedgerFragment(true);
+    dispatch(setHasSecondLedgerFragment(true));
     setIsMusicalPillarsComplete(true);
     if (!unlockedJournalEntries.includes("musical_pillars_acoustics")) {
-      setUnlockedJournalEntries((prev) => [...prev, "musical_pillars_acoustics"]);
+      dispatch(addJournalEntry("musical_pillars_acoustics"));
     }
   };
 
   // Stage 4 Handlers
   const handleFestivalReconstructionComplete = () => {
     setShowFestivalPuzzleModal(false);
-    setIsFestivalSceneRestored(true);
+    dispatch(setIsFestivalSceneRestored(true));
   };
 
   const handleCompleteCampaignFinale = () => {
     setShowKeeperDialogue(false);
     setIsJournalFullyUnlocked(true);
-    setHasFinalKeepsake(true);
-    setIsCampaignComplete(true);
+    dispatch(setHasFinalKeepsake(true));
+    dispatch(setIsCampaignComplete(true));
 
     // Unlock all 15 journal entries
     const allJournalIds = JOURNAL_DATABASE.map((e) => e.id);
-    setUnlockedJournalEntries(allJournalIds);
+    dispatch(setJournalEntries(allJournalIds));
 
     setShowCampaignCompletionModal(true);
   };
@@ -2254,8 +2261,8 @@ export default function VijayanagaraGameScreen() {
         <JournalModal
           isOpen={isJournalOpen}
           onClose={() => setIsJournalOpen(false)}
-          unlockedEntryIds={unlockedJournalEntries}
-          collectedFragmentIds={collectedFragments}
+          
+          
         />
 
         {/* --- REGIONAL JOURNEY TRANSITION MODAL --- */}
@@ -2316,7 +2323,7 @@ export default function VijayanagaraGameScreen() {
             setShowTalikotaModal(false);
             setHasTalikotaNarrationViewed(true);
             if (!unlockedJournalEntries.includes("battle_of_talikota")) {
-              setUnlockedJournalEntries((prev) => [...prev, "battle_of_talikota"]);
+              dispatch(addJournalEntry("battle_of_talikota"));
             }
             triggerTransition(
               "closing_reflection",
@@ -2465,7 +2472,7 @@ export default function VijayanagaraGameScreen() {
               if (opt.id === "close") {
                 setShowRaghavendraDialogue(false);
                 if (raghavendraTopic === "warning" && hasSecondLedgerFragment) {
-                  setIsStage3Complete(true);
+                  dispatch(setStage3Complete(true));
                   setShowStage3VictoryModal(true);
                 }
               } else {
@@ -2473,7 +2480,7 @@ export default function VijayanagaraGameScreen() {
                 if (opt.id === "warning") {
                   setHasMusicianWarning(true);
                   if (hasSecondLedgerFragment) {
-                    setIsStage3Complete(true);
+                    dispatch(setStage3Complete(true));
                   }
                 }
               }
@@ -2739,7 +2746,7 @@ export default function VijayanagaraGameScreen() {
                     );
                     setStage(2);
                     if (!unlockedJournalEntries.includes("hampi_bazaar_trade")) {
-                      setUnlockedJournalEntries((prev) => [...prev, "hampi_bazaar_trade"]);
+                      dispatch(addJournalEntry("hampi_bazaar_trade"));
                     }
                   }}
                   disabled={isTransitioning}
@@ -2807,7 +2814,7 @@ export default function VijayanagaraGameScreen() {
                     );
                     setStage(3);
                     if (!unlockedJournalEntries.includes("stone_chariot_garuda")) {
-                      setUnlockedJournalEntries((prev) => [...prev, "stone_chariot_garuda"]);
+                      dispatch(addJournalEntry("stone_chariot_garuda"));
                     }
                   }}
                   className="bg-gradient-to-r from-[#8b6528] to-[#d4a359] hover:from-[#a07430] hover:to-[#e5b56a] text-[#141210] font-serif font-bold px-6 py-2.5 rounded-xl shadow-md transition-all text-xs uppercase tracking-wider flex items-center justify-center cursor-pointer"
@@ -2883,7 +2890,7 @@ export default function VijayanagaraGameScreen() {
                     );
                     setStage(4);
                     if (!unlockedJournalEntries.includes("mahanavami_dibba_platform")) {
-                      setUnlockedJournalEntries((prev) => [...prev, "mahanavami_dibba_platform"]);
+                      dispatch(addJournalEntry("mahanavami_dibba_platform"));
                     }
                   }}
                   className="bg-gradient-to-r from-[#8b6528] to-[#d4a359] hover:from-[#a07430] hover:to-[#e5b56a] text-[#141210] font-serif font-bold px-6 py-2.5 rounded-xl shadow-md transition-all text-xs uppercase tracking-wider flex items-center justify-center cursor-pointer"
