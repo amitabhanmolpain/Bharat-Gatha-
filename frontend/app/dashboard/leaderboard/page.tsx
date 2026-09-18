@@ -1,6 +1,7 @@
 "use client";
 
 import { useTheme } from "../ThemeContext";
+import GamePrizesSection from "./GamePrizesSection";
 
 const LEADERBOARD_DATA = [
   { rank: 1, name: "Arjun The Great", score: 14250, title: "Emperor" },
@@ -71,6 +72,9 @@ export default function Leaderboard() {
           ))}
         </div>
       </div>
+
+      {/* --- ALL GAME PRIZES / REWARDS SECTION --- */}
+      <GamePrizesSection />
     </>
   );
 }
