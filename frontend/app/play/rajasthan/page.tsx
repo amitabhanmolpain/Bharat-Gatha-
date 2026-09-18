@@ -7,6 +7,7 @@ import DialoguePanel from "../../components/DialoguePanel";
 import ChauparGame from "./components/ChauparGame";
 import VijayStambhCarvingSystem from "./components/VijayStambhCarvingSystem";
 import BadalMahalLampGame from "./components/BadalMahalLampGame";
+import { recordGameWinToDatabase } from "../../../services/gameProgressService";
 import { playCharacterDialogue, stopCharacterDialogue, stopAllCharacterVoice } from "../../../services/characterVoiceService";
 import { playNarration, stopNarration } from "../../../services/narratorService";
 import { soundFx } from "../../../services/soundService";
@@ -68,6 +69,9 @@ export default function RajasthanGameScreen() {
   const [isSoundMuted, setIsSoundMuted] = useState(false);
   // --- CHITTORGARH FORT THEME MUSIC REF ---
   const chittorgarhAudioRef = useRef<HTMLAudioElement | null>(null);
+  // --- JAUHAR KUND MEMORIAL EMOTIONAL MUSIC REF ---
+  const jauharAudioRef = useRef<HTMLAudioElement | null>(null);
+  const jauharFadeIntervalRef = useRef<NodeJS.Timeout | null>(null);
   // --- BHANGARH KILA THEME MUSIC REF ---
   const bhangarhAudioRef = useRef<HTMLAudioElement | null>(null);
   // --- KUMBHALGARH MOUNTAIN WIND AMBIENCE REF ---
@@ -448,7 +452,39 @@ export default function RajasthanGameScreen() {
   const [chachaPawnPos, setChachaPawnPos] = useState(0); // 0 to 12 along board track
   const [isPawnMoving, setIsPawnMoving] = useState(false);
   const [showVijayStambhModal, setShowVijayStambhModal] = useState(false);
-  const [showJauharModal, setShowJauharModal] = useState(false);
+  const [hasJauharMemorialCompleted, setHasJauharMemorialCompleted] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("jauhar_kund_memorial_completed") === "true";
+    }
+    return false;
+  });
+
+  const handlePayTribute = useCallback(() => {
+    if (hasJauharMemorialCompleted) return;
+    setHasJauharMemorialCompleted(true);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("jauhar_kund_memorial_completed", "true");
+      } catch (e) {}
+    }
+    recordGameWinToDatabase({
+      era: "rajputana",
+      gameType: "jauhar_kund_memorial",
+      prizeUnlocked: "Chittor's Memory",
+      score: 200,
+    }).catch(() => {});
+
+    const solemnLine =
+      "Mere aaka... this place carries the memory of Chittor's darkest hour. Let us remember those who were caught in the tragedy of war with silence and respect.";
+    setJollySpeechText(solemnLine);
+    setJollyStatusBadge("glowing");
+    setJollyAudioUrl("/jolly_jauhar_memorial.wav");
+    setJollyOptions([
+      { id: 99, text: "Let us remember them in silence and respect." },
+    ]);
+    setJollyDialogueScene("jauhar_kund");
+    setShowJollyDialogue(true);
+  }, [hasJauharMemorialCompleted]);
 
   // --- STAGE 2 -> STAGE 3 TRANSITION (Elephant Journey) ---
   const [isElephantTravelling, setIsElephantTravelling] = useState(false);
@@ -643,7 +679,7 @@ export default function RajasthanGameScreen() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    if (stage === 1 && !isTransitioning && !isCampaignComplete) {
+    if (stage === 1 && scene !== "jauhar_kund" && !isTransitioning && !isCampaignComplete) {
       if (!chittorgarhAudioRef.current) {
         const audio = new Audio("/chittorgarh_theme.mp3");
         audio.loop = true;
@@ -684,7 +720,115 @@ export default function RajasthanGameScreen() {
         chittorgarhAudioRef.current.currentTime = 0;
       }
     }
-  }, [stage, isTransitioning, isCampaignComplete, isMusicMuted]);
+  }, [stage, scene, isTransitioning, isCampaignComplete, isMusicMuted]);
+
+  // --- JAUHAR KUND MEMORIAL BACKGROUND MUSIC (EMOTIONAL SARANGI) ---
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const isJauharKundActive =
+      stage === 1 &&
+      scene === "jauhar_kund" &&
+      !isTransitioning &&
+      !isCampaignComplete;
+
+    if (isJauharKundActive) {
+      if (jauharFadeIntervalRef.current) {
+        clearInterval(jauharFadeIntervalRef.current);
+        jauharFadeIntervalRef.current = null;
+      }
+
+      if (!jauharAudioRef.current) {
+        const audio = new Audio("/audio/170316__johnnydhol__sarangi-1.wav");
+        audio.loop = true;
+        audio.volume = 0;
+        audio.onended = () => {
+          audio.currentTime = 0;
+          audio.play().catch(() => {});
+        };
+        jauharAudioRef.current = audio;
+      }
+
+      const audio = jauharAudioRef.current;
+
+      if (isMusicMuted) {
+        audio.pause();
+      } else {
+        if (audio.paused) {
+          audio.volume = 0;
+          audio.play().catch((err) => {
+            console.log("Jauhar Kund audio autoplay pending player gesture:", err?.message || err);
+          });
+        }
+        // Smooth fade-in to subtle ambient volume 0.16
+        const targetVol = 0.16;
+        const step = 0.02;
+        jauharFadeIntervalRef.current = setInterval(() => {
+          if (!jauharAudioRef.current) return;
+          if (jauharAudioRef.current.volume < targetVol) {
+            jauharAudioRef.current.volume = Math.min(
+              targetVol,
+              jauharAudioRef.current.volume + step
+            );
+          } else {
+            if (jauharFadeIntervalRef.current) {
+              clearInterval(jauharFadeIntervalRef.current);
+              jauharFadeIntervalRef.current = null;
+            }
+          }
+        }, 40);
+      }
+
+      const triggerOnGesture = () => {
+        if (
+          isJauharKundActive &&
+          !isMusicMuted &&
+          jauharAudioRef.current &&
+          jauharAudioRef.current.paused
+        ) {
+          jauharAudioRef.current.play().catch(() => {});
+        }
+      };
+
+      window.addEventListener("click", triggerOnGesture, { once: true });
+      window.addEventListener("keydown", triggerOnGesture, { once: true });
+
+      return () => {
+        window.removeEventListener("click", triggerOnGesture);
+        window.removeEventListener("keydown", triggerOnGesture);
+      };
+    } else {
+      // Smooth fade-out and stop on leaving Jauhar Kund
+      if (jauharAudioRef.current && !jauharAudioRef.current.paused) {
+        if (jauharFadeIntervalRef.current) {
+          clearInterval(jauharFadeIntervalRef.current);
+        }
+        const step = 0.03;
+        jauharFadeIntervalRef.current = setInterval(() => {
+          if (!jauharAudioRef.current) {
+            if (jauharFadeIntervalRef.current) clearInterval(jauharFadeIntervalRef.current);
+            return;
+          }
+          if (jauharAudioRef.current.volume > step) {
+            jauharAudioRef.current.volume = Math.max(
+              0,
+              jauharAudioRef.current.volume - step
+            );
+          } else {
+            jauharAudioRef.current.volume = 0;
+            jauharAudioRef.current.pause();
+            jauharAudioRef.current.currentTime = 0;
+            if (jauharFadeIntervalRef.current) {
+              clearInterval(jauharFadeIntervalRef.current);
+              jauharFadeIntervalRef.current = null;
+            }
+          }
+        }, 40);
+      } else if (jauharAudioRef.current) {
+        jauharAudioRef.current.currentTime = 0;
+      }
+    }
+  }, [stage, scene, isTransitioning, isCampaignComplete, isMusicMuted]);
 
   // --- KUMBHALGARH MOUNTAIN WIND AMBIENCE (OPEN-AIR FORT WALL SECTIONS ONLY) ---
   const windFadeIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -980,6 +1124,14 @@ export default function RajasthanGameScreen() {
         chittorgarhAudioRef.current.pause();
         chittorgarhAudioRef.current.currentTime = 0;
       }
+      if (jauharFadeIntervalRef.current) {
+        clearInterval(jauharFadeIntervalRef.current);
+        jauharFadeIntervalRef.current = null;
+      }
+      if (jauharAudioRef.current) {
+        jauharAudioRef.current.pause();
+        jauharAudioRef.current.currentTime = 0;
+      }
       if (bhangarhAudioRef.current) {
         bhangarhAudioRef.current.pause();
         bhangarhAudioRef.current.currentTime = 0;
@@ -1026,6 +1178,10 @@ export default function RajasthanGameScreen() {
       chittorgarhAudioRef.current.pause();
       chittorgarhAudioRef.current.currentTime = 0;
     }
+    if (jauharAudioRef.current) {
+      jauharAudioRef.current.pause();
+      jauharAudioRef.current.currentTime = 0;
+    }
     if (bhangarhAudioRef.current) {
       bhangarhAudioRef.current.pause();
       bhangarhAudioRef.current.currentTime = 0;
@@ -1052,7 +1208,10 @@ export default function RajasthanGameScreen() {
       setShowJollyDialogue(false);
       setShowChauparGame(false);
       setShowVijayStambhModal(false);
-      setShowJauharModal(false);
+      setHasJauharMemorialCompleted(false);
+      try {
+        localStorage.removeItem("jauhar_kund_memorial_completed");
+      } catch (e) {}
       setIsElephantTravelling(false);
       setIsBhangarhTravelling(false);
       setHasPillar83Inspected(false);
@@ -1122,6 +1281,9 @@ export default function RajasthanGameScreen() {
             if (parsed.hasWeddingOrnament) setHasWeddingOrnament(parsed.hasWeddingOrnament);
             if (parsed.hasTaxLedger) setHasTaxLedger(parsed.hasTaxLedger);
             if (parsed.hasWaterPotsSupplies) setHasWaterPotsSupplies(parsed.hasWaterPotsSupplies);
+            if (parsed.hasJauharMemorialCompleted) {
+              setHasJauharMemorialCompleted(parsed.hasJauharMemorialCompleted);
+            }
             if (parsed.hasBhangarhChronicleClue) setHasBhangarhChronicleClue(parsed.hasBhangarhChronicleClue);
             if (parsed.hasTempleArchitectureClue) setHasTempleArchitectureClue(parsed.hasTempleArchitectureClue);
             if (parsed.hasFamineRecordClue) setHasFamineRecordClue(parsed.hasFamineRecordClue);
@@ -1157,6 +1319,7 @@ export default function RajasthanGameScreen() {
             hasWeddingOrnament,
             hasTaxLedger,
             hasWaterPotsSupplies,
+            hasJauharMemorialCompleted,
             hasBhangarhChronicleClue,
             hasTempleArchitectureClue,
             hasFamineRecordClue,
@@ -1567,6 +1730,7 @@ export default function RajasthanGameScreen() {
   const isNearPassageBottomDoor = scene === "jauhar_passage" && playerPos.y >= 82.0;
   const isNearJauharPavilionStairs = scene === "jauhar_kund" && playerPos.x >= 32.0 && playerPos.x <= 56.0 && playerPos.y <= 64.0;
   const isNearJauharDesertExit = scene === "jauhar_kund" && playerPos.x <= 24.0 && playerPos.y >= 66.0;
+  const isNearJauharTribute = scene === "jauhar_kund" && playerPos.x >= 35.0 && playerPos.x <= 65.0 && playerPos.y >= 65.0 && playerPos.y <= 80.0;
   const isNearDesertPalaceGate = scene === "desert_outskirts" && playerPos.x >= 74.0 && playerPos.y <= 82.0;
   const isNearCamel = scene === "desert_outskirts" && playerPos.x >= 18.0 && playerPos.x <= 38.0 && playerPos.y >= 68.0 && playerPos.y <= 88.0;
 
@@ -1684,6 +1848,8 @@ export default function RajasthanGameScreen() {
       isNearPassageBottomDoor,
       isNearJauharPavilionStairs,
       isNearJauharDesertExit,
+      isNearJauharTribute,
+      hasJauharMemorialCompleted,
       isNearDesertPalaceGate,
       isNearCamel,
       isNearKumbhalgarhGateDoor,
@@ -1741,7 +1907,9 @@ export default function RajasthanGameScreen() {
       triggerJollyDialogue,
       setShowChauparGame,
       setShowVijayStambhModal,
-      setShowJauharModal,
+      handlePayTribute,
+      setHasJauharMemorialCompleted,
+      setJollyAudioUrl,
       setShowPillar83Modal,
       setShowHaveliOrnamentModal,
       setShowTaxLedgerModal,
@@ -1801,6 +1969,26 @@ export default function RajasthanGameScreen() {
       // --- [E] INTERACTION KEY ---
       if (key === "e") {
         // Stage 1
+        if (state.scene === "jauhar_kund") {
+          if (state.isNearJauharTribute && !state.hasJauharMemorialCompleted) {
+            e.preventDefault();
+            e.stopPropagation();
+            keysHeldRef.current.clear();
+            state.handlePayTribute?.();
+            return;
+          } else if (state.isNearJauharDesertExit) {
+            e.preventDefault();
+            e.stopPropagation();
+            state.setIsTransitioning(true);
+            setTimeout(() => {
+              state.setScene("desert_outskirts");
+              state.setPlayerPos({ x: 80.0, y: 72.0 });
+              state.setIsTransitioning(false);
+            }, 400);
+            return;
+          }
+        }
+
         if (state.isNearRamPolDoor) {
           state.setIsTransitioning(true);
           setTimeout(() => {
@@ -1829,13 +2017,6 @@ export default function RajasthanGameScreen() {
           setTimeout(() => {
             state.setScene("jauhar_kund");
             state.setPlayerPos({ x: 44.0, y: 59.0 });
-            state.setIsTransitioning(false);
-          }, 400);
-        } else if (state.isNearJauharDesertExit) {
-          state.setIsTransitioning(true);
-          setTimeout(() => {
-            state.setScene("desert_outskirts");
-            state.setPlayerPos({ x: 80.0, y: 72.0 });
             state.setIsTransitioning(false);
           }, 400);
         } else if (state.isNearDesertPalaceGate) {
@@ -3013,6 +3194,10 @@ export default function RajasthanGameScreen() {
                 chittorgarhAudioRef.current.pause();
                 chittorgarhAudioRef.current.currentTime = 0;
               }
+              if (jauharAudioRef.current) {
+                jauharAudioRef.current.pause();
+                jauharAudioRef.current.currentTime = 0;
+              }
               if (bhangarhAudioRef.current) {
                 bhangarhAudioRef.current.pause();
                 bhangarhAudioRef.current.currentTime = 0;
@@ -3470,31 +3655,15 @@ export default function RajasthanGameScreen() {
         </div>
       )}
 
-      {/* --- VIJAY STAMBH: THE SCULPTOR'S TESTAMENT SINGLE-SCREEN PUZZLE SYSTEM --- */}
-      {scene === "vijay_stambh_interior" && (
-        <VijayStambhCarvingSystem
-          playerPos={playerPos}
-          onTriggerJollySpeech={(text, badge = "normal") => {
-            setJollySpeechText(text);
-            setJollyStatusBadge(badge);
-            setJollyOptions([
-              { id: 99, text: "Understood, Jolly Bhai!" }
-            ]);
-            setJollyDialogueScene("vijay_stambh_interior");
-            setShowJollyDialogue(true);
-          }}
-          onPuzzleSolved={() => {
-            // Unlocks progression or campaign completion
-          }}
-          onExitInterior={() => {
-            setIsTransitioning(true);
-            setTimeout(() => {
-              setScene("vijay_stambh");
-              setPlayerPos({ x: 40.0, y: 76.0 });
-              setIsTransitioning(false);
-            }, 400);
-          }}
-        />
+      {/* --- JAUHAR KUND: PAY TRIBUTE INTERACTION PROMPT --- */}
+      {isNearJauharTribute && scene === "jauhar_kund" && !hasJauharMemorialCompleted && !showJollyDialogue && (
+        <div
+          className="absolute bottom-[16%] left-1/2 -translate-x-1/2 bg-[#fff9ea] border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-[13px] font-bold text-black flex items-center gap-2 z-30 animate-bounce cursor-pointer pointer-events-auto"
+          onClick={() => handlePayTribute()}
+        >
+          <span className="bg-amber-400 border border-black rounded px-1.5 text-[11px]">E</span>
+          <span>PAY TRIBUTE</span>
+        </div>
       )}
 
       {/* --- BADAL MAHAL: LIGHT THE 3 LAMPS MINI-GAME --- */}

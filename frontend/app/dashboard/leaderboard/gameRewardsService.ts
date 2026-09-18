@@ -16,6 +16,7 @@ export async function fetchAllGamesUnlockStatus(): Promise<GameUnlockStatusMap> 
     // Rajputana
     chaupar: false,
     vijay_stambh_carvings: false,
+    jauhar_kund_memorial: false,
     badal_mahal_lamps: false,
     kuldhara_deduction: false,
     bhangarh_curse_truth: false,
@@ -102,6 +103,13 @@ export async function fetchAllGamesUnlockStatus(): Promise<GameUnlockStatusMap> 
       allSolvedFromIndexedDB.has("vijay_stambh_carvings") ||
       Boolean(rajState?.hasPillar83Inspected) ||
       stage > 1 ||
+      false;
+
+    // Jauhar Kund Memorial
+    statusMap.jauhar_kund_memorial =
+      allSolvedFromIndexedDB.has("jauhar_kund_memorial") ||
+      Boolean(rajState?.hasJauharMemorialCompleted) ||
+      localStorage.getItem("jauhar_kund_memorial_completed") === "true" ||
       false;
 
     // Badal Mahal Lamps
