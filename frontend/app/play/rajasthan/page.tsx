@@ -2485,17 +2485,9 @@ export default function RajasthanGameScreen() {
           }
           // --- STAGE 1: VIJAY STAMBH INTERIOR ---
           else if (state.scene === "vijay_stambh_interior") {
-            const minX = 12.0, maxX = 88.0, minY = 54.0, maxY = 86.0;
+            const minX = 12.0, maxX = 88.0, minY = 54.0, maxY = 88.0;
             const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
             const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
-            if (nextY >= 85.0 && nextX >= 40.0 && nextX <= 60.0) {
-              state.setIsTransitioning(true);
-              setTimeout(() => {
-                state.setScene("vijay_stambh");
-                state.setPlayerPos({ x: 40.0, y: 76.0 });
-                state.setIsTransitioning(false);
-              }, 400);
-            }
             return { x: nextX, y: nextY };
           }
           // --- STAGE 1: JAUHAR PASSAGE ---
@@ -3664,6 +3656,33 @@ export default function RajasthanGameScreen() {
           <span className="bg-amber-400 border border-black rounded px-1.5 text-[11px]">E</span>
           <span>PAY TRIBUTE</span>
         </div>
+      )}
+
+      {/* --- VIJAY STAMBH INTERIOR: THE SCULPTOR'S TESTAMENT SEARCH GAME --- */}
+      {scene === "vijay_stambh_interior" && (
+        <VijayStambhCarvingSystem
+          playerPos={playerPos}
+          onTriggerJollySpeech={(text, badge = "normal") => {
+            setJollySpeechText(text);
+            setJollyStatusBadge(badge);
+            setJollyOptions([
+              { id: 99, text: "Understood, Jolly Bhai!" }
+            ]);
+            setJollyDialogueScene("vijay_stambh_interior");
+            setShowJollyDialogue(true);
+          }}
+          onPuzzleSolved={() => {
+            // Sculptor's Testament solved
+          }}
+          onExitInterior={() => {
+            setIsTransitioning(true);
+            setTimeout(() => {
+              setScene("vijay_stambh");
+              setPlayerPos({ x: 40.0, y: 76.0 });
+              setIsTransitioning(false);
+            }, 400);
+          }}
+        />
       )}
 
       {/* --- BADAL MAHAL: LIGHT THE 3 LAMPS MINI-GAME --- */}
@@ -5040,14 +5059,22 @@ export default function RajasthanGameScreen() {
       )}
 
       {/* --- BOTTOM CENTER CONTROLS GUIDE --- */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20">
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 pointer-events-none select-none">
         <div className="bg-[#1a1a1a]/80 backdrop-blur-md border border-gray-600 rounded-full px-6 py-2 shadow-lg flex items-center gap-3">
-          <span className="text-white text-[12px] font-bold tracking-wider">WASD / arrows</span>
-          <span className="text-gray-400 text-[10px]">- move -</span>
+          <span className="text-white text-[12px] font-bold tracking-wider">WASD / ARROWS</span>
+          <span className="text-gray-400 text-[10px]">— Move —</span>
           <span className="text-white text-[12px] font-bold tracking-wider">E</span>
-          <span className="text-gray-400 text-[10px]">- inspect/decode -</span>
+          <span className="text-gray-400 text-[10px]">
+            {scene === "vijay_stambh_interior" ? "— Shilpa Drishti —" : "— Interact —"}
+          </span>
+          {scene === "vijay_stambh_interior" && (
+            <>
+              <span className="text-amber-400 text-[12px] font-bold tracking-wider">G</span>
+              <span className="text-gray-400 text-[10px]">— Collect Glyph —</span>
+            </>
+          )}
           <span className="text-white text-[12px] font-bold tracking-wider">F</span>
-          <span className="text-gray-400 text-[10px]">- exit outside -</span>
+          <span className="text-gray-400 text-[10px]">— Exit Outside —</span>
         </div>
       </div>
     </div>
