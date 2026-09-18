@@ -72,6 +72,9 @@ export default function RajasthanGameScreen() {
   const bhangarhAudioRef = useRef<HTMLAudioElement | null>(null);
   // --- KUMBHALGARH MOUNTAIN WIND AMBIENCE REF ---
   const kumbhalgarhWindAudioRef = useRef<HTMLAudioElement | null>(null);
+  // --- KULDHARA GHOST VILLAGE THEME MUSIC REF ---
+  const kuldharaAudioRef = useRef<HTMLAudioElement | null>(null);
+  const kuldharaFadeIntervalRef = useRef<NodeJS.Timeout | null>(null);
   // --- THAR DESERT ELEPHANT TRANSITION AMBIENCE REF ---
   const elephantAudioRef = useRef<HTMLAudioElement | null>(null);
   const elephantFadeIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -845,6 +848,119 @@ export default function RajasthanGameScreen() {
     };
   }, [isElephantTravelling, isSoundMuted, isMusicMuted]);
 
+  // --- KULDHARA GHOST VILLAGE THEME MUSIC (SARANGI INSTRUMENTAL) ---
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const isKuldharaActive =
+      stage === 3 &&
+      (scene === "kuldhara_gate" ||
+        scene === "chiefs_house" ||
+        scene === "treasury" ||
+        scene === "well" ||
+        scene === "village_square") &&
+      !isElephantTravelling &&
+      !isBhangarhTravelling &&
+      !isCampaignComplete;
+
+    if (isKuldharaActive) {
+      if (kuldharaFadeIntervalRef.current) {
+        clearInterval(kuldharaFadeIntervalRef.current);
+        kuldharaFadeIntervalRef.current = null;
+      }
+
+      if (!kuldharaAudioRef.current) {
+        const audio = new Audio("/audio/170316__johnnydhol__sarangi-1.wav");
+        audio.loop = true;
+        audio.volume = 0;
+        audio.onended = () => {
+          audio.currentTime = 0;
+          audio.play().catch(() => {});
+        };
+        kuldharaAudioRef.current = audio;
+      }
+
+      const audio = kuldharaAudioRef.current;
+
+      if (isMusicMuted) {
+        audio.pause();
+      } else {
+        if (audio.paused) {
+          audio.volume = 0;
+          audio.play().catch((err) => {
+            console.log("Kuldhara audio autoplay pending player gesture:", err?.message || err);
+          });
+        }
+        // Smooth fade-in to subtle target volume 0.18 (so Jolly Bhai & clues remain crystal clear)
+        const targetVol = 0.18;
+        const step = 0.02;
+        kuldharaFadeIntervalRef.current = setInterval(() => {
+          if (!kuldharaAudioRef.current) return;
+          if (kuldharaAudioRef.current.volume < targetVol) {
+            kuldharaAudioRef.current.volume = Math.min(
+              targetVol,
+              kuldharaAudioRef.current.volume + step
+            );
+          } else {
+            if (kuldharaFadeIntervalRef.current) {
+              clearInterval(kuldharaFadeIntervalRef.current);
+              kuldharaFadeIntervalRef.current = null;
+            }
+          }
+        }, 40);
+      }
+
+      const triggerOnGesture = () => {
+        if (
+          isKuldharaActive &&
+          !isMusicMuted &&
+          kuldharaAudioRef.current &&
+          kuldharaAudioRef.current.paused
+        ) {
+          kuldharaAudioRef.current.play().catch(() => {});
+        }
+      };
+
+      window.addEventListener("click", triggerOnGesture, { once: true });
+      window.addEventListener("keydown", triggerOnGesture, { once: true });
+
+      return () => {
+        window.removeEventListener("click", triggerOnGesture);
+        window.removeEventListener("keydown", triggerOnGesture);
+      };
+    } else {
+      // Smooth fade-out and complete stop on leaving Kuldhara
+      if (kuldharaAudioRef.current && !kuldharaAudioRef.current.paused) {
+        if (kuldharaFadeIntervalRef.current) {
+          clearInterval(kuldharaFadeIntervalRef.current);
+        }
+        const step = 0.03;
+        kuldharaFadeIntervalRef.current = setInterval(() => {
+          if (!kuldharaAudioRef.current) {
+            if (kuldharaFadeIntervalRef.current) clearInterval(kuldharaFadeIntervalRef.current);
+            return;
+          }
+          if (kuldharaAudioRef.current.volume > step) {
+            kuldharaAudioRef.current.volume = Math.max(
+              0,
+              kuldharaAudioRef.current.volume - step
+            );
+          } else {
+            kuldharaAudioRef.current.volume = 0;
+            kuldharaAudioRef.current.pause();
+            kuldharaAudioRef.current.currentTime = 0;
+            if (kuldharaFadeIntervalRef.current) {
+              clearInterval(kuldharaFadeIntervalRef.current);
+              kuldharaFadeIntervalRef.current = null;
+            }
+          }
+        }, 40);
+      } else if (kuldharaAudioRef.current) {
+        kuldharaAudioRef.current.currentTime = 0;
+      }
+    }
+  }, [stage, scene, isElephantTravelling, isBhangarhTravelling, isCampaignComplete, isMusicMuted]);
+
   // Pause all background audio on unmount
   useEffect(() => {
     return () => {
@@ -855,6 +971,10 @@ export default function RajasthanGameScreen() {
       if (elephantFadeIntervalRef.current) {
         clearInterval(elephantFadeIntervalRef.current);
         elephantFadeIntervalRef.current = null;
+      }
+      if (kuldharaFadeIntervalRef.current) {
+        clearInterval(kuldharaFadeIntervalRef.current);
+        kuldharaFadeIntervalRef.current = null;
       }
       if (chittorgarhAudioRef.current) {
         chittorgarhAudioRef.current.pause();
@@ -867,6 +987,10 @@ export default function RajasthanGameScreen() {
       if (kumbhalgarhWindAudioRef.current) {
         kumbhalgarhWindAudioRef.current.pause();
         kumbhalgarhWindAudioRef.current.currentTime = 0;
+      }
+      if (kuldharaAudioRef.current) {
+        kuldharaAudioRef.current.pause();
+        kuldharaAudioRef.current.currentTime = 0;
       }
       if (elephantAudioRef.current) {
         elephantAudioRef.current.pause();
@@ -909,6 +1033,10 @@ export default function RajasthanGameScreen() {
     if (kumbhalgarhWindAudioRef.current) {
       kumbhalgarhWindAudioRef.current.pause();
       kumbhalgarhWindAudioRef.current.currentTime = 0;
+    }
+    if (kuldharaAudioRef.current) {
+      kuldharaAudioRef.current.pause();
+      kuldharaAudioRef.current.currentTime = 0;
     }
     setShowKuldharaNarratorBanner(false);
     setHasKuldharaNarrationFinished(false);
@@ -2892,6 +3020,14 @@ export default function RajasthanGameScreen() {
               if (kumbhalgarhWindAudioRef.current) {
                 kumbhalgarhWindAudioRef.current.pause();
                 kumbhalgarhWindAudioRef.current.currentTime = 0;
+              }
+              if (kuldharaAudioRef.current) {
+                kuldharaAudioRef.current.pause();
+                kuldharaAudioRef.current.currentTime = 0;
+              }
+              if (elephantAudioRef.current) {
+                elephantAudioRef.current.pause();
+                elephantAudioRef.current.currentTime = 0;
               }
               router.push("/dashboard");
             }}
