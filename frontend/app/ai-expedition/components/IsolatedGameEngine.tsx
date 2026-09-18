@@ -31,8 +31,13 @@ export default function IsolatedGameEngine({ world }: IsolatedGameEngineProps) {
   const [isWalking, setIsWalking] = useState<boolean>(false);
   const [walkPhase, setWalkPhase] = useState<number>(0);
 
+  // Active NPC Dialogue state
+  const [activeNPC, setActiveNPC] = useState<NPCDefinition | null>(null);
+  const [activeDialogueNode, setActiveDialogueNode] = useState<NPCDialogueNode | null>(null);
+
   // GLOBAL DIALOGUE & AUDIO LIFECYCLE CLEANUP ON SCENE TRANSITION
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setActiveNPC(null);
     setActiveDialogueNode(null);
     stopAllCharacterVoice();
@@ -62,10 +67,6 @@ export default function IsolatedGameEngine({ world }: IsolatedGameEngineProps) {
   const [discoveredClues, setDiscoveredClues] = useState<string[]>([]);
   const [currentStageIndex, setCurrentStageIndex] = useState<number>(0);
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
-
-  // Active NPC Dialogue state
-  const [activeNPC, setActiveNPC] = useState<NPCDefinition | null>(null);
-  const [activeDialogueNode, setActiveDialogueNode] = useState<NPCDialogueNode | null>(null);
 
   // Load saved state safely after hydration
   useEffect(() => {

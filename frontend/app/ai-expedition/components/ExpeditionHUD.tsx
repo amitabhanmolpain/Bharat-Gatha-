@@ -1,95 +1,225 @@
 "use client";
 
-import React from "react";
-import { WorldDefinition } from "../types/world";
+import React, { useState, useEffect } from "react";
+import { ExpeditionMetadata, QuestDefinition } from "../types/expedition";
+import { narrationManager } from "../services/narrationManager";
 
 interface ExpeditionHUDProps {
-  world: WorldDefinition;
-  currentSceneName: string;
-  cluesCount: number;
-  currentStageIndex: number;
-  onOpenCodex?: () => void;
-  onLeave: () => void;
+  metadata?: ExpeditionMetadata;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  world?: any;
+  currentSceneName?: string;
+  cluesCount?: number;
+  currentStageIndex?: number;
+  onOpenCodex: () => void;
+  onLeave?: () => void;
+  activeQuest?: QuestDefinition | null;
+  discoveredCount?: number;
+  totalEvidenceCount?: number;
+  onRestart?: () => void;
+  onBackToGenerator?: () => void;
 }
 
 export default function ExpeditionHUD({
+  metadata: propMetadata,
   world,
-  currentSceneName,
-  cluesCount,
-  currentStageIndex,
+  activeQuest = null,
+  discoveredCount = 0,
+  totalEvidenceCount = 0,
   onOpenCodex,
-  onLeave,
+  onRestart = () => {},
+  onBackToGenerator = () => {}
 }: ExpeditionHUDProps) {
-  const currentStage = world.quest.stages[currentStageIndex] || world.quest.stages[world.quest.stages.length - 1];
+  const metadata: ExpeditionMetadata = propMetadata || {
+    id: world?.worldId || "world-1",
+    title: world?.title || "Historical Expedition",
+    era: world?.historicalEra || "Historical Era",
+    year: String(world?.year || 1857),
+    location: world?.region || "India",
+    summary: world?.summary || "",
+    archetype: "INVESTIGATION" as const,
+    difficulty: "Intermediate" as const,
+    estimatedPlaytimeMinutes: 10,
+    createdAt: new Date().toISOString(),
+    isFallback: false,
+    fallbackReason: undefined
+  };
+  const [narrationEnabled, setNarrationEnabled] = useState(() => narrationManager.isEnabled());
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [activeText, setActiveText] = useState<string | null>(null);
+  const [isUnavailable, setIsUnavailable] = useState(false);
+
+  useEffect(() => {
+    const unsub = narrationManager.subscribe((state) => {
+      setIsSpeaking(state.isSpeaking);
+      setActiveText(state.activeText);
+      setIsUnavailable(state.isUnavailable);
+      setNarrationEnabled(state.isEnabled);
+    });
+    return () => unsub();
+  }, []);
+
+  const toggleNarration = () => {
+    const nextState = !narrationEnabled;
+    narrationManager.setEnabled(nextState);
+    setNarrationEnabled(nextState);
+  };
+
+  const currentObjective = activeQuest?.objectives.find((o) => !o.isCompleted);
+
+  const handleReplayObjective = () => {
+    if (currentObjective) {
+      narrationManager.narrate(`Your objective: ${currentObjective.description}`, {
+        type: "OBJECTIVE",
+        key: `objective_replay_${currentObjective.id}`,
+        priority: 100
+      });
+    }
+  };
 
   return (
-    <div className="absolute inset-0 pointer-events-none z-30 flex flex-col justify-between p-4 font-sans">
-      {/* Top Bar */}
-      <div className="flex justify-between items-start w-full gap-3">
-        {/* Top-Left Mission Tracker */}
-        <div className="pointer-events-auto bg-[#fff9e6] border-3 border-black rounded-lg p-3.5 max-w-md shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-black">
-          <div className="flex items-center justify-between mb-1.5 border-b-2 border-black/15 pb-1">
-            <span className="text-[10px] font-black uppercase tracking-widest text-[#8a6835]">
-              Historical Mission • {world.region} ({world.year})
+    <>
+      <header className="absolute top-4 left-4 right-4 z-40 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 pointer-events-none">
+        {/* Expedition Header Card */}
+        <div className="bg-[#fff9e6]/95 border-3 border-black rounded-lg px-4 py-2.5 shadow-[4px_4px_0_0_rgba(0,0,0,1)] pointer-events-auto max-w-md backdrop-blur-sm">
+          
+          {/* Fallback Banner if Gemini API was unavailable */}
+          {metadata.isFallback && (
+            <div className="mb-2 bg-[#fef3c7] border border-[#b45309] rounded p-1.5 text-[11px] font-bold text-[#b45309] flex items-center gap-1.5" title={metadata.fallbackReason}>
+              <span>⚠️</span>
+              <span>Gemini unavailable — using development fallback</span>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2 mb-0.5">
+            <span className="bg-[#d97706] text-white text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded border border-black tracking-wider">
+              {metadata.era} ({metadata.year})
             </span>
-            <span className="bg-[#fef3c7] border border-black rounded text-[9px] font-bold px-1.5 py-0.5 text-amber-950">
-              Stage {currentStageIndex + 1}/{world.quest.stages.length}
+            <span className="text-xs font-bold text-[#78350f] font-mono">
+              {metadata.archetype.replace("_", " ")}
             </span>
+            {isSpeaking && (
+              <span className="bg-[#b45309] text-white text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded border border-black animate-pulse flex items-center gap-1 ml-auto">
+                <span>🎙️</span>
+                <span>NARRATOR</span>
+              </span>
+            )}
           </div>
-          <h4 className="font-bold text-black text-sm leading-tight mb-1">{world.quest.title}</h4>
-          <p className="text-xs text-gray-800 font-medium leading-snug">
-            {currentStage ? currentStage.description : world.quest.objective}
-          </p>
-          {world.quest.learningObjective && (
-            <p className="text-[10px] text-amber-900 font-bold mt-1.5 pt-1 border-t border-black/10 flex items-center gap-1">
-              <span>🎯 Focus:</span> {world.quest.learningObjective}
-            </p>
+          <h2 className="text-lg font-serif font-bold text-black leading-tight drop-shadow-sm truncate">
+            {metadata.title}
+          </h2>
+          
+          {/* Active Mission Banner */}
+          {activeQuest && (
+            <div className="mt-1.5 pt-1.5 border-t border-black/20 flex items-start gap-2 group">
+              <button
+                onClick={handleReplayObjective}
+                title="Click to hear objective narrated"
+                className="text-sm cursor-pointer hover:scale-125 transition-transform"
+              >
+                🎯
+              </button>
+              <div className="text-xs flex-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-[#b45309] block uppercase tracking-wide">
+                    Objective: {activeQuest.title}
+                  </span>
+                  <button
+                    onClick={handleReplayObjective}
+                    className="text-[10px] bg-[#f59e0b]/20 hover:bg-[#f59e0b]/40 text-[#78350f] px-1.5 py-0.5 rounded border border-[#b45309]/40 font-bold ml-1 flex items-center gap-1 cursor-pointer"
+                    title="Replay Narrator Audio for Objective"
+                  >
+                    <span>🔊</span>
+                    <span>HEAR</span>
+                  </button>
+                </div>
+                <p className="text-gray-800 font-medium">
+                  {currentObjective ? currentObjective.description : "Mission objectives completed!"}
+                </p>
+              </div>
+            </div>
           )}
         </div>
 
-        {/* Top-Right Controls */}
-        <div className="pointer-events-auto flex items-center gap-2.5">
+        {/* Right Controls Group */}
+        <div className="flex items-center gap-2 pointer-events-auto self-end md:self-auto">
+          <button
+            onClick={toggleNarration}
+            title={narrationEnabled ? "Disable Male Narrator Audio" : "Enable Male Narrator Audio"}
+            className={`border-3 border-black rounded-lg px-3.5 py-2 font-black text-xs shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[1px_1px_0_0_rgba(0,0,0,1)] transition-all flex items-center gap-1.5 cursor-pointer ${
+              narrationEnabled ? "bg-[#3b82f6] text-white hover:bg-[#2563eb]" : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            }`}
+          >
+            <span className="text-sm">{narrationEnabled ? (isSpeaking ? "🔊" : "🔈") : "🔇"}</span>
+            <span className="font-extrabold text-xs tracking-wide">{narrationEnabled ? "Audio ON" : "Audio OFF"}</span>
+          </button>
+
           <button
             onClick={onOpenCodex}
-            className="bg-[#ffdc5e] hover:bg-[#ffcf33] border-3 border-black rounded-lg px-3 py-2 text-xs font-black text-black shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[0px_0px_0_0_rgba(0,0,0,1)] transition-all flex items-center gap-1.5"
+            className="bg-[#ffdc5e] hover:bg-[#eab308] border-3 border-black rounded-lg px-3.5 py-2 font-black text-xs text-black shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[1px_1px_0_0_rgba(0,0,0,1)] transition-all flex items-center gap-1.5 cursor-pointer"
           >
-            <span>📜</span> Historical Codex
-          </button>
-
-          <div className="bg-[#fff9e6] border-3 border-black rounded-lg px-3.5 py-2 shadow-[3px_3px_0_0_rgba(0,0,0,1)]">
-            <span className="text-xs font-extrabold text-black uppercase tracking-wider">
-              📍 {currentSceneName}
+            <span className="text-sm">📜</span>
+            <span className="text-black font-extrabold text-xs tracking-wide">Codex</span>
+            <span className="bg-black text-[#ffdc5e] text-[11px] font-mono font-black px-2 py-0.5 rounded-full ml-0.5">
+              {discoveredCount}/{totalEvidenceCount}
             </span>
-          </div>
+          </button>
 
           <button
-            onClick={onLeave}
-            className="bg-white hover:bg-gray-100 border-3 border-black rounded-lg px-3 py-2 text-xs font-bold text-black shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[0px_0px_0_0_rgba(0,0,0,1)] transition-all"
+            onClick={onRestart}
+            title="Restart Expedition"
+            className="bg-white hover:bg-gray-100 border-3 border-black rounded-lg px-3.5 py-2 font-black text-xs text-black shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[1px_1px_0_0_rgba(0,0,0,1)] transition-all cursor-pointer flex items-center gap-1.5"
           >
-            Esc - Exit
+            <span className="text-sm">🔄</span>
+            <span className="text-black font-extrabold text-xs tracking-wide">Restart</span>
+          </button>
+
+          <button
+            onClick={onBackToGenerator}
+            title="Exit Expedition"
+            className="bg-[#ef4444] hover:bg-[#dc2626] border-3 border-black rounded-lg px-3.5 py-2 font-black text-xs text-white shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[1px_1px_0_0_rgba(0,0,0,1)] transition-all cursor-pointer flex items-center gap-1.5"
+          >
+            <span className="text-sm">🚪</span>
+            <span className="text-white font-extrabold text-xs tracking-wide">Exit</span>
           </button>
         </div>
-      </div>
+      </header>
 
-      {/* Bottom Bar: Evidence Counter & Controls Hint */}
-      <div className="flex justify-between items-end w-full">
-        <button
-          onClick={onOpenCodex}
-          className="pointer-events-auto bg-[#fff9e6] hover:bg-[#ffedb3] border-3 border-black rounded-lg px-4 py-2 shadow-[3px_3px_0_0_rgba(0,0,0,1)] flex items-center gap-2 text-left transition-all"
-        >
-          <span className="text-xl">📜</span>
-          <div>
-            <div className="text-[9px] font-black uppercase tracking-wider text-gray-700">Historical Evidence</div>
-            <div className="text-xs font-bold text-black">
-              {cluesCount} / {world.quest.cluesRequired} Discovered
+      {/* Live Narrator Subtitle Overlay at Bottom Center */}
+      {isSpeaking && activeText && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[500] pointer-events-auto max-w-2xl w-11/12 animate-in slide-in-from-bottom-4 duration-200">
+          <div className="bg-[#0f172a]/95 border-3 border-[#f59e0b] rounded-xl px-5 py-3 shadow-[0_6px_24px_rgba(0,0,0,0.8)] backdrop-blur-md flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-[#f59e0b] text-black shrink-0 flex items-center justify-center font-bold text-lg animate-pulse shadow-md border-2 border-black">
+              🎙️
             </div>
+            <div className="flex-1 min-w-0">
+              <span className="text-[10px] font-mono font-extrabold tracking-widest text-[#f59e0b] uppercase block mb-0.5">
+                Male Historical Narrator
+              </span>
+              <p className="text-white font-serif text-sm leading-snug drop-shadow font-medium">
+                &quot;{activeText}&quot;
+              </p>
+            </div>
+            <button
+              onClick={() => narrationManager.stop()}
+              className="text-gray-300 hover:text-white text-xs font-bold px-2.5 py-1.5 bg-white/10 hover:bg-white/20 rounded border border-white/20 cursor-pointer shrink-0 transition-colors"
+              title="Skip Active Narration"
+            >
+              SKIP ⏩
+            </button>
           </div>
-        </button>
-
-        <div className="pointer-events-auto bg-black/75 backdrop-blur-sm border border-white/20 rounded-lg px-3 py-1.5 text-[11px] font-medium text-white/90">
-          <span className="font-bold text-[#ffdc5e]">WASD / Arrow Keys</span> Move • <span className="font-bold text-[#ffdc5e]">[E]</span> Inspect Evidence & Talk
         </div>
-      </div>
-    </div>
+      )}
+
+      {/* Subtle status if Speech Synthesis is blocked by browser */}
+      {isUnavailable && !isSpeaking && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[500] pointer-events-auto max-w-md w-11/12 animate-in fade-in duration-200">
+          <div className="bg-[#451a03]/95 border-2 border-[#f59e0b] rounded-lg px-4 py-2 text-center shadow-lg text-amber-200 text-xs font-mono font-bold flex items-center justify-center gap-2">
+            <span>⚠️</span>
+            <span>Narration unavailable on this browser</span>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

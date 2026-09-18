@@ -317,6 +317,18 @@ function isVulgar(text: string): boolean {
                 />
               </div>
             )}
+            {characterId === "duarte" && (
+              <div className="relative w-12 h-12 rounded-xl border-2 border-black flex items-center justify-center shadow-[2px_2px_0_0_rgba(0,0,0,1)] bg-amber-200/50 overflow-hidden shrink-0">
+                <img
+                  src={isVoiceActive || isSpeaking ? "/portuguese_traveler_talking.png" : "/portuguese_traveler_idle.png"}
+                  alt="Senhor Duarte"
+                  className={`w-11 h-11 object-contain object-top drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)] ${
+                    isVoiceActive || isSpeaking ? "scale-105" : ""
+                  }`}
+                  style={{ imageRendering: "pixelated" }}
+                />
+              </div>
+            )}
             <div>
               <h3 className="text-xl font-black text-black tracking-tight leading-tight flex items-center gap-2">
                 {characterName}
