@@ -6,7 +6,7 @@ import {
   setStage1Complete, setStage2Complete, setStage3Complete, setStage4Complete,
   setHasRecruitedHistorian,
   setHasVidyaranyaBlessing, setHasMetVidyaranya, setIsChowkaBaraComplete,
-  setIsFestivalSceneRestored, setIsLedgerAssembled, setIsCampaignComplete
+  setIsFestivalSceneRestored, setIsLedgerAssembled, setIsCampaignComplete, setIsUncleKidnapped
 } from '../../store/slices/progressionSlice';
 import {
   addJournalEntry, setJournalEntries, addCollectedFragment,
@@ -99,7 +99,11 @@ export default function VijayanagaraGameScreen() {
   const hasFinalKeepsake = useAppSelector(state => state.inventory.hasFinalKeepsake);
   const isCampaignComplete = useAppSelector(state => state.progression.isCampaignComplete);
   const hasRecruitedHistorian = useAppSelector(state => state.progression.hasRecruitedHistorian);
+  const isUncleKidnapped = useAppSelector(state => state.progression.isUncleKidnapped);
   const [showStage4OpeningBanner, setShowStage4OpeningBanner] = useState(true);
+
+  // Kidnap Event State
+  const [showKidnapCutscene, setShowKidnapCutscene] = useState(false);
 
   // Journal Unlocks State
   const unlockedJournalEntries = useAppSelector(state => state.inventory.unlockedJournalEntries);
@@ -124,6 +128,7 @@ export default function VijayanagaraGameScreen() {
   const [dialogueTopic, setDialogueTopic] = useState<"intro" | "founders" | "region" | "vidyaranya">("intro");
   const [showChowkaBaraModal, setShowChowkaBaraModal] = useState(false);
   const [showBlessingCutscene, setShowBlessingCutscene] = useState(false);
+  const [showOarUnlockModal, setShowOarUnlockModal] = useState(false);
   const [showStage1VictoryModal, setShowStage1VictoryModal] = useState(false);
   const [showCoracleNotice, setShowCoracleNotice] = useState(false);
   const [hasTriggeredCoracleNotice, setHasTriggeredCoracleNotice] = useState(false);
@@ -859,7 +864,8 @@ export default function VijayanagaraGameScreen() {
     showLedgerAssemblyModal ||
     showTalikotaModal ||
     showKeeperDialogue ||
-    showCampaignCompletionModal;
+    showCampaignCompletionModal ||
+    showKidnapCutscene;
 
   useEffect(() => {
     if (isLoading || isTransitioning) return;
@@ -1141,7 +1147,7 @@ export default function VijayanagaraGameScreen() {
         setIsJournalOpen(false);
         setShowVidyaranyaDialogue(false);
         setShowJollyDialogue(false);
-    setShowUncleDialogue(false);
+        setShowUncleDialogue(false);
         setShowCoracleNotice(false);
         setShowGemAssessorDialogue(false);
         setShowToymakerDialogue(false);
@@ -1152,6 +1158,7 @@ export default function VijayanagaraGameScreen() {
         setShowLedgerAssemblyModal(false);
         setShowTalikotaModal(false);
         setShowKeeperDialogue(false);
+        setShowKidnapCutscene(false);
       }
     };
 
@@ -1288,14 +1295,25 @@ export default function VijayanagaraGameScreen() {
     } else {
       // Player has left the interaction radius — dismiss the hint and reset
       // the trigger guard so the notice can appear again on the next approach.
-      if (showCoracleNotice) {
-        setShowCoracleNotice(false);
-      }
-      if (hasTriggeredCoracleNotice) {
-        setHasTriggeredCoracleNotice(false);
-      }
+      if (showCoracleNotice) setShowCoracleNotice(false);
+      if (hasTriggeredCoracleNotice) setHasTriggeredCoracleNotice(false);
     }
   }, [isNearCoracle, hasVidyaranyaBlessing, hasTriggeredCoracleNotice, showCoracleNotice]);
+
+  // Kidnap Event Trigger
+  useEffect(() => {
+    let kidnapTimer: number;
+    if (scene === "hampi_bazaar_entry" && !isUncleKidnapped) {
+      kidnapTimer = window.setTimeout(() => {
+        setShowKidnapCutscene(true);
+        playNarration(
+          "While you were busy in your business, your friend was kidnapped! Rescue him before he gets killed!", 
+          { speaker: "ratan", pace: 0.88, language_code: "en-IN" }
+        );
+      }, 4000);
+    }
+    return () => clearTimeout(kidnapTimer);
+  }, [scene, isUncleKidnapped]);
 
   // Stage 1 Handler
   const handleChowkaBaraComplete = (won: boolean, attempts: number) => {
@@ -2199,8 +2217,6 @@ export default function VijayanagaraGameScreen() {
           );
         })()}
 
-        
-          
           {/* --- UNCLE COMPANION NPC --- */}
           {scene === "anegundi_river_crossing" && !hasRecruitedHistorian && (
             <div
@@ -2216,8 +2232,11 @@ export default function VijayanagaraGameScreen() {
               <img
                 src="/uncle_companion.png"
                 alt="Uncle Companion"
-                className="w-24 h-32 object-contain object-bottom drop-shadow-[0_8px_12px_rgba(0,0,0,0.9)] cursor-pointer hover:drop-shadow-[0_8px_15px_rgba(212,163,89,0.8)] transition-all"
-                style={{ imageRendering: "pixelated" }}
+                className="w-20 h-28 object-contain object-bottom drop-shadow-[0_8px_12px_rgba(0,0,0,0.9)] cursor-pointer hover:drop-shadow-[0_8px_15px_rgba(212,163,89,0.8)] transition-all"
+                style={{
+                  transform: `scale(${depthScale})`,
+                  imageRendering: "pixelated",
+                }}
                 onClick={(e) => {
                   e.stopPropagation();
                   setUncleSpeechText("Greetings, traveler. I am also a historian, seeking to understand the tragic fall of such a magnificent empire.");
@@ -2231,9 +2250,8 @@ export default function VijayanagaraGameScreen() {
             </div>
           )}
 
-          
         {/* --- UNCLE COMPANION FOLLOWER --- */}
-        {hasRecruitedHistorian && (() => {
+        {!isUncleKidnapped && (hasRecruitedHistorian || scene === "hampi_bazaar_entry") && (() => {
           const uncleFollowX = facingLeft ? playerPos.x - 12 : playerPos.x + 12;
           const uncleFollowY = playerPos.y;
           
@@ -2249,9 +2267,9 @@ export default function VijayanagaraGameScreen() {
               <img
                 src="/uncle_companion.png"
                 alt="Historian Companion"
-                className="w-24 h-32 object-contain object-bottom transition-all drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]"
+                className="w-20 h-28 object-contain object-bottom transition-all drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]"
                 style={{
-                  transform: `scaleX(${facingLeft ? -1 : 1})`,
+                  transform: `scale(${depthScale}) scaleX(${facingLeft ? -1 : 1})`,
                   imageRendering: "pixelated"
                 }}
               />
@@ -2342,8 +2360,6 @@ export default function VijayanagaraGameScreen() {
         <JournalModal
           isOpen={isJournalOpen}
           onClose={() => setIsJournalOpen(false)}
-          
-          
         />
 
         {/* --- REGIONAL JOURNEY TRANSITION MODAL --- */}
@@ -2454,6 +2470,43 @@ export default function VijayanagaraGameScreen() {
           }}
           onOpenJournal={() => setIsJournalOpen(true)}
         />
+
+        {/* --- KIDNAP CUTSCENE --- */}
+        {showKidnapCutscene && (
+          <div className="fixed inset-0 z-[100] bg-black animate-fadeIn overflow-hidden flex flex-col items-center justify-end pb-20 px-8 text-center">
+            <img 
+              src="/kidnap_scene.jpg" 
+              alt="Kidnap" 
+              className="absolute inset-0 w-full h-full object-cover opacity-60" 
+            />
+            
+            {/* Gradient overlay to make text readable at bottom */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent pointer-events-none" />
+            
+            <div className="relative z-10 flex flex-col items-center max-w-4xl mx-auto w-full">
+              <div className="text-[#e5b56a] uppercase tracking-[0.3em] font-mono text-sm font-bold mb-4 drop-shadow-[0_2px_4px_rgba(0,0,0,1)]">
+                Urgent Warning
+              </div>
+              <h2 className="text-3xl md:text-5xl font-serif font-bold text-white mb-6 drop-shadow-[0_4px_10px_rgba(0,0,0,1)]">
+                While you were busy in your business, your friend was kidnapped!
+              </h2>
+              <p className="text-[#f6ede0] text-xl mb-12 drop-shadow-[0_2px_4px_rgba(0,0,0,1)]">
+                Rescue him before he gets killed!
+              </p>
+              
+              <button
+                onClick={() => {
+                  setShowKidnapCutscene(false);
+                  stopNarration();
+                  dispatch(setIsUncleKidnapped(true));
+                }}
+                className="bg-[#f0c05a] hover:bg-[#ffcf6a] text-black font-sans font-bold px-12 py-3 rounded-lg shadow-[0_4px_15px_rgba(0,0,0,0.5)] transition-all cursor-pointer text-sm uppercase tracking-wider hover:scale-105"
+              >
+                I Must Find Him
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* --- HAZARA RAMA BAS-RELIEF MODAL --- */}
         {showHazaraRamaModal && (
@@ -2755,11 +2808,55 @@ export default function VijayanagaraGameScreen() {
                   onClick={() => {
                     stopAllCharacterVoice();
                     setShowBlessingCutscene(false);
-                    setShowStage1VictoryModal(true);
+                    setShowOarUnlockModal(true);
+                    
+                    const audio = new Audio("/audio/subway-surfers-open-box.mp3");
+                    audio.volume = 0.6;
+                    audio.play().catch(e => console.log("Audio play failed:", e));
                   }}
                   className="bg-gradient-to-r from-[#8b6528] to-[#d4a359] hover:from-[#a07430] hover:to-[#e5b56a] text-[#141210] font-serif font-bold px-8 py-3 rounded-xl shadow-lg transition-all cursor-pointer text-xs uppercase tracking-wider"
                 >
                   Accept Blessing & Complete Stage 1 ✦
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* --- OAR UNLOCK MODAL --- */}
+        {showOarUnlockModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md animate-fadeIn">
+            <div className="absolute inset-0 bg-white animate-flashWhite z-10" />
+            
+            <div className="relative aspect-video w-[90vw] max-w-5xl rounded-2xl border-4 border-[#d4a359] overflow-hidden shadow-[0_0_80px_rgba(212,163,89,0.7)] flex flex-col items-center justify-center z-20">
+              {/* Background Burst */}
+              <img 
+                src="/unlock_bg.png" 
+                alt="Unlock Burst" 
+                className="absolute inset-0 w-[150%] h-[150%] object-cover opacity-90" 
+                style={{ top: '-25%', left: '-25%' }}
+              />
+              
+              {/* Content */}
+              <div className="relative z-10 flex flex-col items-center justify-center w-full h-full p-8 bg-black/20">
+                <h2 className="text-3xl md:text-5xl font-serif font-bold text-white mb-6 drop-shadow-[0_4px_10px_rgba(0,0,0,0.9)] uppercase tracking-widest text-center">
+                  Unlocked the wooden oar to row to Hampi
+                </h2>
+                <img 
+                  src="/wooden_oar.png" 
+                  alt="Wooden Oar" 
+                  className="w-48 h-48 md:w-64 md:h-64 object-contain drop-shadow-[0_15px_30px_rgba(0,0,0,0.9)] hover:scale-110 transition-transform duration-500 mb-8" 
+                />
+                
+                {/* Continue Button */}
+                <button
+                  onClick={() => {
+                    setShowOarUnlockModal(false);
+                    setShowStage1VictoryModal(true);
+                  }}
+                  className="bg-white/10 hover:bg-white/20 border-2 border-white/50 text-white font-serif font-bold px-12 py-4 rounded-full shadow-lg transition-all cursor-pointer text-lg tracking-[0.2em] backdrop-blur-sm"
+                >
+                  CONTINUE
                 </button>
               </div>
             </div>

@@ -15,6 +15,7 @@ interface ProgressionState {
   isLedgerAssembled: boolean;
   isCampaignComplete: boolean;
   hasRecruitedHistorian: boolean;
+  isUncleKidnapped: boolean;
 }
 
 const initialState: ProgressionState = {
@@ -30,6 +31,7 @@ const initialState: ProgressionState = {
   isLedgerAssembled: false,
   isCampaignComplete: false,
   hasRecruitedHistorian: false,
+  isUncleKidnapped: false,
 };
 
 export const progressionSlice = createSlice({
@@ -64,11 +66,14 @@ export const progressionSlice = createSlice({
     setIsLedgerAssembled: (state, action: PayloadAction<boolean>) => {
       state.isLedgerAssembled = action.payload;
     },
-        setHasRecruitedHistorian: (state, action: PayloadAction<boolean>) => {
+    setHasRecruitedHistorian: (state, action: PayloadAction<boolean>) => {
       state.hasRecruitedHistorian = action.payload;
     },
     setIsCampaignComplete: (state, action: PayloadAction<boolean>) => {
       state.isCampaignComplete = action.payload;
+    },
+    setIsUncleKidnapped: (state, action: PayloadAction<boolean>) => {
+      state.isUncleKidnapped = action.payload;
     },
   },
 });
@@ -84,7 +89,8 @@ export const {
   setIsFestivalSceneRestored,
   setIsLedgerAssembled,
   setIsCampaignComplete,
-  setHasRecruitedHistorian
+  setHasRecruitedHistorian,
+  setIsUncleKidnapped
 } = progressionSlice.actions;
 
 export default progressionSlice.reducer;

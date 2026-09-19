@@ -56,3 +56,7 @@ body {
   animation: puzzledDoubt 2.2s infinite ease-in-out !important;
 }
 
+
+@keyframes flashWhite { 0% { opacity: 1; } 100% { opacity: 0; } }
+.animate-flashWhite { animation: flashWhite 1s ease-out forwards; pointer-events: none; }
+
