@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import { useAppSelector } from '../../../store/hooks';
+
 import { JournalCategory, JournalEntry } from "../types";
 import { JOURNAL_DATABASE, LEDGER_FRAGMENTS } from "../constants";
 import AccessibleModal from "./AccessibleModal";
@@ -9,16 +11,14 @@ import GameIcon, { GameIconType } from "./GameIcon";
 interface JournalModalProps {
   isOpen: boolean;
   onClose: () => void;
-  unlockedEntryIds: string[];
-  collectedFragmentIds: string[];
 }
 
 export default function JournalModal({
   isOpen,
   onClose,
-  unlockedEntryIds,
-  collectedFragmentIds,
 }: JournalModalProps) {
+    const unlockedEntryIds = useAppSelector(state => state.inventory.unlockedJournalEntries);
+  const collectedFragmentIds = useAppSelector(state => state.inventory.collectedFragments);
   const [activeCategory, setActiveCategory] = useState<JournalCategory>("FOUNDING");
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
 
