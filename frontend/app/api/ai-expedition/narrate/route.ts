@@ -41,6 +41,17 @@ export async function POST(req: NextRequest) {
       cleanText = cleanText.slice(0, 2000);
     }
 
+    // Voice profile selection — validated against Sarvam bulbul:v3 supported speakers
+    // British characters: aarav (authoritative male)
+    // Royal/Senior Indian: arvind (mature male)
+    // Normal Indian: meera (warm female) or anushka
+    // Narrator / default: ratan (measured narrative voice)
+    const VALID_SPEAKERS = new Set(["ratan", "aarav", "anushka", "meera", "arvind", "amol", "diya", "kavya"]);
+    const requestedSpeaker: string = typeof body.speaker === "string" ? body.speaker : "ratan";
+    const speaker = VALID_SPEAKERS.has(requestedSpeaker) ? requestedSpeaker : "ratan";
+
+    console.log(`[SARVAM TTS] speaker="${speaker}" textLen=${cleanText.length}`);
+
     // Request Sarvam AI Bulbul v3 Text-to-Speech API
     const response = await fetch("https://api.sarvam.ai/text-to-speech", {
       method: "POST",
@@ -51,7 +62,7 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         inputs: [cleanText],
         model: "bulbul:v3",
-        speaker: "ratan",
+        speaker,
         target_language_code: "en-IN",
         pace: 0.95
       })

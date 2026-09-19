@@ -9,6 +9,7 @@ import { geminiImageProvider } from "../../services/geminiImageProvider";
 import { updatePlayerPhysics, isWithinProximity, InputState, PlayerPhysicsState, PLASSEY_CHARACTER_SCALE_MULTIPLIER } from "../../engine/physics";
 import { QuestRuntime } from "../../engine/questRuntime";
 import { narrationManager } from "../../services/narrationManager";
+import { sfxManager } from "../../services/sfxManager";
 
 import ExpeditionHUD from "../../components/ExpeditionHUD";
 import NarratorPanel from "../../components/NarratorPanel";
@@ -359,6 +360,7 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
 
     // 2. Cancel previous scene narration IMMEDIATELY before transition
     narrationManager.cancelForSceneTransition(targetSceneId);
+    sfxManager.playTransition();
 
     // Prepare scene intro audio for target scene
     const SCENE_INTROS: Record<string, string> = {
@@ -428,6 +430,7 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
   // Interaction Key Handler
   const handleInteractKey = useCallback(() => {
     if (nearNPCDef) {
+      sfxManager.playDialogueOpen();
       const dialogueTree = nearNPCDef.dialogueTree || [];
       const firstNode = dialogueTree[0];
       const promptText = firstNode ? firstNode.prompt : nearNPCDef.initialDialogue;
@@ -444,6 +447,7 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
       if (nearObjectPlacement.clueId && questRuntimeRef.current && world) {
         const discovered = questRuntimeRef.current.discoverEvidence(nearObjectPlacement.clueId);
         if (discovered) {
+          sfxManager.playDiscover();
           const allDiscovered = questRuntimeRef.current.getDiscoveredEvidence();
           setDiscoveredEvidenceIds(allDiscovered);
           setDiscoveredEvidenceCount(allDiscovered.length);
@@ -461,6 +465,7 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
     }
 
     if (nearExit) {
+      sfxManager.playInteract();
       executeSceneTransition(nearExit);
       return;
     }
@@ -555,6 +560,11 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
         setRenderScale(computed.scale);
         setRenderBobY(computed.bobOffsetY);
         setRenderSwayDeg(computed.swayRotationDeg);
+
+        // Footstep SFX — triggered on each walking frame at rate-limited 4/s
+        if (computed.isWalking) {
+          sfxManager.playFootstep();
+        }
 
         if (questRuntimeRef.current && computed.nextPos) {
           questRuntimeRef.current.setPlayerPos(computed.nextPos);
@@ -739,6 +749,7 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
                 className="absolute h-32 object-contain drop-shadow-[0_6px_10px_rgba(0,0,0,0.85)] pointer-events-auto cursor-pointer select-none transition-transform duration-100"
                 onClick={() => {
                   if (isModalOpen || !npcDef) return;
+                  sfxManager.playDialogueOpen();
                   setActiveNPC(npcDef);
                   setActiveDialogueNodeId(undefined);
                 }}
@@ -810,33 +821,36 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
           );
         })}
 
-        {/* Hero Player Foot Shadow & Sprite */}
-        {playerSpriteUrl && (
-          <>
-            <div
-              style={{
-                left: `${playerPhysics.x}%`,
-                top: `${playerPhysics.y}%`,
-                transform: `translate(-50%, -50%) scale(${renderScale})`,
-                zIndex: Math.floor(playerPhysics.y) + 11
-              }}
-              className="absolute w-16 h-4 rounded-full bg-black/50 blur-[2px] pointer-events-none"
-            />
-            <img
-              src={playerSpriteUrl}
-              alt="Protagonist"
-              style={{
-                left: `${playerPhysics.x}%`,
-                top: `${playerPhysics.y}%`,
-                transform: `translate(-50%, -100%) scale(${renderScale}) scaleX(${playerPhysics.facingLeft ? -1 : 1}) rotate(${renderSwayDeg}deg) translateY(${renderBobY}px)`,
-                transformOrigin: "bottom center",
-                zIndex: Math.floor(playerPhysics.y) + 12,
-                imageRendering: "pixelated"
-              }}
-              className="absolute h-32 object-contain drop-shadow-[0_8px_14px_rgba(0,0,0,0.95)] transition-transform duration-75 pointer-events-none select-none"
-            />
-          </>
-        )}
+        {/* Hero Player Foot Shadow & Sprite — always visible, uses /player.png as canonical fallback */}
+        {(() => {
+          const spriteSrc = playerSpriteUrl || "/player.png";
+          return (
+            <>
+              <div
+                style={{
+                  left: `${playerPhysics.x}%`,
+                  top: `${playerPhysics.y}%`,
+                  transform: `translate(-50%, -50%) scale(${renderScale})`,
+                  zIndex: Math.floor(playerPhysics.y) + 11
+                }}
+                className="absolute w-16 h-4 rounded-full bg-black/50 blur-[2px] pointer-events-none"
+              />
+              <img
+                src={spriteSrc}
+                alt="Protagonist"
+                style={{
+                  left: `${playerPhysics.x}%`,
+                  top: `${playerPhysics.y}%`,
+                  transform: `translate(-50%, -100%) scale(${renderScale}) scaleX(${playerPhysics.facingLeft ? -1 : 1}) rotate(${renderSwayDeg}deg) translateY(${renderBobY}px)`,
+                  transformOrigin: "bottom center",
+                  zIndex: Math.floor(playerPhysics.y) + 12,
+                  imageRendering: "pixelated"
+                }}
+                className="absolute h-32 object-contain drop-shadow-[0_8px_14px_rgba(0,0,0,0.95)] transition-transform duration-75 pointer-events-none select-none"
+              />
+            </>
+          );
+        })()}
       </div>
 
       {/* 2. GAME HUD LAYER (z-100) */}

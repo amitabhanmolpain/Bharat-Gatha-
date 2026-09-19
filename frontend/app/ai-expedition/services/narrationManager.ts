@@ -25,6 +25,49 @@ export interface NarrationOptions {
   type?: NarrationType;
   forceRepeat?: boolean;
   sceneId?: string;
+  speaker?: string;
+}
+
+/**
+ * Character-aware voice profiles for Plassey 1757 expedition.
+ * Maps NPC/character IDs to Sarvam bulbul:v3 speaker voices.
+ *
+ * Voice archetypes:
+ *   British (EIC)  → "aarav"   — authoritative, clipped male
+ *   Royal Indian   → "arvind"  — mature, formal Nawab-court male
+ *   Normal Indian  → "meera"   — warm, everyday Indian female
+ *   Subdued Indian → "anushka" — careful, thoughtful female
+ *   Narrator       → "ratan"   — measured historical narrator (default)
+ */
+const PLASSEY_VOICE_PROFILES: Record<string, string> = {
+  // British East India Company characters
+  char_clive:           "aarav",
+  char_company_guard:   "aarav",
+  char_company_soldier: "aarav",
+  char_camp_clerk:      "aarav",
+  // Royal Indian / Nawab court characters
+  char_siraj:           "arvind",
+  char_jafar:           "arvind",
+  char_court_official:  "arvind",
+  char_political_observer: "arvind",
+  // Normal Indian characters
+  char_bengal_merchant: "meera",
+  char_artisan:         "meera",
+  char_silk_merchant:   "meera",
+  // Subdued / observer Indian characters
+  char_traveller:       "anushka",
+  char_resident:        "anushka",
+  char_narrator_observer: "anushka",
+  // Narrator & fallback
+  narrator:             "ratan"
+};
+
+/**
+ * Returns the Sarvam voice speaker for a given NPC / character ID.
+ * Falls back to "ratan" (narrator) if the character has no specific profile.
+ */
+export function getVoiceForNPC(npcId: string): string {
+  return PLASSEY_VOICE_PROFILES[npcId] || "ratan";
 }
 
 interface QueuedItem {
@@ -34,6 +77,7 @@ interface QueuedItem {
   type: NarrationType;
   sceneId?: string;
   generation: number;
+  speaker: string;
 }
 
 const PRIORITY_MAP: Record<NarrationType, number> = {
@@ -266,10 +310,11 @@ export class NarrationManager {
     // 3. Perform Sarvam fetch request with timing instrumentation
     const fetchPromise = (async () => {
       const tFetchStart = performance.now();
+      const speaker = options.speaker || "ratan";
       const res = await fetch("/api/ai-expedition/narrate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: cleanedText })
+        body: JSON.stringify({ text: cleanedText, speaker })
       });
 
       const tFetchEnd = performance.now();
@@ -418,6 +463,7 @@ export class NarrationManager {
     const type = options.type || "INFO";
     const priority = options.priority !== undefined ? options.priority : PRIORITY_MAP[type];
     const itemSceneId = options.sceneId || this.activeSceneId;
+    const speaker = options.speaker || "ratan";
 
     const newItem: QueuedItem = {
       key,
@@ -425,7 +471,8 @@ export class NarrationManager {
       priority,
       type,
       sceneId: itemSceneId,
-      generation: this.currentGeneration
+      generation: this.currentGeneration,
+      speaker
     };
 
     this.spokenKeys.add(key);
@@ -484,7 +531,7 @@ export class NarrationManager {
         const res = await fetch("/api/ai-expedition/narrate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: item.text }),
+          body: JSON.stringify({ text: item.text, speaker: item.speaker || "ratan" }),
           signal: controller.signal
         });
 
@@ -643,6 +690,20 @@ export class NarrationManager {
       this.setState("IDLE");
       setTimeout(() => this.processQueue(), 50);
     }
+  }
+
+  /**
+   * Convenience method: narrate with a specific NPC/character ID for automatic voice profile selection.
+   * Uses PLASSEY_VOICE_PROFILES to resolve the Sarvam speaker, then delegates to narrate().
+   */
+  public narrateWithVoice(
+    npcId: string,
+    key: string,
+    text: string,
+    opts: Omit<NarrationOptions, "speaker"> = {}
+  ): boolean {
+    const speaker = getVoiceForNPC(npcId);
+    return this.narrate(key, text, { ...opts, speaker });
   }
 
   public stop(): void {
