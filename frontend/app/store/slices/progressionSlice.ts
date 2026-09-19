@@ -14,6 +14,7 @@ interface ProgressionState {
   isFestivalSceneRestored: boolean;
   isLedgerAssembled: boolean;
   isCampaignComplete: boolean;
+  hasRecruitedHistorian: boolean;
 }
 
 const initialState: ProgressionState = {
@@ -28,6 +29,7 @@ const initialState: ProgressionState = {
   isFestivalSceneRestored: false,
   isLedgerAssembled: false,
   isCampaignComplete: false,
+  hasRecruitedHistorian: false,
 };
 
 export const progressionSlice = createSlice({
@@ -62,6 +64,9 @@ export const progressionSlice = createSlice({
     setIsLedgerAssembled: (state, action: PayloadAction<boolean>) => {
       state.isLedgerAssembled = action.payload;
     },
+        setHasRecruitedHistorian: (state, action: PayloadAction<boolean>) => {
+      state.hasRecruitedHistorian = action.payload;
+    },
     setIsCampaignComplete: (state, action: PayloadAction<boolean>) => {
       state.isCampaignComplete = action.payload;
     },
@@ -78,7 +83,9 @@ export const {
   setIsChowkaBaraComplete,
   setIsFestivalSceneRestored,
   setIsLedgerAssembled,
-  setIsCampaignComplete
+  setIsCampaignComplete,
+  setHasRecruitedHistorian
 } = progressionSlice.actions;
 
 export default progressionSlice.reducer;
+// Force Webpack Recompile

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { 
   setStage1Complete, setStage2Complete, setStage3Complete, setStage4Complete,
+  setHasRecruitedHistorian,
   setHasVidyaranyaBlessing, setHasMetVidyaranya, setIsChowkaBaraComplete,
   setIsFestivalSceneRestored, setIsLedgerAssembled, setIsCampaignComplete
 } from '../../store/slices/progressionSlice';
@@ -97,10 +98,16 @@ export default function VijayanagaraGameScreen() {
   const [isJournalFullyUnlocked, setIsJournalFullyUnlocked] = useState(false);
   const hasFinalKeepsake = useAppSelector(state => state.inventory.hasFinalKeepsake);
   const isCampaignComplete = useAppSelector(state => state.progression.isCampaignComplete);
+  const hasRecruitedHistorian = useAppSelector(state => state.progression.hasRecruitedHistorian);
   const [showStage4OpeningBanner, setShowStage4OpeningBanner] = useState(true);
 
   // Journal Unlocks State
   const unlockedJournalEntries = useAppSelector(state => state.inventory.unlockedJournalEntries);
+
+  // Uncle Companion State
+  const [showUncleDialogue, setShowUncleDialogue] = useState(false);
+  const [uncleSpeechText, setUncleSpeechText] = useState("");
+  const [uncleOptions, setUncleOptions] = useState<Array<{ id: number; text: string }>>([]);
 
   // Jolly Bhai Companion State
   const [showJollyDialogue, setShowJollyDialogue] = useState(false);
@@ -180,6 +187,7 @@ export default function VijayanagaraGameScreen() {
     setShowKeeperDialogue(false);
     setShowCoracleNotice(false);
     setShowJollyDialogue(false);
+    setShowUncleDialogue(false);
     setJollyDialogueScene(null);
   }, [scene, stage]);
 
@@ -490,6 +498,12 @@ export default function VijayanagaraGameScreen() {
     playerPos.x >= 20.0 &&
     playerPos.x <= 45.0;
 
+  const unclePos = { x: 18.0, y: 78.0 };
+  const distToUncle = Math.sqrt(
+    Math.pow(playerPos.x - unclePos.x, 2) + Math.pow(playerPos.y - unclePos.y, 2)
+  );
+  const isNearUncle = scene === "anegundi_river_crossing" && distToUncle < 11.0 && !hasRecruitedHistorian;
+
   const coraclePos = { x: 65.0, y: 78.0 };
   const distToCoracle = Math.sqrt(
     Math.pow(playerPos.x - coraclePos.x, 2) + Math.pow(playerPos.y - coraclePos.y, 2)
@@ -673,8 +687,7 @@ export default function VijayanagaraGameScreen() {
 
       // Stage 1 Physics
       if (activeScene === "anegundi_river_crossing") {
-        if (targetX > 54.0 && targetY < 65.0) return false;
-        if (targetX < 24.0 && targetY > 78.0) return false;
+        // Allow unrestricted movement so the player can reach the uncle everywhere
       }
 
       if (activeScene === "anegundi_old_fort") {
@@ -896,6 +909,13 @@ export default function VijayanagaraGameScreen() {
               dispatch(addJournalEntry("harihara_bukka_founding"));
             }
           }
+        } else if (isNearUncle) {
+          setUncleSpeechText("Greetings, traveler. I am also a historian, seeking to understand the tragic fall of such a magnificent empire.");
+          setUncleOptions([
+            { id: 1, text: "Let us seek the truth together." }
+          ]);
+          if (typeof soundFx.playDialogueOpen === "function") soundFx.playDialogueOpen();
+          setShowUncleDialogue(true);
         } else if (isNearCoracle) {
           if (hasVidyaranyaBlessing) {
             triggerTransition(
@@ -1121,6 +1141,7 @@ export default function VijayanagaraGameScreen() {
         setIsJournalOpen(false);
         setShowVidyaranyaDialogue(false);
         setShowJollyDialogue(false);
+    setShowUncleDialogue(false);
         setShowCoracleNotice(false);
         setShowGemAssessorDialogue(false);
         setShowToymakerDialogue(false);
@@ -2178,7 +2199,67 @@ export default function VijayanagaraGameScreen() {
           );
         })()}
 
-        {/* --- OPENING ATMOSPHERE FLOATING BANNERS --- */}
+        
+          
+          {/* --- UNCLE COMPANION NPC --- */}
+          {scene === "anegundi_river_crossing" && !hasRecruitedHistorian && (
+            <div
+              className="absolute transform -translate-x-1/2 -translate-y-[100%] flex flex-col items-center z-10"
+              style={{ left: `${unclePos.x}%`, top: `${unclePos.y}%` }}
+            >
+              {isNearUncle && (
+                <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
+                  <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">E</kbd>
+                  <span>Talk to Friend</span>
+                </div>
+              )}
+              <img
+                src="/uncle_companion.png"
+                alt="Uncle Companion"
+                className="w-24 h-32 object-contain object-bottom drop-shadow-[0_8px_12px_rgba(0,0,0,0.9)] cursor-pointer hover:drop-shadow-[0_8px_15px_rgba(212,163,89,0.8)] transition-all"
+                style={{ imageRendering: "pixelated" }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setUncleSpeechText("Greetings, traveler. I am also a historian, seeking to understand the tragic fall of such a magnificent empire.");
+                  setUncleOptions([
+                    { id: 1, text: "Let us seek the truth together." }
+                  ]);
+                  if (typeof soundFx.playDialogueOpen === "function") soundFx.playDialogueOpen();
+                  setShowUncleDialogue(true);
+                }}
+              />
+            </div>
+          )}
+
+          
+        {/* --- UNCLE COMPANION FOLLOWER --- */}
+        {hasRecruitedHistorian && (() => {
+          const uncleFollowX = facingLeft ? playerPos.x - 12 : playerPos.x + 12;
+          const uncleFollowY = playerPos.y;
+          
+          return (
+            <div
+              className="absolute transform -translate-x-1/2 -translate-y-[100%] flex flex-col items-center pointer-events-auto group z-20"
+              style={{
+                left: `${uncleFollowX}%`,
+                top: `${uncleFollowY}%`,
+                transition: "left 0.8s ease-out, top 0.8s ease-out"
+              }}
+            >
+              <img
+                src="/uncle_companion.png"
+                alt="Historian Companion"
+                className="w-24 h-32 object-contain object-bottom transition-all drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]"
+                style={{
+                  transform: `scaleX(${facingLeft ? -1 : 1})`,
+                  imageRendering: "pixelated"
+                }}
+              />
+            </div>
+          );
+        })()}
+
+          {/* --- OPENING ATMOSPHERE FLOATING BANNERS --- */}
         {showOpeningAtmosphere && scene === "anegundi_river_crossing" && (
           <div className="absolute top-24 left-1/2 transform -translate-x-1/2 z-30 bg-[#1a1714]/95 border-2 border-[#d4a359] px-6 py-3 rounded-2xl shadow-[0_4px_25px_rgba(0,0,0,0.85)] max-w-lg text-center animate-fadeIn">
             <div className="text-[10px] font-mono text-[#d4a359] uppercase tracking-[0.25em] mb-1">
@@ -2917,7 +2998,30 @@ export default function VijayanagaraGameScreen() {
           </div>
         )}
 
-        {/* --- CORACLE FERRY INSPECTION MODAL (STAGE 1 LOCKED STATE) --- */}
+        
+          {/* --- UNCLE DIALOGUE MODAL --- */}
+          {showUncleDialogue && scene === "anegundi_river_crossing" && (
+            <DialoguePanel
+              sceneId="anegundi_river_crossing"
+              currentSceneId={scene}
+              characterName="Historian"
+              characterTitle="Your Loyal Friend"
+              characterId="uncle"
+              dialogueText={uncleSpeechText || "Greetings! I am the local historian."}
+              isSpeaking={true}
+              showInput={true}
+              options={uncleOptions.length > 0 ? uncleOptions : [{ id: 1, text: "Tell me more." }]}
+              onOptionSelect={(opt) => {
+                if (opt.id === 1) {
+                  dispatch(setHasRecruitedHistorian(true));
+                  setShowUncleDialogue(false);
+                }
+              }}
+              onClose={() => setShowUncleDialogue(false)}
+            />
+          )}
+
+          {/* --- CORACLE FERRY INSPECTION MODAL (STAGE 1 LOCKED STATE) --- */}
         {showCoracleNotice && scene === "anegundi_river_crossing" && (
           <DialoguePanel
             sceneId="anegundi_river_crossing"
@@ -2974,11 +3078,13 @@ export default function VijayanagaraGameScreen() {
               if (typeof soundFx.playSelect === "function") soundFx.playSelect();
               stopAllCharacterVoice();
               setShowJollyDialogue(false);
+    setShowUncleDialogue(false);
               setHeardClueScenes((prev) => (prev.includes(scene) ? prev : [...prev, scene]));
             }}
             onClose={() => {
               stopAllCharacterVoice();
               setShowJollyDialogue(false);
+    setShowUncleDialogue(false);
               setHeardClueScenes((prev) => (prev.includes(scene) ? prev : [...prev, scene]));
             }}
           />
@@ -2998,3 +3104,4 @@ const STAGE_NAMES: Record<number, string> = {
   3: "Vittala Temple (c. 1540 AD)",
   4: "Mahanavami Dibba (1565 AD)",
 };
+// Force Webpack Recompile
