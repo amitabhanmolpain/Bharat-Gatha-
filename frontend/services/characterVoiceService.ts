@@ -301,6 +301,17 @@ class CharacterVoiceManager {
       if (lower.includes("jolly bhai") && (lower.includes("born many centuries") || lower.includes("witnessed great wars") || lower.includes("madman"))) {
         return "/jolly_intro.wav";
       }
+      // Jauhar Kund Memorial Solemn Tribute Line
+      if (
+        lower.includes("chittor's darkest hour") ||
+        lower.includes("chittors darkest hour") ||
+        (lower.includes("tragedy of war") && lower.includes("silence and respect")) ||
+        lower.includes("carries the memory of chittor") ||
+        lower.includes("carries a memory of chittor")
+      ) {
+        return "/jolly_jauhar_memorial.wav";
+      }
+
       if (
         lower.includes("mighty fort of chittorgarh") ||
         (lower.includes("rajputana") && lower.includes("buzurg chacha")) ||
