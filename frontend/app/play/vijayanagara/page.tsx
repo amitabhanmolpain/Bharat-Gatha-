@@ -661,8 +661,8 @@ export default function VijayanagaraGameScreen() {
     scene === "hazara_rama_walls" &&
     playerPos.x >= 35.0 &&
     playerPos.x <= 55.0 &&
-    playerPos.y >= 62.0 &&
-    playerPos.y <= 74.0;
+    playerPos.y >= 76.0 &&
+    playerPos.y <= 100.0;
 
   const isNearHazaraRamaExit =
     scene === "hazara_rama_walls" &&
@@ -957,6 +957,14 @@ export default function VijayanagaraGameScreen() {
             "Leaving the Vittala Temple complex and fast-traveling back to the bustling bazaar.",
             "stone_road"
           );
+        } else if (scene === "hazara_rama_walls") {
+          triggerTransition(
+            "stone_chariot_entry",
+            { x: 32.0, y: 65.0 },
+            "Returning to Vittala Temple Courtyard",
+            "Returning to the central stone courtyard of the Stone Chariot.",
+            "temple_walk"
+          );
         }
       }
 
@@ -1159,14 +1167,6 @@ export default function VijayanagaraGameScreen() {
           if (!unlockedJournalEntries.includes("hazara_rama_friezes")) {
             dispatch(addJournalEntry("hazara_rama_friezes"));
           }
-        } else if (isNearHazaraRamaExit) {
-          triggerTransition(
-            "stone_chariot_entry",
-            { x: 32.0, y: 65.0 },
-            "Returning to Vittala Temple Courtyard",
-            "Returning to the central stone courtyard of the Stone Chariot.",
-            "temple_walk"
-          );
         }
 
         // --- STAGE 4 INTERACTIONS ---
@@ -1977,45 +1977,6 @@ export default function VijayanagaraGameScreen() {
                 Hazara Rama
               </span>
             </div>
-
-            {/* Path to Stage 4: Mahanavami Dibba */}
-            {(isStage3Complete || hasSecondLedgerFragment) && (
-              <div
-                className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
-                style={{ left: "80%", top: "82%" }}
-              >
-                {isNearChariotStage4Road && (
-                  <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                    <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">E</kbd>
-                    <span>Path to Mahanavami Dibba (Stage 4)</span>
-                  </div>
-                )}
-                <div className="w-11 h-11 bg-[#3d3328]/90 border-2 border-[#d4a359] rounded-xl flex items-center justify-center shadow-lg">
-                  <GameIcon name="temple" size={20} className="text-[#d4a359]" />
-                </div>
-                <span className="text-[10px] font-serif font-bold text-[#d4a359] bg-[#1a1714]/90 px-2 py-0.5 rounded border border-[#d4a359] mt-1">
-                  Mahanavami Dibba
-                </span>
-              </div>
-            )}
-
-            <div
-              className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
-              style={{ left: "22%", top: "80%" }}
-            >
-              {isNearChariotBazaarReturn && (
-                <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                  <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">E</kbd>
-                  <span>Return to Hampi Bazaar (Stage 2)</span>
-                </div>
-              )}
-              <div className="w-10 h-10 bg-[#2b2520]/80 border border-[#5a4d3f] rounded-xl flex items-center justify-center shadow">
-                <GameIcon name="courtyard" size={18} className="text-[#d6c7b2]" />
-              </div>
-              <span className="text-[10px] font-serif font-bold text-[#d6c7b2] bg-[#1a1714]/80 px-2 py-0.5 rounded border border-[#5a4d3f] mt-1">
-                Hampi Bazaar
-              </span>
-            </div>
           </>
         )}
 
@@ -2758,7 +2719,7 @@ export default function VijayanagaraGameScreen() {
         {/* --- TEMPLE MUSICIAN RAGHAVENDRA DIALOGUE MODAL --- */}
         {showRaghavendraDialogue && scene === "stone_chariot_entry" && (
           <DialoguePanel
-            sceneId="musical_pillars"
+            sceneId="stone_chariot_entry"
             currentSceneId={scene}
             characterName="Maestoso Raghavendra"
             characterTitle="Royal Court Musician & Scholar • Vittala Temple (c. 1540 AD)"
