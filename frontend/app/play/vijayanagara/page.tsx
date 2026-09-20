@@ -613,8 +613,8 @@ export default function VijayanagaraGameScreen() {
     scene === "toymaker_stall" &&
     playerPos.x >= 54.0 &&
     playerPos.x <= 70.0 &&
-    playerPos.y >= 60.0 &&
-    playerPos.y <= 74.0;
+    playerPos.y >= 80.0 &&
+    playerPos.y <= 100.0;
 
   // Stage 3 Proximities
   const isNearChariotMusician =
@@ -937,6 +937,16 @@ export default function VijayanagaraGameScreen() {
         setShowStage2OpeningBanner(false);
         setShowStage3OpeningBanner(false);
         setShowStage4OpeningBanner(false);
+      }
+      // Debug / Fast-Travel Key [F]
+      if (key === "f" && scene === "toymaker_stall" && !isAnyModalOpen) {
+        triggerTransition(
+          "stone_chariot_entry",
+          { x: 50.0, y: 70.0 },
+          "Traveling to Vittala Temple Complex",
+          "Leaving the Toymaker's stall and heading directly to the legendary Stone Chariot in Stage 3.",
+          "stone_road"
+        );
       }
 
       // Handle Interaction Key [E]
@@ -1387,10 +1397,9 @@ export default function VijayanagaraGameScreen() {
     if (!unlockedJournalEntries.includes("missing_ledger_mystery")) {
       dispatch(addJournalEntry("missing_ledger_mystery"));
     }
-    if (hasEncounteredFirstRumor) {
-      dispatch(setStage2Complete(true));
-      setShowStage2VictoryModal(true);
-    }
+    // As requested: Immediately trigger Stage 2 completion / Stage 3 redirect
+    dispatch(setStage2Complete(true));
+    setShowStage2VictoryModal(true);
   };
 
   const handleSelectJournalToy = () => {
@@ -1875,6 +1884,23 @@ export default function VijayanagaraGameScreen() {
               </div>
               <span className="text-[10px] font-serif font-bold text-[#d6c7b2] bg-[#1a1714]/80 px-2 py-0.5 rounded border border-[#5a4d3f] mt-1">
                 Car Street
+              </span>
+            </div>
+
+            {/* --- FAST TRAVEL STAGE 3 HOTSPOT --- */}
+            <div
+              className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
+              style={{ left: "85%", top: "78%" }}
+            >
+              <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-pulse flex items-center gap-1.5 whitespace-nowrap">
+                <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">F</kbd>
+                <span>Travel to Stone Chariot (Stage 3)</span>
+              </div>
+              <div className="w-10 h-10 bg-[#2b2520]/80 border border-[#5a4d3f] rounded-xl flex items-center justify-center shadow">
+                <GameIcon name="courtyard" size={18} className="text-[#d6c7b2]" />
+              </div>
+              <span className="text-[10px] font-serif font-bold text-[#d6c7b2] bg-[#1a1714]/80 px-2 py-0.5 rounded border border-[#5a4d3f] mt-1">
+                Stage 3
               </span>
             </div>
           </>
