@@ -46,7 +46,7 @@ import GameIcon from "./components/GameIcon";
 import HistoricalNPCDialogueCard from "./components/HistoricalNPCDialogueCard";
 
 // Visual scale for player character (enlarged for prominent, clear hero presence)
-const PLAYER_VISUAL_SCALE = 1.7;
+const PLAYER_VISUAL_SCALE = 2.2;
 
 export default function VijayanagaraGameScreen() {
   const dispatch = useAppDispatch();
@@ -104,6 +104,13 @@ export default function VijayanagaraGameScreen() {
 
   // Kidnap Event State
   const [showKidnapCutscene, setShowKidnapCutscene] = useState(false);
+
+  // Guard Animation State
+  const [guardPos, setGuardPos] = useState({ x: 15.0, y: 75.0 });
+  const [guardFacingLeft, setGuardFacingLeft] = useState(false);
+  const [guardFrame, setGuardFrame] = useState(1);
+  const [showGuardDialogue, setShowGuardDialogue] = useState(false);
+  const guardDirectionRef = useRef(1);
 
   // Journal Unlocks State
   const unlockedJournalEntries = useAppSelector(state => state.inventory.unlockedJournalEntries);
@@ -182,6 +189,26 @@ export default function VijayanagaraGameScreen() {
   const [showTalikotaModal, setShowTalikotaModal] = useState(false);
   const [showKeeperDialogue, setShowKeeperDialogue] = useState(false);
   const [showCampaignCompletionModal, setShowCampaignCompletionModal] = useState(false);
+
+  // =========================================================================
+  // GUARD ANIMATION LOOP
+  // =========================================================================
+  useEffect(() => {
+    if (scene !== "toymaker_stall") return;
+    
+    const interval = setInterval(() => {
+      setGuardPos(prev => {
+        let newX = prev.x + (0.5 * guardDirectionRef.current);
+        if (newX >= 35.0) guardDirectionRef.current = -1;
+        if (newX <= 10.0) guardDirectionRef.current = 1;
+        return { ...prev, x: newX };
+      });
+      setGuardFacingLeft(guardDirectionRef.current === -1);
+      setGuardFrame(prev => (prev % 3) + 1);
+    }, 200);
+    
+    return () => clearInterval(interval);
+  }, [scene]);
 
   // =========================================================================
   // GLOBAL DIALOGUE & AUDIO LIFECYCLE CLEANUP ON SCENE / STAGE CHANGE
@@ -680,6 +707,26 @@ export default function VijayanagaraGameScreen() {
     playerPos.x >= 70.0 &&
     playerPos.y >= 78.0;
 
+  // --- BOUNDARY RESCUE EFFECT ---
+  // If the player is loaded outside the walkable area (e.g. after a code update), push them back in.
+  useEffect(() => {
+    const config = SCENE_CONFIGS[scene];
+    if (config) {
+      let newX = playerPos.x;
+      let newY = playerPos.y;
+      let needsRescue = false;
+      
+      if (playerPos.y < config.minY) { newY = config.minY; needsRescue = true; }
+      if (playerPos.y > config.maxY) { newY = config.maxY; needsRescue = true; }
+      if (playerPos.x < config.minX) { newX = config.minX; needsRescue = true; }
+      if (playerPos.x > config.maxX) { newX = config.maxX; needsRescue = true; }
+      
+      if (needsRescue) {
+        setPlayerPos({ x: newX, y: newY });
+      }
+    }
+  }, [scene, playerPos.x, playerPos.y]);
+
   // --- COLLISION BOUNDARY FUNCTION ---
   const checkWalkablePosition = useCallback(
     (targetX: number, targetY: number, activeScene: VijayanagaraSceneType) => {
@@ -728,8 +775,8 @@ export default function VijayanagaraGameScreen() {
       }
 
       if (activeScene === "toymaker_stall") {
-        if (targetX > 60.0 && targetY < 65.0) return false;
-        if (targetX < 32.0 && targetY < 66.0) return false;
+        // The street is now completely open in the new background image.
+        // No internal obstacles needed!
       }
 
       // Stage 3 Physics
@@ -1766,6 +1813,35 @@ export default function VijayanagaraGameScreen() {
         {/* --- STAGE 2 SCENE 3: TOYMAKER STALL HOTSPOTS --- */}
         {scene === "toymaker_stall" && (
           <>
+            {/* --- ANIMATED GUARD --- */}
+            {(() => {
+              const gX = guardPos.x;
+              // Path: Horizontal from x=35 to x=25, then curves back into depth from x=25 to x=10
+              const gY = gX > 25 ? 96 : 80 + ((gX - 10) / 15) * 16;
+              // Scale: 1.0 at foreground (y=96), 0.6 at background (y=80)
+              const gScale = 0.6 + ((gY - 80) / 16) * 0.4;
+              
+              return (
+                <div
+                  className="absolute transform z-10 cursor-pointer hover:brightness-125 transition-all"
+                  style={{ 
+                    left: `${gX}%`, 
+                    top: `${gY}%`, 
+                    transform: `translate(-50%, -100%) scale(${guardFacingLeft ? -gScale : gScale}, ${gScale})` 
+                  }}
+                  onClick={() => setShowGuardDialogue(true)}
+                  title="Speak to Royal Guard"
+                >
+                  <img 
+                    src={`/guard_anim_${guardFrame}.png`} 
+                    alt="Vijayanagara Guard" 
+                    className="w-28 h-auto drop-shadow-[0_10px_8px_rgba(0,0,0,0.5)]" 
+                    style={{ imageRendering: 'pixelated' }}
+                  />
+                </div>
+              );
+            })()}
+
             <div
               className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
               style={{ left: "62%", top: "66%" }}
@@ -2134,7 +2210,7 @@ export default function VijayanagaraGameScreen() {
         {/* --- JOLLY BHAI (GENIE) COMPANION FOLLOWER --- */}
         {(() => {
           const genieX = facingLeft ? playerPos.x + 8.5 : playerPos.x - 8.5;
-          const genieY = playerPos.y - 12.0;
+          const genieY = playerPos.y - 4.0;
 
           // Mode 1: ✨ Glowing (Only for major hidden secrets when nearby)
           const isGlowing = (scene === "toymaker_stall" && !hasFirstLedgerFragment) ||
@@ -2825,6 +2901,22 @@ export default function VijayanagaraGameScreen() {
               }
             }}
             onClose={() => setShowToymakerDialogue(false)}
+          />
+        )}
+
+        {/* --- GUARD DIALOGUE MODAL --- */}
+        {showGuardDialogue && scene === "toymaker_stall" && (
+          <DialoguePanel
+            sceneId="toymaker_stall"
+            currentSceneId={scene}
+            characterName="Royal Guard"
+            characterTitle="EMPIRE SECURITY"
+            dialogueText="Move along, traveler. The streets must be kept clear for the King's inspectors. Stay away from restricted areas."
+            options={[
+              { id: 1, text: "I will stay out of trouble." }
+            ]}
+            onOptionSelect={() => setShowGuardDialogue(false)}
+            onClose={() => setShowGuardDialogue(false)}
           />
         )}
 
