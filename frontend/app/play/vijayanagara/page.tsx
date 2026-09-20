@@ -621,27 +621,28 @@ export default function VijayanagaraGameScreen() {
     scene === "stone_chariot_entry" &&
     playerPos.x >= 28.0 &&
     playerPos.x <= 44.0 &&
-    playerPos.y >= 64.0 &&
-    playerPos.y <= 76.0;
+    playerPos.y >= 78.0 &&
+    playerPos.y <= 100.0;
 
   const isNearChariotMandapaExit =
     scene === "stone_chariot_entry" &&
-    playerPos.x >= 68.0 &&
-    playerPos.y <= 66.0;
+    playerPos.x >= 65.0 &&
+    playerPos.y >= 78.0;
 
   const isNearChariotHazaraRamaExit =
     scene === "stone_chariot_entry" &&
-    playerPos.x <= 26.0 &&
-    playerPos.y <= 62.0;
+    playerPos.x <= 30.0 &&
+    playerPos.x >= 20.0 &&
+    playerPos.y >= 78.0;
 
   const isNearChariotStage4Road =
     scene === "stone_chariot_entry" &&
-    playerPos.x >= 72.0 &&
+    playerPos.x >= 80.0 &&
     playerPos.y >= 78.0;
 
   const isNearChariotBazaarReturn =
     scene === "stone_chariot_entry" &&
-    playerPos.x <= 26.0 &&
+    playerPos.x <= 20.0 &&
     playerPos.y >= 78.0;
 
   const isNearMusicalPillarsCenter =
@@ -939,14 +940,24 @@ export default function VijayanagaraGameScreen() {
         setShowStage4OpeningBanner(false);
       }
       // Debug / Fast-Travel Key [F]
-      if (key === "f" && scene === "toymaker_stall" && !isAnyModalOpen) {
-        triggerTransition(
-          "stone_chariot_entry",
-          { x: 50.0, y: 70.0 },
-          "Traveling to Vittala Temple Complex",
-          "Leaving the Toymaker's stall and heading directly to the legendary Stone Chariot in Stage 3.",
-          "stone_road"
-        );
+      if (key === "f" && !isAnyModalOpen) {
+        if (scene === "toymaker_stall") {
+          triggerTransition(
+            "stone_chariot_entry",
+            { x: 50.0, y: 70.0 },
+            "Traveling to Vittala Temple Complex",
+            "Leaving the Toymaker's stall and heading directly to the legendary Stone Chariot in Stage 3.",
+            "stone_road"
+          );
+        } else if (scene === "stone_chariot_entry") {
+          triggerTransition(
+            "hampi_bazaar_entry",
+            { x: 50.0, y: 80.0 },
+            "Returning to Hampi Bazaar",
+            "Leaving the Vittala Temple complex and fast-traveling back to the bustling bazaar.",
+            "stone_road"
+          );
+        }
       }
 
       // Handle Interaction Key [E]
@@ -2745,7 +2756,7 @@ export default function VijayanagaraGameScreen() {
         )}
 
         {/* --- TEMPLE MUSICIAN RAGHAVENDRA DIALOGUE MODAL --- */}
-        {showRaghavendraDialogue && scene === "musical_pillars" && (
+        {showRaghavendraDialogue && scene === "stone_chariot_entry" && (
           <DialoguePanel
             sceneId="musical_pillars"
             currentSceneId={scene}
