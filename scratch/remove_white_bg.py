@@ -1,3 +1,4 @@
+import sys
 from PIL import Image
 
 def remove_white_bg(input_path, output_path, tolerance=30):
@@ -6,9 +7,7 @@ def remove_white_bg(input_path, output_path, tolerance=30):
     
     new_data = []
     for item in data:
-        # Check if the pixel is close to white
         if item[0] > 255 - tolerance and item[1] > 255 - tolerance and item[2] > 255 - tolerance:
-            # Change white to transparent
             new_data.append((255, 255, 255, 0))
         else:
             new_data.append(item)
@@ -16,8 +15,8 @@ def remove_white_bg(input_path, output_path, tolerance=30):
     img.putdata(new_data)
     img.save(output_path, "PNG")
 
-input_path = r"C:\Users\ami05\.gemini\antigravity-ide\brain\6cc172be-6b2a-4513-8ba8-99b349c01561\wooden_oar_icon_1789838095667.jpg"
-output_path = r"C:\Users\ami05\OneDrive\Desktop\BHARAT_GATHA\frontend\public\wooden_oar.png"
-
-remove_white_bg(input_path, output_path, tolerance=10)
-print("Solid background removed and image saved!")
+if __name__ == "__main__":
+    input_path = sys.argv[1]
+    output_path = sys.argv[2]
+    remove_white_bg(input_path, output_path, tolerance=20)
+    print(f"Solid background removed and image saved to {output_path}")

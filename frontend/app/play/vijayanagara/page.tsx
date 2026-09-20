@@ -141,6 +141,8 @@ export default function VijayanagaraGameScreen() {
   const [showForeignTravelerDialogue, setShowForeignTravelerDialogue] = useState(false);
   const [showStage2VictoryModal, setShowStage2VictoryModal] = useState(false);
   const [travelerTalkFrame, setTravelerTalkFrame] = useState(0);
+  const [merchantAnimFrame, setMerchantAnimFrame] = useState(0);
+  const [activeMerchantBubble, setActiveMerchantBubble] = useState<number | null>(null);
 
   // Animated speaking frame toggling while Portuguese Traveler is speaking
   useEffect(() => {
@@ -155,10 +157,17 @@ export default function VijayanagaraGameScreen() {
       const nextDelay = 100 + Math.random() * 250;
       timeoutId = setTimeout(animateSpeech, nextDelay);
     };
-    timeoutId = setTimeout(animateSpeech, 150);
-    
+    animateSpeech();
     return () => clearTimeout(timeoutId);
   }, [showForeignTravelerDialogue]);
+
+  // General animation loop for merchants
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setMerchantAnimFrame(prev => (prev + 1) % 3);
+    }, 400); // Faster toggle for 3-frame animation
+    return () => clearInterval(interval);
+  }, []);
 
   // Stage 3 Modals
   const [showRaghavendraDialogue, setShowRaghavendraDialogue] = useState(false);
@@ -283,11 +292,8 @@ export default function VijayanagaraGameScreen() {
   useEffect(() => {
     if (!isLoading && stage === 2 && !hasPlayedStage2NarrationRef.current) {
       hasPlayedStage2NarrationRef.current = true;
-      const text =
-        "The year is 1520 AD. Welcome to Hampi Bazaar during the golden age. Search the market and find the missing merchant's ledger.";
       const timer = setTimeout(() => {
         setShowStage2OpeningBanner(false);
-        playNarration(text, { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
       }, 2000);
       return () => clearTimeout(timer);
     }
@@ -1306,10 +1312,6 @@ export default function VijayanagaraGameScreen() {
     if (scene === "hampi_bazaar_entry" && !isUncleKidnapped) {
       kidnapTimer = window.setTimeout(() => {
         setShowKidnapCutscene(true);
-        playNarration(
-          "While you were busy in your business, your friend was kidnapped! Rescue him before he gets killed!", 
-          { speaker: "ratan", pace: 0.88, language_code: "en-IN" }
-        );
       }, 4000);
     }
     return () => clearTimeout(kidnapTimer);
@@ -1512,10 +1514,10 @@ export default function VijayanagaraGameScreen() {
         {/* --- STAGE 2 SCENE 1: HAMPI BAZAAR ENTRY HOTSPOTS --- */}
         {scene === "hampi_bazaar_entry" && (
           <>
-            {/* River Ferry (Next to Golden Area as shown in 2nd image) */}
+            {/* River Ferry (Moved to where Portuguese guy was) */}
             <div
               className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
-              style={{ left: "32%", top: "40%" }}
+              style={{ left: "64%", top: "61%" }}
             >
               {isNearBazaarNorthExit && (
                 <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
@@ -1572,7 +1574,7 @@ export default function VijayanagaraGameScreen() {
             {/* Portuguese Traveler (Senhor Duarte) Animated NPC */}
             <div
               className="absolute transform -translate-x-1/2 -translate-y-[90%] flex flex-col items-center pointer-events-auto cursor-pointer z-20 group"
-              style={{ left: "64%", top: "61%" }}
+              style={{ left: "68%", top: "78%" }}
               onClick={() => {
                 if (typeof soundFx.playDialogueOpen === "function") soundFx.playDialogueOpen();
                 setShowForeignTravelerDialogue(true);
@@ -1651,6 +1653,72 @@ export default function VijayanagaraGameScreen() {
                 </span>
               </div>
             )}
+
+            {/* Shopkeeper 1: Spice Merchant */}
+            <div
+              className="absolute transform -translate-x-1/2 -translate-y-[90%] flex flex-col items-center z-10 pointer-events-auto cursor-pointer group"
+              style={{ left: "28%", top: "96%" }}
+              onClick={() => {
+                setActiveMerchantBubble(1);
+                setTimeout(() => setActiveMerchantBubble(null), 3000);
+              }}
+            >
+              {activeMerchantBubble === 1 && (
+                <div className="absolute -top-12 bg-amber-50 border-2 border-amber-600 text-amber-900 px-3 py-1 rounded-xl text-xs font-serif font-bold whitespace-nowrap shadow-lg animate-bounce z-30">
+                  "Finest spices from Kerala! Come take a look!"
+                </div>
+              )}
+              <img
+                src={merchantAnimFrame === 0 ? "/merchant_1.png" : merchantAnimFrame === 1 ? "/merchant_1_anim1.png" : "/merchant_1_anim2.png"}
+                alt="Spice Merchant"
+                className="w-36 h-52 md:w-44 md:h-64 object-contain object-bottom drop-shadow-[0_8px_16px_rgba(0,0,0,0.85)] group-hover:scale-105 transition-transform"
+                style={{ imageRendering: "pixelated" }}
+              />
+            </div>
+
+            {/* Shopkeeper 2: Jewelry Merchant */}
+            <div
+              className="absolute transform -translate-x-1/2 -translate-y-[90%] flex flex-col items-center z-10 pointer-events-auto cursor-pointer group"
+              style={{ left: "48%", top: "88%" }}
+              onClick={() => {
+                setActiveMerchantBubble(2);
+                setTimeout(() => setActiveMerchantBubble(null), 3000);
+              }}
+            >
+              {activeMerchantBubble === 2 && (
+                <div className="absolute -top-12 bg-emerald-50 border-2 border-emerald-600 text-emerald-900 px-3 py-1 rounded-xl text-xs font-serif font-bold whitespace-nowrap shadow-lg animate-bounce z-30">
+                  "Precious gems from Golconda! Only for the wealthy!"
+                </div>
+              )}
+              <img
+                src={merchantAnimFrame === 0 ? "/merchant_2.png" : merchantAnimFrame === 1 ? "/merchant_2_anim1.png" : "/merchant_2_anim2.png"}
+                alt="Jewelry Merchant"
+                className="w-36 h-52 md:w-44 md:h-64 object-contain object-bottom drop-shadow-[0_8px_16px_rgba(0,0,0,0.85)] group-hover:scale-105 transition-transform"
+                style={{ imageRendering: "pixelated" }}
+              />
+            </div>
+
+            {/* Shopkeeper 3: Fabric Merchant */}
+            <div
+              className="absolute transform -translate-x-1/2 -translate-y-[90%] flex flex-col items-center z-10 pointer-events-auto cursor-pointer group"
+              style={{ left: "78%", top: "96%" }}
+              onClick={() => {
+                setActiveMerchantBubble(3);
+                setTimeout(() => setActiveMerchantBubble(null), 3000);
+              }}
+            >
+              {activeMerchantBubble === 3 && (
+                <div className="absolute -top-12 bg-rose-50 border-2 border-rose-600 text-rose-900 px-3 py-1 rounded-xl text-xs font-serif font-bold whitespace-nowrap shadow-lg animate-bounce z-30">
+                  "Luxurious silks from Kanchipuram! Feel the texture!"
+                </div>
+              )}
+              <img
+                src={merchantAnimFrame === 0 ? "/merchant_3.png" : merchantAnimFrame === 1 ? "/merchant_3_anim1.png" : "/merchant_3_anim2.png"}
+                alt="Fabric Merchant"
+                className="w-36 h-52 md:w-44 md:h-64 object-contain object-bottom drop-shadow-[0_8px_16px_rgba(0,0,0,0.85)] group-hover:scale-105 transition-transform"
+                style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }}
+              />
+            </div>
           </>
         )}
 
@@ -2486,6 +2554,7 @@ export default function VijayanagaraGameScreen() {
             <div className="relative z-10 flex flex-col items-center max-w-4xl mx-auto w-full">
               <div className="text-[#e5b56a] uppercase tracking-[0.3em] font-mono text-sm font-bold mb-4 drop-shadow-[0_2px_4px_rgba(0,0,0,1)]">
                 Urgent Warning
+                <audio autoPlay src="/kidnap_warning_sarvam.wav" />
               </div>
               <h2 className="text-3xl md:text-5xl font-serif font-bold text-white mb-6 drop-shadow-[0_4px_10px_rgba(0,0,0,1)]">
                 While you were busy in your business, your friend was kidnapped!
@@ -2499,6 +2568,11 @@ export default function VijayanagaraGameScreen() {
                   setShowKidnapCutscene(false);
                   stopNarration();
                   dispatch(setIsUncleKidnapped(true));
+                  
+                  playNarration(
+                    "Find your friend. Ask the traders out here, they might give you a clue.",
+                    { audioUrl: "/post_kidnap_hint_sarvam.wav" }
+                  );
                 }}
                 className="bg-[#f0c05a] hover:bg-[#ffcf6a] text-black font-sans font-bold px-12 py-3 rounded-lg shadow-[0_4px_15px_rgba(0,0,0,0.5)] transition-all cursor-pointer text-sm uppercase tracking-wider hover:scale-105"
               >
@@ -2770,7 +2844,8 @@ export default function VijayanagaraGameScreen() {
               nearby_monuments: "Virupaksha Temple",
               historical_events: "Portuguese horse trade with Vijayanagara"
             }}
-            dialogueText="Bom dia, senhor! In all my voyages across Venice, Cairo, and Lisbon, I have never seen a city of such boundless prosperity. Portugal trades war horses with Vijayanagara for fine silks and spices. Royal scribes keep detailed records of every trade. I heard an elder merchant hid secret scrolls within artisan wares across the city to protect historical knowledge."
+            dialogueText="Bom dia, senhor! In all my voyages across Venice, Cairo, and Lisbon, I have never seen a city of such boundless prosperity. By the way, I saw a suspicious person dragging an older man towards the Toy Street. You might want to check there!"
+            audioUrl="/senhor_duarte_hint.wav"
             isSpeaking={true}
             options={[
               { id: 1, text: "Farewell, Duarte" }
