@@ -71,6 +71,15 @@ CHARACTER_VOICE_PROFILES = {
         "fallback_pace": 0.78,
         "language_code": "en-IN"
     },
+    "uncle": {
+        "id": "uncle",
+        "name": "Historian",
+        "role": "Historian Companion",
+        "description": "An old man Indian voice. He speaks slowly and clearly in Indian English with a lot of historical knowledge.",
+        "fallback_speaker": "ratan",
+        "fallback_pace": 0.85,
+        "language_code": "en-IN"
+    },
     "chacha": {
         "id": "chacha",
         "name": "Buzurg Chacha",
@@ -192,6 +201,8 @@ def get_character_profile(character_id: str) -> dict:
     key = (character_id or "jolly").lower().strip()
     if "chacha" in key or "buzurg" in key:
         return CHARACTER_VOICE_PROFILES["chacha"]
+    if "uncle" in key or "historian" in key:
+        return CHARACTER_VOICE_PROFILES["uncle"]
     if "guard" in key or "sentry" in key or "soldier" in key:
         return CHARACTER_VOICE_PROFILES["guard"]
     # Explicit match for Master Kallappa (elderly artisan)

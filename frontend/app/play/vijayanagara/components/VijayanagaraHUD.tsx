@@ -157,33 +157,7 @@ export default function VijayanagaraHUD({
         </div>
       </div>
 
-      {/* Bottom Hint Banner */}
-      <div className="flex flex-wrap items-center justify-between gap-3 text-[11px] font-mono text-[#a89985] bg-[#1a1714]/90 backdrop-blur-md border border-[#5a4d3f] px-4 py-2 rounded-xl max-w-2xl mx-auto pointer-events-auto shadow-[3px_3px_0_0_rgba(0,0,0,0.8)]">
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-1.5 text-[#d4a359] font-bold tracking-wider">
-            <GameIcon name="controls" size={14} className="text-[#d4a359]" />
-            <span>CONTROLS</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#25201b] border border-[#5a4d3f] text-[#eedfc8] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.7)]">W</kbd>
-            <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#25201b] border border-[#5a4d3f] text-[#eedfc8] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.7)]">A</kbd>
-            <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#25201b] border border-[#5a4d3f] text-[#eedfc8] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.7)]">S</kbd>
-            <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#25201b] border border-[#5a4d3f] text-[#eedfc8] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.7)]">D</kbd>
-          </div>
-          <span className="text-[#7d7060]">or</span>
-          <div className="flex items-center gap-1">
-            <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#25201b] border border-[#5a4d3f] text-[#eedfc8] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.7)]">↑</kbd>
-            <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#25201b] border border-[#5a4d3f] text-[#eedfc8] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.7)]">←</kbd>
-            <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#25201b] border border-[#5a4d3f] text-[#eedfc8] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.7)]">↓</kbd>
-            <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#25201b] border border-[#5a4d3f] text-[#eedfc8] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.7)]">→</kbd>
-          </div>
-          <span>to Walk</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <kbd className="inline-flex items-center justify-center min-w-[20px] h-[20px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1.5 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">E</kbd>
-          <span className="text-[#eedfc8] font-serif font-semibold">Interact & Speak</span>
-        </div>
-      </div>
+
     </div>
   );
 }
