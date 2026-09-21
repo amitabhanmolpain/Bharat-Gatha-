@@ -74,6 +74,8 @@ export default function VijayanagaraGameScreen() {
   const [hasMusicianWarning, setHasMusicianWarning] = useState(false);
   const [isStage3Complete, setIsStage3Complete] = useState(false);
   const [showStage3OpeningBanner, setShowStage3OpeningBanner] = useState(true);
+  const [stage3Countdown, setStage3Countdown] = useState<number | null>(null);
+  const [showCaughtByGuardsModal, setShowCaughtByGuardsModal] = useState(false);
 
   // Stage 4 Story & Climax State
   const [isFestivalSceneRestored, setIsFestivalSceneRestored] = useState(false);
@@ -255,10 +257,20 @@ export default function VijayanagaraGameScreen() {
     if (!isLoading && stage === 3 && !hasPlayedStage3NarrationRef.current) {
       hasPlayedStage3NarrationRef.current = true;
       const text =
-        "The year is 1540 AD. You stand before the Vittala Temple. Explore the Stone Chariot and listen to the musical pillars.";
-      const timer = setTimeout(() => {
+        "Welcome to the vittala temple in raja krishnaverya time the golden period of vijaynagra now find out all the ledgers in this time period before the guards catch you";
+      const timer = setTimeout(async () => {
         setShowStage3OpeningBanner(false);
-        playNarration(text, { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
+        const audio = await playNarration(text, { 
+          speaker: "ratan", 
+          pace: 0.88, 
+          language_code: "en-IN",
+          audioUrl: "/audio_cache/stage3_opening_narration.wav"
+        });
+        if (audio) {
+          audio.addEventListener("ended", () => {
+            setStage3Countdown(120);
+          });
+        }
       }, 2000);
       return () => clearTimeout(timer);
     }
@@ -277,6 +289,30 @@ export default function VijayanagaraGameScreen() {
       return () => clearTimeout(timer);
     }
   }, [isLoading, stage]);
+
+  // Stage 3 Countdown Timer Logic
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (stage3Countdown !== null && stage3Countdown > 0 && !showCaughtByGuardsModal && stage === 3) {
+      if (hasSecondLedgerFragment) {
+        // Player found the ledger! Stop the timer.
+        setStage3Countdown(null);
+      } else {
+        interval = setInterval(() => {
+          setStage3Countdown((prev) => {
+            if (prev === null) return null;
+            if (prev <= 1) {
+              clearInterval(interval);
+              setShowCaughtByGuardsModal(true);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      }
+    }
+    return () => clearInterval(interval);
+  }, [stage3Countdown, showCaughtByGuardsModal, stage, hasSecondLedgerFragment]);
 
   // Sage Vidyaranya Dialogue Narration (1336 AD Sringeri Scholar)
   useEffect(() => {
@@ -1574,6 +1610,30 @@ export default function VijayanagaraGameScreen() {
         {/* --- STAGE 2 SCENE 3: TOYMAKER STALL HOTSPOTS --- */}
         {scene === "toymaker_stall" && (
           <>
+            {/* Animated Shopkeeper on the right stall */}
+            <div
+              className="absolute pointer-events-none z-10"
+              style={{ 
+                left: "82%", 
+                top: "85%", 
+                transform: "translate(-50%, -100%)",
+                animation: "wiggle_shopkeeper 3s ease-in-out infinite",
+                transformOrigin: "bottom center"
+              }}
+            >
+              <style>{`
+                @keyframes wiggle_shopkeeper {
+                  0%, 100% { transform: translate(-50%, -100%) rotate(-1deg) scale(1); }
+                  50% { transform: translate(-50%, -100%) rotate(1deg) scale(1.03); }
+                }
+              `}</style>
+              <img 
+                src="/trader_pots_transparent.png" 
+                alt="Shopkeeper" 
+                className="w-40 h-auto drop-shadow-xl" 
+              />
+            </div>
+
             <div
               className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
               style={{ left: "62%", top: "66%" }}
@@ -1615,6 +1675,40 @@ export default function VijayanagaraGameScreen() {
         {/* --- STAGE 3 SCENE 1: VITTALA TEMPLE STONE CHARIOT HOTSPOTS --- */}
         {scene === "stone_chariot_entry" && (
           <>
+            <style>{`
+              @keyframes patrol_guard_1 {
+                0% { left: -15%; transform: translate(-50%, -100%) scaleX(1); }
+                45% { left: 115%; transform: translate(-50%, -100%) scaleX(1); }
+                50% { left: 115%; transform: translate(-50%, -100%) scaleX(-1); }
+                95% { left: -15%; transform: translate(-50%, -100%) scaleX(-1); }
+                100% { left: -15%; transform: translate(-50%, -100%) scaleX(1); }
+              }
+              @keyframes patrol_guard_2 {
+                0% { left: 115%; transform: translate(-50%, -100%) scaleX(-1); }
+                45% { left: -15%; transform: translate(-50%, -100%) scaleX(-1); }
+                50% { left: -15%; transform: translate(-50%, -100%) scaleX(1); }
+                95% { left: 115%; transform: translate(-50%, -100%) scaleX(1); }
+                100% { left: 115%; transform: translate(-50%, -100%) scaleX(-1); }
+              }
+              @keyframes walk_bob {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(-6px); }
+              }
+            `}</style>
+
+            {/* Animated Patrolling Guards */}
+            <div
+              className="absolute pointer-events-none z-[5]"
+              style={{ top: "82%", animation: "patrol_guard_1 22s linear infinite" }}
+            >
+              <img src="/guard.png" alt="Patrol Guard" className="w-24 h-24 object-contain filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)]" style={{ imageRendering: "pixelated", animation: "walk_bob 0.5s ease-in-out infinite" }} />
+            </div>
+            <div
+              className="absolute pointer-events-none z-[12]"
+              style={{ top: "92%", animation: "patrol_guard_2 28s linear infinite" }}
+            >
+              <img src="/rajasthan-guard-v2.png" alt="Patrol Guard" className="w-28 h-28 object-contain filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)]" style={{ imageRendering: "pixelated", animation: "walk_bob 0.6s ease-in-out infinite" }} />
+            </div>
             <div
               className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
               style={{ left: "35%", top: "70%" }}
@@ -1941,12 +2035,23 @@ export default function VijayanagaraGameScreen() {
 
         {/* --- JOLLY BHAI (GENIE) COMPANION FOLLOWER --- */}
         {(() => {
-          const genieX = facingLeft ? playerPos.x + 8.5 : playerPos.x - 8.5;
-          const genieY = playerPos.y - 12.0;
+          let genieX = facingLeft ? playerPos.x + 8.5 : playerPos.x - 8.5;
+          let genieY = playerPos.y - 12.0;
 
           // Mode 1: ✨ Glowing (Only for major hidden secrets when nearby)
           const isGlowing = (scene === "toymaker_stall" && !hasFirstLedgerFragment) ||
                             (scene === "musical_pillars" && !isMusicalPillarsComplete);
+
+          // Move the Genie specifically to the hidden secret location to point it out clearly!
+          if (isGlowing) {
+            if (scene === "toymaker_stall") {
+              genieX = 62.0;
+              genieY = 58.0; // Directly above Master Kallappa and the toys
+            } else if (scene === "musical_pillars") {
+              genieX = 50.0;
+              genieY = 55.0; // Center of musical pillars
+            }
+          }
 
           // Mode 2: 💥 Clue Alert (Stops once clue is heard or solved)
           const hasHeardThisClue = heardClueScenes.includes(scene);
@@ -2828,6 +2933,47 @@ export default function VijayanagaraGameScreen() {
                   🏰 Dashboard
                 </Link>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* --- STAGE 3 COUNTDOWN TIMER UI --- */}
+        {stage3Countdown !== null && stage3Countdown > 0 && stage === 3 && (
+          <div className="absolute top-20 right-6 bg-black/80 border-2 border-red-500 rounded-lg px-4 py-2 flex items-center gap-2 z-40 animate-pulse shadow-[0_0_15px_rgba(220,38,38,0.5)]">
+            <span className="text-xl">⏳</span>
+            <div className="flex flex-col">
+              <span className="text-[9px] uppercase font-bold text-red-500 tracking-wider">Guards Patrol</span>
+              <span className="text-xl font-mono text-white font-bold leading-none">
+                {Math.floor(stage3Countdown / 60)}:{(stage3Countdown % 60).toString().padStart(2, '0')}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* --- CAUGHT BY GUARDS MODAL --- */}
+        {showCaughtByGuardsModal && (
+          <div className="absolute inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 z-50 pointer-events-auto">
+            <div className="bg-[#1a0f0f] border-2 border-red-700 rounded-2xl p-6 max-w-md w-full shadow-[0_0_50px_rgba(220,38,38,0.5)]">
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-red-950 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-red-700">
+                  <span className="text-3xl">⚔️</span>
+                </div>
+                <h3 className="text-2xl font-black text-red-500 mb-2">CAUGHT BY PATROL</h3>
+                <p className="text-sm text-red-200/80 leading-relaxed">
+                  You took too long to find the ledger fragment. The royal guards have discovered you trespassing in the sacred courtyard!
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  soundFx.playKeyboardClick();
+                  setShowCaughtByGuardsModal(false);
+                  setStage3Countdown(120);
+                  setPlayerPos({ x: 35.0, y: 70.0 });
+                }}
+                className="w-full bg-red-700 hover:bg-red-600 text-white font-bold py-3 rounded-lg border-2 border-red-900 transition-colors cursor-pointer"
+              >
+                Try Again
+              </button>
             </div>
           </div>
         )}

@@ -7,7 +7,7 @@ from pathlib import Path
 
 # Add backend service to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../backend/app/services")))
-from parler_tts_service import CHARACTER_VOICE_PROFILES, clean_text_for_speech
+from parler_tts_service import CHARACTER_VOICE_PROFILES, clean_text_for_speech  # type: ignore
 
 PARLER_SPACE_BASE = "https://ai4bharat-indic-parler-tts.hf.space"
 TARGET_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../frontend/public/audio_cache"))
@@ -15,29 +15,9 @@ os.makedirs(TARGET_DIR, exist_ok=True)
 
 ITEMS = [
     {
-        "filename": "kallappa_primary.wav",
-        "character": "kallappa",
-        "text": "Namaskara! Every toy on these shelves is hand-carved from seasoned wood and coated with natural mineral lacquer from Kinhal."
-    },
-    {
-        "filename": "kallappa_full.wav",
-        "character": "kallappa",
-        "text": "Namaskara! Every toy on these shelves is hand-carved from seasoned wood and coated with natural mineral lacquer from Kinhal. You ask of Merchant Ramayya? Yes, he was my dearest childhood friend. Shortly before he vanished, he spent hours in my workshop, admiring these very pieces and carving intricate marks into their bases. Feel free to inspect them closely upon my workbench!"
-    },
-    {
-        "filename": "somappa_gems.wav",
-        "character": "somappa",
-        "text": "Welcome, traveler! Nowhere under heaven will you behold wealth like ours. We measure diamonds from Kollur, pearls from the Persian Gulf, and Ceylon rubies by the dry measure like sesame seeds! Ask me what you wish of our commerce, or of the strange rumors stirring our market colonnades."
-    },
-    {
-        "filename": "somappa_rumor.wav",
-        "character": "somappa",
-        "text": "Ramayya the Scribe-Merchant managed royal accounts. He feared our records might be lost one day, so he hid three ledger fragments. He left the first clue with his friend Master Kallappa, the toymaker."
-    },
-    {
-        "filename": "somappa_merchant.wav",
-        "character": "somappa",
-        "text": "Ramayya believed gold and stone fade over time, but written records and culture last forever. Inspect Kallappa's wooden toys to learn more."
+        "filename": "stage3_opening_narration.wav",
+        "character": "narrator",
+        "text": "Welcome to the vittala temple in raja krishnaverya time the golden period of vijaynagra now find out all the ledgers in this time period before the guards catch you"
     }
 ]
 

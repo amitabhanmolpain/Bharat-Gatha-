@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../backend/app/services")))
-from parler_tts_service import CHARACTER_VOICE_PROFILES, clean_text_for_speech
+from parler_tts_service import CHARACTER_VOICE_PROFILES, clean_text_for_speech  # type: ignore
 
 PARLER_SPACE_BASE = "https://ai4bharat-indic-parler-tts.hf.space"
 TARGET_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../frontend/public/audio_cache"))

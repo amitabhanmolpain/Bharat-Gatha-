@@ -133,7 +133,7 @@ export const SCENE_CONFIGS: Record<VijayanagaraSceneType, SceneMeta> = {
     title: "Kinhal Artisan Toymaker Stall",
     era: "c. 1520 AD",
     subtitle: "Hand-lacquered wooden toys and historical craft figurines",
-    backgroundImage: "/bg-vijayanagara-toymaker.jpg",
+    backgroundImage: "/bg-vijayanagara-toymaker-clean.jpg",
     defaultObjective: "Inspect Master Kallappa's wooden toys for secret compartments and markings.",
     minX: 22.0,
     maxX: 78.0,

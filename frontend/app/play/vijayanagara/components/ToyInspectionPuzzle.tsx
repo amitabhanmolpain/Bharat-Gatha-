@@ -311,17 +311,36 @@ export default function ToyInspectionPuzzle({
           <div 
             className={`my-6 transition-all duration-700 ease-in-out flex items-center justify-center ${isRotating ? "drop-shadow-[0_15px_25px_rgba(0,0,0,0.9)]" : "drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)]"}`}
             style={{ 
-              transform: `scale(${isRotating ? 0.98 : 1}) rotateX(${isViewingUnderside ? 75 : 0}deg) rotateY(${rotationAngle}deg)`,
+              transform: `scale(${isRotating ? 0.98 : 1}) rotateX(${isViewingUnderside ? 75 : 0}deg) rotateY(${rotationAngle * 2}deg)`,
               transformStyle: 'preserve-3d',
               transformOrigin: 'center center'
             }}
           >
-            {currentToy.id === "chariot" ? (
-              <ChariotSvg className="w-32 h-32 text-[#c89a50]" />
-            ) : currentToy.id === "elephant" ? (
-              <ElephantSvg className="w-32 h-32 text-[#c89a50]" />
-            ) : currentToy.id === "doll" ? (
-              <DollSvg className="w-32 h-32 text-[#c89a50]" />
+            {currentToy.id === "chariot" || currentToy.id === "elephant" || currentToy.id === "doll" ? (
+              <div className="relative w-48 h-48" style={{ transformStyle: 'preserve-3d' }}>
+                {/* Front Face */}
+                <img 
+                  src={`/toys/toy_${currentToy.id}.jpg`} 
+                  alt={currentToy.name} 
+                  className="absolute inset-0 w-48 h-48 object-cover border-2 border-[#141210] shadow-2xl" 
+                  style={{ transform: 'translateZ(6px)' }} 
+                />
+                {/* Back Face (Flipped) */}
+                <img 
+                  src={`/toys/toy_${currentToy.id}.jpg`} 
+                  alt={currentToy.name} 
+                  className="absolute inset-0 w-48 h-48 object-cover border-2 border-[#141210] shadow-2xl" 
+                  style={{ transform: 'translateZ(-6px) rotateY(180deg) scaleX(-1)' }} 
+                />
+                {/* Left Face (Edge Thickness) */}
+                <div className="absolute top-0 left-0 h-48 bg-[#2e261f] border-y-2 border-l-2 border-[#141210]" style={{ width: '12px', transform: 'rotateY(-90deg) translateZ(6px)', transformOrigin: 'left' }} />
+                {/* Right Face (Edge Thickness) */}
+                <div className="absolute top-0 right-0 h-48 bg-[#1e1914] border-y-2 border-r-2 border-[#141210]" style={{ width: '12px', transform: 'rotateY(90deg) translateZ(6px)', transformOrigin: 'right' }} />
+                {/* Top Face */}
+                <div className="absolute top-0 left-0 w-48 bg-[#3d3328] border-x-2 border-t-2 border-[#141210]" style={{ height: '12px', transform: 'rotateX(90deg) translateZ(6px)', transformOrigin: 'top' }} />
+                {/* Bottom Face */}
+                <div className="absolute bottom-0 left-0 w-48 bg-[#0a0807] border-x-2 border-b-2 border-[#141210]" style={{ height: '12px', transform: 'rotateX(-90deg) translateZ(6px)', transformOrigin: 'bottom' }} />
+              </div>
             ) : (
               <GameIcon name={currentToy.icon} size={80} className="text-[#c89a50]" />
             )}
