@@ -27,4 +27,4 @@ env/
 frontend/public/audio_cache/
 
 # Data folders
-data/
+/data/
