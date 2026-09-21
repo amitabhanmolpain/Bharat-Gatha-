@@ -3077,8 +3077,7 @@ export default function VijayanagaraGameScreen() {
               <img 
                 src="/unlock_bg.png" 
                 alt="Unlock Burst" 
-                className="absolute inset-0 w-[150%] h-[150%] object-cover opacity-90" 
-                style={{ top: '-25%', left: '-25%' }}
+                className="absolute inset-0 w-full h-full object-cover opacity-90 scale-150 pointer-events-none" 
               />
               
               {/* Content */}

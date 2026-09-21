@@ -25,3 +25,6 @@ env/
 # Audio cache & OS files
 .DS_Store
 frontend/public/audio_cache/
+
+# Data folders
+/data/
