@@ -221,7 +221,7 @@ export default function ToyInspectionPuzzle({
     if (isLatchOpened) return;
     if (typeof soundFx.playKeyboardClick === "function") soundFx.playKeyboardClick(1.2);
     setIsLatchOpened(true);
-    const msg = "Click! The secret base slides open to reveal a tightly rolled palm-leaf folio bearing the scribe's seal!";
+    const msg = "the kidnapper left this behind";
     setStatusMessage(msg);
     triggerVoice(msg);
     onDiscoverFragment();

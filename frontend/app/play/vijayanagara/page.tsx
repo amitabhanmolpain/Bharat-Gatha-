@@ -1386,6 +1386,21 @@ export default function VijayanagaraGameScreen() {
         {/* --- STAGE 1 SCENE 1: ANEGUNDI RIVER CROSSING HOTSPOTS --- */}
         {scene === "anegundi_river_crossing" && (
           <>
+            {/* Realistic Sailing Boat in River */}
+            <div className="absolute top-[38%] left-0 pointer-events-none z-0 animate-river-sail opacity-90 drop-shadow-2xl">
+              <div className="animate-river-bob">
+                <img 
+                  src="/sprite-egyptian-boat-1.png" 
+                  alt="Sailing Boat" 
+                  className="w-24 h-auto object-contain"
+                  style={{ 
+                    imageRendering: "pixelated",
+                    filter: "sepia(0.8) hue-rotate(-45deg) brightness(0.55) contrast(1.3) saturate(1.5)"
+                  }}
+                />
+              </div>
+            </div>
+
             <div
               className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
               style={{ left: "32%", top: "56%" }}
