@@ -504,6 +504,7 @@ function IndusValleyGameComponent() {
   const [hasFirstRelicChertWeight, setHasFirstRelicChertWeight] = useState(INITIAL_INDUS_STATE.hasFirstRelicChertWeight);
   const [showOverseerDialogue, setShowOverseerDialogue] = useState(false);
   const [showSealUnlockModal, setShowSealUnlockModal] = useState(false);
+  const [showToyUnlockModal, setShowToyUnlockModal] = useState(false);
   const [showForeignTradersModal, setShowForeignTradersModal] = useState(false);
   const [hasInspectedForeignTraders, setHasInspectedForeignTraders] = useState(false);
 
@@ -1700,6 +1701,7 @@ function IndusValleyGameComponent() {
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
+        showToyUnlockModal ||
         showSealUnlockModal ||
         showOverseerDialogue ||
         showForeignTradersModal ||
@@ -2862,6 +2864,8 @@ function IndusValleyGameComponent() {
         {/* Stage 1.55: Central Domestic Courtyard Canvas Scene       */}
         {/* ========================================================= */}
 
+
+
         {/* Stage 1.55: House Courtyard -> Exit to Street Grid / Great Bath Trigger */}
         {scene === "house_courtyard" && isNearCourtyardExit && (
           <div
@@ -3101,6 +3105,26 @@ function IndusValleyGameComponent() {
         {/* ========================================================= */}
         {/* Stage 1.6: Harappan Residence Interior Canvas Scene       */}
         {/* ========================================================= */}
+
+        {/* Stage 1.6: Hidden Terracotta Toy Prop in Interior */}
+        {scene === "house_interior" && (
+          <div
+            className="absolute z-10 pointer-events-auto cursor-pointer group"
+            style={{ left: "82%", top: "68%" }}
+            title="Terracotta Toy Cart"
+            onClick={() => {
+              soundFx.playItemUnlock();
+              setShowToyUnlockModal(true);
+            }}
+          >
+            <img
+              src="/indus_terracotta_toy.png"
+              alt="Terracotta Toy"
+              className="w-10 h-10 object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)] transform -translate-x-1/2 -translate-y-1/2 hover:scale-125 transition-transform"
+              style={{ imageRendering: 'pixelated' }}
+            />
+          </div>
+        )}
 
         {/* Stage 1.6: House Interior -> Return to Courtyard Trigger */}
         {scene === "house_interior" && isNearHouseExit && (
@@ -4616,6 +4640,49 @@ function IndusValleyGameComponent() {
         onComplete={handleSealComplete}
         alreadySolved={isSealPuzzleSolved}
       />
+
+      {/* --- TOY UNLOCK MODAL --- */}
+      {showToyUnlockModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md animate-fadeIn">
+          <div className="absolute inset-0 bg-white animate-flashWhite z-10" />
+          
+          <div className="relative aspect-video w-[90vw] max-w-5xl rounded-2xl border-4 border-[#d4a359] overflow-hidden shadow-[0_0_80px_rgba(212,163,89,0.7)] flex flex-col items-center justify-center z-20">
+            {/* Background Burst */}
+            <img 
+              src="/unlock_bg.png" 
+              alt="Unlock Burst" 
+              className="absolute w-full h-full object-cover opacity-90 scale-150" 
+            />
+            
+            {/* Content */}
+            <div className="relative z-10 flex flex-col items-center justify-center w-full h-full p-8 bg-black/20">
+              <h2 className="text-3xl md:text-5xl font-serif font-bold text-white mb-6 drop-shadow-[0_4px_10px_rgba(0,0,0,0.9)] uppercase tracking-widest text-center">
+                Unlocked the Terracotta Toy Cart
+              </h2>
+              <img 
+                src="/indus_terracotta_toy.png" 
+                alt="Terracotta Toy" 
+                className="w-48 h-48 md:w-64 md:h-64 object-contain drop-shadow-[0_15px_30px_rgba(0,0,0,0.9)] animate-bounce hover:scale-110 transition-transform duration-500 mb-6" 
+                style={{ imageRendering: 'pixelated' }}
+              />
+              
+              <div className="bg-[#1b1510]/80 border-2 border-[#d4a359] p-4 rounded-xl mb-8 max-w-2xl text-center shadow-xl">
+                <p className="text-[#f4ebd9] font-serif text-lg font-bold italic drop-shadow-md">
+                  "A child's toy left behind. Children of the Priest-King's followers played with such carts in these courtyards."
+                </p>
+              </div>
+
+              {/* Continue Button */}
+              <button
+                onClick={() => setShowToyUnlockModal(false)}
+                className="bg-white/10 hover:bg-white/20 border-2 border-white/50 text-white font-serif font-bold px-12 py-4 rounded-full shadow-lg transition-all cursor-pointer text-lg tracking-[0.2em] backdrop-blur-sm"
+              >
+                CONTINUE
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* --- TRADE SEAL UNLOCK MODAL --- */}
       {showSealUnlockModal && (
