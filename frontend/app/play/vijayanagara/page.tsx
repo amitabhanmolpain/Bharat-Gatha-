@@ -3054,9 +3054,7 @@ export default function VijayanagaraGameScreen() {
                     setShowBlessingCutscene(false);
                     setShowOarUnlockModal(true);
                     
-                    const audio = new Audio("/audio/subway-surfers-open-box.mp3");
-                    audio.volume = 0.6;
-                    audio.play().catch(e => console.log("Audio play failed:", e));
+                    soundFx.playItemUnlock();
                   }}
                   className="bg-gradient-to-r from-[#8b6528] to-[#d4a359] hover:from-[#a07430] hover:to-[#e5b56a] text-[#141210] font-serif font-bold px-8 py-3 rounded-xl shadow-lg transition-all cursor-pointer text-xs uppercase tracking-wider"
                 >

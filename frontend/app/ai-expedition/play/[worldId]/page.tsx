@@ -601,20 +601,10 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
         setRenderScale(computed.scale);
         setRenderBobY(computed.bobOffsetY);
         setRenderSwayDeg(computed.swayRotationDeg);
-
         // Footstep SFX — triggered on each walking frame at rate-limited 4/s
         if (computed.isWalking) {
-        const computed = updatePlayerPhysics(prev, inputs, template, 1.0);
-        // ... logic ...
-        return computed;
-      });
-
-      // Trigger side effects outside the updater
-      if (playerPhysics.isWalking) {
-        sfxManager.playFootstep();
-      }
+          sfxManager.playFootstep();
         }
-
         if (questRuntimeRef.current && computed.nextPos) {
           questRuntimeRef.current.setPlayerPos(computed.nextPos);
         }
