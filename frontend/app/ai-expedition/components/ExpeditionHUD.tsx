@@ -67,13 +67,23 @@ export default function ExpeditionHUD({
 
   const currentObjective = activeQuest?.objectives.find((o) => !o.isCompleted);
 
-  const handleReplayObjective = () => {
+  const handleReplayObjective = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    narrationManager.unlockAudio();
     if (currentObjective) {
-      narrationManager.narrate(`Your objective: ${currentObjective.description}`, {
-        type: "OBJECTIVE",
-        key: `objective_replay_${currentObjective.id}`,
-        priority: 100
-      });
+      const presId = `objective_replay_${currentObjective.id}`;
+      const activePres = narrationManager.getActivePresentation();
+      if (activePres && activePres.presentationId === presId) {
+        void narrationManager.replay(presId);
+      } else {
+        narrationManager.narrate(`Your objective: ${currentObjective.description}`, {
+          type: "OBJECTIVE",
+          key: presId,
+          priority: 100,
+          presentationId: presId,
+          forceRepeat: true
+        });
+      }
     }
   };
 
@@ -126,11 +136,11 @@ export default function ExpeditionHUD({
                   </span>
                   <button
                     onClick={handleReplayObjective}
-                    className="text-[10px] bg-[#f59e0b]/20 hover:bg-[#f59e0b]/40 text-[#78350f] px-1.5 py-0.5 rounded border border-[#b45309]/40 font-bold ml-1 flex items-center gap-1 cursor-pointer"
+                    className="text-[11px] bg-[#ffdc5e] hover:bg-[#f59e0b] text-black px-2 py-0.5 rounded border border-black font-extrabold ml-1 flex items-center gap-1 cursor-pointer shadow-xs active:translate-y-0.5"
                     title="Replay Narrator Audio for Objective"
                   >
-                    <span>🔊</span>
-                    <span>HEAR</span>
+                    <span>↻</span>
+                    <span>Replay</span>
                   </button>
                 </div>
                 <p className="text-gray-800 font-medium">
@@ -141,7 +151,7 @@ export default function ExpeditionHUD({
           )}
         </div>
 
-        {/* Right Controls Group */}
+        {/* Right Controls Group — Restyled to match Pre-defined Game Visual Grammar */}
         <div className="flex items-center gap-2 pointer-events-auto self-end md:self-auto">
           <button
             onClick={toggleNarration}
@@ -156,7 +166,7 @@ export default function ExpeditionHUD({
 
           <button
             onClick={onOpenCodex}
-            className="bg-[#ffdc5e] hover:bg-[#eab308] border-3 border-black rounded-lg px-3.5 py-2 font-black text-xs text-black shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[1px_1px_0_0_rgba(0,0,0,1)] transition-all flex items-center gap-1.5 cursor-pointer"
+            className="bg-[#ffdc5e] hover:bg-[#f59e0b] border-3 border-black rounded-lg px-3.5 py-2 font-black text-xs text-black shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[1px_1px_0_0_rgba(0,0,0,1)] transition-all flex items-center gap-1.5 cursor-pointer"
           >
             <span className="text-sm">📜</span>
             <span className="text-black font-extrabold text-xs tracking-wide">Codex</span>
