@@ -1,5 +1,5 @@
 import os
-from PIL import Image, ImageFilter
+from PIL import Image
 
 orig_path = "../frontend/public/bg-vijayanagara-toymaker.jpg"
 gen_path = os.environ.get("GEN_PATH", "../frontend/public/bg-vijayanagara-toymaker-clean.jpg")
