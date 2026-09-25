@@ -74,3 +74,10 @@ body {
   animation: riverBob 4s ease-in-out infinite;
 }
 
+@keyframes flashWhite { 0% { opacity: 1; } 100% { opacity: 0; } }
+.animate-flashWhite { animation: flashWhite 1s ease-out forwards; pointer-events: none; }
+
+@keyframes wiggle_shopkeeper {
+  0%, 100% { transform: translate(-50%, -100%) rotate(-1deg) scale(1); }
+  50% { transform: translate(-50%, -100%) rotate(1deg) scale(1.03); }
+}
