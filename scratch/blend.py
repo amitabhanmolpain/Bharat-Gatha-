@@ -2,7 +2,7 @@ import os
 from PIL import Image, ImageFilter
 
 orig_path = "../frontend/public/bg-vijayanagara-toymaker.jpg"
-gen_path = r"C:\Users\Chitra\.gemini\antigravity-ide\brain\5d081b4c-586d-4a0d-8cce-2f846a14694d\bg_toymaker_clean_right_1789968538243.jpg"
+gen_path = os.environ.get("GEN_PATH", "../frontend/public/bg-vijayanagara-toymaker-clean.jpg")
 out_path = "../frontend/public/bg-vijayanagara-toymaker.jpg"
 
 if not os.path.exists(orig_path):

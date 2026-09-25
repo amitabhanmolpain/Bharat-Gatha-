@@ -335,20 +335,21 @@ export default function VijayanagaraGameScreen() {
     if (!isLoading && stage === 3 && !hasPlayedStage3NarrationRef.current) {
       hasPlayedStage3NarrationRef.current = true;
       const text =
-        "Welcome to the vittala temple in raja krishnaverya time the golden period of vijaynagra now find out all the ledgers in this time period before the guards catch you";
-      const timer = setTimeout(async () => {
+        "Welcome to the Vittala Temple in Raja Krishnadevaraya's time, the golden period of Vijayanagara. Now find out all the ledgers in this time period before the guards catch you";
+      const timer = setTimeout(() => {
         setShowStage3OpeningBanner(false);
-        const audio = await playNarration(text, { 
+        playNarration(text, { 
           speaker: "ratan", 
           pace: 0.88, 
           language_code: "en-IN",
           audioUrl: "/audio_cache/stage3_opening_narration.wav"
-        });
-        if (audio) {
-          audio.addEventListener("ended", () => {
-            setStage3Countdown(120);
-          });
-        }
+        }).then((audio) => {
+          if (audio) {
+            audio.addEventListener("ended", () => {
+              setStage3Countdown(120);
+            }, { once: true });
+          }
+        }).catch((err) => console.error("Narration error:", err));
       }, 2000);
       return () => clearTimeout(timer);
     }

@@ -49,6 +49,7 @@ def generate_and_save(item):
 
         stream_url = f"{PARLER_SPACE_BASE}/gradio_api/call/generate_base/{event_id}"
         stream_res = requests.get(stream_url, timeout=30)
+        stream_res.raise_for_status()
         
         file_path = None
         for line in stream_res.text.strip().split("\n"):
@@ -57,9 +58,8 @@ def generate_and_save(item):
                     data = json.loads(line[5:].strip())
                     if isinstance(data, list) and len(data) > 0 and isinstance(data[0], dict):
                         file_path = data[0].get("path")
-                except Exception:
-                    pass
-
+                except Exception as e:
+                    print(f"Error parsing json in stream: {e}")
         if not file_path:
             print(f"Could not extract file_path from stream response: {stream_res.text[:200]}")
             return False

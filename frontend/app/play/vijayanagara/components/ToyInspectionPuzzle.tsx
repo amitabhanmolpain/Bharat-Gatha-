@@ -311,7 +311,7 @@ export default function ToyInspectionPuzzle({
           <div 
             className={`my-6 transition-all duration-700 ease-in-out flex items-center justify-center ${isRotating ? "drop-shadow-[0_15px_25px_rgba(0,0,0,0.9)]" : "drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)]"}`}
             style={{ 
-              transform: `scale(${isRotating ? 0.98 : 1}) rotateX(${isViewingUnderside ? 75 : 0}deg) rotateY(${rotationAngle * 2}deg)`,
+              transform: `scale(${isRotating ? 0.98 : 1}) rotateX(${isViewingUnderside ? 75 : 0}deg) rotateY(${rotationAngle}deg)`,
               transformStyle: 'preserve-3d',
               transformOrigin: 'center center'
             }}

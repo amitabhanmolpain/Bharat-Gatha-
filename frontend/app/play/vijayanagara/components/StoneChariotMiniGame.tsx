@@ -41,7 +41,7 @@ export default function StoneChariotMiniGame({
       setOuterAngle((prev) => (prev + 90) % 360);
     } else if (ring === "middle") {
       setMiddleAngle((prev) => (prev + 90) % 360);
-    } else if (ring === "inner") {
+    } else {
       setInnerAngle((prev) => (prev + 90) % 360);
     }
   };
