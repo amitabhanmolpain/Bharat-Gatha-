@@ -17,7 +17,7 @@ ITEMS = [
     {
         "filename": "stage3_opening_narration.wav",
         "character": "narrator",
-        "text": "Welcome to the vittala temple in raja krishnaverya time the golden period of vijaynagra now find out all the ledgers in this time period before the guards catch you"
+        "text": "Welcome to the Vittala Temple in Raja Krishnadevaraya's time, the golden period of Vijayanagara. Now find out all the ledgers in this time period before the guards catch you"
     }
 ]
 
