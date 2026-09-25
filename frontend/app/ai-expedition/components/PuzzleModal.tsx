@@ -13,16 +13,18 @@ export default function PuzzleModal({ puzzle, onSolve, onClose }: PuzzleModalPro
   const [showHint, setShowHint] = useState(false);
   const [isSolved, setIsSolved] = useState(puzzle.isSolved);
 
+  const presentationId = `puzzle_question_${puzzle.id}`;
+
   useEffect(() => {
     if (!puzzle.isSolved) {
       const puzzleKey = `puzzle_question_${puzzle.id}`;
       const fullText = `Historical reasoning challenge. ${puzzle.title}. ${puzzle.historicalContext}. ${puzzle.question}`;
-      narrationManager.narrate(puzzleKey, fullText, { type: "PUZZLE", priority: 40 });
+      narrationManager.narrate(puzzleKey, fullText, { type: "PUZZLE", priority: 40, presentationId });
     }
     return () => {
       narrationManager.stopCurrentNarration("puzzle-unmount");
     };
-  }, [puzzle.id, puzzle.title, puzzle.historicalContext, puzzle.question, puzzle.isSolved]);
+  }, [puzzle.id, puzzle.title, puzzle.historicalContext, puzzle.question, puzzle.isSolved, presentationId]);
 
   const handleClose = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -41,7 +43,7 @@ export default function PuzzleModal({ puzzle, onSolve, onClose }: PuzzleModalPro
       narrationManager.narrate(
         `puzzle_correct_${puzzle.id}`,
         `Correct. HISTORICAL INSIGHT UNLOCKED. ${puzzle.historicalInsightUnlocked}`,
-        { type: "INSIGHT", priority: 70, forceRepeat: true }
+        { type: "INSIGHT", priority: 70, forceRepeat: true, presentationId: `puzzle_correct_${puzzle.id}` }
       );
       setTimeout(() => {
         onSolve();
@@ -51,7 +53,7 @@ export default function PuzzleModal({ puzzle, onSolve, onClose }: PuzzleModalPro
       narrationManager.narrate(
         `puzzle_hint_${puzzle.id}`,
         `Not quite. ${opt.explanation || puzzle.hint}`,
-        { type: "INFO", priority: 35, forceRepeat: true }
+        { type: "INFO", priority: 35, forceRepeat: true, presentationId: `puzzle_hint_${puzzle.id}` }
       );
     }
   };
@@ -73,12 +75,25 @@ export default function PuzzleModal({ puzzle, onSolve, onClose }: PuzzleModalPro
               {puzzle.title}
             </h3>
           </div>
-          <button
-            onClick={handleClose}
-            className="bg-white border-2 border-black rounded-lg px-2.5 py-1 text-xs font-bold shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 cursor-pointer"
-          >
-            ✕ Esc
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                narrationManager.replay(presentationId);
+              }}
+              title="Replay Puzzle Narration"
+              className="bg-[#ffdc5e] hover:bg-[#f59e0b] border-2 border-black rounded-lg px-2.5 py-1 text-xs font-black shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 cursor-pointer flex items-center gap-1 text-black"
+            >
+              <span>↻</span>
+              <span>Replay</span>
+            </button>
+            <button
+              onClick={handleClose}
+              className="bg-white border-2 border-black rounded-lg px-2.5 py-1 text-xs font-bold shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 cursor-pointer"
+            >
+              ✕ Esc
+            </button>
+          </div>
         </div>
 
         {/* Puzzle Success Banner */}

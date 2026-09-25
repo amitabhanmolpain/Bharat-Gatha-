@@ -8,14 +8,20 @@ interface NarratorPanelProps {
 }
 
 export default function NarratorPanel({ text, tone = "informative", onDismiss }: NarratorPanelProps) {
+  const presentationId = `narrator_panel_${text.slice(0, 30)}`;
+
   useEffect(() => {
     if (text) {
-      narrationManager.narrate(`narrator_panel_${text.slice(0, 30)}`, text, { type: "SCENE_INTRO", priority: 85 });
+      narrationManager.narrate(`narrator_panel_${text.slice(0, 30)}`, text, {
+        type: "SCENE_INTRO",
+        priority: 85,
+        presentationId
+      });
     }
     return () => {
       narrationManager.stopCurrentNarration("narrator-panel-unmount");
     };
-  }, [text]);
+  }, [text, presentationId]);
 
   const handleDismiss = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -44,8 +50,19 @@ export default function NarratorPanel({ text, tone = "informative", onDismiss }:
           &quot;{text}&quot;
         </p>
 
-        {/* Action Button */}
-        <div className="flex justify-end">
+        {/* Action Buttons */}
+        <div className="flex justify-end items-center gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              narrationManager.replay(presentationId);
+            }}
+            title="Replay Narrator Audio"
+            className="bg-[#ffdc5e] hover:bg-[#f59e0b] text-black border-3 border-black rounded-lg px-4 py-2 font-black text-sm shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[1px_1px_0_0_rgba(0,0,0,1)] transition-all flex items-center gap-1.5 cursor-pointer"
+          >
+            <span>↻</span>
+            <span>Replay</span>
+          </button>
           <button
             onClick={handleDismiss}
             className="bg-[#d97706] hover:bg-[#b45309] text-white border-3 border-black rounded-lg px-5 py-2 font-bold text-sm shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[1px_1px_0_0_rgba(0,0,0,1)] transition-all flex items-center gap-2 cursor-pointer"

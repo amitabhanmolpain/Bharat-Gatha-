@@ -3,20 +3,46 @@ import { InputState } from "../engine/physics";
 
 interface VirtualDPadProps {
   onInputStateChange: (updater: (prev: InputState) => InputState) => void;
-  onInteract: () => void;
-  isInteractNear: boolean;
+  onTalk?: () => void;
+  onObjectInteract?: () => void;
+  isNpcNear?: boolean;
+  isObjectNear?: boolean;
+  npcLabel?: string;
+  objectLabel?: string;
+  // Legacy props for compatibility
+  onInteract?: () => void;
+  isInteractNear?: boolean;
   interactLabel?: string;
 }
 
 export default function VirtualDPad({
   onInputStateChange,
+  onTalk,
+  onObjectInteract,
+  isNpcNear = false,
+  isObjectNear = false,
+  npcLabel = "Talk",
+  objectLabel = "Examine",
   onInteract,
   isInteractNear,
-  interactLabel = "Interact"
+  interactLabel: _interactLabel = "Interact"
 }: VirtualDPadProps) {
   const setDir = (dir: keyof InputState, active: boolean) => {
     onInputStateChange((prev) => ({ ...prev, [dir]: active }));
   };
+
+  const handleTalkClick = () => {
+    if (onTalk) onTalk();
+    else if (onInteract) onInteract();
+  };
+
+  const handleObjectClick = () => {
+    if (onObjectInteract) onObjectInteract();
+    else if (onInteract) onInteract();
+  };
+
+  const talkActive = isNpcNear || (isInteractNear && npcLabel.includes("Talk"));
+  const objectActive = isObjectNear || (isInteractNear && !npcLabel.includes("Talk"));
 
   return (
     <div className="absolute bottom-4 left-4 right-4 z-40 flex justify-between items-end pointer-events-none md:hidden">
@@ -67,20 +93,38 @@ export default function VirtualDPad({
         </button>
       </div>
 
-      {/* Action Button */}
-      <button
-        onClick={onInteract}
-        disabled={!isInteractNear}
-        title={interactLabel}
-        className={`w-16 h-16 rounded-full border-3 border-black font-extrabold text-sm shadow-lg pointer-events-auto flex flex-col items-center justify-center transition-all select-none ${
-          isInteractNear
-            ? "bg-[#ffdc5e] hover:bg-[#ffcf33] text-black active:scale-95 animate-pulse"
-            : "bg-gray-300 text-gray-500 opacity-60"
-        }`}
-      >
-        <span className="text-lg leading-none">✋</span>
-        <span className="text-[10px] uppercase font-mono mt-0.5">E</span>
-      </button>
+      {/* Action Buttons Group */}
+      <div className="flex gap-2 pointer-events-auto">
+        {/* E Button (Talk NPC) */}
+        <button
+          onClick={handleTalkClick}
+          disabled={!talkActive}
+          title={npcLabel}
+          className={`w-14 h-14 rounded-full border-3 border-black font-extrabold text-xs shadow-lg flex flex-col items-center justify-center transition-all select-none ${
+            talkActive
+              ? "bg-[#ffdc5e] hover:bg-[#ffcf33] text-black active:scale-95 animate-pulse"
+              : "bg-gray-300 text-gray-500 opacity-50"
+          }`}
+        >
+          <span className="text-base leading-none">💬</span>
+          <span className="text-[10px] uppercase font-mono mt-0.5">E</span>
+        </button>
+
+        {/* G Button (Examine Object / Exit) */}
+        <button
+          onClick={handleObjectClick}
+          disabled={!objectActive}
+          title={objectLabel}
+          className={`w-14 h-14 rounded-full border-3 border-black font-extrabold text-xs shadow-lg flex flex-col items-center justify-center transition-all select-none ${
+            objectActive
+              ? "bg-[#3b82f6] hover:bg-[#2563eb] text-white active:scale-95 animate-pulse"
+              : "bg-gray-300 text-gray-500 opacity-50"
+          }`}
+        >
+          <span className="text-base leading-none">🔍</span>
+          <span className="text-[10px] uppercase font-mono mt-0.5">G</span>
+        </button>
+      </div>
     </div>
   );
 }
