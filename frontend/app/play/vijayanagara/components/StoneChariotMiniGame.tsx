@@ -26,9 +26,7 @@ export default function StoneChariotMiniGame({
   useEffect(() => {
     if (isOpen && !alreadySolved) {
       // Randomize initial angles (0, 90, 180, 270) but make sure it's not solved
-      setOuterAngle([90, 180, 270][Math.floor(Math.random() * 3)]);
-      setMiddleAngle([90, 180, 270][Math.floor(Math.random() * 3)]);
-      setInnerAngle([90, 180, 270][Math.floor(Math.random() * 3)]);
+setOuterAngle([90, 180, 270][window.crypto.getRandomValues(new Uint32Array(1))[0] % 3]);
       setIsSolved(false);
     }
   }, [isOpen, alreadySolved]);
