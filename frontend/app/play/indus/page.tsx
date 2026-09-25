@@ -505,6 +505,8 @@ function IndusValleyGameComponent() {
   const [showOverseerDialogue, setShowOverseerDialogue] = useState(false);
   const [showSealUnlockModal, setShowSealUnlockModal] = useState(false);
   const [showToyUnlockModal, setShowToyUnlockModal] = useState(false);
+  const [showPriestFollowerDialogue, setShowPriestFollowerDialogue] = useState(false);
+  const [isPriestFollowerTalking, setIsPriestFollowerTalking] = useState(false);
   const [showForeignTradersModal, setShowForeignTradersModal] = useState(false);
   const [hasInspectedForeignTraders, setHasInspectedForeignTraders] = useState(false);
 
@@ -3884,16 +3886,7 @@ function IndusValleyGameComponent() {
               }
             }}
           >
-            {isNearGreatBathBasin && (
-              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
-                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
-                <span>
-                  {isDrainagePuzzleSolved
-                    ? "Inspect Restored Hydraulic Basin"
-                    : "Restore Great Bath Drainage Culvert"}
-                </span>
-              </div>
-            )}
+
             <div className="w-14 h-14 bg-[#231b14]/90 border-2 border-[#5dbcd2] rounded-2xl flex items-center justify-center shadow-lg group-hover:border-[#eedbbf] transition-all">
               <svg className="w-7 h-7 text-[#5dbcd2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
@@ -4433,22 +4426,42 @@ function IndusValleyGameComponent() {
 
         {/* --- DRAINAGE CULVERT ENDPOINTS --- */}
         {scene === "great_bath_citadel" && (
-          <div
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
-            style={{ left: "50%", top: "45%" }}
-            onClick={() => triggerTransition("drainage_culvert", { x: 50.0, y: 50.0 }, 2, 600)}
-          >
-            {isNearDrainageEntrance ? (
-              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
-                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">E</div>
-                <span>Enter Drainage Culvert</span>
+          <>
+            {/* Hidden Drainage Entry */}
+            <div
+              className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+              style={{ left: "50%", top: "45%" }}
+              onClick={() => triggerTransition("drainage_culvert", { x: 50.0, y: 50.0 }, 2, 600)}
+            >
+              <div className="opacity-0 w-10 h-10" />
+            </div>
+
+            {/* Priest King Follower */}
+            <div
+              className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-[15]"
+              style={{ left: "40%", top: "50%" }}
+              onClick={() => {
+                setShowPriestFollowerDialogue(true);
+                setIsPriestFollowerTalking(true);
+                playCharacterDialogue({
+                  character: "priest_follower",
+                  text: "Blessings of the sacred waters upon you, traveler. The Great Bath purifies not just the body, but the soul. The Priest-King watches over our civic devotion.",
+                  onEnd: () => setIsPriestFollowerTalking(false),
+                  onError: () => setIsPriestFollowerTalking(false)
+                });
+              }}
+            >
+              <img 
+                src="/indus_priest_king_follower.png" 
+                alt="Priest King Follower" 
+                className={`h-24 w-auto object-contain drop-shadow-[0_5px_10px_rgba(0,0,0,0.5)] transition-all group-hover:scale-110 ${isPriestFollowerTalking ? 'animate-bounce' : ''}`}
+                style={{ imageRendering: 'pixelated' }}
+              />
+              <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center gap-1.5 whitespace-nowrap">
+                 <span>Talk to Priest-King Follower</span>
               </div>
-            ) : (
-              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center gap-1.5 whitespace-nowrap">
-                <span>Drainage Culvert</span>
-              </div>
-            )}
-          </div>
+            </div>
+          </>
         )}
 
         {scene === "drainage_culvert" && (
@@ -4716,6 +4729,41 @@ function IndusValleyGameComponent() {
               >
                 CONTINUE
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Priest King Follower Dialogue Modal */}
+      {showPriestFollowerDialogue && (
+        <div className="fixed inset-0 z-[100] flex flex-col justify-end p-8 pb-16 pointer-events-none">
+          <div className="w-full max-w-4xl mx-auto bg-[#1b1510]/95 border-2 border-[#d4a359] rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] pointer-events-auto overflow-hidden animate-slideUp">
+            <div className="flex flex-col md:flex-row h-full">
+              <div className="w-full md:w-1/3 bg-[#261f18] p-6 flex items-center justify-center border-b md:border-b-0 md:border-r border-[#4a3b2b]">
+                <img 
+                  src="/indus_priest_king_follower.png" 
+                  alt="Priest King Follower" 
+                  className={`w-40 h-40 object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.6)] ${isPriestFollowerTalking ? 'animate-pulse' : ''}`}
+                  style={{ imageRendering: 'pixelated' }}
+                />
+              </div>
+              <div className="w-full md:w-2/3 p-8 flex flex-col justify-between relative">
+                <button
+                  onClick={() => {
+                    setShowPriestFollowerDialogue(false);
+                    stopAllCharacterVoice();
+                  }}
+                  className="absolute top-4 right-4 text-[#8b7355] hover:text-[#d4a359] transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+                <div>
+                  <h3 className="text-[#d4a359] font-serif text-xl font-bold mb-2 uppercase tracking-wider">Devotee of the Priest-King</h3>
+                  <p className="text-[#f7eedf] font-serif text-lg leading-relaxed italic">
+                    "Blessings of the sacred waters upon you, traveler. The Great Bath purifies not just the body, but the soul. The Priest-King watches over our civic devotion."
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
