@@ -76,10 +76,17 @@ const PLASSEY_VOICE_PROFILES: Record<string, string> = {
 
 /**
  * Returns the Sarvam voice speaker for a given NPC / character ID.
+ * Uses safe property lookup to prevent prototype pollution or unexpected behavior.
  * Falls back to "ratan" (narrator) if the character has no specific profile.
  */
 export function getVoiceForNPC(npcId: string): string {
-  return PLASSEY_VOICE_PROFILES[npcId] || "ratan";
+  if (
+    typeof npcId === "string" &&
+    Object.prototype.hasOwnProperty.call(PLASSEY_VOICE_PROFILES, npcId)
+  ) {
+    return PLASSEY_VOICE_PROFILES[npcId];
+  }
+  return "ratan";
 }
 
 interface QueuedItem {
@@ -288,7 +295,7 @@ export class NarrationManager {
     }
 
     const cacheLookupKey = `${pres.speaker}:${pres.key}`;
-    const targetUrl = pres.audioUrl || this.audioCache.get(cacheLookupKey) || this.audioCache.get(pres.key);
+    const targetUrl = pres.audioUrl || this.audioCache.get(cacheLookupKey);
 
     if (this.currentAudio && targetUrl) {
       try {
@@ -640,7 +647,7 @@ export class NarrationManager {
     try {
       const speaker = item.speaker || "ratan";
       const cacheLookupKey = `${speaker}:${item.key}`;
-      let objectUrl = this.audioCache.get(cacheLookupKey) || this.audioCache.get(item.key);
+      let objectUrl = this.audioCache.get(cacheLookupKey);
 
       if (!objectUrl) {
         // Request Sarvam AI TTS audio URL via server API route
@@ -697,7 +704,6 @@ export class NarrationManager {
         }
 
         this.audioCache.set(cacheLookupKey, objectUrl!);
-        this.audioCache.set(item.key, objectUrl!);
       }
 
       // VERIFY GENERATION & PRESENTATION ID BEFORE PLAYBACK

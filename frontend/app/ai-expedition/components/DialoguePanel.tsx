@@ -74,7 +74,7 @@ export default function DialoguePanel({
 
   const handleReplay = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    narrationManager.replay(presentationId);
+    void narrationManager.replay(presentationId);
   };
 
   const handleOptionSelect = (opt: DialogueOption, e?: React.MouseEvent) => {

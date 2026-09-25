@@ -55,7 +55,7 @@ export default function NarratorPanel({ text, tone = "informative", onDismiss }:
           <button
             onClick={(e) => {
               e.stopPropagation();
-              narrationManager.replay(presentationId);
+              void narrationManager.replay(presentationId);
             }}
             title="Replay Narrator Audio"
             className="bg-[#ffdc5e] hover:bg-[#f59e0b] text-black border-3 border-black rounded-lg px-4 py-2 font-black text-sm shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[1px_1px_0_0_rgba(0,0,0,1)] transition-all flex items-center gap-1.5 cursor-pointer"

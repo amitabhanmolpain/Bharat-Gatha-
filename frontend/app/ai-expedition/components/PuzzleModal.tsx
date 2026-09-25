@@ -79,7 +79,7 @@ export default function PuzzleModal({ puzzle, onSolve, onClose }: PuzzleModalPro
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                narrationManager.replay(presentationId);
+                void narrationManager.replay(presentationId);
               }}
               title="Replay Puzzle Narration"
               className="bg-[#ffdc5e] hover:bg-[#f59e0b] border-2 border-black rounded-lg px-2.5 py-1 text-xs font-black shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 cursor-pointer flex items-center gap-1 text-black"

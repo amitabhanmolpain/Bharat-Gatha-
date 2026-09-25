@@ -74,7 +74,7 @@ export default function ExpeditionHUD({
       const presId = `objective_replay_${currentObjective.id}`;
       const activePres = narrationManager.getActivePresentation();
       if (activePres && activePres.presentationId === presId) {
-        narrationManager.replay(presId);
+        void narrationManager.replay(presId);
       } else {
         narrationManager.narrate(`Your objective: ${currentObjective.description}`, {
           type: "OBJECTIVE",

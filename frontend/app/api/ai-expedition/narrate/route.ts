@@ -1,10 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
-import fs from "fs";
-import path from "path";
+import { defaultAudioStore, sanitizeCacheKey } from "../../../ai-expedition/services/audioStore";
 
 // Server-level in-flight request deduplication map
-const inFlightServerRequests = new Map<string, Promise<{ status: string; audio_url: string; cached: boolean }>>();
+const inFlightServerRequests = new Map<string, Promise<{ status: string; audio_url: string; cached: boolean; cache_key: string; speaker: string }>>();
+
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const rawKey = searchParams.get("key");
+    if (!rawKey) {
+      return NextResponse.json({ error: "Missing audio key parameter" }, { status: 400 });
+    }
+
+    const cacheKey = sanitizeCacheKey(rawKey);
+    const audioBuffer = await defaultAudioStore.get(cacheKey);
+
+    if (!audioBuffer) {
+      return NextResponse.json({ error: "Cached audio file not found" }, { status: 404 });
+    }
+
+    return new NextResponse(new Uint8Array(audioBuffer), {
+      status: 200,
+      headers: {
+        "Content-Type": "audio/wav",
+        "Content-Length": audioBuffer.length.toString(),
+        "Cache-Control": "public, max-age=31536000, immutable",
+        "X-Cache": "HIT"
+      }
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Invalid key request";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -52,35 +81,30 @@ export async function POST(req: NextRequest) {
     const languageCode = typeof body.language_code === "string" ? body.language_code : "en-IN";
     const model = typeof body.model === "string" ? body.model : "bulbul:v3";
 
-    // 2. MD5 Cache Key calculation matching existing Sarvam backend disk-cache system
+    // 2. MD5 Cache Key calculation (includes speaker to prevent voice collision)
     const keySource = `${cleanText}_${speaker}_${pace}_${languageCode}_${model}`;
-    const cacheKey = crypto.createHash("md5").update(keySource).digest("hex");
-    const filename = `sarvam_${cacheKey}.wav`;
-    const cacheDir = path.join(process.cwd(), "public", "audio_cache");
-    const filepath = path.join(cacheDir, filename);
-    const audioUrl = `/audio_cache/${filename}`;
+    const rawCacheKey = crypto.createHash("md5").update(keySource).digest("hex");
+    const cacheKey = sanitizeCacheKey(rawCacheKey);
 
-    // Ensure audio cache directory exists
-    if (!fs.existsSync(cacheDir)) {
-      fs.mkdirSync(cacheDir, { recursive: true });
-    }
+    // 3. CHECK AUDIO STORE CACHE (CACHE HIT)
+    const cacheExists = await defaultAudioStore.exists(cacheKey);
+    if (cacheExists) {
+      const audioUrl = defaultAudioStore.getPublicUrl(cacheKey);
+      console.log(`[SARVAM TTS CACHE HIT] speaker="${speaker}" key="${cacheKey}" url="${audioUrl}"`);
 
-    // 3. CHECK DISK CACHE (CACHE HIT)
-    if (fs.existsSync(filepath) && fs.statSync(filepath).size > 100) {
-      console.log(`[SARVAM TTS DISK CACHE HIT] speaker="${speaker}" key="${cacheKey}" url="${audioUrl}"`);
-
-      // If client requests binary audio directly
       if (req.headers.get("accept")?.includes("audio/")) {
-        const fileBuffer = fs.readFileSync(filepath);
-        return new NextResponse(fileBuffer, {
-          status: 200,
-          headers: {
-            "Content-Type": "audio/wav",
-            "Content-Length": fileBuffer.length.toString(),
-            "X-Cache": "HIT",
-            "X-Audio-Url": audioUrl
-          }
-        });
+        const fileBuffer = await defaultAudioStore.get(cacheKey);
+        if (fileBuffer) {
+          return new NextResponse(new Uint8Array(fileBuffer), {
+            status: 200,
+            headers: {
+              "Content-Type": "audio/wav",
+              "Content-Length": fileBuffer.length.toString(),
+              "X-Cache": "HIT",
+              "X-Audio-Url": audioUrl
+            }
+          });
+        }
       }
 
       return NextResponse.json(
@@ -89,10 +113,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 4. CHECK IN-FLIGHT REQUESTS (CONCURRENT DEDUPLICATION)
-    if (inFlightServerRequests.has(cacheKey)) {
+    // 4. CHECK IN-FLIGHT REQUESTS (CONCURRENT DEDUPLICATION) — Safe non-null handling
+    const existingServerReq = inFlightServerRequests.get(cacheKey);
+    if (existingServerReq) {
       console.log(`[SARVAM TTS IN-FLIGHT DEDUP] Waiting for active synthesis key="${cacheKey}"`);
-      const result = await inFlightServerRequests.get(cacheKey)!;
+      const result = await existingServerReq;
       return NextResponse.json(result, { headers: { "X-Cache": "HIT" } });
     }
 
@@ -139,17 +164,9 @@ export async function POST(req: NextRequest) {
         throw new Error("Sarvam API returned invalid or corrupted zero-byte audio payload");
       }
 
-      // Safe atomic file write
-      const tempPath = `${filepath}.tmp_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-      fs.writeFileSync(tempPath, audioBuffer);
-      fs.renameSync(tempPath, filepath);
-
-      // Verify file written successfully
-      if (!fs.existsSync(filepath) || fs.statSync(filepath).size < 100) {
-        throw new Error("Failed to verify saved audio cache file on disk");
-      }
-
-      console.log(`[SARVAM TTS CACHE SAVED] Filename="${filename}" Size=${audioBuffer.length} bytes`);
+      // Save to production-safe audio store
+      const audioUrl = await defaultAudioStore.put(cacheKey, audioBuffer, "audio/wav");
+      console.log(`[SARVAM TTS CACHE SAVED] Key="${cacheKey}" Size=${audioBuffer.length} bytes Url="${audioUrl}"`);
 
       return { status: "success", audio_url: audioUrl, cached: false, cache_key: cacheKey, speaker };
     })();
@@ -161,16 +178,18 @@ export async function POST(req: NextRequest) {
       inFlightServerRequests.delete(cacheKey);
 
       if (req.headers.get("accept")?.includes("audio/")) {
-        const fileBuffer = fs.readFileSync(filepath);
-        return new NextResponse(fileBuffer, {
-          status: 200,
-          headers: {
-            "Content-Type": "audio/wav",
-            "Content-Length": fileBuffer.length.toString(),
-            "X-Cache": "MISS",
-            "X-Audio-Url": audioUrl
-          }
-        });
+        const fileBuffer = await defaultAudioStore.get(cacheKey);
+        if (fileBuffer) {
+          return new NextResponse(new Uint8Array(fileBuffer), {
+            status: 200,
+            headers: {
+              "Content-Type": "audio/wav",
+              "Content-Length": fileBuffer.length.toString(),
+              "X-Cache": "MISS",
+              "X-Audio-Url": result.audio_url
+            }
+          });
+        }
       }
 
       return NextResponse.json(result, { headers: { "X-Cache": "MISS" } });
@@ -188,4 +207,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
-

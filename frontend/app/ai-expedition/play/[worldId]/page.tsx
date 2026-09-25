@@ -8,7 +8,7 @@ import { ExpeditionStorage } from "../../services/storage";
 import { geminiImageProvider } from "../../services/geminiImageProvider";
 import { updatePlayerPhysics, isWithinProximity, InputState, PlayerPhysicsState, PLASSEY_CHARACTER_SCALE_MULTIPLIER } from "../../engine/physics";
 import { QuestRuntime } from "../../engine/questRuntime";
-import { narrationManager } from "../../services/narrationManager";
+import { narrationManager, getVoiceForNPC } from "../../services/narrationManager";
 import { sfxManager } from "../../services/sfxManager";
 
 import ExpeditionHUD from "../../components/ExpeditionHUD";
@@ -421,26 +421,28 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
     if (!nearNPCDef) return; // E does nothing if not near an NPC!
     narrationManager.unlockAudio(); // Synchronously unlock audio engine on E keydown user gesture
     sfxManager.playDialogueOpen();
+    const speaker = getVoiceForNPC(nearNPCDef.id);
     const dialogueTree = nearNPCDef.dialogueTree || [];
     const firstNode = dialogueTree[0];
     const promptText = firstNode ? firstNode.prompt : nearNPCDef.initialDialogue;
     if (promptText) {
       const dialogueKey = `dialogue_${nearNPCDef.id}_init_${promptText.slice(0, 20)}`;
-      narrationManager.prepareNarration(dialogueKey, promptText, { type: "DIALOGUE", priority: 50 }).catch(() => {});
+      narrationManager.prepareNarration(dialogueKey, promptText, { type: "DIALOGUE", priority: 50, speaker }).catch(() => {});
     }
     setActiveNPC(nearNPCDef);
     setActiveDialogueNodeId(undefined);
   }, [nearNPCDef]);
 
-  // Proximity Voice Preloading: Preload NPC initial dialogue line as player approaches
+  // Proximity Voice Preloading: Preload NPC initial dialogue line as player approaches using NPC speaker
   useEffect(() => {
     if (nearNPCDef) {
+      const speaker = getVoiceForNPC(nearNPCDef.id);
       const dialogueTree = nearNPCDef.dialogueTree || [];
       const firstNode = dialogueTree[0];
       const promptText = firstNode ? firstNode.prompt : nearNPCDef.initialDialogue;
       if (promptText) {
         const dialogueKey = `dialogue_${nearNPCDef.id}_init_${promptText.slice(0, 20)}`;
-        narrationManager.preloadNext(dialogueKey, promptText, { type: "DIALOGUE", priority: 50 });
+        narrationManager.preloadNext(dialogueKey, promptText, { type: "DIALOGUE", priority: 50, speaker });
       }
     }
   }, [nearNPCDef]);
