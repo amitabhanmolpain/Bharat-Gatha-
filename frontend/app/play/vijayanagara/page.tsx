@@ -2277,7 +2277,7 @@ export default function VijayanagaraGameScreen() {
             {/* --- KING RAMA RAYA ON THRONE --- */}
             <div
               className="absolute transform -translate-x-1/2 -translate-y-[80%] z-0 pointer-events-none"
-              style={{ left: "50%", top: "25%" }} 
+              style={{ left: "50%", top: "12%" }} 
             >
               <img 
                 src="/king_on_throne.png" 
@@ -2289,12 +2289,13 @@ export default function VijayanagaraGameScreen() {
 
             {/* --- 5 MARCHING GUARDS --- */}
             {Array.from({ length: 5 }).map((_, i) => {
-              let gX = guardPos.x + (i * 10);
+              // Increased spacing to 15 to ensure they don't overlap/collide
+              let gX = (guardPos.x + (i * 15)) % 100;
               
               return (
                 <div
                   key={`guard-${i}`}
-                  className="absolute transform z-10 pointer-events-none"
+                  className="absolute transform z-10 pointer-events-none transition-all duration-200"
                   style={{ 
                     left: `${gX}%`, 
                     top: `93%`, 
@@ -2310,6 +2311,31 @@ export default function VijayanagaraGameScreen() {
                 </div>
               );
             })}
+
+            {/* --- ANIMATED ELEPHANTS AND HORSES IN EMPTY AREAS --- */}
+            <div
+              className="absolute transform -translate-x-1/2 -translate-y-1/2 z-0 pointer-events-none animate-pulse"
+              style={{ left: "15%", top: "85%", animationDuration: "3s" }} 
+            >
+              <img 
+                src="/rajasthan-elephant.png" 
+                alt="Royal Elephant" 
+                className="w-32 h-auto drop-shadow-[0_15px_10px_rgba(0,0,0,0.6)]" 
+                style={{ transform: "scaleX(-1)", imageRendering: 'pixelated', opacity: 0.8 }}
+              />
+            </div>
+            
+            <div
+              className="absolute transform -translate-x-1/2 -translate-y-1/2 z-0 pointer-events-none animate-bounce"
+              style={{ left: "85%", top: "88%", animationDuration: "4s" }} 
+            >
+              <img 
+                src="/rajasthan-camel.png" 
+                alt="Royal Mount" 
+                className="w-24 h-auto drop-shadow-[0_15px_10px_rgba(0,0,0,0.6)]" 
+                style={{ imageRendering: 'pixelated', opacity: 0.8 }}
+              />
+            </div>
           </>
         )}
 
