@@ -487,7 +487,7 @@ class SoundEffectsService {
       if (typeof window !== "undefined") {
         const audio = new window.Audio("/audio/subway-surfers-open-box.mp3");
         audio.volume = 0.5;
-        audio.play().catch(e => console.error("[SoundService] Item unlock audio failed:", e));
+audio.play().catch(e => { console.error("[SoundService] Item unlock audio failed:", e); });
       }
     } catch (e) {
       console.error("[SoundService] Error playing item unlock:", e);
