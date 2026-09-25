@@ -8,7 +8,8 @@ import { ExpeditionStorage } from "../../services/storage";
 import { geminiImageProvider } from "../../services/geminiImageProvider";
 import { updatePlayerPhysics, isWithinProximity, InputState, PlayerPhysicsState, PLASSEY_CHARACTER_SCALE_MULTIPLIER } from "../../engine/physics";
 import { QuestRuntime } from "../../engine/questRuntime";
-import { narrationManager } from "../../services/narrationManager";
+import { narrationManager, getVoiceForNPC } from "../../services/narrationManager";
+import { sfxManager } from "../../services/sfxManager";
 
 import ExpeditionHUD from "../../components/ExpeditionHUD";
 import NarratorPanel from "../../components/NarratorPanel";
@@ -33,7 +34,7 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
   const [world, setWorld] = useState<WorldDefinition | null>(null);
   const [activeSceneId, setActiveSceneId] = useState<string>("");
   const [currentBgUrl, setCurrentBgUrl] = useState<string>("");
-  const [playerSpriteUrl, setPlayerSpriteUrl] = useState<string>("");
+  const [playerSpriteUrl] = useState<string>("/player.png");
   const [npcSpriteUrls, setNpcSpriteUrls] = useState<Record<string, string>>({});
   const [activeDialogueNodeId, setActiveDialogueNodeId] = useState<string | undefined>(undefined);
 
@@ -138,17 +139,6 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
         }
       });
 
-    // Load Hero Player Character Image
-    const playerPrompt = `Create a 2.5D RPG protagonist sprite during ${world.metadata.era} in ${world.metadata.location}`;
-    geminiImageProvider.getCharacterImage(worldId, "player", playerPrompt)
-      .then((res) => {
-        if (!isMounted) return;
-        if (res.success && res.objectUrl) {
-          setPlayerSpriteUrl(encodeURI(res.objectUrl));
-        } else {
-          setErrorMessage(res.error || "Generated player character asset is missing.");
-        }
-      });
 
     // Load Scene NPC Character Images
     if (sceneDef?.npcs) {
@@ -359,6 +349,7 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
 
     // 2. Cancel previous scene narration IMMEDIATELY before transition
     narrationManager.cancelForSceneTransition(targetSceneId);
+    sfxManager.playTransition();
 
     // Prepare scene intro audio for target scene
     const SCENE_INTROS: Record<string, string> = {
@@ -425,25 +416,44 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
     transitionToScene(exit.targetSceneId, exit.targetSpawn);
   }, [transitionToScene]);
 
-  // Interaction Key Handler
-  const handleInteractKey = useCallback(() => {
+  // E KEY: TALK / SPEAK WITH NPC ONLY
+  const handleTalkKey = useCallback(() => {
+    if (!nearNPCDef) return; // E does nothing if not near an NPC!
+    narrationManager.unlockAudio(); // Synchronously unlock audio engine on E keydown user gesture
+    sfxManager.playDialogueOpen();
+    const speaker = getVoiceForNPC(nearNPCDef.id);
+    const dialogueTree = nearNPCDef.dialogueTree || [];
+    const firstNode = dialogueTree[0];
+    const promptText = firstNode ? firstNode.prompt : nearNPCDef.initialDialogue;
+    if (promptText) {
+      const dialogueKey = `dialogue_${nearNPCDef.id}_init_${promptText.slice(0, 20)}`;
+      narrationManager.prepareNarration(dialogueKey, promptText, { type: "DIALOGUE", priority: 50, speaker }).catch(() => {});
+    }
+    setActiveNPC(nearNPCDef);
+    setActiveDialogueNodeId(undefined);
+  }, [nearNPCDef]);
+
+  // Proximity Voice Preloading: Preload NPC initial dialogue line as player approaches using NPC speaker
+  useEffect(() => {
     if (nearNPCDef) {
+      const speaker = getVoiceForNPC(nearNPCDef.id);
       const dialogueTree = nearNPCDef.dialogueTree || [];
       const firstNode = dialogueTree[0];
       const promptText = firstNode ? firstNode.prompt : nearNPCDef.initialDialogue;
       if (promptText) {
         const dialogueKey = `dialogue_${nearNPCDef.id}_init_${promptText.slice(0, 20)}`;
-        narrationManager.prepareNarration(dialogueKey, promptText, { type: "DIALOGUE", priority: 50 }).catch(() => {});
+        narrationManager.preloadNext(dialogueKey, promptText, { type: "DIALOGUE", priority: 50, speaker });
       }
-      setActiveNPC(nearNPCDef);
-      setActiveDialogueNodeId(undefined);
-      return;
     }
+  }, [nearNPCDef]);
 
+  // G KEY: OBJECT INTERACT / EXAMINE EVIDENCE / PRIMARY SOURCE / EXIT PORTAL
+  const handleObjectKey = useCallback(() => {
     if (nearObjectPlacement) {
       if (nearObjectPlacement.clueId && questRuntimeRef.current && world) {
         const discovered = questRuntimeRef.current.discoverEvidence(nearObjectPlacement.clueId);
         if (discovered) {
+          sfxManager.playDiscover();
           const allDiscovered = questRuntimeRef.current.getDiscoveredEvidence();
           setDiscoveredEvidenceIds(allDiscovered);
           setDiscoveredEvidenceCount(allDiscovered.length);
@@ -461,6 +471,7 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
     }
 
     if (nearExit) {
+      sfxManager.playInteract();
       executeSceneTransition(nearExit);
       return;
     }
@@ -475,32 +486,57 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
         setActivePuzzle(puzzle);
       }
     }
-  }, [nearNPCDef, nearObjectPlacement, nearExit, world, activePuzzle, executeSceneTransition]);
+  }, [nearObjectPlacement, nearExit, world, activePuzzle, executeSceneTransition]);
+
+  // F KEY: RETURN / GO BACK / EXIT ACTIVE MODAL OR BACK SCENE TRANSITION
+  const handleReturnKey = useCallback(() => {
+    narrationManager.stopCurrentNarration("f-key-return");
+    sfxManager.playInteract();
+
+    const modalActive = Boolean(
+      activeNPC || activePuzzle || activeNarratorEvent || activeEvidenceItem || showCodex || showExpeditionComplete
+    );
+
+    if (modalActive) {
+      setActiveNPC(null);
+      setActivePuzzle(null);
+      setActiveNarratorEvent(null);
+      setActiveEvidenceItem(null);
+      setShowCodex(false);
+      setShowExpeditionComplete(false);
+      return;
+    }
+
+    if (nearExit) {
+      executeSceneTransition(nearExit);
+    }
+  }, [activeNPC, activePuzzle, activeNarratorEvent, activeEvidenceItem, showCodex, showExpeditionComplete, nearExit, executeSceneTransition]);
 
   const isModalOpen = Boolean(
     activeNPC || activePuzzle || activeNarratorEvent || activeEvidenceItem || showCodex || showExpeditionComplete
   );
 
-  // Keydown / Keyup Event Listeners with Edge-Triggered E Key
+  const gKeyDownHandledRef = useRef<boolean>(false);
+  const fKeyDownHandledRef = useRef<boolean>(false);
+
+  // Keydown / Keyup Event Listeners with Strict E (Talk), G (Object), F (Return) Mapping
   useEffect(() => {
     if (isLoading || !world || errorMessage) return;
 
     const onKeyDown = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase();
 
-      if (key === "escape") {
-        setActiveNPC(null);
-        setActivePuzzle(null);
-        setActiveNarratorEvent(null);
-        setShowCodex(false);
-        setInputs({ left: false, right: false, up: false, down: false });
-        eKeyDownHandledRef.current = true;
+      if (key === "escape" || key === "f") {
+        if (!fKeyDownHandledRef.current) {
+          fKeyDownHandledRef.current = true;
+          handleReturnKey();
+          setInputs({ left: false, right: false, up: false, down: false });
+        }
         return;
       }
 
       if (isModalOpen) {
         setInputs({ left: false, right: false, up: false, down: false });
-        eKeyDownHandledRef.current = true;
         return;
       }
 
@@ -509,19 +545,29 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
       if (key === "w" || key === "arrowup") setInputs((p) => ({ ...p, up: true }));
       if (key === "s" || key === "arrowdown") setInputs((p) => ({ ...p, down: true }));
 
+      // E = TALK WITH NPC ONLY
       if (key === "e") {
         if (!eKeyDownHandledRef.current) {
           eKeyDownHandledRef.current = true;
-          handleInteractKey();
+          handleTalkKey();
+        }
+      }
+
+      // G = INTERACT / EXAMINE OBJECT / EVIDENCE / PORTAL
+      if (key === "g") {
+        if (!gKeyDownHandledRef.current) {
+          gKeyDownHandledRef.current = true;
+          handleObjectKey();
         }
       }
     };
 
     const onKeyUp = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase();
-      if (key === "e") {
-        eKeyDownHandledRef.current = false;
-      }
+      if (key === "e") eKeyDownHandledRef.current = false;
+      if (key === "g") gKeyDownHandledRef.current = false;
+      if (key === "f" || key === "escape") fKeyDownHandledRef.current = false;
+
       if (isModalOpen) return;
       if (key === "a" || key === "arrowleft") setInputs((p) => ({ ...p, left: false }));
       if (key === "d" || key === "arrowright") setInputs((p) => ({ ...p, right: false }));
@@ -536,7 +582,7 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
     };
-  }, [isLoading, world, errorMessage, isModalOpen, handleInteractKey]);
+  }, [isLoading, world, errorMessage, isModalOpen, handleTalkKey, handleObjectKey, handleReturnKey]);
 
   // Continuous 60 FPS Physics & Game Loop
   useEffect(() => {
@@ -556,27 +602,25 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
         setRenderBobY(computed.bobOffsetY);
         setRenderSwayDeg(computed.swayRotationDeg);
 
+        // Footstep SFX — triggered on each walking frame at rate-limited 4/s
+        if (computed.isWalking) {
+        const computed = updatePlayerPhysics(prev, inputs, template, 1.0);
+        // ... logic ...
+        return computed;
+      });
+
+      // Trigger side effects outside the updater
+      if (playerPhysics.isWalking) {
+        sfxManager.playFootstep();
+      }
+        }
+
         if (questRuntimeRef.current && computed.nextPos) {
           questRuntimeRef.current.setPlayerPos(computed.nextPos);
         }
 
-        // Physical exit collision check: trigger transition ONLY IF exit is ARMED and transition lock is clear
-        const currentExits = sceneDef?.exits || [];
-        const triggeredExit = currentExits.find((ex) => {
-          if (disarmedExitIdsRef.current.has(ex.id)) {
-            return false; // Ignore disarmed exit until player moves away from spawn
-          }
-          return (
-            computed.nextPos.x >= ex.triggerArea.minX &&
-            computed.nextPos.x <= ex.triggerArea.maxX &&
-            computed.nextPos.y >= ex.triggerArea.minY &&
-            computed.nextPos.y <= ex.triggerArea.maxY
-          );
-        });
-
-        if (triggeredExit && !isSceneTransitioningRef.current && performance.now() >= transitionLockUntilRef.current) {
-          executeSceneTransition(triggeredExit);
-        }
+        // Physical exit collision check: PROXIMITY ONLY updates nearExit state for UI prompts.
+        // AUTOMATIC TRANSITION IS REMOVED: Scene transitions require explicit G (Forward) or F (Return) key presses.
 
         return {
           x: computed.nextPos.x,
@@ -686,8 +730,9 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
         {!isModalOpen && currentSceneDef?.exits.map((ex) => (
           <InteractionPrompt
             key={ex.id}
+            keyLabel="G"
             label={ex.label.startsWith("Walk to") ? ex.label : `Walk to ${ex.label}`}
-            onClick={handleInteractKey}
+            onClick={handleObjectKey}
             xPercent={(ex.triggerArea.minX + ex.triggerArea.maxX) / 2}
             yPercent={(ex.triggerArea.minY + ex.triggerArea.maxY) / 2}
           />
@@ -709,8 +754,9 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
             <div key={npcPlacement.npcId}>
               {!isModalOpen && isNearThisNPC && (
                 <InteractionPrompt
+                  keyLabel="E"
                   label={`Talk to ${npcDef?.name}`}
-                  onClick={handleInteractKey}
+                  onClick={handleTalkKey}
                   xPercent={npcPlacement.x}
                   yPercent={npcPlacement.y - 14}
                 />
@@ -739,6 +785,7 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
                 className="absolute h-32 object-contain drop-shadow-[0_6px_10px_rgba(0,0,0,0.85)] pointer-events-auto cursor-pointer select-none transition-transform duration-100"
                 onClick={() => {
                   if (isModalOpen || !npcDef) return;
+                  sfxManager.playDialogueOpen();
                   setActiveNPC(npcDef);
                   setActiveDialogueNodeId(undefined);
                 }}
@@ -762,8 +809,9 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
             <div key={obj.id}>
               {!isModalOpen && isNearThisObj && (
                 <InteractionPrompt
+                  keyLabel="G"
                   label={obj.interactionText}
-                  onClick={handleInteractKey}
+                  onClick={handleObjectKey}
                   xPercent={obj.x}
                   yPercent={obj.y - 8}
                 />
@@ -781,7 +829,7 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
                   className="absolute pointer-events-auto cursor-pointer group flex flex-col items-center"
                   onClick={() => {
                     if (isModalOpen) return;
-                    handleInteractKey();
+                    handleObjectKey();
                   }}
                 >
                   <div className="w-5 h-5 mb-1 rounded-full bg-[#f59e0b]/80 border border-[#fff9e6] animate-bounce flex items-center justify-center text-[10px] shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
@@ -800,7 +848,7 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
                   className="absolute -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-[#f59e0b]/40 border-2 border-[#ffdc5e] animate-pulse cursor-pointer flex items-center justify-center text-xs shadow-md"
                   onClick={() => {
                     if (isModalOpen) return;
-                    handleInteractKey();
+                    handleObjectKey();
                   }}
                 >
                   🔍
@@ -810,33 +858,36 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
           );
         })}
 
-        {/* Hero Player Foot Shadow & Sprite */}
-        {playerSpriteUrl && (
-          <>
-            <div
-              style={{
-                left: `${playerPhysics.x}%`,
-                top: `${playerPhysics.y}%`,
-                transform: `translate(-50%, -50%) scale(${renderScale})`,
-                zIndex: Math.floor(playerPhysics.y) + 11
-              }}
-              className="absolute w-16 h-4 rounded-full bg-black/50 blur-[2px] pointer-events-none"
-            />
-            <img
-              src={playerSpriteUrl}
-              alt="Protagonist"
-              style={{
-                left: `${playerPhysics.x}%`,
-                top: `${playerPhysics.y}%`,
-                transform: `translate(-50%, -100%) scale(${renderScale}) scaleX(${playerPhysics.facingLeft ? -1 : 1}) rotate(${renderSwayDeg}deg) translateY(${renderBobY}px)`,
-                transformOrigin: "bottom center",
-                zIndex: Math.floor(playerPhysics.y) + 12,
-                imageRendering: "pixelated"
-              }}
-              className="absolute h-32 object-contain drop-shadow-[0_8px_14px_rgba(0,0,0,0.95)] transition-transform duration-75 pointer-events-none select-none"
-            />
-          </>
-        )}
+        {/* Hero Player Foot Shadow & Sprite — always visible, uses /player.png as canonical fallback */}
+        {(() => {
+          const spriteSrc = playerSpriteUrl || "/player.png";
+          return (
+            <>
+              <div
+                style={{
+                  left: `${playerPhysics.x}%`,
+                  top: `${playerPhysics.y}%`,
+                  transform: `translate(-50%, -50%) scale(${renderScale})`,
+                  zIndex: Math.floor(playerPhysics.y) + 11
+                }}
+                className="absolute w-16 h-4 rounded-full bg-black/50 blur-[2px] pointer-events-none"
+              />
+              <img
+                src={spriteSrc}
+                alt="Protagonist"
+                style={{
+                  left: `${playerPhysics.x}%`,
+                  top: `${playerPhysics.y}%`,
+                  transform: `translate(-50%, -100%) scale(${renderScale}) scaleX(${playerPhysics.facingLeft ? -1 : 1}) rotate(${renderSwayDeg}deg) translateY(${renderBobY}px)`,
+                  transformOrigin: "bottom center",
+                  zIndex: Math.floor(playerPhysics.y) + 12,
+                  imageRendering: "pixelated"
+                }}
+                className="absolute h-32 object-contain drop-shadow-[0_8px_14px_rgba(0,0,0,0.95)] transition-transform duration-75 pointer-events-none select-none"
+              />
+            </>
+          );
+        })()}
       </div>
 
       {/* 2. GAME HUD LAYER (z-100) */}
@@ -857,9 +908,12 @@ export default function AIExpeditionPlayPage({ params }: { params: Promise<{ wor
         {!isModalOpen && (
           <VirtualDPad
             onInputStateChange={setInputs}
-            onInteract={handleInteractKey}
-            isInteractNear={Boolean(nearNPCDef || nearObjectPlacement || nearExit)}
-            interactLabel={nearNPCDef ? `Talk to ${nearNPCDef.name}` : nearExit ? "Enter Portal" : "Inspect"}
+            onTalk={handleTalkKey}
+            onObjectInteract={handleObjectKey}
+            isNpcNear={Boolean(nearNPCDef)}
+            isObjectNear={Boolean(nearObjectPlacement || nearExit)}
+            npcLabel={nearNPCDef ? `Talk to ${nearNPCDef.name}` : "Talk"}
+            objectLabel={nearObjectPlacement ? "Examine Object" : nearExit ? "Walk to Area" : "Examine"}
           />
         )}
       </div>

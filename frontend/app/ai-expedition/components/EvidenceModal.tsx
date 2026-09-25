@@ -8,16 +8,18 @@ interface EvidenceModalProps {
 }
 
 export default function EvidenceModal({ evidence, onClose }: EvidenceModalProps) {
+  const presentationId = `evidence_${evidence.id}`;
+
   useEffect(() => {
     if (evidence) {
       const evKey = `evidence_${evidence.id}`;
       const evText = `Primary Source Evidence. ${evidence.title}. ${evidence.description}. ${evidence.historicalFact}`;
-      narrationManager.narrate(evKey, evText, { type: "EVIDENCE", priority: 20 });
+      narrationManager.narrate(evKey, evText, { type: "EVIDENCE", priority: 20, presentationId });
     }
     return () => {
       narrationManager.stopCurrentNarration("evidence-unmount");
     };
-  }, [evidence]);
+  }, [evidence, presentationId]);
 
   const handleClose = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -43,12 +45,25 @@ export default function EvidenceModal({ evidence, onClose }: EvidenceModalProps)
               {evidence.title}
             </h3>
           </div>
-          <button
-            onClick={handleClose}
-            className="bg-white hover:bg-gray-100 border-2 border-black rounded-lg px-2.5 py-1 text-xs font-bold shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 cursor-pointer"
-          >
-            ✕ Esc
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                narrationManager.replay(presentationId);
+              }}
+              title="Replay Evidence Narration"
+              className="bg-[#ffdc5e] hover:bg-[#f59e0b] border-2 border-black rounded-lg px-2.5 py-1 text-xs font-black shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 cursor-pointer flex items-center gap-1 text-black"
+            >
+              <span>↻</span>
+              <span>Replay</span>
+            </button>
+            <button
+              onClick={handleClose}
+              className="bg-white hover:bg-gray-100 border-2 border-black rounded-lg px-2.5 py-1 text-xs font-bold shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 cursor-pointer"
+            >
+              ✕ Esc
+            </button>
+          </div>
         </div>
 
         {/* Clean Pixel-Art Prop Container */}
@@ -79,8 +94,19 @@ export default function EvidenceModal({ evidence, onClose }: EvidenceModalProps)
           )}
         </div>
 
-        {/* Action Button */}
-        <div className="flex justify-end">
+        {/* Action Buttons */}
+        <div className="flex justify-end items-center gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              void narrationManager.replay(presentationId);
+            }}
+            title="Replay Evidence Audio"
+            className="bg-[#ffdc5e] hover:bg-[#f59e0b] text-black font-extrabold text-sm border-3 border-black rounded-lg px-4 py-2 shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[1px_1px_0_0_rgba(0,0,0,1)] transition-all cursor-pointer flex items-center gap-1.5"
+          >
+            <span>↻</span>
+            <span>Replay</span>
+          </button>
           <button
             onClick={handleClose}
             className="bg-[#f59e0b] hover:bg-[#d97706] text-black font-bold text-sm border-3 border-black rounded-lg px-5 py-2 shadow-[3px_3px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[1px_1px_0_0_rgba(0,0,0,1)] transition-all cursor-pointer"

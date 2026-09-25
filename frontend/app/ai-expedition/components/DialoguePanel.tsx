@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { NPCDefinition, DialogueOption } from "../types/expedition";
-import { narrationManager } from "../services/narrationManager";
+import { narrationManager, getVoiceForNPC } from "../services/narrationManager";
 
 interface DialoguePanelProps {
   npc: NPCDefinition;
@@ -41,18 +41,21 @@ export default function DialoguePanel({
   const options = currentNode ? currentNode.options : [];
   const characterPortrait = portraitUrl || npc.portraitAsset || npc.spriteAsset || STATIC_CHARACTER_PORTRAITS[npc.id];
 
+  const presentationId = `dialogue_${npc.id}_${currentNodeId || "init"}_${promptText ? promptText.slice(0, 20) : ""}`;
+
   useEffect(() => {
     if (promptText) {
+      const speaker = getVoiceForNPC(npc.id);
       const dialogueKey = `dialogue_${npc.id}_${currentNodeId || "init"}_${promptText.slice(0, 20)}`;
-      narrationManager.narrate(dialogueKey, promptText, { type: "DIALOGUE", priority: 50 });
+      narrationManager.narrate(dialogueKey, promptText, { type: "DIALOGUE", priority: 50, speaker, presentationId });
 
-      // Preload next dialogue option lines in the background
+      // Preload next dialogue option lines in the background (does NOT set active presentation)
       options.forEach((opt) => {
         if (opt.nextDialogueId) {
           const nextNode = dialogueTree.find((n) => n.id === opt.nextDialogueId);
           if (nextNode && nextNode.prompt) {
             const nextKey = `dialogue_${npc.id}_${opt.nextDialogueId}_${nextNode.prompt.slice(0, 20)}`;
-            narrationManager.preloadNext(nextKey, nextNode.prompt, { type: "DIALOGUE", priority: 50 });
+            narrationManager.preloadNext(nextKey, nextNode.prompt, { type: "DIALOGUE", priority: 50, speaker });
           }
         }
       });
@@ -60,13 +63,18 @@ export default function DialoguePanel({
     return () => {
       narrationManager.stopCurrentNarration("dialogue-unmount");
     };
-  }, [npc.id, currentNodeId, promptText]);
+  }, [npc.id, currentNodeId, promptText, presentationId]);
 
   const handleClose = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     narrationManager.unlockAudio();
     narrationManager.stopCurrentNarration("dialogue-close");
     onClose();
+  };
+
+  const handleReplay = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    void narrationManager.replay(presentationId);
   };
 
   const handleOptionSelect = (opt: DialogueOption, e?: React.MouseEvent) => {
@@ -106,12 +114,22 @@ export default function DialoguePanel({
             </div>
           </div>
 
-          <button
-            onClick={handleClose}
-            className="bg-white hover:bg-gray-100 border-2 border-black rounded-lg px-3 py-1 font-bold text-xs shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[0px_0px_0_0_rgba(0,0,0,1)] transition-all cursor-pointer"
-          >
-            Esc - Leave
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleReplay}
+              title="Replay Character Audio"
+              className="bg-[#ffdc5e] hover:bg-[#f59e0b] text-black border-2 border-black rounded-lg px-3 py-1 font-extrabold text-xs shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[0px_0px_0_0_rgba(0,0,0,1)] transition-all cursor-pointer flex items-center gap-1"
+            >
+              <span>↻</span>
+              <span>Replay</span>
+            </button>
+            <button
+              onClick={handleClose}
+              className="bg-white hover:bg-gray-100 border-2 border-black rounded-lg px-3 py-1 font-bold text-xs shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[0px_0px_0_0_rgba(0,0,0,1)] transition-all cursor-pointer"
+            >
+              Esc - Leave
+            </button>
+          </div>
         </div>
 
         {/* Dialogue Text */}

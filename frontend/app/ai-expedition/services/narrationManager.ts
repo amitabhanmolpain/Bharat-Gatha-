@@ -25,6 +25,77 @@ export interface NarrationOptions {
   type?: NarrationType;
   forceRepeat?: boolean;
   sceneId?: string;
+  speaker?: string;
+  presentationId?: string;
+}
+
+export interface NarrationPresentation {
+  presentationId: string;
+  key: string;
+  text: string;
+  speaker: string;
+  type: NarrationType;
+  sceneId?: string;
+  generation: number;
+  audioUrl?: string;
+}
+
+/**
+ * Character-aware voice profiles for Plassey 1757 expedition.
+ * Maps NPC/character IDs to verified Sarvam bulbul:v3 speaker voices.
+ *
+ * Voice archetypes & verified Bulbul v3 speakers:
+ *   British (EIC)  → "aditya" — authoritative, deep male voice
+ *   Royal Indian   → "kabir"  — commanding, formal Nawab-court male
+ *   Normal Indian  → "shreya" — natural, expressive Indian female
+ *   Subdued Indian → "kavya"  — soft, subdued Indian female
+ *   Narrator       → "ratan"  — measured historical narrator (default)
+ */
+const PLASSEY_VOICE_PROFILES: Record<string, string> = {
+  // British East India Company characters
+  char_clive:           "aditya",
+  char_company_guard:   "aditya",
+  char_company_soldier: "aditya",
+  char_camp_clerk:      "aditya",
+  // Royal Indian / Nawab court characters
+  char_siraj:           "kabir",
+  char_jafar:           "kabir",
+  char_court_official:  "kabir",
+  char_political_observer: "kabir",
+  // Normal Indian characters
+  char_bengal_merchant: "shreya",
+  char_artisan:         "shreya",
+  char_silk_merchant:   "shreya",
+  // Subdued / observer Indian characters
+  char_traveller:       "kavya",
+  char_resident:        "kavya",
+  char_narrator_observer: "kavya",
+  // Narrator & fallback
+  narrator:             "ratan"
+};
+
+/**
+ * Returns the Sarvam voice speaker for a given NPC / character ID.
+ * Uses safe property lookup to prevent prototype pollution or unexpected behavior.
+ * Falls back to "ratan" (narrator) if the character has no specific profile.
+ */
+export function getVoiceForNPC(npcId: string): string {
+  if (
+    typeof npcId === "string" &&
+    Object.prototype.hasOwnProperty.call(PLASSEY_VOICE_PROFILES, npcId)
+  ) {
+const PLASSEY_VOICE_PROFILES = new Map<string, string>([
+  ['char_clive', 'aditya'],
+  ['char_company_guard', 'aditya'],
+  ['narrator', 'ratan']
+  // ... other entries
+]);
+
+export function getVoiceForNPC(npcId: string): string {
+  return PLASSEY_VOICE_PROFILES.get(npcId) || 'ratan';
+}
+  }
+  return "ratan";
 }
 
 interface QueuedItem {
@@ -34,6 +105,8 @@ interface QueuedItem {
   type: NarrationType;
   sceneId?: string;
   generation: number;
+  speaker: string;
+  presentationId: string;
 }
 
 const PRIORITY_MAP: Record<NarrationType, number> = {
@@ -56,6 +129,7 @@ export class NarrationManager {
   private activeSceneId: string = "scene_1";
   private activeAbortController: AbortController | null = null;
   private activeObjectUrl: string | null = null;
+  private activePresentation: NarrationPresentation | null = null; // Currently visible card narration presentation identity
 
   private spokenKeys: Set<string> = new Set();
   private audioCache: Map<string, string> = new Map(); // Session memory cache for Object URLs
@@ -108,6 +182,14 @@ export class NarrationManager {
 
   public getActiveRequestId(): string | null {
     return this.activeRequestId;
+  }
+
+  public getActivePresentation(): NarrationPresentation | null {
+    return this.activePresentation;
+  }
+
+  public getCurrentAudioUrl(): string | null {
+    return this.currentAudio?.src || null;
   }
 
   public unlockAudio(): void {
@@ -185,7 +267,7 @@ export class NarrationManager {
     }
 
     // Revoke transient Object URL if active
-    if (this.activeObjectUrl) {
+    if (this.activeObjectUrl && this.activeObjectUrl.startsWith("blob:")) {
       try {
         URL.revokeObjectURL(this.activeObjectUrl);
       } catch {
@@ -196,9 +278,67 @@ export class NarrationManager {
 
     this.currentItem = null;
     this.activeRequestId = null;
+    this.activePresentation = null;
     this.isProcessing = false;
     this.setState("CANCELLED");
     this.setState("IDLE");
+  }
+
+  /**
+   * Replay the narration belonging to a specific visible presentation ID.
+   * Enforces strict presentation identity checks to prevent playing audio from a previous card.
+   */
+  public async replay(targetPresentationId?: string): Promise<boolean> {
+    this.unlockAudio();
+
+    // Development assertion & logging
+    if (targetPresentationId && this.activePresentation && this.activePresentation.presentationId !== targetPresentationId) {
+      console.warn(`[REPLAY STALE TARGET BLOCKED] Requested PresentationId="${targetPresentationId}" vs Active Presented="${this.activePresentation.presentationId}"`);
+      return false;
+    }
+
+    const pres = this.activePresentation;
+    if (!pres) {
+      console.warn(`[REPLAY BLOCKED] No active narration presentation is currently visible.`);
+      return false;
+    }
+
+    const cacheLookupKey = `${pres.speaker}:${pres.key}`;
+    const targetUrl = pres.audioUrl || this.audioCache.get(cacheLookupKey);
+
+    if (this.currentAudio && targetUrl) {
+      try {
+        console.log(`[REPLAY SUCCESS] PresentationId="${pres.presentationId}" Restarting from 0:00 URL="${targetUrl}"`);
+        this.currentAudio.pause();
+        this.currentAudio.currentTime = 0;
+
+        if (this.currentAudio.src !== targetUrl && !this.currentAudio.src.endsWith(targetUrl)) {
+          this.currentAudio.src = targetUrl;
+          this.currentAudio.load();
+        }
+
+        this.setState("PLAYING");
+        const playPromise = this.currentAudio.play();
+        if (playPromise !== undefined) {
+          await playPromise;
+        }
+        return true;
+      } catch (err) {
+        console.warn("[REPLAY EXCEPTION]", err);
+      }
+    }
+
+    return this.narrate(pres.key, pres.text, {
+      type: pres.type,
+      speaker: pres.speaker,
+      sceneId: pres.sceneId,
+      presentationId: pres.presentationId,
+      forceRepeat: true
+    });
+  }
+
+  public async replayCurrent(targetPresentationId?: string): Promise<boolean> {
+    return this.replay(targetPresentationId);
   }
 
   /**
@@ -237,16 +377,20 @@ export class NarrationManager {
     } else {
       text = arg1;
       options = arg2 || {};
-      key = options.key || `speech_${text.slice(0, 30)}`;
+      const speakerTag = options.speaker || "ratan";
+      key = options.key || `speech_${speakerTag}_${text.slice(0, 30)}`;
     }
 
     const cleanedText = this.sanitizeText(text);
     if (!cleanedText) return { prepared: false, key };
 
+    const speaker = options.speaker || "ratan";
+    const cacheLookupKey = `${speaker}:${key}`;
+
     const t0 = performance.now();
 
     // 1. Memory Cache Hit check
-    let objectUrl = this.audioCache.get(key);
+    let objectUrl = this.audioCache.get(cacheLookupKey);
     if (objectUrl) {
       const tReady = (performance.now() - t0).toFixed(1);
       console.log(`[NARRATION TIMING] event="${options.type || 'INFO'}" scene="${options.sceneId || this.activeSceneId}" cacheHit=true requestMs=0.0ms decodeMs=0.0ms readyMs=${tReady}ms visualToAudioMs=0.0ms`);
@@ -254,9 +398,9 @@ export class NarrationManager {
     }
 
     // 2. In-flight request deduplication check
-    if (this.inFlightRequests.has(key)) {
+    if (this.inFlightRequests.has(cacheLookupKey)) {
       try {
-        objectUrl = await this.inFlightRequests.get(key)!;
+        objectUrl = await this.inFlightRequests.get(cacheLookupKey)!;
         return { prepared: Boolean(objectUrl), key, url: objectUrl };
       } catch {
         return { prepared: false, key };
@@ -269,37 +413,47 @@ export class NarrationManager {
       const res = await fetch("/api/ai-expedition/narrate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: cleanedText })
+        body: JSON.stringify({ text: cleanedText, speaker, pace: 0.95, language_code: "en-IN", model: "bulbul:v3" })
       });
 
       const tFetchEnd = performance.now();
       if (!res.ok) {
-        throw new Error(`Sarvam TTS Server API error ${res.status}`);
+        const errJson = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        throw new Error(errJson.error || `Sarvam TTS Server API error ${res.status}`);
       }
 
-      const blob = await res.blob();
-      const tDecodeEnd = performance.now();
+      const contentType = res.headers.get("content-type") || "";
+      let url: string;
 
-      const url = URL.createObjectURL(blob);
-      this.audioCache.set(key, url);
+      if (contentType.includes("application/json")) {
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        url = data.audio_url;
+      } else {
+        const blob = await res.blob();
+        url = URL.createObjectURL(blob);
+      }
+
+      const tDecodeEnd = performance.now();
+      this.audioCache.set(cacheLookupKey, url);
 
       const requestMs = (tFetchEnd - tFetchStart).toFixed(1);
       const decodeMs = (tDecodeEnd - tFetchEnd).toFixed(1);
       const readyMs = (tDecodeEnd - t0).toFixed(1);
 
-      console.log(`[NARRATION TIMING] event="${options.type || 'INFO'}" scene="${options.sceneId || this.activeSceneId}" cacheHit=false requestMs=${requestMs}ms decodeMs=${decodeMs}ms readyMs=${readyMs}ms visualToAudioMs=0.0ms`);
+      console.log(`[NARRATION TIMING] event="${options.type || 'INFO'}" scene="${options.sceneId || this.activeSceneId}" cacheHit=false requestMs=${requestMs}ms decodeMs=${decodeMs}ms readyMs=${readyMs}ms visualToAudioMs=0.0ms url="${url}"`);
 
       return url;
     })();
 
-    this.inFlightRequests.set(key, fetchPromise);
+    this.inFlightRequests.set(cacheLookupKey, fetchPromise);
 
     try {
       objectUrl = await fetchPromise;
-      this.inFlightRequests.delete(key);
+      this.inFlightRequests.delete(cacheLookupKey);
       return { prepared: Boolean(objectUrl), key, url: objectUrl };
     } catch (err) {
-      this.inFlightRequests.delete(key);
+      this.inFlightRequests.delete(cacheLookupKey);
       console.warn(`[NARRATOR PREPARE EXCEPTION] Key: "${key}"`, err);
       return { prepared: false, key };
     }
@@ -408,16 +562,32 @@ export class NarrationManager {
       key = options.key || `speech_${text.slice(0, 30)}`;
     }
 
-    if (!options.forceRepeat && this.spokenKeys.has(key)) {
+    const type = options.type || "INFO";
+    const forceRepeat = options.forceRepeat !== undefined ? options.forceRepeat : (type === "DIALOGUE");
+    if (!forceRepeat && this.spokenKeys.has(key)) {
       return false; // Deduplicated
     }
 
     const cleanedText = this.sanitizeText(text);
     if (!cleanedText) return false;
 
-    const type = options.type || "INFO";
     const priority = options.priority !== undefined ? options.priority : PRIORITY_MAP[type];
     const itemSceneId = options.sceneId || this.activeSceneId;
+    const speaker = options.speaker || "ratan";
+    const presentationId = options.presentationId || key;
+
+    this.currentGeneration += 1;
+    const newGen = this.currentGeneration;
+
+    this.activePresentation = {
+      presentationId,
+      key,
+      text: cleanedText,
+      speaker,
+      type,
+      sceneId: itemSceneId,
+      generation: newGen
+    };
 
     const newItem: QueuedItem = {
       key,
@@ -425,7 +595,9 @@ export class NarrationManager {
       priority,
       type,
       sceneId: itemSceneId,
-      generation: this.currentGeneration
+      generation: newGen,
+      speaker,
+      presentationId
     };
 
     this.spokenKeys.add(key);
@@ -459,9 +631,14 @@ export class NarrationManager {
       return;
     }
 
-    // Filter out stale generation or stale scene items
-    if (item.generation !== this.currentGeneration || (item.sceneId && item.sceneId !== this.activeSceneId)) {
-      console.log(`[NARRATOR DISCARD STALE QUEUE ITEM] Key: "${item.key}" | Item Gen: ${item.generation} vs Current Gen: ${this.currentGeneration} | Item Scene: "${item.sceneId}" vs Active Scene: "${this.activeSceneId}"`);
+    // Filter out stale generation, stale scene, or stale presentation items
+    if (
+      item.generation !== this.currentGeneration ||
+      (item.sceneId && item.sceneId !== this.activeSceneId) ||
+      !this.activePresentation ||
+      this.activePresentation.presentationId !== item.presentationId
+    ) {
+      console.log(`[NARRATOR DISCARD STALE QUEUE ITEM] PresentationId: "${item.presentationId}" vs Active: "${this.activePresentation?.presentationId}" | Item Gen: ${item.generation} vs Current Gen: ${this.currentGeneration}`);
       this.isProcessing = false;
       this.processQueue();
       return;
@@ -477,58 +654,92 @@ export class NarrationManager {
     this.activeAbortController = controller;
 
     try {
-      let objectUrl = this.audioCache.get(item.key);
+      const speaker = item.speaker || "ratan";
+      const cacheLookupKey = `${speaker}:${item.key}`;
+      let objectUrl = this.audioCache.get(cacheLookupKey);
 
       if (!objectUrl) {
-        // Request Sarvam AI TTS binary audio via server API route
+        // Request Sarvam AI TTS audio URL via server API route
         const res = await fetch("/api/ai-expedition/narrate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: item.text }),
+          body: JSON.stringify({ text: item.text, speaker, pace: 0.95, language_code: "en-IN", model: "bulbul:v3" }),
           signal: controller.signal
         });
 
-        // VERIFY GENERATION & REQUEST ID AFTER FETCH
-        if (requestGen !== this.currentGeneration || this.activeRequestId !== requestId) {
+        // VERIFY GENERATION & REQUEST ID & PRESENTATION ID AFTER FETCH
+        if (
+          requestGen !== this.currentGeneration ||
+          this.activeRequestId !== requestId ||
+          !this.activePresentation ||
+          this.activePresentation.presentationId !== item.presentationId
+        ) {
           if (item.type === "EVIDENCE" || item.key.startsWith("evidence_")) {
             console.log(`[STALE PRIMARY SOURCE AUDIO DISCARDED] id="${item.key}"`);
           }
-          console.log(`[NARRATOR DISCARD STALE FETCH RESPONSE] RequestId: "${requestId}" | Key: "${item.key}"`);
+          console.log(`[NARRATOR DISCARD STALE FETCH RESPONSE] RequestId: "${requestId}" | PresentationId: "${item.presentationId}" vs Active: "${this.activePresentation?.presentationId}"`);
           this.isProcessing = false;
           return;
         }
 
         if (!res.ok) {
-          throw new Error(`Sarvam TTS Server API error ${res.status}`);
+          const errJson = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+          throw new Error(errJson.error || `Sarvam TTS Server API error ${res.status}`);
         }
 
-        const blob = await res.blob();
+        const contentType = res.headers.get("content-type") || "";
+        if (contentType.includes("application/json")) {
+          const data = await res.json();
+          if (data.error) throw new Error(data.error);
+          objectUrl = data.audio_url;
+        } else {
+          const blob = await res.blob();
+          objectUrl = URL.createObjectURL(blob);
+        }
 
-        // VERIFY GENERATION & REQUEST ID AFTER BLOB DECODE
-        if (requestGen !== this.currentGeneration || this.activeRequestId !== requestId) {
+        // VERIFY GENERATION & REQUEST ID & PRESENTATION ID AFTER RESPONSE PARSE
+        if (
+          requestGen !== this.currentGeneration ||
+          this.activeRequestId !== requestId ||
+          !this.activePresentation ||
+          this.activePresentation.presentationId !== item.presentationId
+        ) {
           if (item.type === "EVIDENCE" || item.key.startsWith("evidence_")) {
             console.log(`[STALE PRIMARY SOURCE AUDIO DISCARDED] id="${item.key}"`);
           }
-          console.log(`[NARRATOR DISCARD STALE BLOB DECODE] RequestId: "${requestId}" | Key: "${item.key}"`);
+          console.log(`[NARRATOR DISCARD STALE RESPONSE PARSE] RequestId: "${requestId}" | PresentationId: "${item.presentationId}" vs Active: "${this.activePresentation?.presentationId}"`);
           this.isProcessing = false;
           return;
         }
 
-        objectUrl = URL.createObjectURL(blob);
-        this.audioCache.set(item.key, objectUrl);
+        this.audioCache.set(cacheLookupKey, objectUrl!);
       }
 
-      // VERIFY GENERATION BEFORE PLAYBACK
-      if (requestGen !== this.currentGeneration || this.activeRequestId !== requestId) {
+      // VERIFY GENERATION & PRESENTATION ID BEFORE PLAYBACK
+      if (
+        requestGen !== this.currentGeneration ||
+        this.activeRequestId !== requestId ||
+        !this.activePresentation ||
+        this.activePresentation.presentationId !== item.presentationId
+      ) {
         if (item.type === "EVIDENCE" || item.key.startsWith("evidence_")) {
           console.log(`[STALE PRIMARY SOURCE AUDIO DISCARDED] id="${item.key}"`);
         }
-        console.log(`[NARRATOR DISCARD STALE PLAYBACK] RequestId: "${requestId}" | Key: "${item.key}"`);
+        console.log(`[NARRATOR DISCARD STALE PLAYBACK] RequestId: "${requestId}" | PresentationId: "${item.presentationId}" vs Active: "${this.activePresentation?.presentationId}"`);
         this.isProcessing = false;
         return;
       }
 
-      this.activeObjectUrl = objectUrl;
+      if (!objectUrl) {
+        throw new Error(`Failed to resolve audio URL for narration key "${item.key}"`);
+      }
+
+      const finalUrl: string = objectUrl;
+
+      this.activeObjectUrl = finalUrl;
+      if (this.activePresentation && this.activePresentation.presentationId === item.presentationId) {
+        this.activePresentation.audioUrl = finalUrl;
+      }
       this.setState("READY");
 
       if (!this.currentAudio) {
@@ -539,7 +750,7 @@ export class NarrationManager {
       audio.preload = "auto";
       audio.volume = 1.0;
       audio.muted = false;
-      audio.src = objectUrl;
+      audio.src = finalUrl;
       audio.playbackRate = 0.95;
       audio.load();
 
@@ -611,7 +822,9 @@ export class NarrationManager {
         setTimeout(() => this.processQueue(), 50);
       };
 
+      console.log(`[NARRATOR PLAY INVOKED] RequestId: "${requestId}" | Key: "${item.key}" | Speaker: "${item.speaker}" | ObjectUrl: "${finalUrl.slice(0, 30)}..." | ReadyState: ${audio.readyState} | Muted: ${audio.muted} | Volume: ${audio.volume}`);
       await audio.play();
+      console.log(`[NARRATOR PLAY PROMISE RESOLVED] RequestId: "${requestId}" | Key: "${item.key}"`);
 
     } catch (err: unknown) {
       const isAbort = err instanceof Error && err.name === "AbortError";
@@ -643,6 +856,20 @@ export class NarrationManager {
       this.setState("IDLE");
       setTimeout(() => this.processQueue(), 50);
     }
+  }
+
+  /**
+   * Convenience method: narrate with a specific NPC/character ID for automatic voice profile selection.
+   * Uses PLASSEY_VOICE_PROFILES to resolve the Sarvam speaker, then delegates to narrate().
+   */
+  public narrateWithVoice(
+    npcId: string,
+    key: string,
+    text: string,
+    opts: Omit<NarrationOptions, "speaker"> = {}
+  ): boolean {
+    const speaker = getVoiceForNPC(npcId);
+    return this.narrate(key, text, { ...opts, speaker });
   }
 
   public stop(): void {
@@ -734,14 +961,20 @@ export class NarrationManager {
     text?: string,
     isUnavailable: boolean = false
   ): void {
-    this.listeners.forEach((fn) => {
-      try {
-        fn(state, isSpeaking, currentKey, text, isUnavailable);
-      } catch (e) {
-        console.warn("[SARVAM NARRATOR] Listener error:", e);
-      }
-    });
+    // Defer listener notifications to the next macrotask.
+    // This prevents "Cannot update a component while rendering a different component"
+    // React errors when narrate() is called during a render side effect (useEffect startup).
+    setTimeout(() => {
+      this.listeners.forEach((fn) => {
+        try {
+          fn(state, isSpeaking, currentKey, text, isUnavailable);
+        } catch (e) {
+          console.warn("[SARVAM NARRATOR] Listener error:", e);
+        }
+      });
+    }, 0);
   }
 }
 
 export const narrationManager = NarrationManager.getInstance();
+export const replayCurrent = () => narrationManager.replayCurrent();
