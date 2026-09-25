@@ -67,7 +67,7 @@ export default function HistoricalNPCDialogueCard({
       stopAllCharacterVoice();
       setIsSpeaking(false);
       setIsLoading(true);
-      playCharacterDialogue({
+      void playCharacterDialogue({
         character: characterVoiceId,
         text: trimmed,
         onStart: () => {

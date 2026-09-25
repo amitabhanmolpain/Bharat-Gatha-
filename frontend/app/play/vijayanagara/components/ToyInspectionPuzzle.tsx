@@ -112,7 +112,7 @@ export default function ToyInspectionPuzzle({
     setIsSpeaking(false);
     setIsLoadingVoice(true);
     
-    playCharacterDialogue({
+    void playCharacterDialogue({
       character: "kallappa",
       text: trimmed,
       onStart: () => {

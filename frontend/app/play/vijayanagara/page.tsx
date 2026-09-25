@@ -312,7 +312,7 @@ export default function VijayanagaraGameScreen() {
         "The year is 1336 AD. Vijayanagara begins here at Anegundi beside the Tungabhadra River. Cross the river and speak with Sage Vidyaranya.";
       const timer = setTimeout(() => {
         setShowOpeningAtmosphere(false);
-        playNarration(introText, { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
+        void playNarration(introText, { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
       }, 2500);
       return () => clearTimeout(timer);
     }
@@ -363,7 +363,7 @@ export default function VijayanagaraGameScreen() {
         "The year is 1565 AD at Mahanavami Dibba. Find the last ledger fragment to preserve the story of Vijayanagara.";
       const timer = setTimeout(() => {
         setShowStage4OpeningBanner(false);
-        playNarration(text, { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
+        void playNarration(text, { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
       }, 2000);
       return () => clearTimeout(timer);
     }
@@ -418,7 +418,7 @@ export default function VijayanagaraGameScreen() {
         // generic narrator voice.  The "vidyaranya" character key maps to the dedicated
         // voice profile in parler_tts_service.py (slow pace, reverent Indian English).
         stopAllCharacterVoice();
-        playCharacterDialogue({
+        void playCharacterDialogue({
           character: "vidyaranya",
           text: speech,
           onStart: () => setIsVidyaranyaVoiceActive(true),
@@ -2504,7 +2504,7 @@ export default function VijayanagaraGameScreen() {
                   setHeardClueScenes((prev) => [...prev, scene]);
                 }
                 stopAllCharacterVoice();
-                playCharacterDialogue({
+                void playCharacterDialogue({
                   character: "jolly",
                   text: speechText,
                   onEnd: () => {
@@ -2837,7 +2837,7 @@ export default function VijayanagaraGameScreen() {
                   stopNarration();
                   dispatch(setIsUncleKidnapped(true));
                   
-                  playNarration(
+                  void playNarration(
                     "Find your friend. Ask the traders out here, they might give you a clue.",
                     { audioUrl: "/post_kidnap_hint_sarvam.wav" }
                   );

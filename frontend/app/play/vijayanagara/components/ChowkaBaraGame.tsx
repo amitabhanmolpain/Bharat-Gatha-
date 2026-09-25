@@ -117,7 +117,7 @@ export default function ChowkaBaraGame({
       resetMatchState();
     } else {
       stopAllCharacterVoice();
-      playNarration(
+      void playNarration(
         "Roll the four cowrie shells. A roll of 4 or 8 lets a pawn enter the board!",
         { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
       );
@@ -276,7 +276,7 @@ export default function ChowkaBaraGame({
               : "Vidyaranya's pawns reach the sanctuary first. 'A wise strategist learns from each turn. Try again!'";
           setDialogueMessage(endMsg);
           stopAllCharacterVoice();
-          playNarration(endMsg, { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true });
+          void playNarration(endMsg, { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true });
           return nextAtt;
         });
       } else if (getsExtraThrow) {
@@ -289,7 +289,7 @@ export default function ChowkaBaraGame({
         }
         setDialogueMessage(msg);
         stopAllCharacterVoice();
-        playNarration(msg, { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true });
+        void playNarration(msg, { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true });
         
         aiTimeoutRef.current = setTimeout(() => {
           executeAiTurn(aPieces, pPieces, aKadi);
@@ -304,7 +304,7 @@ export default function ChowkaBaraGame({
         }
         setDialogueMessage(aiMsg);
         stopAllCharacterVoice();
-        playNarration(aiMsg, {
+        void playNarration(aiMsg, {
           speaker: "ratan",
           pace: 0.88,
           language_code: "en-IN",
@@ -355,7 +355,7 @@ export default function ChowkaBaraGame({
         "Well done! Now Vidyaranya will cast his shells and move his Terracotta pawns from the opposite corner."
       );
       stopAllCharacterVoice();
-      playNarration(
+      void playNarration(
         "Well done! Now watch Vidyaranya respond with his move from the upper corner.",
         { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
       );
@@ -369,7 +369,7 @@ export default function ChowkaBaraGame({
         "🏆 Splendid match! All your Golden Gotis have reached the Sanctuary. You have won Vidyaranya's blessing!"
       );
       stopAllCharacterVoice();
-      playNarration(
+      void playNarration(
         "Splendid match! You navigated the board with patience and skill, winning Vidyaranya's blessing!",
         { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
       );
@@ -386,7 +386,7 @@ export default function ChowkaBaraGame({
       }
       setDialogueMessage(msg);
       stopAllCharacterVoice();
-      playNarration(msg, { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true });
+      void playNarration(msg, { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true });
       return; 
     }
 
@@ -400,7 +400,7 @@ export default function ChowkaBaraGame({
     }
     setDialogueMessage(`You moved Pawn ${pawnIndex + 1}. Vidyaranya prepares his move...`);
     stopAllCharacterVoice();
-    playNarration(msg, {
+    void playNarration(msg, {
       speaker: "ratan",
       pace: 0.88,
       language_code: "en-IN",
@@ -474,7 +474,7 @@ export default function ChowkaBaraGame({
             "We have played long enough! You have grasped the authentic rules of the game. I grant you my blessing."
           );
           stopAllCharacterVoice();
-          playNarration(
+          void playNarration(
             "We have played long enough! You have grasped the authentic rules of the game. I grant you my blessing.",
             { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
           );
@@ -497,7 +497,7 @@ export default function ChowkaBaraGame({
           if (tutorialStep === "roll_cowries") {
             setTutorialStep("move_pawn");
             setDialogueMessage(`You rolled ${roll}! Click a pulsing Golden Goti to move it.`);
-            playNarration("Click a pulsing Golden Goti to move it along the path.", { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true });
+            void playNarration("Click a pulsing Golden Goti to move it along the path.", { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true });
           } else {
             setDialogueMessage(`You rolled ${roll}! Select which Golden Goti to move.`);
           }
@@ -516,7 +516,7 @@ export default function ChowkaBaraGame({
     clearAllTimers();
     stopAllCharacterVoice();
     
-    playNarration(
+    void playNarration(
       "Well done, traveler! You carry Vidyaranya's blessing. Cross the Tungabhadra to enter Hampi Bazaar!",
       { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
     );
@@ -543,7 +543,7 @@ export default function ChowkaBaraGame({
     setDialogueMessage(
       "Namaste, seeker. I am Sage Vidyaranya. Welcome to Chowka Bara — the ancient 5x5 strategic race of Karnataka."
     );
-    playNarration(
+    void playNarration(
       "Namaste, seeker. I am Sage Vidyaranya. Let us learn Chowka Bara together step by step.",
       { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
     );
@@ -557,7 +557,7 @@ export default function ChowkaBaraGame({
         setDialogueMessage(
           "You command the two Golden Gotis (🟡) starting at the bottom-left corner. Your goal is to guide both into the Center Sanctuary (Cell 12)."
         );
-        playNarration(
+        void playNarration(
           "You command the Golden Gotis at the bottom corner. Your goal is to guide both into the Center Sanctuary.",
           { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
         );
@@ -567,7 +567,7 @@ export default function ChowkaBaraGame({
         setDialogueMessage(
           "Each turn, cast the 4 cowrie shells to determine your movement. Click the pulsing [Cast Cowrie Shells] button now!"
         );
-        playNarration(
+        void playNarration(
           "Click the Cast Cowrie Shells button to roll your distance.",
           { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
         );
@@ -577,7 +577,7 @@ export default function ChowkaBaraGame({
         setDialogueMessage(
           "Notice the cross-marked squares (✖) on the four corners and the center. These are Safe Sanctuaries where pawns can never be captured."
         );
-        playNarration(
+        void playNarration(
           "Cross-marked squares are Safe Sanctuaries where your pawns are protected from captures.",
           { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
         );
@@ -587,7 +587,7 @@ export default function ChowkaBaraGame({
         setDialogueMessage(
           "On regular unmarked squares, if your pawn lands on an opponent's pawn, it captures it and sends it all the way back to the start!"
         );
-        playNarration(
+        void playNarration(
           "Landing on an opponent on regular squares captures them and sends them back to the start.",
           { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
         );
@@ -597,7 +597,7 @@ export default function ChowkaBaraGame({
         setDialogueMessage(
           "Important Kadi (Kill) Rule: Your pawns cannot enter the inner ring unless your team has made at least one capture! Otherwise, they queue at the end of the outer ring."
         );
-        playNarration(
+        void playNarration(
           "You must make at least one capture to enter the inner ring. Otherwise, your pawns will wait in the queue after one round.",
           { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
         );
@@ -607,7 +607,7 @@ export default function ChowkaBaraGame({
         setDialogueMessage(
           "Pawns move around the outer ring, then spiral into the inner track, and finally enter the Center Sanctuary with an exact roll."
         );
-        playNarration(
+        void playNarration(
           "Pawns move along the outer perimeter, spiral inside, and enter the center with an exact count.",
           { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
         );
@@ -617,7 +617,7 @@ export default function ChowkaBaraGame({
         setDialogueMessage(
           "The first player to bring BOTH pawns safely into the Center Sanctuary wins the match and receives my royal blessing!"
         );
-        playNarration(
+        void playNarration(
           "The first player to bring both pawns into the Center Sanctuary wins. You are now ready to play!",
           { speaker: "ratan", pace: 0.88, language_code: "en-IN", hideSubtitle: true }
         );
