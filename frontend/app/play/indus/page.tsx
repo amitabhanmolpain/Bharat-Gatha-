@@ -505,6 +505,8 @@ function IndusValleyGameComponent() {
   const [showOverseerDialogue, setShowOverseerDialogue] = useState(false);
   const [showSealUnlockModal, setShowSealUnlockModal] = useState(false);
   const [showToyUnlockModal, setShowToyUnlockModal] = useState(false);
+  const [hasCollectedSeal, setHasCollectedSeal] = useState(false);
+  const [hasCollectedToy, setHasCollectedToy] = useState(false);
   const [showPriestFollowerDialogue, setShowPriestFollowerDialogue] = useState(false);
   const [isPriestFollowerTalking, setIsPriestFollowerTalking] = useState(false);
   const [showForeignTradersModal, setShowForeignTradersModal] = useState(false);
@@ -2391,7 +2393,7 @@ function IndusValleyGameComponent() {
         )}
 
         {/* Stage 1: Trade Seal Prop on Ground */}
-        {scene === "lower_town_gate" && (
+        {scene === "lower_town_gate" && !hasCollectedSeal && (
           <div
             className="absolute z-10 pointer-events-auto cursor-pointer group"
             style={{ left: "57%", top: "34%" }}
@@ -2399,6 +2401,7 @@ function IndusValleyGameComponent() {
             onClick={() => {
               soundFx.playItemUnlock();
               setShowSealUnlockModal(true);
+              setHasCollectedSeal(true);
             }}
           >
             <img
@@ -3109,7 +3112,7 @@ function IndusValleyGameComponent() {
         {/* ========================================================= */}
 
         {/* Stage 1.6: Hidden Terracotta Toy Prop in Interior */}
-        {scene === "house_interior" && (
+        {scene === "house_interior" && !hasCollectedToy && (
           <div
             className="absolute z-10 pointer-events-auto cursor-pointer group"
             style={{ left: "82%", top: "68%" }}
@@ -3117,6 +3120,7 @@ function IndusValleyGameComponent() {
             onClick={() => {
               soundFx.playItemUnlock();
               setShowToyUnlockModal(true);
+              setHasCollectedToy(true);
             }}
           >
             <img
@@ -4655,84 +4659,23 @@ function IndusValleyGameComponent() {
       />
 
       {/* --- TOY UNLOCK MODAL --- */}
-      {showToyUnlockModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md animate-fadeIn">
-          <div className="absolute inset-0 bg-white animate-flashWhite z-10" />
-          
-          <div className="relative aspect-video w-[90vw] max-w-5xl rounded-2xl border-4 border-[#d4a359] overflow-hidden shadow-[0_0_80px_rgba(212,163,89,0.7)] flex flex-col items-center justify-center z-20">
-            {/* Background Burst */}
-            <img 
-              src="/unlock_bg.png" 
-              alt="Unlock Burst" 
-              className="absolute w-full h-full object-cover opacity-90 scale-150" 
-            />
-            
-            {/* Content */}
-            <div className="relative z-10 flex flex-col items-center justify-center w-full h-full p-8 bg-black/20">
-              <h2 className="text-3xl md:text-5xl font-serif font-bold text-white mb-6 drop-shadow-[0_4px_10px_rgba(0,0,0,0.9)] uppercase tracking-widest text-center">
-                Unlocked the Terracotta Toy Cart
-              </h2>
-              <img 
-                src="/indus_terracotta_toy.png" 
-                alt="Terracotta Toy" 
-                className="w-48 h-48 md:w-64 md:h-64 object-contain drop-shadow-[0_15px_30px_rgba(0,0,0,0.9)] animate-bounce hover:scale-110 transition-transform duration-500 mb-6" 
-                style={{ imageRendering: 'pixelated' }}
-              />
-              
-              <div className="bg-[#1b1510]/80 border-2 border-[#d4a359] p-4 rounded-xl mb-8 max-w-2xl text-center shadow-xl">
-                <p className="text-[#f4ebd9] font-serif text-lg font-bold italic drop-shadow-md">
-                  "A child's toy left behind. Children of the Priest-King's followers played with such carts in these courtyards."
-                </p>
-              </div>
-
-              {/* Continue Button */}
-              <button
-                onClick={() => setShowToyUnlockModal(false)}
-                className="bg-white/10 hover:bg-white/20 border-2 border-white/50 text-white font-serif font-bold px-12 py-4 rounded-full shadow-lg transition-all cursor-pointer text-lg tracking-[0.2em] backdrop-blur-sm"
-              >
-                CONTINUE
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <CollectionUnlockModal 
+        show={showToyUnlockModal}
+        onClose={() => setShowToyUnlockModal(false)}
+        title="Unlocked the Terracotta Toy Cart"
+        imageSrc="/indus_terracotta_toy.png"
+        imageAlt="Terracotta Toy"
+        description="&quot;A child's toy left behind. Children of the Priest-King's followers played with such carts in these courtyards.&quot;"
+      />
 
       {/* --- TRADE SEAL UNLOCK MODAL --- */}
-      {showSealUnlockModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md animate-fadeIn">
-          <div className="absolute inset-0 bg-white animate-flashWhite z-10" />
-          
-          <div className="relative aspect-video w-[90vw] max-w-5xl rounded-2xl border-4 border-[#d4a359] overflow-hidden shadow-[0_0_80px_rgba(212,163,89,0.7)] flex flex-col items-center justify-center z-20">
-            {/* Background Burst */}
-            <img 
-              src="/unlock_bg.png" 
-              alt="Unlock Burst" 
-              className="absolute w-full h-full object-cover opacity-90 scale-150" 
-            />
-            
-            {/* Content */}
-            <div className="relative z-10 flex flex-col items-center justify-center w-full h-full p-8 bg-black/20">
-              <h2 className="text-3xl md:text-5xl font-serif font-bold text-white mb-6 drop-shadow-[0_4px_10px_rgba(0,0,0,0.9)] uppercase tracking-widest text-center">
-                Unlocked the Steatite Trade Seal
-              </h2>
-              <img 
-                src="/indus_trade_seal.png" 
-                alt="Trade Seal" 
-                className="w-48 h-48 md:w-64 md:h-64 object-contain drop-shadow-[0_15px_30px_rgba(0,0,0,0.9)] animate-bounce hover:scale-110 transition-transform duration-500 mb-8" 
-                style={{ imageRendering: 'pixelated' }}
-              />
-              
-              {/* Continue Button */}
-              <button
-                onClick={() => setShowSealUnlockModal(false)}
-                className="bg-white/10 hover:bg-white/20 border-2 border-white/50 text-white font-serif font-bold px-12 py-4 rounded-full shadow-lg transition-all cursor-pointer text-lg tracking-[0.2em] backdrop-blur-sm"
-              >
-                CONTINUE
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <CollectionUnlockModal 
+        show={showSealUnlockModal}
+        onClose={() => setShowSealUnlockModal(false)}
+        title="Unlocked the Steatite Trade Seal"
+        imageSrc="/indus_trade_seal.png"
+        imageAlt="Trade Seal"
+      />
 
       {/* Priest King Follower Dialogue Modal */}
       {showPriestFollowerDialogue && (
@@ -5765,6 +5708,64 @@ function IndusValleyGameComponent() {
     </div>
   );
 }
+
+const CollectionUnlockModal = ({ 
+  show, 
+  onClose, 
+  title, 
+  imageSrc, 
+  imageAlt, 
+  description 
+}: {
+  show: boolean;
+  onClose: () => void;
+  title: string;
+  imageSrc: string;
+  imageAlt: string;
+  description?: string;
+}) => {
+  if (!show) return null;
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md animate-fadeIn">
+      <div className="absolute inset-0 bg-white animate-flashWhite z-10" />
+      
+      <div className="relative aspect-video w-[90vw] max-w-5xl rounded-2xl border-4 border-[#d4a359] overflow-hidden shadow-[0_0_80px_rgba(212,163,89,0.7)] flex flex-col items-center justify-center z-20">
+        <img 
+          src="/unlock_bg.png" 
+          alt="Unlock Burst" 
+          className="absolute w-full h-full object-cover opacity-90 scale-150" 
+        />
+        
+        <div className="relative z-10 flex flex-col items-center justify-center w-full h-full p-8 bg-black/20">
+          <h2 className="text-3xl md:text-5xl font-serif font-bold text-white mb-6 drop-shadow-[0_4px_10px_rgba(0,0,0,0.9)] uppercase tracking-widest text-center">
+            {title}
+          </h2>
+          <img 
+            src={imageSrc} 
+            alt={imageAlt} 
+            className="w-48 h-48 md:w-64 md:h-64 object-contain drop-shadow-[0_15px_30px_rgba(0,0,0,0.9)] animate-bounce hover:scale-110 transition-transform duration-500 mb-6" 
+            style={{ imageRendering: 'pixelated' }}
+          />
+          
+          {description && (
+            <div className="bg-[#1b1510]/80 border-2 border-[#d4a359] p-4 rounded-xl mb-8 max-w-2xl text-center shadow-xl">
+              <p className="text-[#f4ebd9] font-serif text-lg font-bold italic drop-shadow-md">
+                {description}
+              </p>
+            </div>
+          )}
+
+          <button
+            onClick={onClose}
+            className="bg-white/10 hover:bg-white/20 border-2 border-white/50 text-white font-serif font-bold px-12 py-4 rounded-full shadow-lg transition-all cursor-pointer text-lg tracking-[0.2em] backdrop-blur-sm"
+          >
+            CONTINUE
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function IndusValleyGameScreen() {
   return (

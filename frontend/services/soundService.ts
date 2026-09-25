@@ -11,6 +11,7 @@ class SoundEffectsService {
   private isMuted: boolean = false;
   private lastClickTime: number = 0;
   private lastHoverTime: number = 0;
+  private unlockAudio: HTMLAudioElement | null = null;
 
   private getContext(): AudioContext | null {
     if (typeof window === "undefined") return null;
@@ -485,9 +486,15 @@ class SoundEffectsService {
     if (this.isMuted) return;
     try {
       if (typeof window !== "undefined") {
-        const audio = new window.Audio("/audio/subway-surfers-open-box.mp3");
-        audio.volume = 0.5;
-        audio.play().catch(e => console.error("[SoundService] Item unlock audio failed:", e));
+        if (!this.unlockAudio) {
+          this.unlockAudio = new window.Audio("/audio/item-unlock.mp3");
+          this.unlockAudio.volume = 0.5;
+        }
+        
+        // Reset playback position if it's already playing
+        this.unlockAudio.currentTime = 0;
+        
+        this.unlockAudio.play().catch(e => console.error("[SoundService] Item unlock audio failed:", e));
       }
     } catch (e) {
       console.error("[SoundService] Error playing item unlock:", e);
