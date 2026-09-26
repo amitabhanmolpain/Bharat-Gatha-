@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { playNarration, stopNarration } from "../../../services/narratorService";
+import { playNarration, stopNarration } from "../../../../services/narratorService";
 
 interface TempleWallInspectionControllerProps {
   isActive: boolean;

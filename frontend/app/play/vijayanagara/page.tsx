@@ -46,7 +46,7 @@ import GameIcon from "./components/GameIcon";
 import HistoricalNPCDialogueCard from "./components/HistoricalNPCDialogueCard";
 import AnimatedAnimal from "./components/AnimatedAnimal";
 import PatrollingGuard from "./components/PatrollingGuard";
-import PedestrianNPC from "./components/PedestrianNPC";\nimport TempleWallInspectionController from "./components/TempleWallInspectionController";
+import PedestrianNPC from "./components/PedestrianNPC";
 import TempleWallInspectionController from "./components/TempleWallInspectionController";
 
 // Visual scale for player character (enlarged for prominent, clear hero presence)
@@ -161,6 +161,10 @@ export default function VijayanagaraGameScreen() {
   const [shoeSequenceState, setShoeSequenceState] = useState<"idle" | "kallappa_speaking" | "shoe_reveal" | "shoe_unlocked" | "genie_activating" | "genie_hint" | "completed">("idle");
   const [hasShoeClue, setHasShoeClue] = useState(false);
   const [showShoeUnlockModal, setShowShoeUnlockModal] = useState(false);
+  
+  // Musical Pillars Sequence State
+  const [musicalPillarsSequenceState, setMusicalPillarsSequenceState] = useState<"idle" | "genie_activating" | "genie_hint" | "time_coin_reveal" | "time_coin_unlocked" | "completed">("idle");
+  const [showTimeCoinUnlockModal, setShowTimeCoinUnlockModal] = useState(false);
 
   // Animated speaking frame toggling while Portuguese Traveler is speaking
   useEffect(() => {
@@ -192,7 +196,6 @@ export default function VijayanagaraGameScreen() {
   const [raghavendraTopic, setRaghavendraTopic] = useState<"king" | "chariot" | "pillars" | "warning">("king");
   const [showMusicalPillarsModal, setShowMusicalPillarsModal] = useState(false);
   const [showHazaraRamaModal, setShowHazaraRamaModal] = useState(false);
-  const [cameraTransform, setCameraTransform] = useState("scale(1) translate(0%, 0%)");
   const [cameraTransform, setCameraTransform] = useState("scale(1) translate(0%, 0%)");
   const [showStage3VictoryModal, setShowStage3VictoryModal] = useState(false);
 
@@ -700,7 +703,7 @@ export default function VijayanagaraGameScreen() {
     playerPos.x >= 40.0 &&
     playerPos.x <= 60.0 &&
     playerPos.y >= 58.0 &&
-    playerPos.y <= 72.0;
+    playerPos.y <= 76.0;
 
   const isNearMusicalPillarsExit =
     scene === "musical_pillars" &&
@@ -842,7 +845,8 @@ export default function VijayanagaraGameScreen() {
       }
 
       if (activeScene === "musical_pillars") {
-        if (targetX >= 45.0 && targetX <= 55.0 && targetY >= 62.0 && targetY <= 68.0) return false;
+        // Prevent walking ON the pillar base (y: 58 to 72)
+        if (targetX >= 42.0 && targetX <= 58.0 && targetY >= 58.0 && targetY <= 72.0) return false;
         if (targetY < 54.0) return false;
       }
 
@@ -1515,11 +1519,30 @@ export default function VijayanagaraGameScreen() {
 
   // Stage 3 Handler
   const handleMusicalPillarsDiscovery = () => {
-    dispatch(setHasSecondLedgerFragment(true));
-    setIsMusicalPillarsComplete(true);
-    if (!unlockedJournalEntries.includes("musical_pillars_acoustics")) {
-      dispatch(addJournalEntry("musical_pillars_acoustics"));
-    }
+    if (musicalPillarsSequenceState !== "idle" && musicalPillarsSequenceState !== "completed") return; // Prevent duplicate triggers
+    setShowMusicalPillarsModal(false);
+    
+    // Start sequence
+    setMusicalPillarsSequenceState("genie_activating");
+    soundFx.playSelect();
+
+    setTimeout(() => {
+      setMusicalPillarsSequenceState("genie_hint");
+      playNarration("Listen closely. These remarkable pillars are traditionally said to reproduce the sounds of around 81 different instruments, creating music for religious functions.", { speaker: "neha", pace: 0.9, language_code: "en-IN" });
+      
+      setTimeout(() => {
+        setMusicalPillarsSequenceState("time_coin_reveal");
+        
+        setTimeout(() => {
+          setMusicalPillarsSequenceState("time_coin_unlocked");
+          const audio = new Audio("/audio/subway-surfers-open-box.mp3"); // Reuse existing reward sound
+          audio.volume = 0.6;
+          audio.play().catch(e => console.log("Audio play failed:", e));
+          
+          setShowTimeCoinUnlockModal(true);
+        }, 1500);
+      }, 8000); // Wait for TTS to finish (around 7-8 seconds)
+    }, 2000);
   };
 
   // Stage 4 Handlers
@@ -2464,7 +2487,8 @@ export default function VijayanagaraGameScreen() {
           style={{
             left: `${playerPos.x}%`,
             top: `${playerPos.y}%`,
-            transform: "translate(-50%, -100%)",
+            // Adjusted from -100% to -90% to visually lower the sprite so feet touch the actual Y-coordinate line
+            transform: "translate(-50%, -90%)",
           }}
         >
           <div
@@ -2493,7 +2517,7 @@ export default function VijayanagaraGameScreen() {
 
           // Mode 1: ✨ Glowing (Only for major hidden secrets when nearby)
           const isGlowing = (scene === "toymaker_stall" && (shoeSequenceState === "genie_activating" || shoeSequenceState === "genie_hint")) ||
-                            (scene === "musical_pillars" && !isMusicalPillarsComplete);
+                            (scene === "musical_pillars" && (musicalPillarsSequenceState === "genie_activating" || musicalPillarsSequenceState === "genie_hint"));
 
           // Move the Genie specifically to the hidden secret location to point it out clearly!
           if (isGlowing) {
@@ -2775,8 +2799,10 @@ export default function VijayanagaraGameScreen() {
           objective={
             isCampaignComplete
               ? "Campaign Complete: Vijayanagara Legacy Preserved across stone and memory."
-              : shoeSequenceState === "completed"
+              : scene === "toymaker_stall" && shoeSequenceState === "completed"
               ? "Travel to another time period and uncover the time traveller's connection to the Vijayanagara Empire."
+              : scene === "musical_pillars" && musicalPillarsSequenceState === "completed"
+              ? "Ledger I recovered. Continue the investigation."
               : isStage3Complete && stage === 3
               ? "Stage 3 Complete! Follow the road to Mahanavami Dibba (Stage 4)."
               : isStage2Complete && stage === 2
@@ -2824,6 +2850,55 @@ export default function VijayanagaraGameScreen() {
           onSelectJournalToy={handleSelectJournalToy}
           hasJournalToy={hasJournalToy}
         />
+
+        {/* --- TIME COIN REWARD MODAL --- */}
+        {showTimeCoinUnlockModal && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm pointer-events-auto">
+            <div className="w-[450px] bg-[#1a1714] border-2 border-[#d4a359] rounded-xl shadow-[0_0_50px_rgba(212,163,89,0.3)] overflow-hidden flex flex-col items-center p-8 animate-[popIn_0.5s_cubic-bezier(0.175,0.885,0.32,1.275)]">
+              <h2 className="text-3xl font-serif text-[#d4a359] mb-2 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] text-center">
+                VIJAYANAGARA EMPIRE TIME COIN
+              </h2>
+              <div className="text-[#8cd98c] font-bold tracking-widest text-lg mb-6 flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                UNLOCKED
+              </div>
+
+              <div className="w-40 h-40 rounded-full border-4 border-[#d4a359] shadow-[0_0_30px_rgba(212,163,89,0.6)] bg-gradient-to-br from-[#d4a359]/20 to-transparent flex items-center justify-center mb-6 relative group overflow-hidden">
+                <div className="absolute inset-0 bg-[#d4a359]/10 rounded-full animate-pulse"></div>
+                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30 mix-blend-overlay"></div>
+                <GameIcon name="artifact" size={80} className="text-[#d4a359] drop-shadow-[0_5px_10px_rgba(0,0,0,0.8)] z-10" />
+                <div className="absolute inset-0 rounded-full border border-white/20 z-20"></div>
+              </div>
+
+              <div className="w-full bg-[#2b2520] border border-[#5a4d3f] p-4 rounded-lg mb-6 flex items-center justify-between">
+                <div>
+                  <h3 className="text-[#f6ede0] font-serif font-bold text-lg">LEDGER I</h3>
+                  <p className="text-[#d6c7b2] text-sm">Second Fragment Recovered</p>
+                </div>
+                <div className="text-[#8cd98c] font-bold flex items-center gap-1">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                  UNLOCKED
+                </div>
+              </div>
+              
+              <button
+                className="w-full py-3 bg-gradient-to-r from-[#d4a359] to-[#b38645] hover:from-[#e5b971] hover:to-[#c69a57] text-[#141210] font-bold font-serif uppercase tracking-widest rounded-lg shadow-lg transition-transform hover:scale-105 active:scale-95"
+                onClick={() => {
+                  setShowTimeCoinUnlockModal(false);
+                  setMusicalPillarsSequenceState("completed");
+                  dispatch(setHasSecondLedgerFragment(true));
+                  setIsMusicalPillarsComplete(true);
+                  if (!unlockedJournalEntries.includes("musical_pillars_acoustics")) {
+                    dispatch(addJournalEntry("musical_pillars_acoustics"));
+                  }
+                  soundFx.playSelect();
+                }}
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* --- MUSICAL PILLARS PUZZLE MODAL --- */}
         <MusicalPillarsPuzzle
