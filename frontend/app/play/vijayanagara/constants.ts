@@ -203,7 +203,7 @@ export const SCENE_CONFIGS: Record<VijayanagaraSceneType, SceneMeta> = {
     title: "Mahanavami Platform Complex",
     era: "1565 AD",
     subtitle: "The multi-tiered stone dais where emperors hosted grand Navaratri festivals",
-    backgroundImage: "/bg-vijayanagara-mahanavami-dibba-evening.jpg",
+    backgroundImage: "/bg-vijayanagara-mahanavami-festival.jpg",
     defaultObjective: "Ascend the stepped stone plinth and observe the festival layout.",
     minX: 10.0,
     maxX: 90.0,
