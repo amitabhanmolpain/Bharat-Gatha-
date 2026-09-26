@@ -112,7 +112,7 @@ CHARACTER_VOICE_PROFILES = {
         "name": "Master Kallappa",
         "role": "Kinhal Craft Guild Artisan",
         "description": (
-            "An old man's voice. A warm, very elderly Indian male artisan speaking slow, gentle, dignified Indian English with a soft South Indian accent. "
+            "A male speaker. An old man's voice. A warm, very elderly Indian male artisan speaking slow, gentle, dignified Indian English with a soft South Indian accent. "
             "His voice is aged, gravelly, respectful, and slightly raspy, speaking like a 16th-century master woodcraft artisan with wisdom, humility, and calm patience."
         ),
         "fallback_speaker": "ratan",
@@ -124,7 +124,7 @@ CHARACTER_VOICE_PROFILES = {
         "name": "Setti Somappa",
         "role": "Royal Merchant Guild Assessor",
         "description": (
-            "A dignified, elderly Indian male merchant speaking measured, warm Indian English with a South Indian accent. "
+            "A male speaker. A dignified, elderly Indian male merchant speaking measured, warm Indian English with a South Indian accent. "
             "His voice is mature, seasoned, slightly deep, and authoritative yet cordial, speaking like a 16th-century royal gemstone assessor in Hampi Bazaar."
         ),
         "fallback_speaker": "ratan",

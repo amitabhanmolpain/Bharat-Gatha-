@@ -126,7 +126,7 @@ export default function MusicalPillarsPuzzle({
       // Stop any other active voice
       stopAllCharacterVoice();
       // Only narration to guide the player initially
-      playNarration("Listen carefully to the resonance of each pillar. Strike them in the correct order.");
+      void playNarration("Listen carefully to the resonance of each pillar. Strike them in the correct order.");
     } else if (!isOpen) {
       clearAllTimers();
       setIsAiPlaying(false);

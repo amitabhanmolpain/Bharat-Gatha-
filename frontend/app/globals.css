@@ -56,7 +56,28 @@ body {
   animation: puzzledDoubt 2.2s infinite ease-in-out !important;
 }
 
+@keyframes riverSail {
+  0% { transform: translate(62vw, -2vh) scale(0.35); }
+  100% { transform: translate(115vw, 6vh) scale(0.65); }
+}
+
+@keyframes riverBob {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-8px) rotate(3deg); }
+}
+
+.animate-river-sail {
+  animation: riverSail 50s linear infinite;
+}
+
+.animate-river-bob {
+  animation: riverBob 4s ease-in-out infinite;
+}
 
 @keyframes flashWhite { 0% { opacity: 1; } 100% { opacity: 0; } }
 .animate-flashWhite { animation: flashWhite 1s ease-out forwards; pointer-events: none; }
 
+@keyframes wiggle_shopkeeper {
+  0%, 100% { transform: translate(-50%, -100%) rotate(-1deg) scale(1); }
+  50% { transform: translate(-50%, -100%) rotate(1deg) scale(1.03); }
+}
