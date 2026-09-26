@@ -103,7 +103,6 @@ export default function HistoricalNPCDialogueCard({
     return () => unsubscribe();
   }, []);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (autoPlayVoice && currentSpeechText) {
       triggerVoice(currentSpeechText);
@@ -119,7 +118,6 @@ export default function HistoricalNPCDialogueCard({
     };
   }, []);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {

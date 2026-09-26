@@ -1499,7 +1499,7 @@ export default function VijayanagaraGameScreen() {
        
        setTimeout(() => {
           setShoeSequenceState("shoe_unlocked");
-          const audio = new Audio("/audio/subway-surfers-open-box.mp3");
+          const audio = new Audio("/audio/reward-unlock.mp3");
           audio.volume = 0.6;
           audio.play().catch(e => console.log("Audio play failed:", e));
           
@@ -1535,7 +1535,7 @@ export default function VijayanagaraGameScreen() {
         
         setTimeout(() => {
           setMusicalPillarsSequenceState("time_coin_unlocked");
-          const audio = new Audio("/audio/subway-surfers-open-box.mp3"); // Reuse existing reward sound
+          const audio = new Audio("/audio/reward-unlock.mp3"); // Reuse existing reward sound
           audio.volume = 0.6;
           audio.play().catch(e => console.log("Audio play failed:", e));
           
@@ -3291,7 +3291,7 @@ export default function VijayanagaraGameScreen() {
                     setShowBlessingCutscene(false);
                     setShowOarUnlockModal(true);
                     
-                    const audio = new Audio("/audio/subway-surfers-open-box.mp3");
+                    const audio = new Audio("/audio/reward-unlock.mp3");
                     audio.volume = 0.6;
                     audio.play().catch(e => console.log("Audio play failed:", e));
                   }}
