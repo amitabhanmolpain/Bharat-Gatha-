@@ -91,14 +91,15 @@ export default function TempleWallInspectionController({ isActive, onComplete, s
         });
       }
 
+      if (isCancelled) return;
+      
+      // Wait a second before closing
+      await new Promise(resolve => {
+        stepTimer = setTimeout(resolve, 1000);
+      });
+      
       if (!isCancelled) {
-        // Wait a second before closing
-        await new Promise(resolve => {
-          stepTimer = setTimeout(resolve, 1000);
-        });
-        if (!isCancelled) {
-          onCompleteRef.current();
-        }
+        onCompleteRef.current();
       }
     };
 
