@@ -1010,18 +1010,16 @@ export default function VijayanagaraGameScreen() {
       // Stage 4 Transition Key [G]
       if (key === "g" && !isAnyModalOpen) {
         if (isNearHazaraRamaStage4Exit) {
-          if (isStage3Complete || hasSecondLedgerFragment) {
-            triggerTransition(
-              "mahanavami_celebration",
-              { x: 50.0, y: 80.0 },
-              "Approaching Mahanavami Dibba (Stage 4)",
-              "Ascending toward the multi-tiered royal ceremonial platform as evening shadows stretch across the granite landscape.",
-              "stone_road"
-            );
-            setStage(4);
-            if (!unlockedJournalEntries.includes("mahanavami_dibba_platform")) {
-              dispatch(addJournalEntry("mahanavami_dibba_platform"));
-            }
+          triggerTransition(
+            "mahanavami_celebration",
+            { x: 50.0, y: 80.0 },
+            "Approaching Mahanavami Dibba (Stage 4)",
+            "Ascending toward the multi-tiered royal ceremonial platform as evening shadows stretch across the granite landscape.",
+            "stone_road"
+          );
+          setStage(4);
+          if (!unlockedJournalEntries.includes("mahanavami_dibba_platform")) {
+            dispatch(addJournalEntry("mahanavami_dibba_platform"));
           }
         }
       }
@@ -2151,13 +2149,24 @@ export default function VijayanagaraGameScreen() {
         {scene === "hazara_rama_walls" && (
           <>
             <div
-              className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
+              className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer z-10 hover:scale-105 transition-transform"
               style={{ left: "45%", top: "68%" }}
+              onClick={() => {
+                soundFx.playSelect();
+                setShowHazaraRamaModal(true);
+                setHasHazaraRamaDiscovery(true);
+                if (!unlockedJournalEntries.includes("hazara_rama_friezes")) {
+                  dispatch(addJournalEntry("hazara_rama_friezes"));
+                }
+              }}
             >
-              {isNearHazaraFriezes && (
+              {isNearHazaraFriezes ? (
                 <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                  <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">E</kbd>
                   <span>Examine Narrative Ramayana Bas-Reliefs</span>
+                </div>
+              ) : (
+                <div className="mb-2 opacity-0 hover:opacity-100 transition-opacity duration-200 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] flex items-center gap-1.5 whitespace-nowrap">
+                  <span>Ramayana Friezes</span>
                 </div>
               )}
               <div className="w-12 h-14 bg-[#2e261f]/90 border-2 border-[#d4a359] rounded-2xl flex items-center justify-center shadow-lg">
@@ -2170,11 +2179,20 @@ export default function VijayanagaraGameScreen() {
 
             {/* --- FAST TRAVEL RETURN HOTSPOT --- */}
             <div
-              className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
+              className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer z-10 hover:scale-105 transition-transform"
               style={{ left: "72%", top: "78%" }}
+              onClick={() => {
+                soundFx.playSelect();
+                triggerTransition(
+                  "stone_chariot_entry",
+                  { x: 32.0, y: 65.0 },
+                  "Returning to Vittala Temple Courtyard",
+                  "Returning to the central stone courtyard of the Stone Chariot.",
+                  "temple_walk"
+                );
+              }}
             >
               <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-pulse flex items-center gap-1.5 whitespace-nowrap">
-                <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">F</kbd>
                 <span>Return to Courtyard</span>
               </div>
               <div className="w-10 h-10 bg-[#2b2520]/80 border border-[#5a4d3f] rounded-xl flex items-center justify-center shadow">
@@ -2186,25 +2204,40 @@ export default function VijayanagaraGameScreen() {
             </div>
 
             {/* --- PATH TO MAHANAVAMI DIBBA (STAGE 4) --- */}
-            {(isStage3Complete || hasSecondLedgerFragment) && (
-              <div
-                className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
-                style={{ left: "15%", top: "78%" }}
-              >
-                {isNearHazaraRamaStage4Exit && (
-                  <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                    <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">G</kbd>
-                    <span>Path to Mahanavami Dibba (Stage 4)</span>
-                  </div>
-                )}
-                <div className="w-11 h-11 bg-[#3d3328]/90 border-2 border-[#d4a359] rounded-xl flex items-center justify-center shadow-lg">
-                  <GameIcon name="temple" size={20} className="text-[#d4a359]" />
+            <div
+              className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer z-10 hover:scale-105 transition-transform"
+              style={{ left: "15%", top: "78%" }}
+              onClick={() => {
+                soundFx.playSelect();
+                triggerTransition(
+                  "mahanavami_celebration",
+                  { x: 50.0, y: 80.0 },
+                  "Approaching Mahanavami Dibba (Stage 4)",
+                  "Ascending toward the multi-tiered royal ceremonial platform as evening shadows stretch across the granite landscape.",
+                  "stone_road"
+                );
+                setStage(4);
+                if (!unlockedJournalEntries.includes("mahanavami_dibba_platform")) {
+                  dispatch(addJournalEntry("mahanavami_dibba_platform"));
+                }
+              }}
+            >
+              {isNearHazaraRamaStage4Exit ? (
+                <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
+                  <span>Path to Mahanavami Dibba (Stage 4)</span>
                 </div>
-                <span className="text-[10px] font-serif font-bold text-[#d4a359] bg-[#1a1714]/90 px-2 py-0.5 rounded border border-[#d4a359] mt-1">
-                  Mahanavami Dibba
-                </span>
+              ) : (
+                <div className="mb-2 opacity-0 hover:opacity-100 transition-opacity duration-200 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] flex items-center gap-1.5 whitespace-nowrap">
+                  <span>Mahanavami Dibba</span>
+                </div>
+              )}
+              <div className="w-11 h-11 bg-[#3d3328]/90 border-2 border-[#d4a359] rounded-xl flex items-center justify-center shadow-lg">
+                <GameIcon name="temple" size={20} className="text-[#d4a359]" />
               </div>
-            )}
+              <span className="text-[10px] font-serif font-bold text-[#d4a359] bg-[#1a1714]/90 px-2 py-0.5 rounded border border-[#d4a359] mt-1">
+                Mahanavami Dibba
+              </span>
+            </div>
           </>
         )}
 
