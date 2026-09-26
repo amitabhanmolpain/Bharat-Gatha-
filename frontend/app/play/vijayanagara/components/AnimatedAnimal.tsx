@@ -52,7 +52,11 @@ export default function AnimatedAnimal({ type, path, speed, scaleFactor = 1.0 }:
 
   useEffect(() => {
     requestRef.current = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(requestRef.current!);
+    return () => {
+      if (requestRef.current) {
+        cancelAnimationFrame(requestRef.current);
+      }
+    };
   }, [path, speed]);
 
   const imgSrc = type === 'elephant' ? '/rajasthan-elephant.png' : '/rajasthan-camel.png'; // Fallbacks based on existing

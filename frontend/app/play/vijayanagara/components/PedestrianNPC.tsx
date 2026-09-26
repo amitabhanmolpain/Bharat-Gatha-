@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection */
 import React, { useState, useEffect, useRef } from 'react';
 
 interface Point {
@@ -40,7 +41,9 @@ export default function PedestrianNPC({
     const timer = setTimeout(() => {
       setIsStarted(true);
     }, startDelay);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+    };
   }, [startDelay]);
 
   const animate = (time: number) => {

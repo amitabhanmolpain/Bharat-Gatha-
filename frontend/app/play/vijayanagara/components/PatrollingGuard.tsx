@@ -50,7 +50,11 @@ export default function PatrollingGuard({
 
   useEffect(() => {
     requestRef.current = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(requestRef.current!);
+    return () => {
+      if (requestRef.current) {
+        cancelAnimationFrame(requestRef.current);
+      }
+    };
   }, [centerX, centerY, radiusX, radiusY, speed]);
 
   const depthScale = 0.5 + (pos.y / 100) * 0.5; // simple depth scale

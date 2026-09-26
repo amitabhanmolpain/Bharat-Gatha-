@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection */
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -76,7 +77,7 @@ export default function TempleWallInspectionController({ isActive, onComplete, s
         
         setCameraTransform(step.transform);
         
-        playNarration(step.text, { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
+        void playNarration(step.text, { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
 
         await new Promise(resolve => {
           stepTimer = setTimeout(resolve, step.duration);
@@ -94,7 +95,7 @@ export default function TempleWallInspectionController({ isActive, onComplete, s
       }
     };
 
-    runSequence();
+    void runSequence();
 
     return () => {
       isCancelled = true;
