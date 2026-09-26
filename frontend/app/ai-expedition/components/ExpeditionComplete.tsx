@@ -55,7 +55,7 @@ export default function ExpeditionComplete({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                narrationManager.replay(presentationId);
+                void narrationManager.replay(presentationId);
               }}
               className="text-[11px] bg-[#ffdc5e] hover:bg-[#f59e0b] text-black px-2.5 py-1 rounded-lg border-2 border-black font-extrabold flex items-center gap-1 cursor-pointer shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-0.5"
               title="Replay Ending Narration Audio"
