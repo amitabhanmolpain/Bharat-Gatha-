@@ -55,7 +55,7 @@ export default function PatrollingGuard({
         cancelAnimationFrame(requestRef.current);
       }
     };
-  }, [centerX, centerY, radiusX, radiusY, speed]);
+  }, [centerX, centerY, radiusX, radiusY, speed, angleOffset]);
 
   const depthScale = 0.5 + (pos.y / 100) * 0.5; // simple depth scale
   const finalScaleX = (facingLeft ? -0.7 : 0.7) * depthScale;

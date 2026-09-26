@@ -59,7 +59,7 @@ export default function AnimatedAnimal({ type, path, speed, scaleFactor = 1.0 }:
     };
   }, [path, speed]);
 
-  const imgSrc = type === 'elephant' ? '/rajasthan-elephant.png' : '/rajasthan-camel.png'; // Fallbacks based on existing
+  const imgSrc = type === 'elephant' ? '/rajasthan-elephant.png' : type === 'horse' ? '/horse.png' : '/rajasthan-camel.png'; // Fallbacks based on existing
   const baseScale = type === 'elephant' ? 1.0 : 0.8;
   const depthScale = 0.5 + (pos.y / 100) * 0.5; // simple depth scale
   const finalScaleX = (facingLeft ? -1 : 1) * baseScale * depthScale * scaleFactor;

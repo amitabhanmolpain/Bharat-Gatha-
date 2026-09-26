@@ -1,7 +1,7 @@
 /* eslint-disable security/detect-object-injection */
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { playNarration, stopNarration } from "../../../../services/narratorService";
 
 interface TempleWallInspectionControllerProps {
@@ -57,11 +57,18 @@ const SCRIPT_STEPS = [
 
 export default function TempleWallInspectionController({ isActive, onComplete, setCameraTransform }: TempleWallInspectionControllerProps) {
   const [currentStepIndex, setCurrentStepIndex] = useState(-1);
+  const onCompleteRef = useRef(onComplete);
+  const setCameraTransformRef = useRef(setCameraTransform);
+
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+    setCameraTransformRef.current = setCameraTransform;
+  }, [onComplete, setCameraTransform]);
 
   useEffect(() => {
     if (!isActive) {
       setCurrentStepIndex(-1);
-      setCameraTransform("scale(1) translate(0,0)");
+      setCameraTransformRef.current("scale(1) translate(0,0)");
       return;
     }
 
@@ -73,9 +80,9 @@ export default function TempleWallInspectionController({ isActive, onComplete, s
         if (isCancelled) break;
         
         setCurrentStepIndex(i);
-        const step = SCRIPT_STEPS[i];
+        const step = SCRIPT_STEPS[i as number];
         
-        setCameraTransform(step.transform);
+        setCameraTransformRef.current(step.transform);
         
         void playNarration(step.text, { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
 
@@ -90,7 +97,7 @@ export default function TempleWallInspectionController({ isActive, onComplete, s
           stepTimer = setTimeout(resolve, 1000);
         });
         if (!isCancelled) {
-          onComplete();
+          onCompleteRef.current();
         }
       }
     };
@@ -102,7 +109,7 @@ export default function TempleWallInspectionController({ isActive, onComplete, s
       clearTimeout(stepTimer);
       stopNarration();
     };
-  }, [isActive, onComplete, setCameraTransform]);
+  }, [isActive]);
 
   if (!isActive || currentStepIndex === -1) return null;
 
