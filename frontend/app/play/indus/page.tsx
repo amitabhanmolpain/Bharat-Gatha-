@@ -330,20 +330,20 @@ function getBoatPatrolPosition(
 // NEVER walks on walls, lintels, rooftops, or across the front wall. Strictly grounded on brick ramps.
 function getGreatBathPotterState(elapsedTime: number) {
   // First Gate (left) waypoints:
-  const p1Bottom = { x: 2.0, y: 101.5 };
-  const p1Lower = { x: 7.5, y: 96.5 };
-  const p1Mid = { x: 12.5, y: 91.5 };
-  const p1Upper = { x: 16.5, y: 87.0 };
-  const p1Door = { x: 19.8, y: 83.5 };
-  const p1Inside = { x: 20.2, y: 81.5 };
+  const p1Bottom = { x: 6.3, y: 101.5 };
+  const p1Lower = { x: 11.3, y: 96.5 };
+  const p1Mid = { x: 16.3, y: 91.5 };
+  const p1Upper = { x: 20.8, y: 87.0 };
+  const p1Door = { x: 24.3, y: 83.5 };
+  const p1Inside = { x: 24.7, y: 81.5 };
 
   // Second Gate (right) waypoints:
-  const p2Inside = { x: 80.0, y: 81.5 };
-  const p2Door = { x: 80.5, y: 83.5 };
-  const p2Upper = { x: 83.5, y: 87.0 };
-  const p2Mid = { x: 87.5, y: 91.5 };
-  const p2Lower = { x: 92.5, y: 96.5 };
-  const p2Bottom = { x: 98.0, y: 101.5 };
+  const p2Inside = { x: 78.3, y: 81.5 };
+  const p2Door = { x: 78.7, y: 83.5 };
+  const p2Upper = { x: 82.2, y: 87.0 };
+  const p2Mid = { x: 86.7, y: 91.5 };
+  const p2Lower = { x: 91.7, y: 96.5 };
+  const p2Bottom = { x: 96.7, y: 101.5 };
 
   const loopPeriod = 19.0;
   const t = ((elapsedTime % loopPeriod) + loopPeriod) % loopPeriod;
