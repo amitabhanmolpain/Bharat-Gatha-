@@ -2307,18 +2307,6 @@ export default function VijayanagaraGameScreen() {
               </span>
             </div>
 
-            {/* --- KING RAMA RAYA ON THRONE --- */}
-            <div
-              className="absolute transform -translate-x-1/2 -translate-y-[80%] z-0 pointer-events-none"
-              style={{ left: "50%", top: "12%" }} 
-            >
-              <img 
-                src="/king_on_throne.png" 
-                alt="Emperor Rama Raya" 
-                className="w-24 h-auto drop-shadow-[0_15px_10px_rgba(0,0,0,0.6)]" 
-                style={{ imageRendering: 'pixelated' }}
-              />
-            </div>
 
             {/* --- 5 MARCHING GUARDS --- */}
             {Array.from({ length: 5 }).map((_, i) => {
