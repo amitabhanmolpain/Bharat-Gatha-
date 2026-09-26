@@ -1181,45 +1181,45 @@ function IndusValleyGameComponent() {
   };
 
   // Worker 2: Ground Porter in Lower Dirt Yard (Fix: stays strictly grounded on dirt road, never flies onto arch wall, never goes past cart):
-  // Point A (Cart front/shafts where sacks are unloaded: 53.5%, 96.5%) <-> Point B (Open dirt ground staging: 38.0%, 97.5%)
+  // Point A (Cart front/shafts where sacks are unloaded: 53.5%, 96.5%) <-> Point B (Open dirt ground staging: 75.0%, 97.5%)
   // Total cycle: 14s, staggered by 5s
   const w2Cycle = (carrierTime + 5) % 14;
   let w2Pos = { x: 53.5, y: 96.5 };
-  let w2FacingLeft = true;
+  let w2FacingLeft = false;
   let w2Carrying = true;
 
   if (w2Cycle < 1.5) {
     // Lifting/picking up grain sack at cart front Point A
     w2Pos = { x: 53.5, y: 96.5 };
-    w2FacingLeft = true;
+    w2FacingLeft = false;
     w2Carrying = true;
   } else if (w2Cycle < 6.5) {
     // Walking carrying sack across open dirt ground towards Point B (maintaining ground physics, y >= 96.5)
     const t = (w2Cycle - 1.5) / 5.0;
-    w2FacingLeft = true;
+    w2FacingLeft = false;
     w2Carrying = true;
     w2Pos = {
-      x: 53.5 - t * (53.5 - 38.0),
+      x: 53.5 + t * (75.0 - 53.5),
       y: 96.5 + t * (97.5 - 96.5),
     };
   } else if (w2Cycle < 8.0) {
     // Keeping/depositing grain sack on open dirt ground at Point B
-    w2Pos = { x: 38.0, y: 97.5 };
-    w2FacingLeft = true;
+    w2Pos = { x: 75.0, y: 97.5 };
+    w2FacingLeft = false;
     w2Carrying = false;
   } else if (w2Cycle < 13.0) {
     // Walking back empty-handed across open dirt ground from Point B to cart Point A
     const t = (w2Cycle - 8.0) / 5.0;
-    w2FacingLeft = false;
+    w2FacingLeft = true;
     w2Carrying = false;
     w2Pos = {
-      x: 38.0 + t * (53.5 - 38.0),
+      x: 75.0 - t * (75.0 - 53.5),
       y: 97.5 - t * (97.5 - 96.5),
     };
   } else {
     // Resetting at cart front Point A to start next sack
     w2Pos = { x: 53.5, y: 96.5 };
-    w2FacingLeft = true;
+    w2FacingLeft = false;
     w2Carrying = false;
   }
 
@@ -3749,15 +3749,15 @@ function IndusValleyGameComponent() {
           </div>
         )}
 
-        {/* Stage 1.7: Deposited Grain Bag on Platform 1 (appears when Worker 2 deposits grain) */}
+        {/* Stage 1.7: Deposited Grain Bag on Ground (appears when Worker 2 deposits grain) */}
         {scene === "granary_avenue" && showDepositedSack2 && (
           <div
             className="absolute z-11 pointer-events-none select-none transition-opacity duration-300"
-            style={{ left: "34.5%", top: "57.5%" }}
+            style={{ left: "75.0%", top: "97.5%" }}
           >
             <img
               src="/sprite-grain-sack.png"
-              alt="Deposited Grain Bag on Platform 1"
+              alt="Deposited Grain Bag on Ground"
               className="h-7 sm:h-8 md:h-[32px] w-auto object-contain block select-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)] transform -translate-x-1/2 -translate-y-full"
             />
           </div>
