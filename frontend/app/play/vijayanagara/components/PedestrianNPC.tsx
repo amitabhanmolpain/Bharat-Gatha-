@@ -14,6 +14,7 @@ interface PedestrianNPCProps {
   scale?: number;
   startDelay?: number;
   loop?: boolean;
+  circular?: boolean;
 }
 
 export default function PedestrianNPC({
@@ -24,6 +25,7 @@ export default function PedestrianNPC({
   scale = 1,
   startDelay = 0,
   loop = true,
+  circular = false,
 }: PedestrianNPCProps) {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [pos, setPos] = useState<Point>(path[0]);
@@ -32,8 +34,8 @@ export default function PedestrianNPC({
   const [isStarted, setIsStarted] = useState(false);
   
   const requestRef = useRef<number>(0);
-  const propsRef = useRef({ speed, path, loop, frames });
-  useEffect(() => { propsRef.current = { speed, path, loop, frames }; }, [speed, path, loop, frames]);
+  const propsRef = useRef({ speed, path, loop, circular, frames });
+  useEffect(() => { propsRef.current = { speed, path, loop, circular, frames }; }, [speed, path, loop, circular, frames]);
   const lastTimeRef = useRef<number>(0);
   const posRef = useRef(pos);
   const currentIdxRef = useRef(currentIdx);
@@ -52,7 +54,15 @@ export default function PedestrianNPC({
     if (lastTimeRef.current !== 0) {
       const deltaTime = time - lastTimeRef.current;
       
-      const targetIdx = currentIdxRef.current + directionRef.current;
+      let targetIdx = currentIdxRef.current + directionRef.current;
+      
+      if (propsRef.current.circular) {
+        if (targetIdx >= propsRef.current.path.length) {
+          targetIdx = 0;
+        } else if (targetIdx < 0) {
+          targetIdx = propsRef.current.path.length - 1;
+        }
+      }
       
       if (targetIdx >= 0 && targetIdx < propsRef.current.path.length) {
         const target = propsRef.current.path[targetIdx];

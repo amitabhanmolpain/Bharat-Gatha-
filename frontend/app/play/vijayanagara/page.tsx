@@ -625,11 +625,7 @@ export default function VijayanagaraGameScreen() {
     playerPos.x >= 78.0 &&
     playerPos.y >= 80.0;
 
-  const isNearBazaarToymaker =
-    scene === "hampi_bazaar_entry" &&
-    playerPos.x <= 22.0 &&
-    playerPos.y >= 64.0 &&
-    playerPos.y <= 80.0;
+  const isNearBazaarToymaker = scene === "hampi_bazaar_entry" && playerPos.x >= 45.0 && playerPos.x <= 65.0 && playerPos.y >= 85.0 && playerPos.y <= 100.0;
 
   const isNearBazaarForeignTraveler =
     scene === "hampi_bazaar_entry" &&
@@ -1747,10 +1743,10 @@ export default function VijayanagaraGameScreen() {
               </span>
             </div>
 
-            {/* Kinhal Toys (Bottom Left near Steps/Plant as shown in 3rd image) */}
+            {/* Kinhal Toys (Bottom Middle) */}
             <div
               className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
-              style={{ left: "13%", top: "71%" }}
+              style={{ left: "55%", top: "93%" }}
             >
               {isNearBazaarToymaker && (
                 <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
