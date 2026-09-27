@@ -509,6 +509,20 @@ function IndusValleyGameComponent() {
   const [hasCollectedToy, setHasCollectedToy] = useState(false);
   const [showPriestFollowerDialogue, setShowPriestFollowerDialogue] = useState(false);
   const [isPriestFollowerTalking, setIsPriestFollowerTalking] = useState(false);
+  const [isPriestKingTalking, setIsPriestKingTalking] = useState(false);
+  const [priestAnimFrame, setPriestAnimFrame] = useState(1);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isPriestFollowerTalking || isPriestKingTalking) {
+      interval = setInterval(() => {
+        setPriestAnimFrame(prev => prev === 3 ? 1 : prev + 1);
+      }, 150);
+    } else {
+      setPriestAnimFrame(1);
+    }
+    return () => clearInterval(interval);
+  }, [isPriestFollowerTalking, isPriestKingTalking]);
   const [showForeignTradersModal, setShowForeignTradersModal] = useState(false);
   const [hasInspectedForeignTraders, setHasInspectedForeignTraders] = useState(false);
 
@@ -2037,6 +2051,13 @@ function IndusValleyGameComponent() {
           setShowSealPuzzleModal(true);
         } else if (isNearPriestKing) {
           setShowPriestKingDialogue(true);
+          setIsPriestKingTalking(true);
+          playCharacterDialogue({
+            character: "priest_king",
+            text: "You have traced the full lifeblood of our civilisation, seeker. You began in the quiet streets of the Lower Town where standard bricks form peaceful homes. You purified the waters of the Great Bath using bitumen culverts. You aligned the Unicorn seal that brands our ships sailing to Meluhha. Unlike realms built upon conquest, our civilization stands on civic harmony, craftsmanship, and hydraulic mastery. Accept this lost-wax cast Bronze Dancing Girl - the immortal embodiment of Harappan artistic spirit.",
+            onEnd: () => setIsPriestKingTalking(false),
+            onError: () => setIsPriestKingTalking(false)
+          });
         }
       };
     };
@@ -2242,6 +2263,7 @@ function IndusValleyGameComponent() {
     setHasBronzeDancingGirl(true);
     setIsCampaignComplete(true);
     setShowPriestKingDialogue(false);
+    stopAllCharacterVoice();
 
     if (!unlockedJournalEntries.includes("lost_wax_bronze")) {
       setUnlockedJournalEntries((prev) => [...prev, "lost_wax_bronze"]);
@@ -4456,9 +4478,9 @@ function IndusValleyGameComponent() {
               }}
             >
               <img 
-                src="/indus_priest_king_follower.png" 
+                src={priestAnimFrame === 1 ? "/indus_priest_king_follower.png" : priestAnimFrame === 2 ? "/indus_priest_king_follower_anim_2.png" : "/indus_priest_king_follower_anim_3.png"} 
                 alt="Priest King Follower" 
-                className={`h-24 w-auto object-contain drop-shadow-[0_5px_10px_rgba(0,0,0,0.5)] transition-all group-hover:scale-110 ${isPriestFollowerTalking ? 'animate-bounce' : ''}`}
+                className="h-24 w-auto object-contain drop-shadow-[0_5px_10px_rgba(0,0,0,0.5)] transition-all group-hover:scale-110"
                 style={{ imageRendering: 'pixelated' }}
               />
               <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center gap-1.5 whitespace-nowrap">
@@ -4684,9 +4706,9 @@ function IndusValleyGameComponent() {
             <div className="flex flex-col md:flex-row h-full">
               <div className="w-full md:w-1/3 bg-[#261f18] p-6 flex items-center justify-center border-b md:border-b-0 md:border-r border-[#4a3b2b]">
                 <img 
-                  src="/indus_priest_king_follower.png" 
+                  src={priestAnimFrame === 1 ? "/indus_priest_king_follower.png" : priestAnimFrame === 2 ? "/indus_priest_king_follower_anim_2.png" : "/indus_priest_king_follower_anim_3.png"} 
                   alt="Priest King Follower" 
-                  className={`w-40 h-40 object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.6)] ${isPriestFollowerTalking ? 'animate-pulse' : ''}`}
+                  className="w-40 h-40 object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.6)]"
                   style={{ imageRendering: 'pixelated' }}
                 />
               </div>
@@ -5565,50 +5587,65 @@ function IndusValleyGameComponent() {
 
       {/* --- STAGE 4 PRIEST-KING DIALOGUE MODAL --- */}
       {showPriestKingDialogue && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="relative w-full max-w-2xl bg-[#fffdf5] text-black rounded-2xl border-[4px] border-black p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] max-h-[90vh] overflow-y-auto">
-            <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b-[3px] border-black mb-5 gap-4">
-              <div className="flex flex-col">
-                <h3 className="text-3xl font-black tracking-wide uppercase">
-                  The Priest-King
-                </h3>
-                <div className="text-[11px] font-bold text-gray-700 uppercase tracking-widest mt-1">
-                  Spiritual Dignitary of the Citadel · Mohenjo-daro
+        <div className="fixed inset-0 z-50 flex flex-col justify-end p-8 pb-16 pointer-events-none bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="relative w-full max-w-4xl mx-auto bg-[#fffdf5] text-black rounded-2xl border-[4px] border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] pointer-events-auto overflow-hidden">
+            <div className="flex flex-col md:flex-row h-full">
+              <div className="w-full md:w-1/3 bg-[#fdf5e6] p-6 flex items-center justify-center border-b-[4px] md:border-b-0 md:border-r-[4px] border-black">
+                <img 
+                  src={priestAnimFrame === 1 ? "/indus_priest_king_follower.png" : priestAnimFrame === 2 ? "/indus_priest_king_follower_anim_2.png" : "/indus_priest_king_follower_anim_3.png"} 
+                  alt="The Priest-King" 
+                  className="w-48 h-48 object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.6)]"
+                  style={{ imageRendering: 'pixelated' }}
+                />
+              </div>
+              <div className="w-full md:w-2/3 p-8 flex flex-col justify-between relative max-h-[90vh] overflow-y-auto">
+                <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b-[3px] border-black mb-5 gap-4">
+                  <div className="flex flex-col">
+                    <h3 className="text-3xl font-black tracking-wide uppercase">
+                      The Priest-King
+                    </h3>
+                    <div className="text-[11px] font-bold text-gray-700 uppercase tracking-widest mt-1">
+                      Spiritual Dignitary of the Citadel · Mohenjo-daro
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 self-end md:self-auto">
+                    <button
+                      onClick={() => {
+                        setShowPriestKingDialogue(false);
+                        stopAllCharacterVoice();
+                      }}
+                      className="bg-white border-[3px] border-black rounded-xl px-4 py-2 text-sm font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2 hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer"
+                    >
+                      Esc · leave
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-white border-[2px] border-gray-300 rounded-xl p-5 mb-5 text-sm font-bold leading-relaxed shadow-sm space-y-3">
+                  <p>
+                    &ldquo;You have traced the full lifeblood of our civilisation, seeker.&rdquo;
+                  </p>
+                  <p className="text-gray-600">
+                    &ldquo;You began in the quiet streets of the Lower Town where standard bricks form peaceful homes. You purified the waters of the Great Bath using bitumen culverts. You aligned the Unicorn seal that brands our ships sailing to Meluhha.&rdquo;
+                  </p>
+                  <p className="italic text-gray-800">
+                    &ldquo;Unlike realms built upon conquest, our civilization stands on civic harmony, craftsmanship, and hydraulic mastery. Accept this lost-wax cast Bronze Dancing Girl - the immortal embodiment of Harappan artistic spirit.&rdquo;
+                  </p>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">
+                    Supreme Cultural Relic: Bronze Dancing Girl (cire perdue)
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handlePriestKingBlessing}
+                    className="w-full text-left bg-white border-[3px] border-black rounded-xl px-5 py-4 text-sm font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer flex items-center"
+                  >
+                    <span className="text-[#c85a17] mr-3 text-lg">1.</span> Receive Bronze Dancing Girl
+                  </button>
                 </div>
               </div>
-              <div className="flex items-center gap-3 self-end md:self-auto">
-                <button
-                  onClick={() => setShowPriestKingDialogue(false)}
-                  className="bg-white border-[3px] border-black rounded-xl px-4 py-2 text-sm font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2 hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer"
-                >
-                  Esc · leave
-                </button>
-              </div>
-            </div>
-
-            <div className="bg-white border-[2px] border-gray-300 rounded-xl p-5 mb-5 text-sm font-bold leading-relaxed shadow-sm space-y-3">
-              <p>
-                &ldquo;You have traced the full lifeblood of our civilisation, seeker.&rdquo;
-              </p>
-              <p className="text-gray-600">
-                &ldquo;You began in the quiet streets of the Lower Town where standard bricks form peaceful homes. You purified the waters of the Great Bath using bitumen culverts. You aligned the Unicorn seal that brands our ships sailing to Meluhha.&rdquo;
-              </p>
-              <p className="italic text-gray-800">
-                &ldquo;Unlike realms built upon conquest, our civilization stands on civic harmony, craftsmanship, and hydraulic mastery. Accept this lost-wax cast Bronze Dancing Girl - the immortal embodiment of Harappan artistic spirit.&rdquo;
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-3">
-              <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">
-                Supreme Cultural Relic: Bronze Dancing Girl (cire perdue)
-              </div>
-              <button
-                type="button"
-                onClick={handlePriestKingBlessing}
-                className="w-full text-left bg-white border-[3px] border-black rounded-xl px-5 py-4 text-sm font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer flex items-center"
-              >
-                <span className="text-[#c85a17] mr-3 text-lg">1.</span> Receive Bronze Dancing Girl
-              </button>
             </div>
           </div>
         </div>
