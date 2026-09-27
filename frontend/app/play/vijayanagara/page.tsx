@@ -1448,7 +1448,7 @@ export default function VijayanagaraGameScreen() {
     if (scene === "hampi_bazaar_entry" && !isUncleKidnapped) {
       kidnapTimer = window.setTimeout(() => {
         setShowKidnapCutscene(true);
-      }, 4000);
+      }, 10000);
     }
     return () => clearTimeout(kidnapTimer);
   }, [scene, isUncleKidnapped]);
