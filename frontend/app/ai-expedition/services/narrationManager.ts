@@ -84,16 +84,7 @@ export function getVoiceForNPC(npcId: string): string {
     typeof npcId === "string" &&
     Object.prototype.hasOwnProperty.call(PLASSEY_VOICE_PROFILES, npcId)
   ) {
-const PLASSEY_VOICE_PROFILES = new Map<string, string>([
-  ['char_clive', 'aditya'],
-  ['char_company_guard', 'aditya'],
-  ['narrator', 'ratan']
-  // ... other entries
-]);
-
-export function getVoiceForNPC(npcId: string): string {
-  return PLASSEY_VOICE_PROFILES.get(npcId) || 'ratan';
-}
+    return PLASSEY_VOICE_PROFILES[npcId];
   }
   return "ratan";
 }
