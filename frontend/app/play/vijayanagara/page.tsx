@@ -126,6 +126,17 @@ export default function VijayanagaraGameScreen() {
   const [showUncleDialogue, setShowUncleDialogue] = useState(false);
   const [uncleSpeechText, setUncleSpeechText] = useState("");
   const [uncleOptions, setUncleOptions] = useState<Array<{ id: number; text: string }>>([]);
+  const [uncleFollowPos, setUncleFollowPos] = useState({ x: 50.0, y: 50.0 });
+  const [uncleFacingLeft, setUncleFacingLeft] = useState(false);
+
+  useEffect(() => {
+    // Uncle follows exactly behind the player with a delay so he stays on the path
+    const timer = setTimeout(() => {
+      setUncleFollowPos({ x: playerPos.x, y: playerPos.y });
+      setUncleFacingLeft(facingLeft);
+    }, 400); // 400ms delay
+    return () => clearTimeout(timer);
+  }, [playerPos, facingLeft]);
 
   // Jolly Bhai Companion State
   const [showJollyDialogue, setShowJollyDialogue] = useState(false);
@@ -1622,6 +1633,28 @@ export default function VijayanagaraGameScreen() {
               </div>
             </div>
 
+            {/* Animated Coracle Row Boat 1 (Left Lane) */}
+            <PedestrianNPC
+              id="animated_coracle_1"
+              frames={["/coracle_row_1.png", "/coracle_row_2.png", "/coracle_row_3.png", "/coracle_row_4.png"]}
+              path={[{ x: 62, y: 68 }, { x: 55, y: 50 }, { x: 50, y: 38 }]}
+              speed={0.25}
+              scale={1.8}
+              circular={false}
+              startDelay={0}
+              animSpeed={400}
+            />
+            {/* Animated Coracle Row Boat 2 (Right Lane) */}
+            <PedestrianNPC
+              id="animated_coracle_2"
+              frames={["/coracle_row_1.png", "/coracle_row_2.png", "/coracle_row_3.png", "/coracle_row_4.png"]}
+              path={[{ x: 55, y: 38 }, { x: 65, y: 50 }, { x: 80, y: 68 }]}
+              speed={0.25}
+              scale={1.6}
+              circular={false}
+              startDelay={2000}
+              animSpeed={400}
+            />
             <div
               className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
               style={{ left: "32%", top: "56%" }}
@@ -2716,8 +2749,10 @@ export default function VijayanagaraGameScreen() {
 
         {/* --- UNCLE COMPANION FOLLOWER --- */}
         {!isUncleKidnapped && (hasRecruitedHistorian || scene === "hampi_bazaar_entry") && (() => {
-          const uncleFollowX = facingLeft ? playerPos.x - 12 : playerPos.x + 12;
-          const uncleFollowY = playerPos.y;
+          // Use the delayed uncleFollowPos state to follow the exact path the player took
+          // Offset slightly so they don't perfectly overlap when standing still
+          const uncleFollowX = uncleFacingLeft ? uncleFollowPos.x + 5 : uncleFollowPos.x - 5;
+          const uncleFollowY = uncleFollowPos.y;
           
           return (
             <div
@@ -2733,7 +2768,7 @@ export default function VijayanagaraGameScreen() {
                 alt="Historian Companion"
                 className="w-20 h-28 object-contain object-bottom transition-all drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]"
                 style={{
-                  transform: `scale(${depthScale}) scaleX(${facingLeft ? -1 : 1})`,
+                  transform: `scale(${depthScale}) scaleX(${uncleFacingLeft ? -1 : 1})`,
                   imageRendering: "pixelated"
                 }}
               />
