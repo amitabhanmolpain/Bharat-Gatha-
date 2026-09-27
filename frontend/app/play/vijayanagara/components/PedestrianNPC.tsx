@@ -32,6 +32,8 @@ export default function PedestrianNPC({
   const [isStarted, setIsStarted] = useState(false);
   
   const requestRef = useRef<number>(0);
+  const propsRef = useRef({ speed, path, loop, frames });
+  useEffect(() => { propsRef.current = { speed, path, loop, frames }; }, [speed, path, loop, frames]);
   const lastTimeRef = useRef<number>(0);
   const posRef = useRef(pos);
   const currentIdxRef = useRef(currentIdx);
@@ -52,14 +54,14 @@ export default function PedestrianNPC({
       
       const targetIdx = currentIdxRef.current + directionRef.current;
       
-      if (targetIdx >= 0 && targetIdx < path.length) {
-        const target = path[targetIdx];
+      if (targetIdx >= 0 && targetIdx < propsRef.current.path.length) {
+        const target = propsRef.current.path[targetIdx];
         const dx = target.x - posRef.current.x;
         const dy = target.y - posRef.current.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
         
         // Use a generic speed factor
-        const moveDist = (speed * deltaTime) / 1000;
+        const moveDist = (propsRef.current.speed * deltaTime) / 1000;
         
         if (distance <= moveDist) {
           // Reached target
@@ -77,7 +79,7 @@ export default function PedestrianNPC({
           else if (dx > 0) setFacingLeft(false);
         }
       } else {
-        if (loop) {
+        if (propsRef.current.loop) {
           directionRef.current *= -1; // Reverse path
         }
       }
@@ -85,7 +87,7 @@ export default function PedestrianNPC({
       setPos({ ...posRef.current });
       
       // Update frame based on available frames
-      setFrame(Math.floor(time / 200) % frames.length);
+      setFrame(Math.floor(time / 200) % propsRef.current.frames.length);
     }
     lastTimeRef.current = time;
     requestRef.current = requestAnimationFrame(animate);
@@ -98,7 +100,7 @@ export default function PedestrianNPC({
     return () => {
       if (requestRef.current) cancelAnimationFrame(requestRef.current);
     };
-  }, [isStarted, speed, path, loop, frames]);
+  }, [isStarted]); // Removed path, frames, speed, loop dependencies to avoid restarts. We use refs inside animate.
 
   const depthScale = 0.5 + (pos.y / 100) * 0.5;
   const finalScaleX = (facingLeft ? -1 : 1) * depthScale * scale;
@@ -116,7 +118,7 @@ export default function PedestrianNPC({
       }}
     >
       <img
-        src={frames[frame]}
+        src={propsRef.current.frames[frame]}
         alt={`NPC ${id}`}
         className="w-24 h-auto drop-shadow-[0_10px_8px_rgba(0,0,0,0.5)]"
         style={{ imageRendering: 'pixelated' }}

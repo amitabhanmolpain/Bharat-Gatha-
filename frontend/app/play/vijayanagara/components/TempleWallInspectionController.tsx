@@ -73,43 +73,53 @@ export default function TempleWallInspectionController({ isActive, onComplete, s
     }
 
     let isCancelled = false;
-    let stepTimer: NodeJS.Timeout;
+    let isCancelled = false;
+let currentCancelRef: (() => void) | null = null;
 
-    const runSequence = async () => {
-      for (let i = 0; i < SCRIPT_STEPS.length; i++) {
-        if (isCancelled) break;
-        
-        setCurrentStepIndex(i);
-        const step = SCRIPT_STEPS[i as number];
-        
-        setCameraTransformRef.current(step.transform);
-        
-        void playNarration(step.text, { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
-
-        await new Promise(resolve => {
-          stepTimer = setTimeout(resolve, step.duration);
-        });
-      }
-
-      if (isCancelled) return;
-      
-      // Wait a second before closing
-      await new Promise(resolve => {
-        stepTimer = setTimeout(resolve, 1000);
-      });
-      
-      if (!isCancelled) {
-        onCompleteRef.current();
-      }
+const waitWithCancellation = (ms: number) => {
+  return new Promise<void>((resolve) => {
+    const timer = setTimeout(() => {
+      currentCancelRef = null;
+      resolve();
+    }, ms);
+    currentCancelRef = () => {
+      clearTimeout(timer);
+      resolve();
     };
+  });
+};
 
-    void runSequence();
+const runSequence = async () => {
+  for (let i = 0; i < SCRIPT_STEPS.length; i++) {
+    if (isCancelled) break;
 
-    return () => {
-      isCancelled = true;
-      clearTimeout(stepTimer);
-      stopNarration();
-    };
+    setCurrentStepIndex(i);
+    const step = SCRIPT_STEPS[i];
+
+    setCameraTransformRef.current(step.transform);
+
+    void playNarration(step.text, { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
+
+    await waitWithCancellation(step.duration);
+  }
+
+  if (isCancelled) return;
+
+  // Wait a second before closing
+  await waitWithCancellation(1000);
+
+  if (!isCancelled) {
+    onCompleteRef.current();
+  }
+};
+
+void runSequence();
+
+return () => {
+  isCancelled = true;
+  if (currentCancelRef) currentCancelRef();
+  stopNarration();
+};
   }, [isActive]);
 
   if (!isActive || currentStepIndex === -1) return null;
