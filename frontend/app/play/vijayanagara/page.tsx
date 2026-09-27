@@ -2423,10 +2423,16 @@ export default function VijayanagaraGameScreen() {
             </>
         )}
 
-                                {/* --- KUCHIPUDI DANCERS --- */}
-            <PedestrianNPC id="royal_elephant_1" frames={["/royal_elephant_1.png", "/royal_elephant_2.png"]} path={[{x: 30, y: 55}]} speed={0} scale={2.5} circular={true} startDelay={0} animSpeed={800} />
+                                {/* --- MAHANAVAMI CELEBRATION SPECIFIC NPCS & AUDIO --- */}
+        {scene === "mahanavami_celebration" && (
+          <>
+            <audio src="/vijayanagara_music.mp3" autoPlay loop className="hidden pointer-events-none" onCanPlay={(e) => e.currentTarget.volume = 0.5} />
+            <PedestrianNPC id="royal_elephant_1" frames={["/royal_elephant_1.png", "/royal_elephant_2.png"]} path={[{x: 5, y: 60}]} speed={0} scale={2.5} circular={true} startDelay={0} animSpeed={800} />
+            <PedestrianNPC id="royal_elephant_2" frames={["/royal_elephant_1.png", "/royal_elephant_2.png"]} path={[{x: 26, y: 48}]} speed={0} scale={2.5} circular={true} startDelay={800} animSpeed={800} />
             <PedestrianNPC id="dancer_w1" frames={["/kuchipudi_1.png", "/kuchipudi_2.png", "/kuchipudi_3.png", "/kuchipudi_4.png"]} path={[{x: 82, y: 60}]} speed={0} scale={2.0} circular={true} startDelay={0} animSpeed={400} />
             <PedestrianNPC id="dancer_w2" frames={["/kuchipudi_1.png", "/kuchipudi_2.png", "/kuchipudi_3.png", "/kuchipudi_4.png"]} path={[{x: 88, y: 60}]} speed={0} scale={2.0} circular={true} startDelay={300} animSpeed={400} />
+          </>
+        )}
 
           {/* --- STAGE 4 SCENE 2: PUSHKARANI CLOSING REFLECTION HOTSPOTS --- */}
         {scene === "closing_reflection" && (

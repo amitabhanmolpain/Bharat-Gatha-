@@ -132,7 +132,7 @@ export default function PedestrianNPC({
       <img
         src={propsRef.current.frames[frame]}
         alt={`NPC ${id}`}
-        className="w-24 h-auto drop-shadow-[0_10px_8px_rgba(0,0,0,0.5)]"
+        className="w-24 h-auto drop-shadow-[0_10px_8px_rgba(0,0,0,0.5)] pointer-events-none"
         style={{ imageRendering: 'pixelated' }}
       />
     </div>
