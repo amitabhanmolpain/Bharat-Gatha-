@@ -511,6 +511,10 @@ function IndusValleyGameComponent() {
   const [isPriestFollowerTalking, setIsPriestFollowerTalking] = useState(false);
   const [isPriestKingTalking, setIsPriestKingTalking] = useState(false);
   const [priestAnimFrame, setPriestAnimFrame] = useState(1);
+  const [guardFrame, setGuardFrame] = useState(1);
+  const [roofGuards, setRoofGuards] = useState([
+    { id: 3, baseX: 70, baseY: 20, offsetX: 0, direction: 1, range: 4 }
+  ]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -523,6 +527,22 @@ function IndusValleyGameComponent() {
     }
     return () => clearInterval(interval);
   }, [isPriestFollowerTalking, isPriestKingTalking]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setGuardFrame(prev => prev === 3 ? 1 : prev + 1);
+      setRoofGuards(prevGuards => prevGuards.map(guard => {
+        let newOffset = guard.offsetX + (0.5 * guard.direction);
+        let newDir = guard.direction;
+        if (Math.abs(newOffset) > guard.range) {
+          newDir = -guard.direction;
+          newOffset = guard.offsetX + (0.5 * newDir);
+        }
+        return { ...guard, offsetX: newOffset, direction: newDir };
+      }));
+    }, 200);
+    return () => clearInterval(interval);
+  }, []);
   const [showForeignTradersModal, setShowForeignTradersModal] = useState(false);
   const [hasInspectedForeignTraders, setHasInspectedForeignTraders] = useState(false);
 
@@ -4098,6 +4118,28 @@ function IndusValleyGameComponent() {
             )}
           </div>
         )}
+
+        {/* Caravan Road: Guards on the Roof */}
+        {scene === "caravan_road" && roofGuards.map(guard => (
+          <div
+            key={`guard-${guard.id}`}
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
+            style={{ 
+              left: `${guard.baseX + guard.offsetX}%`, 
+              top: `${guard.baseY}%` 
+            }}
+          >
+            <img 
+              src={guardFrame === 1 ? "/sprite-indus-rooftop.png" : guardFrame === 2 ? "/sprite-rooftop-walk-1.png" : "/sprite-rooftop-walk-2.png"} 
+              alt="Harappan Wall Guard" 
+              className="w-8 h-auto drop-shadow-[0_4px_4px_rgba(0,0,0,0.6)]" 
+              style={{ 
+                imageRendering: 'pixelated', 
+                transform: `scaleX(${guard.direction})` 
+              }}
+            />
+          </div>
+        ))}
 
         {/* Stage 3: Harappan Terracotta Toy Workshop & Stalls */}
         {scene === "steatite_seal_workshop" && (
