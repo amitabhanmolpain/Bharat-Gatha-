@@ -2411,40 +2411,23 @@ export default function VijayanagaraGameScreen() {
             </div>
 
 
-            {/* --- LINEAR PATROLLING GUARDS --- */}
-            <PedestrianNPC id="guard_m1" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 5, y: 92}, {x: 25, y: 92}]} speed={4} scale={1.2} startDelay={0} />
-            <PedestrianNPC id="guard_m2" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 25, y: 94}, {x: 45, y: 94}]} speed={4.5} scale={1.2} startDelay={500} />
-            <PedestrianNPC id="guard_m3" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 45, y: 92}, {x: 65, y: 92}]} speed={4} scale={1.2} startDelay={200} />
-            <PedestrianNPC id="guard_m4" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 65, y: 94}, {x: 85, y: 94}]} speed={4.2} scale={1.2} startDelay={700} />
-            <PedestrianNPC id="guard_m5" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 85, y: 92}, {x: 98, y: 92}]} speed={3.8} scale={1.2} startDelay={100} />
-
-            {/* --- ANIMATED ELEPHANTS AND HORSES --- */}
-            <AnimatedAnimal
-              type="elephant"
-              path={[{x: 10, y: 85}, {x: 35, y: 85}, {x: 35, y: 88}, {x: 10, y: 88}]}
-              speed={5}
-            />
-            <AnimatedAnimal
-              type="elephant"
-              path={[{x: 90, y: 82}, {x: 65, y: 82}, {x: 65, y: 78}, {x: 90, y: 78}]}
-              speed={4}
-              scaleFactor={0.9}
-            />
-            <AnimatedAnimal
-              type="horse"
-              path={[{x: 15, y: 92}, {x: 40, y: 92}, {x: 80, y: 92}, {x: 80, y: 95}, {x: 15, y: 95}]}
-              speed={8}
-            />
-            <AnimatedAnimal
-              type="horse"
-              path={[{x: 85, y: 75}, {x: 60, y: 75}, {x: 60, y: 72}, {x: 85, y: 72}]}
-              speed={9}
-              scaleFactor={0.8}
-            />
-          </>
+                                                {/* --- CIRCULAR MILITARY PARADE GUARDS --- */}
+            <PedestrianNPC id="guard_m1" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 10, y: 75}, {x: 10, y: 95}, {x: 90, y: 95}, {x: 90, y: 75}]} speed={4.5} scale={0.8} circular={true} startDelay={0} />
+            <PedestrianNPC id="guard_m2" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 12.5, y: 73.5}, {x: 12.5, y: 93.5}, {x: 92.5, y: 93.5}, {x: 92.5, y: 73.5}]} speed={4.5} scale={0.8} circular={true} startDelay={0} />
+            <PedestrianNPC id="guard_m3" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 10, y: 95}, {x: 90, y: 95}, {x: 90, y: 75}, {x: 10, y: 75}]} speed={4.5} scale={0.8} circular={true} startDelay={0} />
+            <PedestrianNPC id="guard_m4" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 12.5, y: 93.5}, {x: 92.5, y: 93.5}, {x: 92.5, y: 73.5}, {x: 12.5, y: 73.5}]} speed={4.5} scale={0.8} circular={true} startDelay={0} />
+            <PedestrianNPC id="guard_m5" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 90, y: 95}, {x: 90, y: 75}, {x: 10, y: 75}, {x: 10, y: 95}]} speed={4.5} scale={0.8} circular={true} startDelay={0} />
+            <PedestrianNPC id="guard_m6" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 92.5, y: 93.5}, {x: 92.5, y: 73.5}, {x: 12.5, y: 73.5}, {x: 12.5, y: 93.5}]} speed={4.5} scale={0.8} circular={true} startDelay={0} />
+            <PedestrianNPC id="guard_m7" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 90, y: 75}, {x: 10, y: 75}, {x: 10, y: 95}, {x: 90, y: 95}]} speed={4.5} scale={0.8} circular={true} startDelay={0} />
+            <PedestrianNPC id="guard_m8" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 92.5, y: 73.5}, {x: 12.5, y: 73.5}, {x: 12.5, y: 93.5}, {x: 92.5, y: 93.5}]} speed={4.5} scale={0.8} circular={true} startDelay={0} />
+            </>
         )}
 
-        {/* --- STAGE 4 SCENE 2: PUSHKARANI CLOSING REFLECTION HOTSPOTS --- */}
+                                {/* --- KUCHIPUDI DANCERS --- */}
+            <PedestrianNPC id="dancer_w1" frames={["/kuchipudi_1.png", "/kuchipudi_2.png", "/kuchipudi_3.png", "/kuchipudi_4.png"]} path={[{x: 82, y: 60}]} speed={0} scale={2.0} circular={true} startDelay={0} />
+            <PedestrianNPC id="dancer_w2" frames={["/kuchipudi_1.png", "/kuchipudi_2.png", "/kuchipudi_3.png", "/kuchipudi_4.png"]} path={[{x: 88, y: 60}]} speed={0} scale={2.0} circular={true} startDelay={300} />
+
+          {/* --- STAGE 4 SCENE 2: PUSHKARANI CLOSING REFLECTION HOTSPOTS --- */}
         {scene === "closing_reflection" && (
           <>
             {/* Keeper of Memory Elder NPC (x: 35%, y: 68%) */}

@@ -85,8 +85,8 @@ export default function PedestrianNPC({
             y: posRef.current.y + dy * ratio
           };
           
-          if (dx < 0) setFacingLeft(true);
-          else if (dx > 0) setFacingLeft(false);
+          if (dx < -0.01) setFacingLeft(true);
+          else if (dx > 0.01) setFacingLeft(false);
         }
       } else {
         if (propsRef.current.loop) {
