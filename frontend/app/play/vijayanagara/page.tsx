@@ -324,7 +324,7 @@ export default function VijayanagaraGameScreen() {
     if (!isLoading && scene === "anegundi_river_crossing" && !hasPlayedIntroNarrationRef.current) {
       hasPlayedIntroNarrationRef.current = true;
       const introText =
-        "The year is 1336 AD. Vijayanagara begins here at Anegundi beside the Tungabhadra River. Cross the river and speak with Sage Vidyaranya.";
+        "The year is 1336 AD. On the banks of the Tungabhadra river stands Anegundi — the seat of a new empire, Vijayanagara, ruled by two brothers, Harihara I and Bukka Raya I.\n\nYou are a historian from the year 2026. A time machine has brought you here — but no one in this era can ever know that truth. Reveal it, and the consequences will be far worse than disbelief.";
       const timer = setTimeout(() => {
         setShowOpeningAtmosphere(false);
         void playNarration(introText, { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
@@ -1066,7 +1066,7 @@ export default function VijayanagaraGameScreen() {
             }
           }
         } else if (isNearUncle) {
-          setUncleSpeechText("Greetings, traveler. I am also a historian, seeking to understand the tragic fall of such a magnificent empire.");
+          setUncleSpeechText("Hello Im raju , a time traveller from 2026 come here seeking to understand the tragic fall of such a magnificant empire");
           setUncleOptions([
             { id: 1, text: "Let us seek the truth together." }
           ]);
@@ -2703,7 +2703,7 @@ export default function VijayanagaraGameScreen() {
                 }}
                 onClick={(e) => {
                   e.stopPropagation();
-                  setUncleSpeechText("Greetings, traveler. I am also a historian, seeking to understand the tragic fall of such a magnificent empire.");
+                  setUncleSpeechText("Hello Im raju , a time traveller from 2026 come here seeking to understand the tragic fall of such a magnificant empire");
                   setUncleOptions([
                     { id: 1, text: "Let us seek the truth together." }
                   ]);
@@ -3676,7 +3676,7 @@ export default function VijayanagaraGameScreen() {
           <DialoguePanel
             sceneId="anegundi_river_crossing"
             currentSceneId={scene}
-            characterName="Historian"
+            characterName="Raju"
             characterTitle="Your Loyal Friend"
             characterId="uncle"
             dialogueText={uncleSpeechText || "Greetings! I am the local historian."}
