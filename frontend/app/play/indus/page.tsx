@@ -503,6 +503,12 @@ function IndusValleyGameComponent() {
   const [hasInspectedBrickRatio, setHasInspectedBrickRatio] = useState(INITIAL_INDUS_STATE.hasInspectedBrickRatio);
   const [hasFirstRelicChertWeight, setHasFirstRelicChertWeight] = useState(INITIAL_INDUS_STATE.hasFirstRelicChertWeight);
   const [showOverseerDialogue, setShowOverseerDialogue] = useState(false);
+  const [showSealUnlockModal, setShowSealUnlockModal] = useState(false);
+  const [showToyUnlockModal, setShowToyUnlockModal] = useState(false);
+  const [hasCollectedSeal, setHasCollectedSeal] = useState(false);
+  const [hasCollectedToy, setHasCollectedToy] = useState(false);
+  const [showPriestFollowerDialogue, setShowPriestFollowerDialogue] = useState(false);
+  const [isPriestFollowerTalking, setIsPriestFollowerTalking] = useState(false);
   const [showForeignTradersModal, setShowForeignTradersModal] = useState(false);
   const [hasInspectedForeignTraders, setHasInspectedForeignTraders] = useState(false);
 
@@ -1699,6 +1705,8 @@ function IndusValleyGameComponent() {
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
+        showToyUnlockModal ||
+        showSealUnlockModal ||
         showOverseerDialogue ||
         showForeignTradersModal ||
         showDrainsModal ||
@@ -2384,6 +2392,27 @@ function IndusValleyGameComponent() {
           </div>
         )}
 
+        {/* Stage 1: Trade Seal Prop on Ground */}
+        {scene === "lower_town_gate" && !hasCollectedSeal && (
+          <div
+            className="absolute z-10 pointer-events-auto cursor-pointer group"
+            style={{ left: "57%", top: "34%" }}
+            title="Indus Valley Steatite Trade Seal"
+            onClick={() => {
+              soundFx.playItemUnlock();
+              setShowSealUnlockModal(true);
+              setHasCollectedSeal(true);
+            }}
+          >
+            <img
+              src="/indus_trade_seal.png"
+              alt="Trade Seal"
+              className="w-10 h-10 object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)] transform -translate-x-1/2 -translate-y-1/2 hover:scale-125 transition-transform"
+              style={{ imageRendering: 'pixelated' }}
+            />
+          </div>
+        )}
+
         {/* Stage 1: Mohenjo-daro City Gateway Trigger to Residential Grid */}
         {scene === "lower_town_gate" && hasFirstRelicChertWeight && isNearGranaryExit && (
           <div
@@ -2840,6 +2869,8 @@ function IndusValleyGameComponent() {
         {/* Stage 1.55: Central Domestic Courtyard Canvas Scene       */}
         {/* ========================================================= */}
 
+
+
         {/* Stage 1.55: House Courtyard -> Exit to Street Grid / Great Bath Trigger */}
         {scene === "house_courtyard" && isNearCourtyardExit && (
           <div
@@ -3079,6 +3110,27 @@ function IndusValleyGameComponent() {
         {/* ========================================================= */}
         {/* Stage 1.6: Harappan Residence Interior Canvas Scene       */}
         {/* ========================================================= */}
+
+        {/* Stage 1.6: Hidden Terracotta Toy Prop in Interior */}
+        {scene === "house_interior" && !hasCollectedToy && (
+          <div
+            className="absolute z-10 pointer-events-auto cursor-pointer group"
+            style={{ left: "82%", top: "68%" }}
+            title="Terracotta Toy Cart"
+            onClick={() => {
+              soundFx.playItemUnlock();
+              setShowToyUnlockModal(true);
+              setHasCollectedToy(true);
+            }}
+          >
+            <img
+              src="/indus_terracotta_toy.png"
+              alt="Terracotta Toy"
+              className="w-10 h-10 object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)] transform -translate-x-1/2 -translate-y-1/2 hover:scale-125 transition-transform"
+              style={{ imageRendering: 'pixelated' }}
+            />
+          </div>
+        )}
 
         {/* Stage 1.6: House Interior -> Return to Courtyard Trigger */}
         {scene === "house_interior" && isNearHouseExit && (
@@ -3838,16 +3890,7 @@ function IndusValleyGameComponent() {
               }
             }}
           >
-            {isNearGreatBathBasin && (
-              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
-                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
-                <span>
-                  {isDrainagePuzzleSolved
-                    ? "Inspect Restored Hydraulic Basin"
-                    : "Restore Great Bath Drainage Culvert"}
-                </span>
-              </div>
-            )}
+
             <div className="w-14 h-14 bg-[#231b14]/90 border-2 border-[#5dbcd2] rounded-2xl flex items-center justify-center shadow-lg group-hover:border-[#eedbbf] transition-all">
               <svg className="w-7 h-7 text-[#5dbcd2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
@@ -4387,22 +4430,42 @@ function IndusValleyGameComponent() {
 
         {/* --- DRAINAGE CULVERT ENDPOINTS --- */}
         {scene === "great_bath_citadel" && (
-          <div
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
-            style={{ left: "50%", top: "45%" }}
-            onClick={() => triggerTransition("drainage_culvert", { x: 50.0, y: 50.0 }, 2, 600)}
-          >
-            {isNearDrainageEntrance ? (
-              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
-                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">E</div>
-                <span>Enter Drainage Culvert</span>
+          <>
+            {/* Hidden Drainage Entry */}
+            <div
+              className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-20"
+              style={{ left: "50%", top: "45%" }}
+              onClick={() => triggerTransition("drainage_culvert", { x: 50.0, y: 50.0 }, 2, 600)}
+            >
+              <div className="opacity-0 w-10 h-10" />
+            </div>
+
+            {/* Priest King Follower */}
+            <div
+              className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-[15]"
+              style={{ left: "40%", top: "50%" }}
+              onClick={() => {
+                setShowPriestFollowerDialogue(true);
+                setIsPriestFollowerTalking(true);
+                playCharacterDialogue({
+                  character: "priest_follower",
+                  text: "Blessings of the sacred waters upon you, traveler. The Great Bath purifies not just the body, but the soul. The Priest-King watches over our civic devotion.",
+                  onEnd: () => setIsPriestFollowerTalking(false),
+                  onError: () => setIsPriestFollowerTalking(false)
+                });
+              }}
+            >
+              <img 
+                src="/indus_priest_king_follower.png" 
+                alt="Priest King Follower" 
+                className={`h-24 w-auto object-contain drop-shadow-[0_5px_10px_rgba(0,0,0,0.5)] transition-all group-hover:scale-110 ${isPriestFollowerTalking ? 'animate-bounce' : ''}`}
+                style={{ imageRendering: 'pixelated' }}
+              />
+              <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center gap-1.5 whitespace-nowrap">
+                 <span>Talk to Priest-King Follower</span>
               </div>
-            ) : (
-              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center gap-1.5 whitespace-nowrap">
-                <span>Drainage Culvert</span>
-              </div>
-            )}
-          </div>
+            </div>
+          </>
         )}
 
         {scene === "drainage_culvert" && (
@@ -4594,6 +4657,60 @@ function IndusValleyGameComponent() {
         onComplete={handleSealComplete}
         alreadySolved={isSealPuzzleSolved}
       />
+
+      {/* --- TOY UNLOCK MODAL --- */}
+      <CollectionUnlockModal 
+        show={showToyUnlockModal}
+        onClose={() => setShowToyUnlockModal(false)}
+        title="Unlocked the Terracotta Toy Cart"
+        imageSrc="/indus_terracotta_toy.png"
+        imageAlt="Terracotta Toy"
+        description="&quot;A child's toy left behind. Children of the Priest-King's followers played with such carts in these courtyards.&quot;"
+      />
+
+      {/* --- TRADE SEAL UNLOCK MODAL --- */}
+      <CollectionUnlockModal 
+        show={showSealUnlockModal}
+        onClose={() => setShowSealUnlockModal(false)}
+        title="Unlocked the Steatite Trade Seal"
+        imageSrc="/indus_trade_seal.png"
+        imageAlt="Trade Seal"
+      />
+
+      {/* Priest King Follower Dialogue Modal */}
+      {showPriestFollowerDialogue && (
+        <div className="fixed inset-0 z-[100] flex flex-col justify-end p-8 pb-16 pointer-events-none">
+          <div className="w-full max-w-4xl mx-auto bg-[#1b1510]/95 border-2 border-[#d4a359] rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] pointer-events-auto overflow-hidden animate-slideUp">
+            <div className="flex flex-col md:flex-row h-full">
+              <div className="w-full md:w-1/3 bg-[#261f18] p-6 flex items-center justify-center border-b md:border-b-0 md:border-r border-[#4a3b2b]">
+                <img 
+                  src="/indus_priest_king_follower.png" 
+                  alt="Priest King Follower" 
+                  className={`w-40 h-40 object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.6)] ${isPriestFollowerTalking ? 'animate-pulse' : ''}`}
+                  style={{ imageRendering: 'pixelated' }}
+                />
+              </div>
+              <div className="w-full md:w-2/3 p-8 flex flex-col justify-between relative">
+                <button
+                  onClick={() => {
+                    setShowPriestFollowerDialogue(false);
+                    stopAllCharacterVoice();
+                  }}
+                  className="absolute top-4 right-4 text-[#8b7355] hover:text-[#d4a359] transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+                <div>
+                  <h3 className="text-[#d4a359] font-serif text-xl font-bold mb-2 uppercase tracking-wider">Devotee of the Priest-King</h3>
+                  <p className="text-[#f7eedf] font-serif text-lg leading-relaxed italic">
+                    "Blessings of the sacred waters upon you, traveler. The Great Bath purifies not just the body, but the soul. The Priest-King watches over our civic devotion."
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* --- STAGE 1 OVERSEER DIALOGUE MODAL --- */}
       {showOverseerDialogue && (
@@ -5591,6 +5708,64 @@ function IndusValleyGameComponent() {
     </div>
   );
 }
+
+const CollectionUnlockModal = ({ 
+  show, 
+  onClose, 
+  title, 
+  imageSrc, 
+  imageAlt, 
+  description 
+}: {
+  show: boolean;
+  onClose: () => void;
+  title: string;
+  imageSrc: string;
+  imageAlt: string;
+  description?: string;
+}) => {
+  if (!show) return null;
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md animate-fadeIn">
+      <div className="absolute inset-0 bg-white animate-flashWhite z-10" />
+      
+      <div className="relative aspect-video w-[90vw] max-w-5xl rounded-2xl border-4 border-[#d4a359] overflow-hidden shadow-[0_0_80px_rgba(212,163,89,0.7)] flex flex-col items-center justify-center z-20">
+        <img 
+          src="/unlock_bg.png" 
+          alt="Unlock Burst" 
+          className="absolute w-full h-full object-cover opacity-90 scale-150" 
+        />
+        
+        <div className="relative z-10 flex flex-col items-center justify-center w-full h-full p-8 bg-black/20">
+          <h2 className="text-3xl md:text-5xl font-serif font-bold text-white mb-6 drop-shadow-[0_4px_10px_rgba(0,0,0,0.9)] uppercase tracking-widest text-center">
+            {title}
+          </h2>
+          <img 
+            src={imageSrc} 
+            alt={imageAlt} 
+            className="w-48 h-48 md:w-64 md:h-64 object-contain drop-shadow-[0_15px_30px_rgba(0,0,0,0.9)] animate-bounce hover:scale-110 transition-transform duration-500 mb-6" 
+            style={{ imageRendering: 'pixelated' }}
+          />
+          
+          {description && (
+            <div className="bg-[#1b1510]/80 border-2 border-[#d4a359] p-4 rounded-xl mb-8 max-w-2xl text-center shadow-xl">
+              <p className="text-[#f4ebd9] font-serif text-lg font-bold italic drop-shadow-md">
+                {description}
+              </p>
+            </div>
+          )}
+
+          <button
+            onClick={onClose}
+            className="bg-white/10 hover:bg-white/20 border-2 border-white/50 text-white font-serif font-bold px-12 py-4 rounded-full shadow-lg transition-all cursor-pointer text-lg tracking-[0.2em] backdrop-blur-sm"
+          >
+            CONTINUE
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function IndusValleyGameScreen() {
   return (

@@ -11,6 +11,7 @@ class SoundEffectsService {
   private isMuted: boolean = false;
   private lastClickTime: number = 0;
   private lastHoverTime: number = 0;
+  private unlockAudio: HTMLAudioElement | null = null;
 
   private getContext(): AudioContext | null {
     if (typeof window === "undefined") return null;
@@ -479,6 +480,19 @@ class SoundEffectsService {
     };
 
     play();
+  }
+
+  public playItemUnlock() {
+    if (this.isMuted) return;
+    try {
+      if (typeof window !== "undefined") {
+        const audio = new window.Audio("/audio/subway-surfers-open-box.mp3");
+        audio.volume = 0.5;
+        audio.play().catch(e => console.error("[SoundService] Item unlock audio failed:", e));
+      }
+    } catch (e) {
+      console.error("[SoundService] Error playing item unlock:", e);
+    }
   }
 
   public playDialogueOpen() {

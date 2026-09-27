@@ -84,7 +84,7 @@ export function getVoiceForNPC(npcId: string): string {
     typeof npcId === "string" &&
     Object.prototype.hasOwnProperty.call(PLASSEY_VOICE_PROFILES, npcId)
   ) {
-    return PLASSEY_VOICE_PROFILES[npcId];
+    return PLASSEY_VOICE_PROFILES[npcId as keyof typeof PLASSEY_VOICE_PROFILES];
   }
   return "ratan";
 }
@@ -418,6 +418,10 @@ export class NarrationManager {
 
       if (contentType.includes("application/json")) {
         const data = await res.json();
+        if (data.fallback) {
+          console.warn("[NARRATOR PREPARE GRACEFUL SKIP]", data.error);
+          return "";
+        }
         if (data.error) throw new Error(data.error);
         url = data.audio_url;
       } else {
@@ -681,6 +685,16 @@ export class NarrationManager {
         const contentType = res.headers.get("content-type") || "";
         if (contentType.includes("application/json")) {
           const data = await res.json();
+          if (data.fallback) {
+            console.log(`[NARRATOR GRACEFUL SKIP] ${data.error}`);
+            this.currentItem = null;
+            this.activeRequestId = null;
+            this.activeAbortController = null;
+            this.isProcessing = false;
+            this.setState("IDLE");
+            setTimeout(() => this.processQueue(), 50);
+            return;
+          }
           if (data.error) throw new Error(data.error);
           objectUrl = data.audio_url;
         } else {

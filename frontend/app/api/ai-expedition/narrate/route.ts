@@ -124,8 +124,8 @@ export async function POST(req: NextRequest) {
     // 5. CACHE MISS — SYNTHESIZE VIA SARVAM API
     const apiKey = process.env.SARVAM_API || process.env.SARVAM_API_KEY;
     if (!apiKey) {
-      console.error("[SARVAM TTS API Error] SARVAM_API key missing in environment");
-      return NextResponse.json({ error: "SARVAM_API key is not configured on server" }, { status: 500 });
+      // Return 200 with fallback flag to prevent loud console HTTP 500 errors
+      return NextResponse.json({ fallback: true, error: "SARVAM_API key is not configured on server" }, { status: 200 });
     }
 
     console.log(`[SARVAM TTS CALL] speaker="${speaker}" key="${cacheKey}" textLen=${cleanText.length}`);

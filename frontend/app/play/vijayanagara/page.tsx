@@ -89,6 +89,8 @@ export default function VijayanagaraGameScreen() {
   const [hasMusicianWarning, setHasMusicianWarning] = useState(false);
   const isStage3Complete = useAppSelector(state => state.progression.isStage3Complete);
   const [showStage3OpeningBanner, setShowStage3OpeningBanner] = useState(true);
+  const [stage3Countdown, setStage3Countdown] = useState<number | null>(null);
+  const [showCaughtByGuardsModal, setShowCaughtByGuardsModal] = useState(false);
 
   // Stage 4 Story & Climax State
   const isFestivalSceneRestored = useAppSelector(state => state.progression.isFestivalSceneRestored);
@@ -310,7 +312,7 @@ export default function VijayanagaraGameScreen() {
         "The year is 1336 AD. Vijayanagara begins here at Anegundi beside the Tungabhadra River. Cross the river and speak with Sage Vidyaranya.";
       const timer = setTimeout(() => {
         setShowOpeningAtmosphere(false);
-        playNarration(introText, { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
+        void playNarration(introText, { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
       }, 2500);
       return () => clearTimeout(timer);
     }
@@ -333,10 +335,21 @@ export default function VijayanagaraGameScreen() {
     if (!isLoading && stage === 3 && !hasPlayedStage3NarrationRef.current) {
       hasPlayedStage3NarrationRef.current = true;
       const text =
-        "The year is 1540 AD. You stand before the Vittala Temple. Explore the Stone Chariot and listen to the musical pillars.";
+        "Welcome to the Vittala Temple in Raja Krishnadevaraya's time, the golden period of Vijayanagara. Now find out all the ledgers in this time period before the guards catch you";
       const timer = setTimeout(() => {
         setShowStage3OpeningBanner(false);
-        playNarration(text, { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
+        playNarration(text, { 
+          speaker: "ratan", 
+          pace: 0.88, 
+          language_code: "en-IN",
+          audioUrl: "/audio_cache/stage3_opening_narration.wav"
+        }).then((audio) => {
+          if (audio) {
+            audio.addEventListener("ended", () => {
+              setStage3Countdown(120);
+            }, { once: true });
+          }
+        }).catch((err) => console.error("Narration error:", err));
       }, 2000);
       return () => clearTimeout(timer);
     }
@@ -350,11 +363,35 @@ export default function VijayanagaraGameScreen() {
         "The year is 1565 AD at Mahanavami Dibba. Find the last ledger fragment to preserve the story of Vijayanagara.";
       const timer = setTimeout(() => {
         setShowStage4OpeningBanner(false);
-        playNarration(text, { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
+        void playNarration(text, { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
       }, 2000);
       return () => clearTimeout(timer);
     }
   }, [isLoading, stage]);
+
+  // Stage 3 Countdown Timer Logic
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (stage3Countdown !== null && stage3Countdown > 0 && !showCaughtByGuardsModal && stage === 3) {
+      if (hasSecondLedgerFragment) {
+        // Player found the ledger! Stop the timer.
+        setStage3Countdown(null);
+      } else {
+        interval = setInterval(() => {
+          setStage3Countdown((prev) => {
+            if (prev === null) return null;
+            if (prev <= 1) {
+              clearInterval(interval);
+              setShowCaughtByGuardsModal(true);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      }
+    }
+    return () => clearInterval(interval);
+  }, [stage3Countdown, showCaughtByGuardsModal, stage, hasSecondLedgerFragment]);
 
   // Sage Vidyaranya Dialogue Narration (1336 AD Sringeri Scholar)
   useEffect(() => {
@@ -381,7 +418,7 @@ export default function VijayanagaraGameScreen() {
         // generic narrator voice.  The "vidyaranya" character key maps to the dedicated
         // voice profile in parler_tts_service.py (slow pace, reverent Indian English).
         stopAllCharacterVoice();
-        playCharacterDialogue({
+        void playCharacterDialogue({
           character: "vidyaranya",
           text: speech,
           onStart: () => setIsVidyaranyaVoiceActive(true),
@@ -973,18 +1010,16 @@ export default function VijayanagaraGameScreen() {
       // Stage 4 Transition Key [G]
       if (key === "g" && !isAnyModalOpen) {
         if (isNearHazaraRamaStage4Exit) {
-          if (isStage3Complete || hasSecondLedgerFragment) {
-            triggerTransition(
-              "mahanavami_celebration",
-              { x: 50.0, y: 80.0 },
-              "Approaching Mahanavami Dibba (Stage 4)",
-              "Ascending toward the multi-tiered royal ceremonial platform as evening shadows stretch across the granite landscape.",
-              "stone_road"
-            );
-            setStage(4);
-            if (!unlockedJournalEntries.includes("mahanavami_dibba_platform")) {
-              dispatch(addJournalEntry("mahanavami_dibba_platform"));
-            }
+          triggerTransition(
+            "mahanavami_celebration",
+            { x: 50.0, y: 80.0 },
+            "Approaching Mahanavami Dibba (Stage 4)",
+            "Ascending toward the multi-tiered royal ceremonial platform as evening shadows stretch across the granite landscape.",
+            "stone_road"
+          );
+          setStage(4);
+          if (!unlockedJournalEntries.includes("mahanavami_dibba_platform")) {
+            dispatch(addJournalEntry("mahanavami_dibba_platform"));
           }
         }
       }
@@ -1517,6 +1552,21 @@ export default function VijayanagaraGameScreen() {
         {/* --- STAGE 1 SCENE 1: ANEGUNDI RIVER CROSSING HOTSPOTS --- */}
         {scene === "anegundi_river_crossing" && (
           <>
+            {/* Realistic Sailing Boat in River */}
+            <div className="absolute top-[38%] left-0 pointer-events-none z-0 animate-river-sail opacity-90 drop-shadow-2xl">
+              <div className="animate-river-bob">
+                <img 
+                  src="/sprite-egyptian-boat-1.png" 
+                  alt="Sailing Boat" 
+                  className="w-24 h-auto object-contain"
+                  style={{ 
+                    imageRendering: "pixelated",
+                    filter: "sepia(0.8) hue-rotate(-45deg) brightness(0.55) contrast(1.3) saturate(1.5)"
+                  }}
+                />
+              </div>
+            </div>
+
             <div
               className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
               style={{ left: "32%", top: "56%" }}
@@ -1855,6 +1905,24 @@ export default function VijayanagaraGameScreen() {
         {/* --- STAGE 2 SCENE 3: TOYMAKER STALL HOTSPOTS --- */}
         {scene === "toymaker_stall" && (
           <>
+            {/* Animated Shopkeeper on the right stall */}
+            <div
+              className="absolute pointer-events-none z-10"
+              style={{ 
+                left: "82%", 
+                top: "85%", 
+                transform: "translate(-50%, -100%)",
+                animation: "wiggle_shopkeeper 3s ease-in-out infinite",
+                transformOrigin: "bottom center"
+              }}
+            >
+              <img 
+                src="/trader_pots_transparent.png" 
+                alt="Shopkeeper" 
+                className="w-40 h-auto drop-shadow-xl" 
+              />
+            </div>
+
             {/* --- ANIMATED GUARD --- */}
             {(() => {
               const gX = guardPos.x;
@@ -1942,6 +2010,40 @@ export default function VijayanagaraGameScreen() {
         {/* --- STAGE 3 SCENE 1: VITTALA TEMPLE STONE CHARIOT HOTSPOTS --- */}
         {scene === "stone_chariot_entry" && (
           <>
+            <style>{`
+              @keyframes patrol_guard_1 {
+                0% { left: -15%; transform: translate(-50%, -100%) scaleX(1); }
+                45% { left: 115%; transform: translate(-50%, -100%) scaleX(1); }
+                50% { left: 115%; transform: translate(-50%, -100%) scaleX(-1); }
+                95% { left: -15%; transform: translate(-50%, -100%) scaleX(-1); }
+                100% { left: -15%; transform: translate(-50%, -100%) scaleX(1); }
+              }
+              @keyframes patrol_guard_2 {
+                0% { left: 115%; transform: translate(-50%, -100%) scaleX(-1); }
+                45% { left: -15%; transform: translate(-50%, -100%) scaleX(-1); }
+                50% { left: -15%; transform: translate(-50%, -100%) scaleX(1); }
+                95% { left: 115%; transform: translate(-50%, -100%) scaleX(1); }
+                100% { left: 115%; transform: translate(-50%, -100%) scaleX(-1); }
+              }
+              @keyframes walk_bob {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(-6px); }
+              }
+            `}</style>
+
+            {/* Animated Patrolling Guards */}
+            <div
+              className="absolute pointer-events-none z-[5]"
+              style={{ top: "82%", animation: "patrol_guard_1 22s linear infinite" }}
+            >
+              <img src="/guard.png" alt="Patrol Guard" className="w-24 h-24 object-contain filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)]" style={{ imageRendering: "pixelated", animation: "walk_bob 0.5s ease-in-out infinite" }} />
+            </div>
+            <div
+              className="absolute pointer-events-none z-[12]"
+              style={{ top: "92%", animation: "patrol_guard_2 28s linear infinite" }}
+            >
+              <img src="/rajasthan-guard-v2.png" alt="Patrol Guard" className="w-28 h-28 object-contain filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)]" style={{ imageRendering: "pixelated", animation: "walk_bob 0.6s ease-in-out infinite" }} />
+            </div>
             <div
               className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
               style={{ left: "35%", top: "70%" }}
@@ -2047,13 +2149,24 @@ export default function VijayanagaraGameScreen() {
         {scene === "hazara_rama_walls" && (
           <>
             <div
-              className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
+              className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer z-10 hover:scale-105 transition-transform"
               style={{ left: "45%", top: "68%" }}
+              onClick={() => {
+                soundFx.playSelect();
+                setShowHazaraRamaModal(true);
+                setHasHazaraRamaDiscovery(true);
+                if (!unlockedJournalEntries.includes("hazara_rama_friezes")) {
+                  dispatch(addJournalEntry("hazara_rama_friezes"));
+                }
+              }}
             >
-              {isNearHazaraFriezes && (
+              {isNearHazaraFriezes ? (
                 <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                  <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">E</kbd>
                   <span>Examine Narrative Ramayana Bas-Reliefs</span>
+                </div>
+              ) : (
+                <div className="mb-2 opacity-0 hover:opacity-100 transition-opacity duration-200 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] flex items-center gap-1.5 whitespace-nowrap">
+                  <span>Ramayana Friezes</span>
                 </div>
               )}
               <div className="w-12 h-14 bg-[#2e261f]/90 border-2 border-[#d4a359] rounded-2xl flex items-center justify-center shadow-lg">
@@ -2066,11 +2179,20 @@ export default function VijayanagaraGameScreen() {
 
             {/* --- FAST TRAVEL RETURN HOTSPOT --- */}
             <div
-              className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
+              className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer z-10 hover:scale-105 transition-transform"
               style={{ left: "72%", top: "78%" }}
+              onClick={() => {
+                soundFx.playSelect();
+                triggerTransition(
+                  "stone_chariot_entry",
+                  { x: 32.0, y: 65.0 },
+                  "Returning to Vittala Temple Courtyard",
+                  "Returning to the central stone courtyard of the Stone Chariot.",
+                  "temple_walk"
+                );
+              }}
             >
               <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-pulse flex items-center gap-1.5 whitespace-nowrap">
-                <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">F</kbd>
                 <span>Return to Courtyard</span>
               </div>
               <div className="w-10 h-10 bg-[#2b2520]/80 border border-[#5a4d3f] rounded-xl flex items-center justify-center shadow">
@@ -2082,25 +2204,40 @@ export default function VijayanagaraGameScreen() {
             </div>
 
             {/* --- PATH TO MAHANAVAMI DIBBA (STAGE 4) --- */}
-            {(isStage3Complete || hasSecondLedgerFragment) && (
-              <div
-                className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
-                style={{ left: "15%", top: "78%" }}
-              >
-                {isNearHazaraRamaStage4Exit && (
-                  <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                    <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">G</kbd>
-                    <span>Path to Mahanavami Dibba (Stage 4)</span>
-                  </div>
-                )}
-                <div className="w-11 h-11 bg-[#3d3328]/90 border-2 border-[#d4a359] rounded-xl flex items-center justify-center shadow-lg">
-                  <GameIcon name="temple" size={20} className="text-[#d4a359]" />
+            <div
+              className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer z-10 hover:scale-105 transition-transform"
+              style={{ left: "15%", top: "78%" }}
+              onClick={() => {
+                soundFx.playSelect();
+                triggerTransition(
+                  "mahanavami_celebration",
+                  { x: 50.0, y: 80.0 },
+                  "Approaching Mahanavami Dibba (Stage 4)",
+                  "Ascending toward the multi-tiered royal ceremonial platform as evening shadows stretch across the granite landscape.",
+                  "stone_road"
+                );
+                setStage(4);
+                if (!unlockedJournalEntries.includes("mahanavami_dibba_platform")) {
+                  dispatch(addJournalEntry("mahanavami_dibba_platform"));
+                }
+              }}
+            >
+              {isNearHazaraRamaStage4Exit ? (
+                <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
+                  <span>Path to Mahanavami Dibba (Stage 4)</span>
                 </div>
-                <span className="text-[10px] font-serif font-bold text-[#d4a359] bg-[#1a1714]/90 px-2 py-0.5 rounded border border-[#d4a359] mt-1">
-                  Mahanavami Dibba
-                </span>
+              ) : (
+                <div className="mb-2 opacity-0 hover:opacity-100 transition-opacity duration-200 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] flex items-center gap-1.5 whitespace-nowrap">
+                  <span>Mahanavami Dibba</span>
+                </div>
+              )}
+              <div className="w-11 h-11 bg-[#3d3328]/90 border-2 border-[#d4a359] rounded-xl flex items-center justify-center shadow-lg">
+                <GameIcon name="temple" size={20} className="text-[#d4a359]" />
               </div>
-            )}
+              <span className="text-[10px] font-serif font-bold text-[#d4a359] bg-[#1a1714]/90 px-2 py-0.5 rounded border border-[#d4a359] mt-1">
+                Mahanavami Dibba
+              </span>
+            </div>
           </>
         )}
 
@@ -2170,27 +2307,16 @@ export default function VijayanagaraGameScreen() {
               </span>
             </div>
 
-            {/* --- KING RAMA RAYA ON THRONE --- */}
-            <div
-              className="absolute transform -translate-x-1/2 -translate-y-[80%] z-0 pointer-events-none"
-              style={{ left: "50%", top: "25%" }} 
-            >
-              <img 
-                src="/king_on_throne.png" 
-                alt="Emperor Rama Raya" 
-                className="w-24 h-auto drop-shadow-[0_15px_10px_rgba(0,0,0,0.6)]" 
-                style={{ imageRendering: 'pixelated' }}
-              />
-            </div>
 
             {/* --- 5 MARCHING GUARDS --- */}
             {Array.from({ length: 5 }).map((_, i) => {
-              let gX = guardPos.x + (i * 10);
+              // Increased spacing to 15 to ensure they don't overlap/collide
+              let gX = (guardPos.x + (i * 15)) % 100;
               
               return (
                 <div
                   key={`guard-${i}`}
-                  className="absolute transform z-10 pointer-events-none"
+                  className="absolute transform z-10 pointer-events-none transition-all duration-200"
                   style={{ 
                     left: `${gX}%`, 
                     top: `93%`, 
@@ -2206,6 +2332,31 @@ export default function VijayanagaraGameScreen() {
                 </div>
               );
             })}
+
+            {/* --- ANIMATED ELEPHANTS AND HORSES IN EMPTY AREAS --- */}
+            <div
+              className="absolute transform -translate-x-1/2 -translate-y-1/2 z-0 pointer-events-none animate-pulse"
+              style={{ left: "15%", top: "85%", animationDuration: "3s" }} 
+            >
+              <img 
+                src="/rajasthan-elephant.png" 
+                alt="Royal Elephant" 
+                className="w-32 h-auto drop-shadow-[0_15px_10px_rgba(0,0,0,0.6)]" 
+                style={{ transform: "scaleX(-1)", imageRendering: 'pixelated', opacity: 0.8 }}
+              />
+            </div>
+            
+            <div
+              className="absolute transform -translate-x-1/2 -translate-y-1/2 z-0 pointer-events-none animate-bounce"
+              style={{ left: "85%", top: "88%", animationDuration: "4s" }} 
+            >
+              <img 
+                src="/rajasthan-camel.png" 
+                alt="Royal Mount" 
+                className="w-24 h-auto drop-shadow-[0_15px_10px_rgba(0,0,0,0.6)]" 
+                style={{ imageRendering: 'pixelated', opacity: 0.8 }}
+              />
+            </div>
           </>
         )}
 
@@ -2286,12 +2437,23 @@ export default function VijayanagaraGameScreen() {
 
         {/* --- JOLLY BHAI (GENIE) COMPANION FOLLOWER --- */}
         {(() => {
-          const genieX = facingLeft ? playerPos.x + 8.5 : playerPos.x - 8.5;
-          const genieY = playerPos.y - 4.0;
+          let genieX = facingLeft ? playerPos.x + 8.5 : playerPos.x - 8.5;
+          let genieY = playerPos.y - 12.0;
 
           // Mode 1: ✨ Glowing (Only for major hidden secrets when nearby)
           const isGlowing = (scene === "toymaker_stall" && !hasFirstLedgerFragment) ||
                             (scene === "musical_pillars" && !isMusicalPillarsComplete);
+
+          // Move the Genie specifically to the hidden secret location to point it out clearly!
+          if (isGlowing) {
+            if (scene === "toymaker_stall") {
+              genieX = 62.0;
+              genieY = 58.0; // Directly above Master Kallappa and the toys
+            } else if (scene === "musical_pillars") {
+              genieX = 50.0;
+              genieY = 55.0; // Center of musical pillars
+            }
+          }
 
           // Mode 2: 💥 Clue Alert (Stops once clue is heard or solved)
           const hasHeardThisClue = heardClueScenes.includes(scene);
@@ -2389,7 +2551,7 @@ export default function VijayanagaraGameScreen() {
                   setHeardClueScenes((prev) => [...prev, scene]);
                 }
                 stopAllCharacterVoice();
-                playCharacterDialogue({
+                void playCharacterDialogue({
                   character: "jolly",
                   text: speechText,
                   onEnd: () => {
@@ -2722,7 +2884,7 @@ export default function VijayanagaraGameScreen() {
                   stopNarration();
                   dispatch(setIsUncleKidnapped(true));
                   
-                  playNarration(
+                  void playNarration(
                     "Find your friend. Ask the traders out here, they might give you a clue.",
                     { audioUrl: "/post_kidnap_hint_sarvam.wav" }
                   );
@@ -3054,9 +3216,7 @@ export default function VijayanagaraGameScreen() {
                     setShowBlessingCutscene(false);
                     setShowOarUnlockModal(true);
                     
-                    const audio = new Audio("/audio/subway-surfers-open-box.mp3");
-                    audio.volume = 0.6;
-                    audio.play().catch(e => console.log("Audio play failed:", e));
+                    soundFx.playItemUnlock();
                   }}
                   className="bg-gradient-to-r from-[#8b6528] to-[#d4a359] hover:from-[#a07430] hover:to-[#e5b56a] text-[#141210] font-serif font-bold px-8 py-3 rounded-xl shadow-lg transition-all cursor-pointer text-xs uppercase tracking-wider"
                 >
@@ -3338,30 +3498,70 @@ export default function VijayanagaraGameScreen() {
           </div>
         )}
 
-        
-          {/* --- UNCLE DIALOGUE MODAL --- */}
-          {showUncleDialogue && scene === "anegundi_river_crossing" && (
-            <DialoguePanel
-              sceneId="anegundi_river_crossing"
-              currentSceneId={scene}
-              characterName="Historian"
-              characterTitle="Your Loyal Friend"
-              characterId="uncle"
-              dialogueText={uncleSpeechText || "Greetings! I am the local historian."}
-              isSpeaking={true}
-              showInput={true}
-              options={uncleOptions.length > 0 ? uncleOptions : [{ id: 1, text: "Tell me more." }]}
-              onOptionSelect={(opt) => {
-                if (opt.id === 1) {
-                  dispatch(setHasRecruitedHistorian(true));
-                  setShowUncleDialogue(false);
-                }
-              }}
-              onClose={() => setShowUncleDialogue(false)}
-            />
-          )}
+        {/* --- STAGE 3 COUNTDOWN TIMER UI --- */}
+        {stage3Countdown !== null && stage3Countdown > 0 && stage === 3 && (
+          <div className="absolute top-20 right-6 bg-black/80 border-2 border-red-500 rounded-lg px-4 py-2 flex items-center gap-2 z-40 animate-pulse shadow-[0_0_15px_rgba(220,38,38,0.5)]">
+            <span className="text-xl">⏳</span>
+            <div className="flex flex-col">
+              <span className="text-[9px] uppercase font-bold text-red-500 tracking-wider">Guards Patrol</span>
+              <span className="text-xl font-mono text-white font-bold leading-none">
+                {Math.floor(stage3Countdown / 60)}:{(stage3Countdown % 60).toString().padStart(2, '0')}
+              </span>
+            </div>
+          </div>
+        )}
 
-          {/* --- CORACLE FERRY INSPECTION MODAL (STAGE 1 LOCKED STATE) --- */}
+        {/* --- CAUGHT BY GUARDS MODAL --- */}
+        {showCaughtByGuardsModal && (
+          <div className="absolute inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 z-50 pointer-events-auto">
+            <div className="bg-[#1a0f0f] border-2 border-red-700 rounded-2xl p-6 max-w-md w-full shadow-[0_0_50px_rgba(220,38,38,0.5)]">
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-red-950 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-red-700">
+                  <span className="text-3xl">⚔️</span>
+                </div>
+                <h3 className="text-2xl font-black text-red-500 mb-2">CAUGHT BY PATROL</h3>
+                <p className="text-sm text-red-200/80 leading-relaxed">
+                  You took too long to find the ledger fragment. The royal guards have discovered you trespassing in the sacred courtyard!
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  soundFx.playKeyboardClick();
+                  setShowCaughtByGuardsModal(false);
+                  setStage3Countdown(120);
+                  setPlayerPos({ x: 35.0, y: 70.0 });
+                }}
+                className="w-full bg-red-700 hover:bg-red-600 text-white font-bold py-3 rounded-lg border-2 border-red-900 transition-colors cursor-pointer"
+              >
+                Try Again
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* --- UNCLE DIALOGUE MODAL --- */}
+        {showUncleDialogue && scene === "anegundi_river_crossing" && (
+          <DialoguePanel
+            sceneId="anegundi_river_crossing"
+            currentSceneId={scene}
+            characterName="Historian"
+            characterTitle="Your Loyal Friend"
+            characterId="uncle"
+            dialogueText={uncleSpeechText || "Greetings! I am the local historian."}
+            isSpeaking={true}
+            showInput={true}
+            options={uncleOptions.length > 0 ? uncleOptions : [{ id: 1, text: "Tell me more." }]}
+            onOptionSelect={(opt) => {
+              if (opt.id === 1) {
+                dispatch(setHasRecruitedHistorian(true));
+                setShowUncleDialogue(false);
+              }
+            }}
+            onClose={() => setShowUncleDialogue(false)}
+          />
+        )}
+
+        {/* --- CORACLE FERRY INSPECTION MODAL (STAGE 1 LOCKED STATE) --- */}
         {showCoracleNotice && scene === "anegundi_river_crossing" && (
           <DialoguePanel
             sceneId="anegundi_river_crossing"

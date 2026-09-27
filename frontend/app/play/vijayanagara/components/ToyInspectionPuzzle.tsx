@@ -112,7 +112,7 @@ export default function ToyInspectionPuzzle({
     setIsSpeaking(false);
     setIsLoadingVoice(true);
     
-    playCharacterDialogue({
+    void playCharacterDialogue({
       character: "kallappa",
       text: trimmed,
       onStart: () => {
@@ -221,7 +221,7 @@ export default function ToyInspectionPuzzle({
     if (isLatchOpened) return;
     if (typeof soundFx.playKeyboardClick === "function") soundFx.playKeyboardClick(1.2);
     setIsLatchOpened(true);
-    const msg = "Click! The secret base slides open to reveal a tightly rolled palm-leaf folio bearing the scribe's seal!";
+    const msg = "the kidnapper left this behind";
     setStatusMessage(msg);
     triggerVoice(msg);
     onDiscoverFragment();
@@ -316,12 +316,31 @@ export default function ToyInspectionPuzzle({
               transformOrigin: 'center center'
             }}
           >
-            {currentToy.id === "chariot" ? (
-              <ChariotSvg className="w-32 h-32 text-[#c89a50]" />
-            ) : currentToy.id === "elephant" ? (
-              <ElephantSvg className="w-32 h-32 text-[#c89a50]" />
-            ) : currentToy.id === "doll" ? (
-              <DollSvg className="w-32 h-32 text-[#c89a50]" />
+            {currentToy.id === "chariot" || currentToy.id === "elephant" || currentToy.id === "doll" ? (
+              <div className="relative w-48 h-48" style={{ transformStyle: 'preserve-3d' }}>
+                {/* Front Face */}
+                <img 
+                  src={`/toys/toy_${currentToy.id}.jpg`} 
+                  alt={currentToy.name} 
+                  className="absolute inset-0 w-48 h-48 object-cover border-2 border-[#141210] shadow-2xl" 
+                  style={{ transform: 'translateZ(6px)' }} 
+                />
+                {/* Back Face (Flipped) */}
+                <img 
+                  src={`/toys/toy_${currentToy.id}.jpg`} 
+                  alt={currentToy.name} 
+                  className="absolute inset-0 w-48 h-48 object-cover border-2 border-[#141210] shadow-2xl" 
+                  style={{ transform: 'translateZ(-6px) rotateY(180deg) scaleX(-1)' }} 
+                />
+                {/* Left Face (Edge Thickness) */}
+                <div className="absolute top-0 left-0 h-48 bg-[#2e261f] border-y-2 border-l-2 border-[#141210]" style={{ width: '12px', transform: 'rotateY(-90deg) translateZ(6px)', transformOrigin: 'left' }} />
+                {/* Right Face (Edge Thickness) */}
+                <div className="absolute top-0 right-0 h-48 bg-[#1e1914] border-y-2 border-r-2 border-[#141210]" style={{ width: '12px', transform: 'rotateY(90deg) translateZ(6px)', transformOrigin: 'right' }} />
+                {/* Top Face */}
+                <div className="absolute top-0 left-0 w-48 bg-[#3d3328] border-x-2 border-t-2 border-[#141210]" style={{ height: '12px', transform: 'rotateX(90deg) translateZ(6px)', transformOrigin: 'top' }} />
+                {/* Bottom Face */}
+                <div className="absolute bottom-0 left-0 w-48 bg-[#0a0807] border-x-2 border-b-2 border-[#141210]" style={{ height: '12px', transform: 'rotateX(-90deg) translateZ(6px)', transformOrigin: 'bottom' }} />
+              </div>
             ) : (
               <GameIcon name={currentToy.icon} size={80} className="text-[#c89a50]" />
             )}

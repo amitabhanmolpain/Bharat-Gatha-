@@ -24,8 +24,7 @@ export default function VirtualDPad({
   npcLabel = "Talk",
   objectLabel = "Examine",
   onInteract,
-  isInteractNear,
-  interactLabel: _interactLabel = "Interact"
+  isInteractNear
 }: VirtualDPadProps) {
   const setDir = (dir: keyof InputState, active: boolean) => {
     onInputStateChange((prev) => ({ ...prev, [dir]: active }));
