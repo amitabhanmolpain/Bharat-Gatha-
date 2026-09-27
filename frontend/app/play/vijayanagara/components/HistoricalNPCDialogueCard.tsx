@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import GameIcon, { GameIconType } from "./GameIcon";
@@ -103,7 +103,6 @@ export default function HistoricalNPCDialogueCard({
     return () => unsubscribe();
   }, []);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (autoPlayVoice && currentSpeechText) {
       triggerVoice(currentSpeechText);
@@ -119,7 +118,6 @@ export default function HistoricalNPCDialogueCard({
     };
   }, []);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -169,7 +167,8 @@ export default function HistoricalNPCDialogueCard({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/78 backdrop-blur-[3px] animate-fadeIn"
+      className="fixed inset-0 flex items-center justify-center p-4 sm:p-6 bg-black/78 backdrop-blur-[3px] animate-fadeIn"
+      style={{ zIndex: 9999 }}
       role="dialog"
       aria-modal="true"
       aria-labelledby="npc-dialogue-name"

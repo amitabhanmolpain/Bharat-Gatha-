@@ -285,7 +285,10 @@ function isVulgar(text: string): boolean {
   };
 
   return (
-    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-3xl px-4 pointer-events-auto select-none">
+    <div 
+      className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-3xl px-4 pointer-events-auto select-none"
+      style={{ zIndex: 9999 }}
+    >
       <div className="bg-[#fff9e6] border-4 border-black rounded-xl p-5 shadow-[6px_6px_0_0_rgba(0,0,0,1)] animate-in slide-in-from-bottom-6 duration-200">
         
         {/* Top Bar: Name & Controls */}

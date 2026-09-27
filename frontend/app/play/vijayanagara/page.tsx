@@ -44,6 +44,10 @@ import DialoguePanel from "../../components/DialoguePanel";
 import NarratorSubtitle from "../../../components/NarratorSubtitle";
 import GameIcon from "./components/GameIcon";
 import HistoricalNPCDialogueCard from "./components/HistoricalNPCDialogueCard";
+import AnimatedAnimal from "./components/AnimatedAnimal";
+import PatrollingGuard from "./components/PatrollingGuard";
+import PedestrianNPC from "./components/PedestrianNPC";
+import TempleWallInspectionController from "./components/TempleWallInspectionController";
 
 // Visual scale for player character (enlarged for prominent, clear hero presence)
 const PLAYER_VISUAL_SCALE = 2.2;
@@ -153,6 +157,15 @@ export default function VijayanagaraGameScreen() {
   const [merchantAnimFrame, setMerchantAnimFrame] = useState(0);
   const [activeMerchantBubble, setActiveMerchantBubble] = useState<number | null>(null);
 
+  // Shoe Sequence State
+  const [shoeSequenceState, setShoeSequenceState] = useState<"idle" | "kallappa_speaking" | "shoe_reveal" | "shoe_unlocked" | "genie_activating" | "genie_hint" | "completed">("idle");
+  const [hasShoeClue, setHasShoeClue] = useState(false);
+  const [showShoeUnlockModal, setShowShoeUnlockModal] = useState(false);
+  
+  // Musical Pillars Sequence State
+  const [musicalPillarsSequenceState, setMusicalPillarsSequenceState] = useState<"idle" | "genie_activating" | "genie_hint" | "time_coin_reveal" | "time_coin_unlocked" | "completed">("idle");
+  const [showTimeCoinUnlockModal, setShowTimeCoinUnlockModal] = useState(false);
+
   // Animated speaking frame toggling while Portuguese Traveler is speaking
   useEffect(() => {
     if (!showForeignTravelerDialogue) {
@@ -183,6 +196,7 @@ export default function VijayanagaraGameScreen() {
   const [raghavendraTopic, setRaghavendraTopic] = useState<"king" | "chariot" | "pillars" | "warning">("king");
   const [showMusicalPillarsModal, setShowMusicalPillarsModal] = useState(false);
   const [showHazaraRamaModal, setShowHazaraRamaModal] = useState(false);
+  const [cameraTransform, setCameraTransform] = useState("scale(1) translate(0%, 0%)");
   const [showStage3VictoryModal, setShowStage3VictoryModal] = useState(false);
 
   // Stage 4 Modals
@@ -689,7 +703,7 @@ export default function VijayanagaraGameScreen() {
     playerPos.x >= 40.0 &&
     playerPos.x <= 60.0 &&
     playerPos.y >= 58.0 &&
-    playerPos.y <= 72.0;
+    playerPos.y <= 76.0;
 
   const isNearMusicalPillarsExit =
     scene === "musical_pillars" &&
@@ -831,7 +845,8 @@ export default function VijayanagaraGameScreen() {
       }
 
       if (activeScene === "musical_pillars") {
-        if (targetX >= 45.0 && targetX <= 55.0 && targetY >= 62.0 && targetY <= 68.0) return false;
+        // Prevent walking ON the pillar base (y: 58 to 72)
+        if (targetX >= 42.0 && targetX <= 58.0 && targetY >= 58.0 && targetY <= 72.0) return false;
         if (targetY < 54.0) return false;
       }
 
@@ -1459,7 +1474,6 @@ export default function VijayanagaraGameScreen() {
     }
   };
 
-  // Stage 2 Handlers
   const handleToyFragmentDiscovery = () => {
     dispatch(setHasFirstLedgerFragment(true));
     if (!unlockedJournalEntries.includes("missing_ledger_mystery")) {
@@ -1467,7 +1481,29 @@ export default function VijayanagaraGameScreen() {
     }
     // As requested: Immediately trigger Stage 2 completion / Stage 3 redirect
     dispatch(setStage2Complete(true));
-    setShowStage2VictoryModal(true);
+    
+    startKallappaShoeSequence();
+  };
+
+  const startKallappaShoeSequence = () => {
+    if (shoeSequenceState !== "idle" && shoeSequenceState !== "completed") return; // Prevent duplicate triggers
+    setShoeSequenceState("kallappa_speaking");
+    
+    // Play Kallappa TTS
+    playNarration("The kidnapper left this behind.", { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
+    
+    setTimeout(() => {
+       setShoeSequenceState("shoe_reveal");
+       
+       setTimeout(() => {
+          setShoeSequenceState("shoe_unlocked");
+          soundFx.playItemUnlock();
+          
+          setHasShoeClue(true);
+          setShowShoeUnlockModal(true);
+       }, 1500);
+
+    }, 3000);
   };
 
   const handleSelectJournalToy = () => {
@@ -1479,11 +1515,28 @@ export default function VijayanagaraGameScreen() {
 
   // Stage 3 Handler
   const handleMusicalPillarsDiscovery = () => {
-    dispatch(setHasSecondLedgerFragment(true));
-    setIsMusicalPillarsComplete(true);
-    if (!unlockedJournalEntries.includes("musical_pillars_acoustics")) {
-      dispatch(addJournalEntry("musical_pillars_acoustics"));
-    }
+    if (musicalPillarsSequenceState !== "idle" && musicalPillarsSequenceState !== "completed") return; // Prevent duplicate triggers
+    setShowMusicalPillarsModal(false);
+    
+    // Start sequence
+    setMusicalPillarsSequenceState("genie_activating");
+    soundFx.playSelect();
+
+    setTimeout(() => {
+      setMusicalPillarsSequenceState("genie_hint");
+      playNarration("Listen closely. These remarkable pillars are traditionally said to reproduce the sounds of around 81 different instruments, creating music for religious functions.", { speaker: "neha", pace: 0.9, language_code: "en-IN" });
+      
+      setTimeout(() => {
+        setMusicalPillarsSequenceState("time_coin_reveal");
+        
+        setTimeout(() => {
+          setMusicalPillarsSequenceState("time_coin_unlocked");
+          soundFx.playItemUnlock();
+          
+          setShowTimeCoinUnlockModal(true);
+        }, 1500);
+      }, 8000); // Wait for TTS to finish (around 7-8 seconds)
+    }, 2000);
   };
 
   // Stage 4 Handlers
@@ -1537,7 +1590,10 @@ export default function VijayanagaraGameScreen() {
     <div className="relative w-screen h-screen overflow-hidden bg-[#141210] select-none flex items-center justify-center font-sans">
       
       {/* 2.5D Pixel Game World Viewport */}
-      <div className="relative w-full h-full max-w-[1920px] max-h-[1080px] overflow-hidden shadow-2xl">
+      <div 
+        className="relative w-full h-full max-w-[1920px] max-h-[1080px] overflow-hidden shadow-2xl transition-transform duration-1000 origin-center"
+        style={{ transform: cameraTransform }}
+      >
         
         {/* Background Artwork */}
         <img
@@ -2031,19 +2087,73 @@ export default function VijayanagaraGameScreen() {
               }
             `}</style>
 
-            {/* Animated Patrolling Guards */}
-            <div
-              className="absolute pointer-events-none z-[5]"
-              style={{ top: "82%", animation: "patrol_guard_1 22s linear infinite" }}
-            >
-              <img src="/guard.png" alt="Patrol Guard" className="w-24 h-24 object-contain filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)]" style={{ imageRendering: "pixelated", animation: "walk_bob 0.5s ease-in-out infinite" }} />
-            </div>
-            <div
-              className="absolute pointer-events-none z-[12]"
-              style={{ top: "92%", animation: "patrol_guard_2 28s linear infinite" }}
-            >
-              <img src="/rajasthan-guard-v2.png" alt="Patrol Guard" className="w-28 h-28 object-contain filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)]" style={{ imageRendering: "pixelated", animation: "walk_bob 0.6s ease-in-out infinite" }} />
-            </div>
+            {/* --- PEDESTRIAN NPCS --- */}
+            <PedestrianNPC
+              id="temple_guard_1"
+              frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]}
+              path={[
+                { x: 64, y: 97 },
+                { x: 69, y: 93 },
+                { x: 75, y: 89 },
+                { x: 81, y: 83 },
+                { x: 85, y: 75 },
+                { x: 86, y: 69 },
+                { x: 90, y: 63 }
+              ]}
+              speed={15}
+              scale={1.2}
+            />
+            <PedestrianNPC
+              id="temple_guard_2"
+              frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]}
+              path={[
+                { x: -5, y: 82 },
+                { x: 30, y: 85 },
+                { x: 50, y: 85 },
+                { x: 105, y: 82 }
+              ]}
+              speed={12}
+              scale={1.1}
+              startDelay={0}
+            />
+            <PedestrianNPC
+              id="merchant_pedestrian"
+              frames={["/merchant_1.png", "/merchant_1_anim1.png", "/merchant_1_anim2.png"]}
+              path={[
+                { x: 105, y: 92 },
+                { x: 60, y: 95 },
+                { x: 20, y: 92 },
+                { x: -5, y: 90 }
+              ]}
+              speed={10}
+              scale={1.2}
+              startDelay={3000}
+            />
+            <PedestrianNPC
+              id="pilgrim_1"
+              frames={["/merchant_2.png", "/merchant_2_anim1.png", "/merchant_2.png"]}
+              path={[
+                { x: 80, y: 60 },
+                { x: 75, y: 65 },
+                { x: 65, y: 75 },
+                { x: 55, y: 80 }
+              ]}
+              speed={8}
+              scale={1.0}
+              startDelay={1500}
+            />
+            <PedestrianNPC
+              id="civilian_1"
+              frames={["/merchant_1.png"]}
+              path={[
+                { x: 10, y: 60 },
+                { x: 15, y: 65 },
+                { x: 25, y: 75 }
+              ]}
+              speed={9}
+              scale={0.9}
+              startDelay={5000}
+            />
             <div
               className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
               style={{ left: "35%", top: "70%" }}
@@ -2308,55 +2418,36 @@ export default function VijayanagaraGameScreen() {
             </div>
 
 
-            {/* --- 5 MARCHING GUARDS --- */}
-            {Array.from({ length: 5 }).map((_, i) => {
-              // Increased spacing to 15 to ensure they don't overlap/collide
-              let gX = (guardPos.x + (i * 15)) % 100;
-              
-              return (
-                <div
-                  key={`guard-${i}`}
-                  className="absolute transform z-10 pointer-events-none transition-all duration-200"
-                  style={{ 
-                    left: `${gX}%`, 
-                    top: `93%`, 
-                    transform: `translate(-50%, -100%) scale(${guardFacingLeft ? -0.7 : 0.7}, 0.7)` 
-                  }}
-                >
-                  <img 
-                    src={`/guard_anim_${guardFrame}.png`} 
-                    alt="Vijayanagara Guard" 
-                    className="w-16 h-auto drop-shadow-[0_10px_8px_rgba(0,0,0,0.5)]" 
-                    style={{ imageRendering: 'pixelated' }}
-                  />
-                </div>
-              );
-            })}
+            {/* --- LINEAR PATROLLING GUARDS --- */}
+            <PedestrianNPC id="guard_m1" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 5, y: 92}, {x: 25, y: 92}]} speed={4} scale={1.2} startDelay={0} />
+            <PedestrianNPC id="guard_m2" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 25, y: 94}, {x: 45, y: 94}]} speed={4.5} scale={1.2} startDelay={500} />
+            <PedestrianNPC id="guard_m3" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 45, y: 92}, {x: 65, y: 92}]} speed={4} scale={1.2} startDelay={200} />
+            <PedestrianNPC id="guard_m4" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 65, y: 94}, {x: 85, y: 94}]} speed={4.2} scale={1.2} startDelay={700} />
+            <PedestrianNPC id="guard_m5" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 85, y: 92}, {x: 98, y: 92}]} speed={3.8} scale={1.2} startDelay={100} />
 
-            {/* --- ANIMATED ELEPHANTS AND HORSES IN EMPTY AREAS --- */}
-            <div
-              className="absolute transform -translate-x-1/2 -translate-y-1/2 z-0 pointer-events-none animate-pulse"
-              style={{ left: "15%", top: "85%", animationDuration: "3s" }} 
-            >
-              <img 
-                src="/rajasthan-elephant.png" 
-                alt="Royal Elephant" 
-                className="w-32 h-auto drop-shadow-[0_15px_10px_rgba(0,0,0,0.6)]" 
-                style={{ transform: "scaleX(-1)", imageRendering: 'pixelated', opacity: 0.8 }}
-              />
-            </div>
-            
-            <div
-              className="absolute transform -translate-x-1/2 -translate-y-1/2 z-0 pointer-events-none animate-bounce"
-              style={{ left: "85%", top: "88%", animationDuration: "4s" }} 
-            >
-              <img 
-                src="/rajasthan-camel.png" 
-                alt="Royal Mount" 
-                className="w-24 h-auto drop-shadow-[0_15px_10px_rgba(0,0,0,0.6)]" 
-                style={{ imageRendering: 'pixelated', opacity: 0.8 }}
-              />
-            </div>
+            {/* --- ANIMATED ELEPHANTS AND HORSES --- */}
+            <AnimatedAnimal
+              type="elephant"
+              path={[{x: 10, y: 85}, {x: 35, y: 85}, {x: 35, y: 88}, {x: 10, y: 88}]}
+              speed={5}
+            />
+            <AnimatedAnimal
+              type="elephant"
+              path={[{x: 90, y: 82}, {x: 65, y: 82}, {x: 65, y: 78}, {x: 90, y: 78}]}
+              speed={4}
+              scaleFactor={0.9}
+            />
+            <AnimatedAnimal
+              type="horse"
+              path={[{x: 15, y: 92}, {x: 40, y: 92}, {x: 80, y: 92}, {x: 80, y: 95}, {x: 15, y: 95}]}
+              speed={8}
+            />
+            <AnimatedAnimal
+              type="horse"
+              path={[{x: 85, y: 75}, {x: 60, y: 75}, {x: 60, y: 72}, {x: 85, y: 72}]}
+              speed={9}
+              scaleFactor={0.8}
+            />
           </>
         )}
 
@@ -2413,7 +2504,8 @@ export default function VijayanagaraGameScreen() {
           style={{
             left: `${playerPos.x}%`,
             top: `${playerPos.y}%`,
-            transform: "translate(-50%, -100%)",
+            // Adjusted from -100% to -90% to visually lower the sprite so feet touch the actual Y-coordinate line
+            transform: "translate(-50%, -90%)",
           }}
         >
           <div
@@ -2441,8 +2533,8 @@ export default function VijayanagaraGameScreen() {
           let genieY = playerPos.y - 12.0;
 
           // Mode 1: ✨ Glowing (Only for major hidden secrets when nearby)
-          const isGlowing = (scene === "toymaker_stall" && !hasFirstLedgerFragment) ||
-                            (scene === "musical_pillars" && !isMusicalPillarsComplete);
+          const isGlowing = (scene === "toymaker_stall" && (shoeSequenceState === "genie_activating" || shoeSequenceState === "genie_hint")) ||
+                            (scene === "musical_pillars" && (musicalPillarsSequenceState === "genie_activating" || musicalPillarsSequenceState === "genie_hint"));
 
           // Move the Genie specifically to the hidden secret location to point it out clearly!
           if (isGlowing) {
@@ -2724,6 +2816,10 @@ export default function VijayanagaraGameScreen() {
           objective={
             isCampaignComplete
               ? "Campaign Complete: Vijayanagara Legacy Preserved across stone and memory."
+              : scene === "toymaker_stall" && shoeSequenceState === "completed"
+              ? "Travel to another time period and uncover the time traveller's connection to the Vijayanagara Empire."
+              : scene === "musical_pillars" && musicalPillarsSequenceState === "completed"
+              ? "Ledger I recovered. Continue the investigation."
               : isStage3Complete && stage === 3
               ? "Stage 3 Complete! Follow the road to Mahanavami Dibba (Stage 4)."
               : isStage2Complete && stage === 2
@@ -2771,6 +2867,55 @@ export default function VijayanagaraGameScreen() {
           onSelectJournalToy={handleSelectJournalToy}
           hasJournalToy={hasJournalToy}
         />
+
+        {/* --- TIME COIN REWARD MODAL --- */}
+        {showTimeCoinUnlockModal && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm pointer-events-auto">
+            <div className="w-[450px] bg-[#1a1714] border-2 border-[#d4a359] rounded-xl shadow-[0_0_50px_rgba(212,163,89,0.3)] overflow-hidden flex flex-col items-center p-8 animate-[popIn_0.5s_cubic-bezier(0.175,0.885,0.32,1.275)]">
+              <h2 className="text-3xl font-serif text-[#d4a359] mb-2 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] text-center">
+                VIJAYANAGARA EMPIRE TIME COIN
+              </h2>
+              <div className="text-[#8cd98c] font-bold tracking-widest text-lg mb-6 flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                UNLOCKED
+              </div>
+
+              <div className="w-40 h-40 rounded-full border-4 border-[#d4a359] shadow-[0_0_30px_rgba(212,163,89,0.6)] bg-gradient-to-br from-[#d4a359]/20 to-transparent flex items-center justify-center mb-6 relative group overflow-hidden">
+                <div className="absolute inset-0 bg-[#d4a359]/10 rounded-full animate-pulse"></div>
+                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30 mix-blend-overlay"></div>
+                <GameIcon name="artifact" size={80} className="text-[#d4a359] drop-shadow-[0_5px_10px_rgba(0,0,0,0.8)] z-10" />
+                <div className="absolute inset-0 rounded-full border border-white/20 z-20"></div>
+              </div>
+
+              <div className="w-full bg-[#2b2520] border border-[#5a4d3f] p-4 rounded-lg mb-6 flex items-center justify-between">
+                <div>
+                  <h3 className="text-[#f6ede0] font-serif font-bold text-lg">LEDGER I</h3>
+                  <p className="text-[#d6c7b2] text-sm">Second Fragment Recovered</p>
+                </div>
+                <div className="text-[#8cd98c] font-bold flex items-center gap-1">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                  UNLOCKED
+                </div>
+              </div>
+              
+              <button
+                className="w-full py-3 bg-gradient-to-r from-[#d4a359] to-[#b38645] hover:from-[#e5b971] hover:to-[#c69a57] text-[#141210] font-bold font-serif uppercase tracking-widest rounded-lg shadow-lg transition-transform hover:scale-105 active:scale-95"
+                onClick={() => {
+                  setShowTimeCoinUnlockModal(false);
+                  setMusicalPillarsSequenceState("completed");
+                  dispatch(setHasSecondLedgerFragment(true));
+                  setIsMusicalPillarsComplete(true);
+                  if (!unlockedJournalEntries.includes("musical_pillars_acoustics")) {
+                    dispatch(addJournalEntry("musical_pillars_acoustics"));
+                  }
+                  soundFx.playSelect();
+                }}
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* --- MUSICAL PILLARS PUZZLE MODAL --- */}
         <MusicalPillarsPuzzle
@@ -2897,65 +3042,12 @@ export default function VijayanagaraGameScreen() {
           </div>
         )}
 
-        {/* --- HAZARA RAMA BAS-RELIEF MODAL --- */}
-        {showHazaraRamaModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fadeIn">
-            <div className="relative w-full max-w-2xl bg-[#1e1b18] text-[#f6ede0] rounded-2xl border-4 border-[#5a4d3f] p-6 shadow-[0_0_50px_rgba(0,0,0,0.95)] max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between pb-3 border-b-2 border-[#5a4d3f] mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-[#2e261f] border-2 border-[#d4a359] flex items-center justify-center shadow-inner">
-                    <GameIcon name="archery" size={26} className="text-[#d4a359]" />
-                  </div>
-                  <div>
-                    <div className="text-[10px] font-mono text-[#d4a359] uppercase tracking-widest">
-                      Royal Enclosure • Stone Narrative Carvings (c. 1540 AD)
-                    </div>
-                    <h3 className="text-xl font-serif font-bold text-[#f6ede0]">
-                      Hazara Rama Temple Wall Friezes
-                    </h3>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => {
-                    stopAllCharacterVoice();
-                    setShowHazaraRamaModal(false);
-                  }}
-                  className="text-[#a89985] hover:text-[#f6ede0] text-sm bg-[#2b2520] hover:bg-[#3d3329] border border-[#5a4d3f] px-3 py-1.5 rounded-lg transition-all cursor-pointer"
-                >
-                  ✕ Close
-                </button>
-              </div>
-
-              <div className="p-4 rounded-xl bg-[#26201b] border border-[#473d32] text-sm font-serif leading-relaxed text-[#eedfc8] mb-5 space-y-2">
-                <p className="font-semibold text-[#d4a359]">
-                  Continuous Epic Stone Chronicle
-                </p>
-                <p className="text-xs text-[#d6c7b2]">
-                  The outer walls of Hazara Rama Temple present thousands of stone friezes. Lower rows depict royal elephants and dancers, while upper panels narrate the entire Ramayana epic.
-                </p>
-                <p className="text-xs text-[#eedfc8] italic">
-                  &ldquo;A king&apos;s valor may conquer lands, but devotion and righteous rule outlive all conquerors.&rdquo;
-                </p>
-              </div>
-
-              <div className="flex justify-between items-center pt-3 border-t border-[#383027]">
-                <div className="text-[10px] font-mono text-[#d4a359]">
-                  ✦ Hazara Rama Inscription added to Palm-Leaf Journal
-                </div>
-                <button
-                  onClick={() => {
-                    stopAllCharacterVoice();
-                    setShowHazaraRamaModal(false);
-                  }}
-                  className="bg-[#2b2520] hover:bg-[#3d3329] border border-[#5a4d3f] text-[#f6ede0] font-serif px-6 py-2 rounded-xl text-xs transition-all cursor-pointer"
-                >
-                  Return to Courtyard
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* --- HAZARA RAMA BAS-RELIEF CINEMATIC --- */}
+        <TempleWallInspectionController
+          isActive={showHazaraRamaModal}
+          onComplete={() => setShowHazaraRamaModal(false)}
+          setCameraTransform={setCameraTransform}
+        />
 
         {/* --- TEMPLE MUSICIAN RAGHAVENDRA DIALOGUE MODAL --- */}
         {showRaghavendraDialogue && scene === "stone_chariot_entry" && (
@@ -3227,9 +3319,60 @@ export default function VijayanagaraGameScreen() {
           </div>
         )}
 
+        {/* --- SHOE UNLOCK MODAL --- */}
+        {showShoeUnlockModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md animate-fadeIn" style={{ zIndex: 9999 }}>
+            <div className="absolute inset-0 bg-white animate-flashWhite z-10" />
+            
+            <div className="relative aspect-video w-[90vw] max-w-5xl rounded-2xl border-4 border-[#d4a359] overflow-hidden shadow-[0_0_80px_rgba(212,163,89,0.7)] flex flex-col items-center justify-center z-20">
+              {/* Background Burst */}
+              <img 
+                src="/unlock_bg.png" 
+                alt="Unlock Burst" 
+                className="absolute inset-0 w-full h-full object-cover opacity-90 scale-150 pointer-events-none" 
+              />
+              
+              {/* Content */}
+              <div className="relative z-10 flex flex-col items-center justify-center w-full h-full p-8 bg-black/20">
+                <h2 className="text-3xl md:text-5xl font-serif font-bold text-white mb-6 drop-shadow-[0_4px_10px_rgba(0,0,0,0.9)] uppercase tracking-widest text-center">
+                  Clue Discovered: The Time Traveller's Shoe
+                </h2>
+                <img 
+                  src="/sneaker_clue.jpg" 
+                  alt="Modern Sneaker Shoe" 
+                  className="w-48 h-48 md:w-64 md:h-64 object-cover rounded-xl border-2 border-[#d4a359] drop-shadow-[0_15px_30px_rgba(0,0,0,0.9)] hover:scale-110 transition-transform duration-500 mb-8"
+                  style={{ mixBlendMode: 'multiply' }}
+                />
+                
+                {/* Continue Button */}
+                <button
+                  onClick={() => {
+                    setShowShoeUnlockModal(false);
+                    // Move to genie activating
+                    setShoeSequenceState("genie_activating");
+                    soundFx.playSelect();
+                    
+                    setTimeout(() => {
+                       setShoeSequenceState("genie_hint");
+                       playNarration("This person is also a time traveller. Go to a different time period and find out how they are connected to the Vijayanagara Empire.", { speaker: "neha", pace: 0.95, language_code: "en-IN" });
+                       
+                       setTimeout(() => {
+                           setShoeSequenceState("completed");
+                       }, 7000);
+                    }, 2000);
+                  }}
+                  className="bg-white/10 hover:bg-white/20 border-2 border-white/50 text-white font-serif font-bold px-12 py-4 rounded-full shadow-lg transition-all cursor-pointer text-lg tracking-[0.2em] backdrop-blur-sm"
+                >
+                  CONTINUE
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* --- OAR UNLOCK MODAL --- */}
         {showOarUnlockModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md animate-fadeIn">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md animate-fadeIn" style={{ zIndex: 9999 }}>
             <div className="absolute inset-0 bg-white animate-flashWhite z-10" />
             
             <div className="relative aspect-video w-[90vw] max-w-5xl rounded-2xl border-4 border-[#d4a359] overflow-hidden shadow-[0_0_80px_rgba(212,163,89,0.7)] flex flex-col items-center justify-center z-20">

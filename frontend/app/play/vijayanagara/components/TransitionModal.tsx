@@ -121,7 +121,8 @@ export default function TransitionModal({
       aria-modal="true"
       aria-labelledby="transition-title"
       tabIndex={-1}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-lg animate-fadeIn p-4 outline-none"
+      className="fixed inset-0 flex items-center justify-center bg-black/90 backdrop-blur-lg animate-fadeIn p-4 outline-none"
+      style={{ zIndex: 9999 }}
     >
       <div className="relative w-full max-w-2xl bg-[#1e1b18] border-4 border-[#5a4d3f] rounded-2xl p-8 text-center text-[#f6ede0] shadow-[0_0_60px_rgba(0,0,0,0.95)] overflow-hidden">
         {/* Top Decorative Border Accent */}

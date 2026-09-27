@@ -50,7 +50,7 @@ export default function VijayanagaraHUD({
   return (
     <div
       aria-hidden={isTransitioning}
-      className={`absolute inset-0 pointer-events-none z-30 flex flex-col justify-between p-4 md:p-6 select-none font-sans ${
+      className={`absolute inset-0 pointer-events-none z-[9998] flex flex-col justify-between p-4 md:p-6 select-none font-sans ${
         isTransitioning ? "opacity-40" : ""
       }`}
     >

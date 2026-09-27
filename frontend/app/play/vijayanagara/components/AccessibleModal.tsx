@@ -105,7 +105,8 @@ export default function AccessibleModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn"
+      className="fixed inset-0 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn"
+      style={{ zIndex: 9999 }}
       onClick={(e) => {
         // Backdrop click to close if clicking outside modal content
         if (closeOnBackdropClick && e.target === e.currentTarget) {
