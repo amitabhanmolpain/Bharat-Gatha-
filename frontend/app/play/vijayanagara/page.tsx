@@ -2883,7 +2883,7 @@ export default function VijayanagaraGameScreen() {
               <div className="w-40 h-40 rounded-full border-4 border-[#d4a359] shadow-[0_0_30px_rgba(212,163,89,0.6)] bg-gradient-to-br from-[#d4a359]/20 to-transparent flex items-center justify-center mb-6 relative group overflow-hidden">
                 <div className="absolute inset-0 bg-[#d4a359]/10 rounded-full animate-pulse"></div>
                 <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30 mix-blend-overlay"></div>
-                <GameIcon name="artifact" size={80} className="text-[#d4a359] drop-shadow-[0_5px_10px_rgba(0,0,0,0.8)] z-10" />
+                <GameIcon name="gem" size={80} className="text-[#d4a359] drop-shadow-[0_5px_10px_rgba(0,0,0,0.8)] z-10" />
                 <div className="absolute inset-0 rounded-full border border-white/20 z-20"></div>
               </div>
 

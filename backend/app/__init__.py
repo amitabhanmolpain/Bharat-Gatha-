@@ -20,7 +20,7 @@ if not hasattr(werkzeug, '__version__'):
         werkzeug.__version__ = '3.0.0'
 
 # Load environment variables
-load_dotenv()
+load_dotenv(override=True)
 
 
 def create_app():
@@ -35,10 +35,17 @@ def create_app():
     app = Flask(__name__)
     
     # Configure CORS (allow requests from frontend)
-    CORS(app)
+    CORS(app, supports_credentials=True, origins=["http://localhost:3000"])
     
     # Configure JWT for authentication
     app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "super-secret-key-change-in-production")
+    app.config["JWT_TOKEN_LOCATION"] = ["headers", "cookies"]
+    app.config["JWT_ACCESS_COOKIE_NAME"] = "access_token"
+    app.config["JWT_REFRESH_COOKIE_NAME"] = "refresh_token"
+    app.config["JWT_COOKIE_SECURE"] = False  # Set to True in production (requires HTTPS)
+    app.config["JWT_COOKIE_CSRF_PROTECT"] = False  # Disable CSRF for this prototype setup
+    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = 900  # 15 minutes
+    app.config["JWT_REFRESH_TOKEN_EXPIRES"] = 86400 * 7  # 7 days
     jwt = JWTManager(app)
     
     # Register Blueprints from app.controllers
@@ -46,10 +53,18 @@ def create_app():
     from app.controllers.tts_controller import tts_bp
     from app.controllers.ai_controller import ai_bp
     from app.controllers.game_controller import game_bp
+    from app.controllers.auth_controller import auth_bp
+    from app.controllers.user_controller import user_bp
 
     app.register_blueprint(main_bp, url_prefix='/api')
     app.register_blueprint(tts_bp, url_prefix='/api/tts')
     app.register_blueprint(ai_bp, url_prefix='/api/ai')
     app.register_blueprint(game_bp, url_prefix='/api/game')
+    app.register_blueprint(auth_bp, url_prefix='/api/auth')
+    app.register_blueprint(user_bp, url_prefix='/api/users')
     
+    @app.errorhandler(Exception)
+    def handle_exception(e):
+        return {"error": "Internal Server Error", "message": str(e)}, 500
+
     return app

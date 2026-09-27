@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "./ThemeContext";
+import { useAuth } from "../context/AuthContext";
 import { 
   Gamepad2, 
   Compass, 
@@ -10,12 +11,31 @@ import {
   User, 
   Sun, 
   Moon, 
-  LogOut 
+  LogOut,
+  Loader2
 } from "lucide-react";
+
+import { useEffect } from "react";
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const { isDark, toggleTheme } = useTheme();
   const pathname = usePathname();
+  const router = useRouter();
+  const { isAuthenticated, isLoading, logout } = useAuth();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.push(`/?redirect=${pathname}`);
+    }
+  }, [isLoading, isAuthenticated, router, pathname]);
+
+  if (isLoading || !isAuthenticated) {
+    return (
+      <div className={`flex h-screen w-full items-center justify-center ${isDark ? 'bg-[#050403]' : 'bg-[#fdfbf7]'}`}>
+        <Loader2 className={`w-8 h-8 animate-spin ${isDark ? 'text-[#c5b59f]' : 'text-[#8a6835]'}`} />
+      </div>
+    );
+  }
 
   return (
     <div className={`flex h-screen w-full overflow-hidden font-sans transition-colors duration-500 ${isDark ? 'bg-[#050403] selection:bg-[#91714b]/30' : 'bg-[#fdfbf7] selection:bg-[#c9a776]/30'}`}>
@@ -123,10 +143,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             {isDark ? 'Light Mode' : 'Dark Mode'}
           </button>
           
-          <Link href="/" className={`flex items-center justify-center gap-3 px-4 py-3 border rounded-lg text-[13px] uppercase tracking-widest font-bold transition-all shadow-inner ${isDark ? 'border-[#3a2d1d] hover:border-[#5a4834] bg-[#0f0c09] hover:bg-[#16120e] text-[#a89985] hover:text-[#c5b59f]' : 'border-[#e3d5c1] hover:border-[#c9a776] bg-white hover:bg-[#fcf8f2] text-[#7a6f5e] hover:text-[#8a6835]'}`}>
+          <button onClick={logout} className={`flex w-full items-center justify-center gap-3 px-4 py-3 border rounded-lg text-[13px] uppercase tracking-widest font-bold transition-all shadow-inner ${isDark ? 'border-[#3a2d1d] hover:border-[#5a4834] bg-[#0f0c09] hover:bg-[#16120e] text-[#a89985] hover:text-[#c5b59f]' : 'border-[#e3d5c1] hover:border-[#c9a776] bg-white hover:bg-[#fcf8f2] text-[#7a6f5e] hover:text-[#8a6835]'}`}>
             <LogOut className="w-4 h-4 opacity-70" />
             Sign out
-          </Link>
+          </button>
         </div>
       </aside>
 

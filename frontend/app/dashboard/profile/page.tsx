@@ -1,20 +1,60 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useTheme } from "../ThemeContext";
-
-const USER_STATS = {
-  name: "Arjun The Great",
-  title: "Emperor",
-  level: 42,
-  xp: "14,250",
-  gamesPlayed: 108,
-  winRate: "76%",
-  highestScore: "2,450",
-  rank: "#1 Global"
-};
 
 export default function Profile() {
   const { isDark } = useTheme();
+  const [profileData, setProfileData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchProfile() {
+      try {
+        const token = localStorage.getItem("bharat_gatha_token");
+        if (!token) {
+          setIsLoading(false);
+          return;
+        }
+        
+        const res = await fetch("http://localhost:5001/api/users/profile", {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        });
+        
+        const data = await res.json();
+        if (res.ok) {
+          setProfileData(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch profile", err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchProfile();
+  }, []);
+
+  const USER_STATS = profileData ? {
+    name: profileData.user.name,
+    title: profileData.user.role,
+    level: profileData.stats.level,
+    xp: profileData.stats.xp.toLocaleString(),
+    gamesPlayed: profileData.stats.gamesPlayed,
+    winRate: `${profileData.stats.winRate}%`,
+    highestScore: profileData.stats.highestScore.toLocaleString(),
+    rank: profileData.stats.rank ? `#${profileData.stats.rank} Global` : "Unranked"
+  } : {
+    name: "Adventurer",
+    title: "Traveler",
+    level: 1,
+    xp: "0",
+    gamesPlayed: 0,
+    winRate: "0%",
+    highestScore: "0",
+    rank: "Unranked"
+  };
 
   return (
     <>
@@ -76,10 +116,26 @@ export default function Profile() {
           <div className={`flex-1 p-8 rounded-xl border-[1.5px] backdrop-blur-sm transition-colors duration-500 ${isDark ? 'bg-[#0a0806]/40 border-[#3a2d1d]' : 'bg-white/40 border-[#e3d5c1]'}`}>
             <h4 className={`text-lg font-serif mb-6 transition-colors duration-500 ${isDark ? 'text-[#e4c794]' : 'text-[#8a6835]'}`}>Recent Adventures</h4>
             
-            <div className="flex flex-col items-center justify-center h-40 text-center">
-              <svg className={`w-12 h-12 mb-4 opacity-50 transition-colors duration-500 ${isDark ? 'text-[#91714b]' : 'text-[#c9a776]'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-              <p className={`text-[13px] max-w-xs transition-colors duration-500 ${isDark ? 'text-[#a89985]' : 'text-[#7a6f5e]'}`}>Your legend is yet to be written. Start a new game to record your first adventure.</p>
-            </div>
+            {!profileData?.recentAdventures || profileData.recentAdventures.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-40 text-center">
+                <svg className={`w-12 h-12 mb-4 opacity-50 transition-colors duration-500 ${isDark ? 'text-[#91714b]' : 'text-[#c9a776]'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                <p className={`text-[13px] max-w-xs transition-colors duration-500 ${isDark ? 'text-[#a89985]' : 'text-[#7a6f5e]'}`}>Your legend is yet to be written. Start a new game to record your first adventure.</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-4">
+                {profileData.recentAdventures.map((adv: any, i: number) => (
+                  <div key={i} className={`flex justify-between items-center p-4 border rounded-xl ${isDark ? 'bg-[#16120e]/50 border-[#3a2d1d]' : 'bg-white/50 border-[#e3d5c1]'}`}>
+                    <div>
+                      <div className={`font-bold ${isDark ? 'text-[#e4c794]' : 'text-[#8a6835]'}`}>{adv.adventureName}</div>
+                      <div className={`text-xs ${isDark ? 'text-[#a89985]' : 'text-[#7a6f5e]'}`}>{new Date(adv.createdAt).toLocaleDateString()}</div>
+                    </div>
+                    <div className={`font-serif tracking-wide ${isDark ? 'text-[#c5b59f]' : 'text-[#7a6f5e]'}`}>
+                      {adv.score.toLocaleString()} Score
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 

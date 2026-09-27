@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { soundFx } from "../services/soundService";
+import { useAuth } from "./context/AuthContext";
 import { 
   User, 
   Mail, 
@@ -26,8 +27,10 @@ const backgrounds = [
   "/bg-british.jpg",
 ];
 
-export default function Home() {
+function HomeContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { isAuthenticated, isLoading: authLoading, login } = useAuth();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // Authentication Box Modes: "overview" | "signup" | "signin"
@@ -51,6 +54,13 @@ export default function Home() {
     }, 6000); // Change image every 6 seconds
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      const redirect = searchParams?.get('redirect') || '/dashboard';
+      router.push(redirect);
+    }
+  }, [isAuthenticated, router, searchParams]);
 
   const handleOpenSignUp = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -95,24 +105,29 @@ export default function Home() {
     soundFx.playClueChime();
     setIsLoading(true);
 
-    setTimeout(() => {
-      if (typeof window !== "undefined") {
-        try {
-          localStorage.setItem(
-            "bharat_gatha_user",
-            JSON.stringify({
-              name: name.trim(),
-              email: email.trim().toLowerCase(),
-              role: "Royal Historian",
-              avatar: "/player.png",
-              joinedAt: new Date().toISOString(),
-            })
-          );
-        } catch (err) {
-          console.error("Failed to save user session:", err);
+    setTimeout(async () => {
+      try {
+        const res = await fetch('http://localhost:5001/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: name.trim(), email: email.trim(), password })
+        });
+        
+        const data = await res.json();
+        if (!res.ok) {
+          setErrorMsg(data.message || "Failed to create account");
+          setIsLoading(false);
+          return;
         }
+
+        login(data.access_token, data.user);
+        const redirect = searchParams?.get('redirect') || '/dashboard';
+        router.push(redirect);
+      } catch (err) {
+        console.error("Signup error:", err);
+        setErrorMsg("Failed to connect to server");
+        setIsLoading(false);
       }
-      router.push("/dashboard");
     }, 700);
   };
 
@@ -132,24 +147,29 @@ export default function Home() {
     soundFx.playButtonClick();
     setIsLoading(true);
 
-    setTimeout(() => {
-      if (typeof window !== "undefined") {
-        try {
-          localStorage.setItem(
-            "bharat_gatha_user",
-            JSON.stringify({
-              name: name.trim() || email.split("@")[0],
-              email: email.trim().toLowerCase(),
-              role: "Royal Historian",
-              avatar: "/player.png",
-              joinedAt: new Date().toISOString(),
-            })
-          );
-        } catch (err) {
-          console.error("Failed to save user session:", err);
+    setTimeout(async () => {
+      try {
+        const res = await fetch('http://localhost:5001/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email.trim(), password })
+        });
+        
+        const data = await res.json();
+        if (!res.ok) {
+          setErrorMsg(data.message || "Invalid credentials");
+          setIsLoading(false);
+          return;
         }
+
+        login(data.access_token, data.user);
+        const redirect = searchParams?.get('redirect') || '/dashboard';
+        router.push(redirect);
+      } catch (err) {
+        console.error("Login error:", err);
+        setErrorMsg("Failed to connect to server");
+        setIsLoading(false);
       }
-      router.push("/dashboard");
     }, 600);
   };
 
@@ -157,25 +177,18 @@ export default function Home() {
     soundFx.playButtonClick();
     setIsLoading(true);
     setTimeout(() => {
-      if (typeof window !== "undefined") {
-        try {
-          localStorage.setItem(
-            "bharat_gatha_user",
-            JSON.stringify({
-              name: "Google Traveler",
-              email: email.trim() || "traveler@bharatgatha.com",
-              role: "Royal Historian",
-              avatar: "/player.png",
-              joinedAt: new Date().toISOString(),
-            })
-          );
-        } catch (err) {
-          console.error("Failed to save user session:", err);
-        }
-      }
-      router.push("/dashboard");
+      // Direct user to backend Google OAuth initiation
+      window.location.href = "http://localhost:5001/api/auth/google";
     }, 500);
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-[#c5b59f]" />
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center md:justify-start px-4 sm:px-8 md:pl-16 lg:pl-24 py-6 overflow-hidden bg-black font-sans">
@@ -639,5 +652,13 @@ export default function Home() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-[#c5b59f]" /></div>}>
+      <HomeContent />
+    </Suspense>
   );
 }
