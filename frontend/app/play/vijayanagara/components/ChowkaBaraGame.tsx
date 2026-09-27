@@ -929,7 +929,10 @@ export default function ChowkaBaraGame({
       </div>
 
       {showTutorial && (
-        <div className="absolute inset-0 bg-[#121c11]/90 z-50 flex items-center justify-center p-3 rounded-xl">
+        <div 
+          className="absolute inset-0 bg-[#121c11]/90 flex items-center justify-center p-3 rounded-xl"
+          style={{ zIndex: 9999 }}
+        >
           <div className="bg-[#1c241a] border border-[#d4a359] p-4 rounded-xl max-w-sm w-full shadow-2xl relative">
             <h3 className="text-lg font-serif font-bold text-[#e8f1e6] mb-3 border-b border-[#31422f] pb-1">Authentic Chowka Bara</h3>
             

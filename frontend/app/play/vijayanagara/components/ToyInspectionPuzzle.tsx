@@ -309,7 +309,7 @@ export default function ToyInspectionPuzzle({
 
           {/* Rendered Visual Artifact */}
           <div 
-            className={`my-6 transition-all duration-700 ease-in-out flex items-center justify-center ${isRotating ? "drop-shadow-[0_15px_25px_rgba(0,0,0,0.9)]" : "drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)]"}`}
+            className={`my-6 transition-all duration-700 ease-in-out flex items-center justify-center`}
             style={{ 
               transform: `scale(${isRotating ? 0.98 : 1}) rotateX(${isViewingUnderside ? 75 : 0}deg) rotateY(${rotationAngle}deg)`,
               transformStyle: 'preserve-3d',
@@ -323,23 +323,33 @@ export default function ToyInspectionPuzzle({
                   src={`/toys/toy_${currentToy.id}.jpg`} 
                   alt={currentToy.name} 
                   className="absolute inset-0 w-48 h-48 object-cover border-2 border-[#141210] shadow-2xl" 
-                  style={{ transform: 'translateZ(6px)' }} 
+                  style={{ transform: 'translateZ(96px)' }} 
                 />
-                {/* Back Face (Flipped) */}
+                {/* Back Face */}
                 <img 
-                  src={`/toys/toy_${currentToy.id}.jpg`} 
+                  src={`/toys/toy_${currentToy.id}_back.jpg`} 
                   alt={currentToy.name} 
                   className="absolute inset-0 w-48 h-48 object-cover border-2 border-[#141210] shadow-2xl" 
-                  style={{ transform: 'translateZ(-6px) rotateY(180deg) scaleX(-1)' }} 
+                  style={{ transform: 'translateZ(-96px) rotateY(180deg) scaleX(-1)' }} 
                 />
-                {/* Left Face (Edge Thickness) */}
-                <div className="absolute top-0 left-0 h-48 bg-[#2e261f] border-y-2 border-l-2 border-[#141210]" style={{ width: '12px', transform: 'rotateY(-90deg) translateZ(6px)', transformOrigin: 'left' }} />
-                {/* Right Face (Edge Thickness) */}
-                <div className="absolute top-0 right-0 h-48 bg-[#1e1914] border-y-2 border-r-2 border-[#141210]" style={{ width: '12px', transform: 'rotateY(90deg) translateZ(6px)', transformOrigin: 'right' }} />
+                {/* Left Face */}
+                <img 
+                  src={`/toys/toy_${currentToy.id}_left.jpg`} 
+                  alt={currentToy.name} 
+                  className="absolute inset-0 w-48 h-48 object-cover border-2 border-[#141210] shadow-2xl" 
+                  style={{ transform: 'rotateY(-90deg) translateZ(96px)' }} 
+                />
+                {/* Right Face */}
+                <img 
+                  src={`/toys/toy_${currentToy.id}_right.jpg`} 
+                  alt={currentToy.name} 
+                  className="absolute inset-0 w-48 h-48 object-cover border-2 border-[#141210] shadow-2xl" 
+                  style={{ transform: 'rotateY(90deg) translateZ(96px)' }} 
+                />
                 {/* Top Face */}
-                <div className="absolute top-0 left-0 w-48 bg-[#3d3328] border-x-2 border-t-2 border-[#141210]" style={{ height: '12px', transform: 'rotateX(90deg) translateZ(6px)', transformOrigin: 'top' }} />
+                <div className="absolute top-0 left-0 w-48 h-48 bg-[#3d3328] border-x-2 border-t-2 border-[#141210]" style={{ transform: 'rotateX(90deg) translateZ(96px)' }} />
                 {/* Bottom Face */}
-                <div className="absolute bottom-0 left-0 w-48 bg-[#0a0807] border-x-2 border-b-2 border-[#141210]" style={{ height: '12px', transform: 'rotateX(-90deg) translateZ(6px)', transformOrigin: 'bottom' }} />
+                <div className="absolute bottom-0 left-0 w-48 h-48 bg-[#0a0807] border-x-2 border-b-2 border-[#141210]" style={{ transform: 'rotateX(-90deg) translateZ(96px)' }} />
               </div>
             ) : (
               <GameIcon name={currentToy.icon} size={80} className="text-[#c89a50]" />
