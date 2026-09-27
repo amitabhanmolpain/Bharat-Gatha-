@@ -1112,10 +1112,7 @@ export default function VijayanagaraGameScreen() {
             "stone_road"
           );
         } else if (isNearBazaarToymaker) {
-          triggerTransition(
-            "toymaker_stall",
-            { x: 32.0, y: 78.0 },
-            "Entering Kinhal Artisan Workshop",
+          triggerTransition("toymaker_stall", { x: 85.0, y: 93.0 }, "Entering Kinhal Artisan Workshop",
             "Visiting the fragrant timber workshop filled with colorful lacquered toys.",
             "stone_road"
           );
