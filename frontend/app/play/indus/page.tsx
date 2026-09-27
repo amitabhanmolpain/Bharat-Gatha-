@@ -512,6 +512,9 @@ function IndusValleyGameComponent() {
   const [isPriestKingTalking, setIsPriestKingTalking] = useState(false);
   const [priestAnimFrame, setPriestAnimFrame] = useState(1);
   const [guardFrame, setGuardFrame] = useState(1);
+  const [artisanFrame, setArtisanFrame] = useState(1);
+  const [pedestrianFrame, setPedestrianFrame] = useState(1);
+  const [shopPotterPos, setShopPotterPos] = useState({ x: 20, y: 90, dir: 1 });
   const [roofGuards, setRoofGuards] = useState([
     { id: 3, baseX: 70, baseY: 20, offsetX: 0, direction: 1, range: 4 }
   ]);
@@ -531,6 +534,22 @@ function IndusValleyGameComponent() {
   useEffect(() => {
     const interval = setInterval(() => {
       setGuardFrame(prev => prev === 3 ? 1 : prev + 1);
+      setArtisanFrame(prev => prev === 1 ? 2 : 1);
+      setPedestrianFrame(prev => prev === 4 ? 1 : prev + 1);
+      
+      setShopPotterPos(prev => {
+        let newX = prev.x + (0.5 * prev.dir);
+        let newY = prev.y - (0.25 * prev.dir); // moves diagonally up/right
+        let newDir = prev.dir;
+        
+        if (newX > 80) {
+          newDir = -1;
+        } else if (newX < 20) {
+          newDir = 1;
+        }
+        return { x: newX, y: newY, dir: newDir };
+      });
+
       setRoofGuards(prevGuards => prevGuards.map(guard => {
         let newOffset = guard.offsetX + (0.5 * guard.direction);
         let newDir = guard.direction;
@@ -1071,7 +1090,13 @@ function IndusValleyGameComponent() {
     playerPos.y <= 38.0;
 
   // Caravan Road: Single Bullock Cart Hotspot (Post-noon Harappa Road)
-  const isNearCaravanCart =
+  
+    const isNearMiddleMerchant = scene === "steatite_seal_workshop" && Math.hypot(playerPos.x - 48, playerPos.y - 70) <= 12.0;
+    const isNearRightMerchant1 = scene === "steatite_seal_workshop" && Math.hypot(playerPos.x - 63, playerPos.y - 65) <= 12.0;
+    const isNearRightMerchant2 = scene === "steatite_seal_workshop" && Math.hypot(playerPos.x - 73, playerPos.y - 60) <= 12.0;
+
+    const isNearToyCraftsman = scene === "steatite_seal_workshop" && Math.hypot(playerPos.x - 8, playerPos.y - 86) <= 15.0;
+    const isNearCaravanCart =
     scene === "caravan_road" &&
     playerPos.x >= 32.0 &&
     playerPos.x <= 58.0 &&
@@ -1774,7 +1799,29 @@ function IndusValleyGameComponent() {
         } else if (isNearCaravanRoadHarappaGate) {
           triggerTransition("steatite_seal_workshop", { x: 20.0, y: 38.0 }, 3, 600);
           return;
-        } else if (isNearHouseDoorway) {
+        
+        } else if (isNearToyCraftsman) {
+          const text = "Welcome to Harappa's toy workshop! We hand-craft solid-wheeled toy bullock carts and humped zebu oxen from fine river clay.";
+          setActiveCitizenDialogue({ name: "Harappan Toy Craftsman", title: "Master Artisan", icon: "", text });
+          soundFx.playSelect();
+          playCharacterDialogue({ character: "toy_craftsman", text });
+        } else if (isNearMiddleMerchant) {
+          const text = "Spices and rare herbs from the southern lands! My goods have traveled far.";
+          setActiveCitizenDialogue({ name: "Traveling Merchant", title: "Spice Trader", icon: "", text });
+          soundFx.playSelect();
+          playCharacterDialogue({ character: "merchant_1", text });
+        } else if (isNearRightMerchant1) {
+          const text = "Fresh fruits and farm produce! Harvested from the fertile floodplains of the Indus.";
+          setActiveCitizenDialogue({ name: "Local Farmer", title: "Produce Seller", icon: "", text });
+          soundFx.playSelect();
+          playCharacterDialogue({ character: "merchant_2", text });
+        } else if (isNearRightMerchant2) {
+          const text = "I offer fine woven cotton and dyed fabrics. The best quality in all of Mohenjo-daro!";
+          setActiveCitizenDialogue({ name: "Weaver", title: "Textile Merchant", icon: "", text });
+          soundFx.playSelect();
+          playCharacterDialogue({ character: "merchant_3", text });
+
+          } else if (isNearHouseDoorway) {
           setCourtyardReturnScene("residential_grid");
           triggerTransition("house_courtyard", { x: 50.0, y: 72.0 });
           return;
@@ -1910,7 +1957,20 @@ function IndusValleyGameComponent() {
 
       // Inspect key: [G] or [g] (Per user requirement: "for all the inspect part keep G")
       if (e.key === "g" || e.key === "G") {
-        if (isNearCaravanCart) {
+        if (isNearToyCraftsman) {
+          const text = "Welcome to Harappa's toy workshop! Along this street, we hand-craft solid-wheeled toy bullock carts, whistling terracotta birds, climbing monkeys, and humped zebu oxen from fine river clay. Standardized toys and artisan goods travel across the entire Indus valley!";
+          setActiveCitizenDialogue({
+            name: "Harappan Toy Craftsman",
+            title: "Master Artisan of Clay Figurines & Wheeled Toys • Harappa",
+            icon: "",
+            text: text,
+          });
+          soundFx.playSelect();
+          playCharacterDialogue({
+            character: "toy_craftsman",
+            text: text,
+          });
+        } else if (isNearCaravanCart) {
           setActiveCitizenDialogue({
             name: "Harappan Bullock Cart",
             title: "Traditional Indus Valley Freight Transport",
@@ -4143,29 +4203,85 @@ function IndusValleyGameComponent() {
 
         {/* Stage 3: Harappan Terracotta Toy Workshop & Stalls */}
         {scene === "steatite_seal_workshop" && (
-          <div
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-15"
-            style={{ left: "18%", top: "72%" }}
-            onClick={() => {
-              setActiveCitizenDialogue({
-                name: "Harappan Toy Craftsman",
-                title: "Master Artisan of Clay Figurines & Wheeled Toys • Harappa",
-                icon: "",
-                text: "Welcome to Harappa's toy workshop! Along this street, we hand-craft solid-wheeled toy bullock carts, whistling terracotta birds, climbing monkeys, and humped zebu oxen from fine river clay. Standardized toys and artisan goods travel across the entire Indus valley!",
-              });
-              soundFx.playSelect();
-            }}
-          >
-            {isNearSealBench && (
-              <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
-                <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
-                <span>Inspect Terracotta Toy Stalls</span>
+          <>
+            <div
+              className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer select-none group z-15"
+              style={{ left: "18%", top: "72%" }}
+              onClick={() => {
+                setActiveCitizenDialogue({
+                  name: "Harappan Toy Craftsman",
+                  title: "Master Artisan of Clay Figurines & Wheeled Toys • Harappa",
+                  icon: "",
+                  text: "Welcome to Harappa's toy workshop! Along this street, we hand-craft solid-wheeled toy bullock carts, whistling terracotta birds, climbing monkeys, and humped zebu oxen from fine river clay. Standardized toys and artisan goods travel across the entire Indus valley!",
+                });
+                soundFx.playSelect();
+              }}
+            >
+              {isNearSealBench && (
+                <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                  <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">G</div>
+                  <span>Inspect Terracotta Toy Stalls</span>
+                </div>
+              )}
+              <div className="px-2.5 py-0.5 rounded bg-[#16110c]/85 border border-[#d8a86a]/60 text-[#f7eedf] text-[10px] font-serif font-bold shadow-md">
+                Terracotta Toy Workshop
               </div>
-            )}
-            <div className="px-2.5 py-0.5 rounded bg-[#16110c]/85 border border-[#d8a86a]/60 text-[#f7eedf] text-[10px] font-serif font-bold shadow-md">
-              Terracotta Toy Workshop
             </div>
-          </div>
+
+            {/* Shopkeeper (standing properly on the ground near the toys) */}
+            <div
+              className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer group z-20"
+              style={{ left: "8%", top: "86%" }}
+            >
+              <img 
+                src={`/merchant_f${(activeCitizenDialogue?.name === "Harappan Toy Craftsman") ? (((pedestrianFrame - 1) % 3) + 1) : 1}.png`} 
+                alt="Toy Craftsman" 
+                className="w-32 h-32 md:w-36 md:h-36 drop-shadow-md transition-transform group-hover:scale-105 object-contain" 
+                style={{ imageRendering: 'pixelated' }} 
+              />
+              <div className="absolute bottom-full mb-1 flex flex-col items-center pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="text-[10px] font-serif font-bold text-[#f7eedf] bg-[#16110c]/90 px-2 py-0.5 rounded border border-[#d8a86a]/50 shadow whitespace-nowrap">
+                  Press E to Speak
+                </span>
+              </div>
+            </div>
+
+            {/* Harappan Couple (standing by the drain) */}
+            <div
+              className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center z-15"
+              style={{ left: "35%", top: "76%" }}
+            >
+              <img 
+                src={`/sprite-artisans-talk-${artisanFrame}.png`} 
+                alt="Harappan Couple" 
+                className="w-32 h-auto drop-shadow-md transform -scale-x-100" 
+                style={{ imageRendering: 'pixelated' }} 
+              />
+            </div>
+
+            
+            {/* 3 Merchants from Vijayanagara/Other */}
+            <div className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center z-15 pointer-events-auto group" style={{ left: "48%", top: "77%" }}>
+              <img src={`/merchant_1_anim${artisanFrame}.png`} alt="Merchant 1" className="h-[95px] w-auto drop-shadow-md" style={{ imageRendering: 'pixelated' }} />
+              <div className="absolute bottom-full mb-1 opacity-0 group-hover:opacity-100"><span className="text-[10px] font-bold text-white bg-black/80 px-1 rounded">Press E to Speak</span></div>
+            </div>
+            <div className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center z-15 pointer-events-auto group" style={{ left: "63%", top: "71%" }}>
+              <img src={`/merchant_2_anim${artisanFrame === 1 ? 2 : 1}.png`} alt="Merchant 2" className="h-[95px] w-auto drop-shadow-md" style={{ imageRendering: 'pixelated' }} />
+              <div className="absolute bottom-full mb-1 opacity-0 group-hover:opacity-100"><span className="text-[10px] font-bold text-white bg-black/80 px-1 rounded">Press E to Speak</span></div>
+            </div>
+            <div className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center z-15 pointer-events-auto group" style={{ left: "73%", top: "66%" }}>
+              <img src={`/indus_priest_king_follower.png`} alt="Merchant 3" className="h-[95px] w-auto drop-shadow-md transform -scale-x-100" style={{ imageRendering: 'pixelated' }} />
+              <div className="absolute bottom-full mb-1 opacity-0 group-hover:opacity-100"><span className="text-[10px] font-bold text-white bg-black/80 px-1 rounded">Press E to Speak</span></div>
+            </div>
+
+            {/* Pedestrian/Potter walking across the street (looping full/empty) */}
+            <img 
+              src={shopPotterPos.dir === -1 ? `/sprite-grain-carrier-${(pedestrianFrame % 3) + 1}.png` : `/sprite-grain-carrier-empty-${(pedestrianFrame % 3) + 1}.png`} 
+              alt="Potter" 
+              className="absolute transform -translate-x-1/2 -translate-y-1/2 w-20 h-auto drop-shadow-md z-10 pointer-events-none" 
+              style={{ left: `${shopPotterPos.x}%`, top: `${shopPotterPos.y}%`, imageRendering: 'pixelated', transform: `translate(-50%, -50%) scaleX(${shopPotterPos.dir})` }} 
+            />
+          </>
         )}
 
         {/* Harappa Toy Workshop: Archway Way to Go Back to Caravan Road */}
