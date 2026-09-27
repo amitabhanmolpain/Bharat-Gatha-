@@ -15,6 +15,7 @@ interface PedestrianNPCProps {
   startDelay?: number;
   loop?: boolean;
   circular?: boolean;
+  animSpeed?: number;
 }
 
 export default function PedestrianNPC({
@@ -26,6 +27,7 @@ export default function PedestrianNPC({
   startDelay = 0,
   loop = true,
   circular = false,
+  animSpeed = 200,
 }: PedestrianNPCProps) {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [pos, setPos] = useState<Point>(path[0]);
@@ -34,8 +36,8 @@ export default function PedestrianNPC({
   const [isStarted, setIsStarted] = useState(false);
   
   const requestRef = useRef<number>(0);
-  const propsRef = useRef({ speed, path, loop, circular, frames });
-  useEffect(() => { propsRef.current = { speed, path, loop, circular, frames }; }, [speed, path, loop, circular, frames]);
+  const propsRef = useRef({ speed, path, loop, circular, frames, animSpeed });
+  useEffect(() => { propsRef.current = { speed, path, loop, circular, frames, animSpeed }; }, [speed, path, loop, circular, frames, animSpeed]);
   const lastTimeRef = useRef<number>(0);
   const posRef = useRef(pos);
   const currentIdxRef = useRef(currentIdx);
@@ -96,8 +98,8 @@ export default function PedestrianNPC({
       
       setPos({ ...posRef.current });
       
-      // Update frame based on available frames
-      setFrame(Math.floor(time / 200) % propsRef.current.frames.length);
+      // Update frame based on available frames and animSpeed
+      setFrame(Math.floor(time / propsRef.current.animSpeed) % propsRef.current.frames.length);
     }
     lastTimeRef.current = time;
     requestRef.current = requestAnimationFrame(animate);
