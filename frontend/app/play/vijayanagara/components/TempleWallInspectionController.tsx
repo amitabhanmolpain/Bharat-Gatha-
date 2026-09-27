@@ -73,8 +73,7 @@ export default function TempleWallInspectionController({ isActive, onComplete, s
     }
 
     let isCancelled = false;
-    let isCancelled = false;
-let currentCancelRef: (() => void) | null = null;
+    let currentCancelRef: (() => void) | null = null;
 
 const waitWithCancellation = (ms: number) => {
   return new Promise<void>((resolve) => {

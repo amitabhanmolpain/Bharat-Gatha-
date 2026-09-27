@@ -330,20 +330,20 @@ function getBoatPatrolPosition(
 // NEVER walks on walls, lintels, rooftops, or across the front wall. Strictly grounded on brick ramps.
 function getGreatBathPotterState(elapsedTime: number) {
   // First Gate (left) waypoints:
-  const p1Bottom = { x: 2.0, y: 101.5 };
-  const p1Lower = { x: 7.5, y: 96.5 };
-  const p1Mid = { x: 12.5, y: 91.5 };
-  const p1Upper = { x: 16.5, y: 87.0 };
-  const p1Door = { x: 19.8, y: 83.5 };
-  const p1Inside = { x: 20.2, y: 81.5 };
+  const p1Bottom = { x: 6.3, y: 101.5 };
+  const p1Lower = { x: 11.3, y: 96.5 };
+  const p1Mid = { x: 16.3, y: 91.5 };
+  const p1Upper = { x: 20.8, y: 87.0 };
+  const p1Door = { x: 24.3, y: 83.5 };
+  const p1Inside = { x: 24.7, y: 81.5 };
 
   // Second Gate (right) waypoints:
-  const p2Inside = { x: 80.0, y: 81.5 };
-  const p2Door = { x: 80.5, y: 83.5 };
-  const p2Upper = { x: 83.5, y: 87.0 };
-  const p2Mid = { x: 87.5, y: 91.5 };
-  const p2Lower = { x: 92.5, y: 96.5 };
-  const p2Bottom = { x: 98.0, y: 101.5 };
+  const p2Inside = { x: 78.3, y: 81.5 };
+  const p2Door = { x: 78.7, y: 83.5 };
+  const p2Upper = { x: 82.2, y: 87.0 };
+  const p2Mid = { x: 86.7, y: 91.5 };
+  const p2Lower = { x: 91.7, y: 96.5 };
+  const p2Bottom = { x: 96.7, y: 101.5 };
 
   const loopPeriod = 19.0;
   const t = ((elapsedTime % loopPeriod) + loopPeriod) % loopPeriod;
@@ -509,6 +509,40 @@ function IndusValleyGameComponent() {
   const [hasCollectedToy, setHasCollectedToy] = useState(false);
   const [showPriestFollowerDialogue, setShowPriestFollowerDialogue] = useState(false);
   const [isPriestFollowerTalking, setIsPriestFollowerTalking] = useState(false);
+  const [isPriestKingTalking, setIsPriestKingTalking] = useState(false);
+  const [priestAnimFrame, setPriestAnimFrame] = useState(1);
+  const [guardFrame, setGuardFrame] = useState(1);
+  const [roofGuards, setRoofGuards] = useState([
+    { id: 3, baseX: 70, baseY: 20, offsetX: 0, direction: 1, range: 4 }
+  ]);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isPriestFollowerTalking || isPriestKingTalking) {
+      interval = setInterval(() => {
+        setPriestAnimFrame(prev => prev === 3 ? 1 : prev + 1);
+      }, 150);
+    } else {
+      setPriestAnimFrame(1);
+    }
+    return () => clearInterval(interval);
+  }, [isPriestFollowerTalking, isPriestKingTalking]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setGuardFrame(prev => prev === 3 ? 1 : prev + 1);
+      setRoofGuards(prevGuards => prevGuards.map(guard => {
+        let newOffset = guard.offsetX + (0.5 * guard.direction);
+        let newDir = guard.direction;
+        if (Math.abs(newOffset) > guard.range) {
+          newDir = -guard.direction;
+          newOffset = guard.offsetX + (0.5 * newDir);
+        }
+        return { ...guard, offsetX: newOffset, direction: newDir };
+      }));
+    }, 200);
+    return () => clearInterval(interval);
+  }, []);
   const [showForeignTradersModal, setShowForeignTradersModal] = useState(false);
   const [hasInspectedForeignTraders, setHasInspectedForeignTraders] = useState(false);
 
@@ -1181,45 +1215,45 @@ function IndusValleyGameComponent() {
   };
 
   // Worker 2: Ground Porter in Lower Dirt Yard (Fix: stays strictly grounded on dirt road, never flies onto arch wall, never goes past cart):
-  // Point A (Cart front/shafts where sacks are unloaded: 53.5%, 96.5%) <-> Point B (Open dirt ground staging: 38.0%, 97.5%)
+  // Point A (Cart front/shafts where sacks are unloaded: 53.5%, 96.5%) <-> Point B (Open dirt ground staging: 75.0%, 97.5%)
   // Total cycle: 14s, staggered by 5s
   const w2Cycle = (carrierTime + 5) % 14;
   let w2Pos = { x: 53.5, y: 96.5 };
-  let w2FacingLeft = true;
+  let w2FacingLeft = false;
   let w2Carrying = true;
 
   if (w2Cycle < 1.5) {
     // Lifting/picking up grain sack at cart front Point A
     w2Pos = { x: 53.5, y: 96.5 };
-    w2FacingLeft = true;
+    w2FacingLeft = false;
     w2Carrying = true;
   } else if (w2Cycle < 6.5) {
     // Walking carrying sack across open dirt ground towards Point B (maintaining ground physics, y >= 96.5)
     const t = (w2Cycle - 1.5) / 5.0;
-    w2FacingLeft = true;
+    w2FacingLeft = false;
     w2Carrying = true;
     w2Pos = {
-      x: 53.5 - t * (53.5 - 38.0),
+      x: 53.5 + t * (75.0 - 53.5),
       y: 96.5 + t * (97.5 - 96.5),
     };
   } else if (w2Cycle < 8.0) {
     // Keeping/depositing grain sack on open dirt ground at Point B
-    w2Pos = { x: 38.0, y: 97.5 };
-    w2FacingLeft = true;
+    w2Pos = { x: 75.0, y: 97.5 };
+    w2FacingLeft = false;
     w2Carrying = false;
   } else if (w2Cycle < 13.0) {
     // Walking back empty-handed across open dirt ground from Point B to cart Point A
     const t = (w2Cycle - 8.0) / 5.0;
-    w2FacingLeft = false;
+    w2FacingLeft = true;
     w2Carrying = false;
     w2Pos = {
-      x: 38.0 + t * (53.5 - 38.0),
+      x: 75.0 - t * (75.0 - 53.5),
       y: 97.5 - t * (97.5 - 96.5),
     };
   } else {
     // Resetting at cart front Point A to start next sack
     w2Pos = { x: 53.5, y: 96.5 };
-    w2FacingLeft = true;
+    w2FacingLeft = false;
     w2Carrying = false;
   }
 
@@ -2037,6 +2071,13 @@ function IndusValleyGameComponent() {
           setShowSealPuzzleModal(true);
         } else if (isNearPriestKing) {
           setShowPriestKingDialogue(true);
+          setIsPriestKingTalking(true);
+          playCharacterDialogue({
+            character: "priest_king",
+            text: "You have traced the full lifeblood of our civilisation, seeker. You began in the quiet streets of the Lower Town where standard bricks form peaceful homes. You purified the waters of the Great Bath using bitumen culverts. You aligned the Unicorn seal that brands our ships sailing to Meluhha. Unlike realms built upon conquest, our civilization stands on civic harmony, craftsmanship, and hydraulic mastery. Accept this lost-wax cast Bronze Dancing Girl - the immortal embodiment of Harappan artistic spirit.",
+            onEnd: () => setIsPriestKingTalking(false),
+            onError: () => setIsPriestKingTalking(false)
+          });
         }
       };
     };
@@ -2242,6 +2283,7 @@ function IndusValleyGameComponent() {
     setHasBronzeDancingGirl(true);
     setIsCampaignComplete(true);
     setShowPriestKingDialogue(false);
+    stopAllCharacterVoice();
 
     if (!unlockedJournalEntries.includes("lost_wax_bronze")) {
       setUnlockedJournalEntries((prev) => [...prev, "lost_wax_bronze"]);
@@ -3749,15 +3791,15 @@ function IndusValleyGameComponent() {
           </div>
         )}
 
-        {/* Stage 1.7: Deposited Grain Bag on Platform 1 (appears when Worker 2 deposits grain) */}
+        {/* Stage 1.7: Deposited Grain Bag on Ground (appears when Worker 2 deposits grain) */}
         {scene === "granary_avenue" && showDepositedSack2 && (
           <div
             className="absolute z-11 pointer-events-none select-none transition-opacity duration-300"
-            style={{ left: "34.5%", top: "57.5%" }}
+            style={{ left: "75.0%", top: "97.5%" }}
           >
             <img
               src="/sprite-grain-sack.png"
-              alt="Deposited Grain Bag on Platform 1"
+              alt="Deposited Grain Bag on Ground"
               className="h-7 sm:h-8 md:h-[32px] w-auto object-contain block select-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)] transform -translate-x-1/2 -translate-y-full"
             />
           </div>
@@ -4076,6 +4118,28 @@ function IndusValleyGameComponent() {
             )}
           </div>
         )}
+
+        {/* Caravan Road: Guards on the Roof */}
+        {scene === "caravan_road" && roofGuards.map(guard => (
+          <div
+            key={`guard-${guard.id}`}
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
+            style={{ 
+              left: `${guard.baseX + guard.offsetX}%`, 
+              top: `${guard.baseY}%` 
+            }}
+          >
+            <img 
+              src={guardFrame === 1 ? "/sprite-indus-rooftop.png" : guardFrame === 2 ? "/sprite-rooftop-walk-1.png" : "/sprite-rooftop-walk-2.png"} 
+              alt="Harappan Wall Guard" 
+              className="w-8 h-auto drop-shadow-[0_4px_4px_rgba(0,0,0,0.6)]" 
+              style={{ 
+                imageRendering: 'pixelated', 
+                transform: `scaleX(${guard.direction})` 
+              }}
+            />
+          </div>
+        ))}
 
         {/* Stage 3: Harappan Terracotta Toy Workshop & Stalls */}
         {scene === "steatite_seal_workshop" && (
@@ -4456,9 +4520,9 @@ function IndusValleyGameComponent() {
               }}
             >
               <img 
-                src="/indus_priest_king_follower.png" 
+                src={priestAnimFrame === 1 ? "/indus_priest_king_follower.png" : priestAnimFrame === 2 ? "/indus_priest_king_follower_anim_2.png" : "/indus_priest_king_follower_anim_3.png"} 
                 alt="Priest King Follower" 
-                className={`h-24 w-auto object-contain drop-shadow-[0_5px_10px_rgba(0,0,0,0.5)] transition-all group-hover:scale-110 ${isPriestFollowerTalking ? 'animate-bounce' : ''}`}
+                className="h-24 w-auto object-contain drop-shadow-[0_5px_10px_rgba(0,0,0,0.5)] transition-all group-hover:scale-110"
                 style={{ imageRendering: 'pixelated' }}
               />
               <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center gap-1.5 whitespace-nowrap">
@@ -4684,9 +4748,9 @@ function IndusValleyGameComponent() {
             <div className="flex flex-col md:flex-row h-full">
               <div className="w-full md:w-1/3 bg-[#261f18] p-6 flex items-center justify-center border-b md:border-b-0 md:border-r border-[#4a3b2b]">
                 <img 
-                  src="/indus_priest_king_follower.png" 
+                  src={priestAnimFrame === 1 ? "/indus_priest_king_follower.png" : priestAnimFrame === 2 ? "/indus_priest_king_follower_anim_2.png" : "/indus_priest_king_follower_anim_3.png"} 
                   alt="Priest King Follower" 
-                  className={`w-40 h-40 object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.6)] ${isPriestFollowerTalking ? 'animate-pulse' : ''}`}
+                  className="w-40 h-40 object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.6)]"
                   style={{ imageRendering: 'pixelated' }}
                 />
               </div>
@@ -5565,50 +5629,65 @@ function IndusValleyGameComponent() {
 
       {/* --- STAGE 4 PRIEST-KING DIALOGUE MODAL --- */}
       {showPriestKingDialogue && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="relative w-full max-w-2xl bg-[#fffdf5] text-black rounded-2xl border-[4px] border-black p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] max-h-[90vh] overflow-y-auto">
-            <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b-[3px] border-black mb-5 gap-4">
-              <div className="flex flex-col">
-                <h3 className="text-3xl font-black tracking-wide uppercase">
-                  The Priest-King
-                </h3>
-                <div className="text-[11px] font-bold text-gray-700 uppercase tracking-widest mt-1">
-                  Spiritual Dignitary of the Citadel · Mohenjo-daro
+        <div className="fixed inset-0 z-50 flex flex-col justify-end p-8 pb-16 pointer-events-none bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="relative w-full max-w-4xl mx-auto bg-[#fffdf5] text-black rounded-2xl border-[4px] border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] pointer-events-auto overflow-hidden">
+            <div className="flex flex-col md:flex-row h-full">
+              <div className="w-full md:w-1/3 bg-[#fdf5e6] p-6 flex items-center justify-center border-b-[4px] md:border-b-0 md:border-r-[4px] border-black">
+                <img 
+                  src={priestAnimFrame === 1 ? "/indus_priest_king_follower.png" : priestAnimFrame === 2 ? "/indus_priest_king_follower_anim_2.png" : "/indus_priest_king_follower_anim_3.png"} 
+                  alt="The Priest-King" 
+                  className="w-48 h-48 object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.6)]"
+                  style={{ imageRendering: 'pixelated' }}
+                />
+              </div>
+              <div className="w-full md:w-2/3 p-8 flex flex-col justify-between relative max-h-[90vh] overflow-y-auto">
+                <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b-[3px] border-black mb-5 gap-4">
+                  <div className="flex flex-col">
+                    <h3 className="text-3xl font-black tracking-wide uppercase">
+                      The Priest-King
+                    </h3>
+                    <div className="text-[11px] font-bold text-gray-700 uppercase tracking-widest mt-1">
+                      Spiritual Dignitary of the Citadel · Mohenjo-daro
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 self-end md:self-auto">
+                    <button
+                      onClick={() => {
+                        setShowPriestKingDialogue(false);
+                        stopAllCharacterVoice();
+                      }}
+                      className="bg-white border-[3px] border-black rounded-xl px-4 py-2 text-sm font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2 hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer"
+                    >
+                      Esc · leave
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-white border-[2px] border-gray-300 rounded-xl p-5 mb-5 text-sm font-bold leading-relaxed shadow-sm space-y-3">
+                  <p>
+                    &ldquo;You have traced the full lifeblood of our civilisation, seeker.&rdquo;
+                  </p>
+                  <p className="text-gray-600">
+                    &ldquo;You began in the quiet streets of the Lower Town where standard bricks form peaceful homes. You purified the waters of the Great Bath using bitumen culverts. You aligned the Unicorn seal that brands our ships sailing to Meluhha.&rdquo;
+                  </p>
+                  <p className="italic text-gray-800">
+                    &ldquo;Unlike realms built upon conquest, our civilization stands on civic harmony, craftsmanship, and hydraulic mastery. Accept this lost-wax cast Bronze Dancing Girl - the immortal embodiment of Harappan artistic spirit.&rdquo;
+                  </p>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">
+                    Supreme Cultural Relic: Bronze Dancing Girl (cire perdue)
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handlePriestKingBlessing}
+                    className="w-full text-left bg-white border-[3px] border-black rounded-xl px-5 py-4 text-sm font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer flex items-center"
+                  >
+                    <span className="text-[#c85a17] mr-3 text-lg">1.</span> Receive Bronze Dancing Girl
+                  </button>
                 </div>
               </div>
-              <div className="flex items-center gap-3 self-end md:self-auto">
-                <button
-                  onClick={() => setShowPriestKingDialogue(false)}
-                  className="bg-white border-[3px] border-black rounded-xl px-4 py-2 text-sm font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2 hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer"
-                >
-                  Esc · leave
-                </button>
-              </div>
-            </div>
-
-            <div className="bg-white border-[2px] border-gray-300 rounded-xl p-5 mb-5 text-sm font-bold leading-relaxed shadow-sm space-y-3">
-              <p>
-                &ldquo;You have traced the full lifeblood of our civilisation, seeker.&rdquo;
-              </p>
-              <p className="text-gray-600">
-                &ldquo;You began in the quiet streets of the Lower Town where standard bricks form peaceful homes. You purified the waters of the Great Bath using bitumen culverts. You aligned the Unicorn seal that brands our ships sailing to Meluhha.&rdquo;
-              </p>
-              <p className="italic text-gray-800">
-                &ldquo;Unlike realms built upon conquest, our civilization stands on civic harmony, craftsmanship, and hydraulic mastery. Accept this lost-wax cast Bronze Dancing Girl - the immortal embodiment of Harappan artistic spirit.&rdquo;
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-3">
-              <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">
-                Supreme Cultural Relic: Bronze Dancing Girl (cire perdue)
-              </div>
-              <button
-                type="button"
-                onClick={handlePriestKingBlessing}
-                className="w-full text-left bg-white border-[3px] border-black rounded-xl px-5 py-4 text-sm font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer flex items-center"
-              >
-                <span className="text-[#c85a17] mr-3 text-lg">1.</span> Receive Bronze Dancing Girl
-              </button>
             </div>
           </div>
         </div>
