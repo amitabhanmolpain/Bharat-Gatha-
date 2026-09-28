@@ -128,9 +128,14 @@ export default function TransitionModal({
         {/* Top Decorative Border Accent */}
         <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-transparent via-[#d4a359] to-transparent"></div>
 
-        {/* Dynamic Animated Travel Icon Badge */}
-        <div className="mx-auto w-24 h-24 mb-6 rounded-2xl bg-gradient-to-br from-[#2c2621] to-[#141210] border-2 border-[#d4a359] flex items-center justify-center text-5xl shadow-[0_0_25px_rgba(212,163,89,0.3)] animate-pulse">
-          {travelType === "coracle" ? "🛶" : travelType === "stone_road" ? "🏛️" : "🛕"}
+        {/* Dynamic Animated Travel Image Badge */}
+        <div className="mx-auto w-48 h-48 mb-6 rounded-2xl bg-gradient-to-br from-[#2c2621] to-[#141210] border-2 border-[#d4a359] flex items-center justify-center text-5xl shadow-[0_0_25px_rgba(212,163,89,0.5)] overflow-hidden relative group">
+          <img 
+            src="/time_traveler_loading.jpg" 
+            alt="Time Travel Portal" 
+            className="w-full h-full object-cover animate-pulse mix-blend-screen opacity-90 transition-transform duration-[4000ms] ease-out group-hover:scale-110"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
         </div>
 
         {/* Journey Subtitle */}

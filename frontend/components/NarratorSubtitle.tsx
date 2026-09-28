@@ -27,7 +27,7 @@ export default function NarratorSubtitle() {
   }
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-3xl px-4 pointer-events-auto select-none animate-in slide-in-from-bottom-6 duration-200">
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[999] w-full max-w-3xl px-4 pointer-events-auto select-none animate-in slide-in-from-bottom-6 duration-200">
       <div className="bg-[#fff9e6] border-4 border-black rounded-xl p-5 shadow-[6px_6px_0_0_rgba(0,0,0,1)]">
         
         {/* Top Bar: Name & Controls */}

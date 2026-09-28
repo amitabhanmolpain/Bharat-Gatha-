@@ -365,12 +365,11 @@ export default function VijayanagaraGameScreen() {
         playNarration(text, { 
           speaker: "ratan", 
           pace: 0.88, 
-          language_code: "en-IN",
-          audioUrl: "/audio_cache/stage3_opening_narration.wav"
+          language_code: "en-IN"
         }).then((audio) => {
           if (audio) {
             audio.addEventListener("ended", () => {
-              setStage3Countdown(120);
+              // setStage3Countdown(120); // Disabled patrol caught logic
             }, { once: true });
           }
         }).catch((err) => console.error("Narration error:", err));
@@ -1522,7 +1521,7 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
 
     setTimeout(() => {
       setMusicalPillarsSequenceState("genie_hint");
-      playNarration("Listen closely. These remarkable pillars are traditionally said to reproduce the sounds of around 81 different instruments, creating music for religious functions.", { speaker: "neha", pace: 0.9, language_code: "en-IN" });
+      playNarration("Listen closely. These remarkable pillars are traditionally said to reproduce the sounds of around 81 different instruments, creating music for religious functions.", { speaker: "ratan", pace: 0.9, language_code: "en-IN" });
       
       setTimeout(() => {
         setMusicalPillarsSequenceState("time_coin_reveal");
@@ -1573,7 +1572,8 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
   const currentSceneConfig = SCENE_CONFIGS[scene];
 
   // Dynamic Perspective Depth Scaling for Vijayanagara Landscapes
-  const depthScale = (0.7 + ((playerPos.y - 50.0) / 40.0) * 0.55) * PLAYER_VISUAL_SCALE;
+  const sceneVisualScale = scene === "stone_chariot_entry" ? 1.3 : PLAYER_VISUAL_SCALE;
+  const depthScale = (0.7 + ((playerPos.y - 50.0) / 40.0) * 0.55) * sceneVisualScale;
   const walkBob = isWalking ? Math.sin(walkPhase) * 1.8 : 0;
   const walkSway = isWalking ? Math.sin(walkPhase * 0.5) * 1.5 : 0;
 
@@ -2132,71 +2132,49 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
             `}</style>
 
             {/* --- PEDESTRIAN NPCS --- */}
+
+            {/* BULLOCK CART: LEFT SIDE (red area) - diagonal in front of left temple */}
+            <PedestrianNPC
+              id="bullock_cart_guy"
+              frames={[
+                "/bullock_cart_1.png",
+                "/bullock_cart_2.png",
+                "/bullock_cart_3.png",
+                "/bullock_cart_4.png"
+              ]}
+              path={[
+                { x: 28, y: 80 },
+                { x: -10, y: 65 }
+              ]}
+              speed={2}
+              animSpeed={450}
+              scale={3.0}
+              startDelay={1000}
+            />
+
+            {/* GUARDS: blue line zone - open courtyard diagonal */}
             <PedestrianNPC
               id="temple_guard_1"
               frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]}
               path={[
-                { x: 64, y: 97 },
-                { x: 69, y: 93 },
-                { x: 75, y: 89 },
-                { x: 81, y: 83 },
-                { x: 85, y: 75 },
-                { x: 86, y: 69 },
-                { x: 90, y: 63 }
+                { x: 65, y: 84 },
+                { x: 78, y: 90 }
               ]}
-              speed={15}
-              scale={1.2}
+              speed={4}
+              animSpeed={320}
+              scale={0.85}
             />
             <PedestrianNPC
               id="temple_guard_2"
               frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]}
               path={[
-                { x: -5, y: 82 },
-                { x: 30, y: 85 },
-                { x: 50, y: 85 },
-                { x: 105, y: 82 }
+                { x: 78, y: 90 },
+                { x: 65, y: 84 }
               ]}
-              speed={12}
-              scale={1.1}
-              startDelay={0}
-            />
-            <PedestrianNPC
-              id="merchant_pedestrian"
-              frames={["/merchant_1.png", "/merchant_1_anim1.png", "/merchant_1_anim2.png"]}
-              path={[
-                { x: 105, y: 92 },
-                { x: 60, y: 95 },
-                { x: 20, y: 92 },
-                { x: -5, y: 90 }
-              ]}
-              speed={10}
-              scale={1.2}
-              startDelay={3000}
-            />
-            <PedestrianNPC
-              id="pilgrim_1"
-              frames={["/merchant_2.png", "/merchant_2_anim1.png", "/merchant_2.png"]}
-              path={[
-                { x: 80, y: 60 },
-                { x: 75, y: 65 },
-                { x: 65, y: 75 },
-                { x: 55, y: 80 }
-              ]}
-              speed={8}
-              scale={1.0}
-              startDelay={1500}
-            />
-            <PedestrianNPC
-              id="civilian_1"
-              frames={["/merchant_1.png"]}
-              path={[
-                { x: 10, y: 60 },
-                { x: 15, y: 65 },
-                { x: 25, y: 75 }
-              ]}
-              speed={9}
-              scale={0.9}
-              startDelay={5000}
+              speed={3.5}
+              animSpeed={320}
+              scale={0.8}
+              startDelay={4000}
             />
             <div
               className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
@@ -2567,28 +2545,34 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
           let genieY = playerPos.y - 12.0;
 
           // Mode 1: ✨ Glowing (Only for major hidden secrets when nearby)
-          const isGlowing = (scene === "toymaker_stall" && (shoeSequenceState === "genie_activating" || shoeSequenceState === "genie_hint")) ||
-                            (scene === "musical_pillars" && (musicalPillarsSequenceState === "genie_activating" || musicalPillarsSequenceState === "genie_hint"));
+          const isGlowing = (scene === "toymaker_stall" && shoeSequenceState === "genie_activating") ||
+                            (scene === "musical_pillars" && (musicalPillarsSequenceState === "genie_activating" || musicalPillarsSequenceState === "genie_hint")) ||
+                            (scene === "stone_chariot_entry");
+                            
+          const isGenieHinting = scene === "toymaker_stall" && shoeSequenceState === "genie_hint";
 
           // Move the Genie specifically to the hidden secret location to point it out clearly!
-          if (isGlowing) {
+          if (isGlowing || isGenieHinting) {
             if (scene === "toymaker_stall") {
               genieX = 62.0;
               genieY = 58.0; // Directly above Master Kallappa and the toys
             } else if (scene === "musical_pillars") {
               genieX = 50.0;
               genieY = 55.0; // Center of musical pillars
+            } else if (scene === "stone_chariot_entry") {
+              genieX = 38.0;
+              genieY = 72.0; // Hovering above the Stone Chariot wheels
             }
           }
 
           // Mode 2: 💥 Clue Alert (Stops once clue is heard or solved)
           const hasHeardThisClue = heardClueScenes.includes(scene);
-          const isShaking = !isGlowing && !hasHeardThisClue && (
+          const isShaking = isGenieHinting || (!isGlowing && !hasHeardThisClue && (
             (scene === "anegundi_river_crossing" && !hasMetVidyaranya) ||
             (scene === "gem_traders_row" && !hasEncounteredFirstRumor && isNearGemAssessor) ||
             (scene === "musicians_warning" && !hasMusicianWarning) ||
             (scene === "mahanavami_celebration" && !isLedgerAssembled)
-          );
+          ));
 
           const mode = isGlowing ? "glowing" : isShaking ? "shaking" : "normal";
 
@@ -2629,7 +2613,9 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
                     { id: 2, text: "What does the first fragment say?" }
                   ];
                 } else if (scene === "stone_chariot_entry" || scene === "musical_pillars") {
-                  speechText = isMusicalPillarsComplete
+                  speechText = scene === "stone_chariot_entry"
+                    ? "✨ Did you know? The wheels of this Stone Chariot could once spin! They were reportedly able to rotate, and were fixed in place later to protect the structure. Incredible craftsmanship from 1540 AD!"
+                    : isMusicalPillarsComplete
                     ? "Great job! The musical pillars sang their notes and revealed the second fragment. We are close to the truth!"
                     : "This is the Stone Chariot of Vittala Temple from Emperor Krishnadevaraya's golden age. The musical pillars hold your next clue!";
                   customOptions = [
@@ -3744,7 +3730,7 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
                 onClick={() => {
                   soundFx.playKeyboardClick();
                   setShowCaughtByGuardsModal(false);
-                  setStage3Countdown(120);
+                  // setStage3Countdown(120); // Disabled patrol caught logic
                   setPlayerPos({ x: 35.0, y: 70.0 });
                 }}
                 className="w-full bg-red-700 hover:bg-red-600 text-white font-bold py-3 rounded-lg border-2 border-red-900 transition-colors cursor-pointer"
