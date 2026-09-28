@@ -47,6 +47,7 @@ import HistoricalNPCDialogueCard from "./components/HistoricalNPCDialogueCard";
 import AnimatedAnimal from "./components/AnimatedAnimal";
 import PatrollingGuard from "./components/PatrollingGuard";
 import PedestrianNPC from "./components/PedestrianNPC";
+import UncleFollower from "./components/UncleFollower";
 import TempleWallInspectionController from "./components/TempleWallInspectionController";
 
 // Visual scale for player character (enlarged for prominent, clear hero presence)
@@ -120,11 +121,19 @@ export default function VijayanagaraGameScreen() {
 
   // Journal Unlocks State
   const unlockedJournalEntries = useAppSelector(state => state.inventory.unlockedJournalEntries);
+  const isMusicMuted = useAppSelector(state => state.settings.isMusicMuted);
 
   // Uncle Companion State
   const [showUncleDialogue, setShowUncleDialogue] = useState(false);
   const [uncleSpeechText, setUncleSpeechText] = useState("");
   const [uncleOptions, setUncleOptions] = useState<Array<{ id: number; text: string }>>([]);
+
+  // Merchant Dialogue State
+  const [showMerchantDialogue, setShowMerchantDialogue] = useState(false);
+  const [activeMerchantId, setActiveMerchantId] = useState<number | null>(null);
+  const [merchantSpeechText, setMerchantSpeechText] = useState("");
+  const [merchantOptions, setMerchantOptions] = useState<Array<{id: number, text: string}>>([]);
+  const [merchantAudioUrl, setMerchantAudioUrl] = useState<string | undefined>(undefined);
 
   // Jolly Bhai Companion State
   const [showJollyDialogue, setShowJollyDialogue] = useState(false);
@@ -160,6 +169,7 @@ export default function VijayanagaraGameScreen() {
   // Shoe Sequence State
   const [shoeSequenceState, setShoeSequenceState] = useState<"idle" | "kallappa_speaking" | "shoe_reveal" | "shoe_unlocked" | "genie_activating" | "genie_hint" | "completed">("idle");
   const [hasShoeClue, setHasShoeClue] = useState(false);
+  const [pendingShoeSequence, setPendingShoeSequence] = useState(false);
   const [showShoeUnlockModal, setShowShoeUnlockModal] = useState(false);
   
   // Musical Pillars Sequence State
@@ -323,7 +333,7 @@ export default function VijayanagaraGameScreen() {
     if (!isLoading && scene === "anegundi_river_crossing" && !hasPlayedIntroNarrationRef.current) {
       hasPlayedIntroNarrationRef.current = true;
       const introText =
-        "The year is 1336 AD. Vijayanagara begins here at Anegundi beside the Tungabhadra River. Cross the river and speak with Sage Vidyaranya.";
+        "The year is 1336 AD. On the banks of the Tungabhadra river stands Anegundi — the seat of a new empire, Vijayanagara, ruled by two brothers, Harihara I and Bukka Raya I.\n\nYou are a historian from the year 2026. A time machine has brought you here — but no one in this era can ever know that truth. Reveal it, and the consequences will be far worse than disbelief.";
       const timer = setTimeout(() => {
         setShowOpeningAtmosphere(false);
         void playNarration(introText, { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
@@ -625,11 +635,7 @@ export default function VijayanagaraGameScreen() {
     playerPos.x >= 78.0 &&
     playerPos.y >= 80.0;
 
-  const isNearBazaarToymaker =
-    scene === "hampi_bazaar_entry" &&
-    playerPos.x <= 22.0 &&
-    playerPos.y >= 64.0 &&
-    playerPos.y <= 80.0;
+  const isNearBazaarToymaker = scene === "hampi_bazaar_entry" && playerPos.x >= 45.0 && playerPos.x <= 65.0 && playerPos.y >= 85.0 && playerPos.y <= 100.0;
 
   const isNearBazaarForeignTraveler =
     scene === "hampi_bazaar_entry" &&
@@ -664,9 +670,9 @@ export default function VijayanagaraGameScreen() {
 
   const isNearToymakerNpc =
     scene === "toymaker_stall" &&
-    playerPos.x >= 54.0 &&
+    playerPos.x >= 50.0 &&
     playerPos.x <= 70.0 &&
-    playerPos.y >= 80.0 &&
+    playerPos.y >= 70.0 &&
     playerPos.y <= 100.0;
 
   // Stage 3 Proximities
@@ -1069,7 +1075,7 @@ export default function VijayanagaraGameScreen() {
             }
           }
         } else if (isNearUncle) {
-          setUncleSpeechText("Greetings, traveler. I am also a historian, seeking to understand the tragic fall of such a magnificent empire.");
+setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here seeking to understand the tragic fall of such a magnificent empire.");
           setUncleOptions([
             { id: 1, text: "Let us seek the truth together." }
           ]);
@@ -1079,7 +1085,7 @@ export default function VijayanagaraGameScreen() {
           if (hasVidyaranyaBlessing) {
             triggerTransition(
               "hampi_bazaar_entry",
-              { x: 33.0, y: 45.0 },
+              { x: 33.0, y: 80.0 }, // Changed y from 45.0 to 80.0 to stand on the ground path
               "Crossing Tungabhadra to Hampi Bazaar (Stage 2)",
               "Skimming across the swirling river rapids as the morning mist parts to reveal the grand Car Street of Virupaksha.",
               "coracle"
@@ -1116,10 +1122,7 @@ export default function VijayanagaraGameScreen() {
             "stone_road"
           );
         } else if (isNearBazaarToymaker) {
-          triggerTransition(
-            "toymaker_stall",
-            { x: 32.0, y: 78.0 },
-            "Entering Kinhal Artisan Workshop",
+          triggerTransition("toymaker_stall", { x: 85.0, y: 93.0 }, "Entering Kinhal Artisan Workshop",
             "Visiting the fragrant timber workshop filled with colorful lacquered toys.",
             "stone_road"
           );
@@ -1452,7 +1455,7 @@ export default function VijayanagaraGameScreen() {
     if (scene === "hampi_bazaar_entry" && !isUncleKidnapped) {
       kidnapTimer = window.setTimeout(() => {
         setShowKidnapCutscene(true);
-      }, 4000);
+      }, 6000);
     }
     return () => clearTimeout(kidnapTimer);
   }, [scene, isUncleKidnapped]);
@@ -1482,7 +1485,7 @@ export default function VijayanagaraGameScreen() {
     // As requested: Immediately trigger Stage 2 completion / Stage 3 redirect
     dispatch(setStage2Complete(true));
     
-    startKallappaShoeSequence();
+    setPendingShoeSequence(true);
   };
 
   const startKallappaShoeSequence = () => {
@@ -1493,17 +1496,12 @@ export default function VijayanagaraGameScreen() {
     playNarration("The kidnapper left this behind.", { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
     
     setTimeout(() => {
-       setShoeSequenceState("shoe_reveal");
+       setShoeSequenceState("shoe_unlocked");
+       if (typeof soundFx.playItemUnlock === "function") soundFx.playItemUnlock();
        
-       setTimeout(() => {
-          setShoeSequenceState("shoe_unlocked");
-          soundFx.playItemUnlock();
-          
-          setHasShoeClue(true);
-          setShowShoeUnlockModal(true);
-       }, 1500);
-
-    }, 3000);
+       setHasShoeClue(true);
+       setShowShoeUnlockModal(true);
+    }, 500);
   };
 
   const handleSelectJournalToy = () => {
@@ -1605,6 +1603,11 @@ export default function VijayanagaraGameScreen() {
         {/* Atmospheric Lighting Gradient */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/25 pointer-events-none"></div>
 
+        {/* --- ANEGUNDI BACKGROUND MUSIC --- */}
+        {(scene === "anegundi_river_crossing" || scene === "anegundi_old_fort") && (
+          <audio id="anegundi-music" src="/anegundi_music.mp3" loop muted={isMusicMuted} className="hidden pointer-events-none" onCanPlay={(e) => { e.currentTarget.volume = 0.5; e.currentTarget.play().catch(() => {}); }} />
+        )}
+
         {/* --- STAGE 1 SCENE 1: ANEGUNDI RIVER CROSSING HOTSPOTS --- */}
         {scene === "anegundi_river_crossing" && (
           <>
@@ -1623,6 +1626,28 @@ export default function VijayanagaraGameScreen() {
               </div>
             </div>
 
+            {/* Animated Coracle Row Boat 1 (Left Lane) */}
+            <PedestrianNPC
+              id="animated_coracle_1"
+              frames={["/coracle_row_1.png", "/coracle_row_2.png", "/coracle_row_3.png", "/coracle_row_4.png"]}
+              path={[{ x: 62, y: 68 }, { x: 55, y: 50 }, { x: 50, y: 38 }]}
+              speed={0.25}
+              scale={1.8}
+              circular={false}
+              startDelay={0}
+              animSpeed={400}
+            />
+            {/* Animated Coracle Row Boat 2 (Right Lane) */}
+            <PedestrianNPC
+              id="animated_coracle_2"
+              frames={["/coracle_row_1.png", "/coracle_row_2.png", "/coracle_row_3.png", "/coracle_row_4.png"]}
+              path={[{ x: 55, y: 38 }, { x: 65, y: 50 }, { x: 80, y: 68 }]}
+              speed={0.25}
+              scale={1.6}
+              circular={false}
+              startDelay={2000}
+              animSpeed={400}
+            />
             <div
               className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
               style={{ left: "32%", top: "56%" }}
@@ -1747,10 +1772,10 @@ export default function VijayanagaraGameScreen() {
               </span>
             </div>
 
-            {/* Kinhal Toys (Bottom Left near Steps/Plant as shown in 3rd image) */}
+            {/* Kinhal Toys (Bottom Middle) */}
             <div
               className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
-              style={{ left: "13%", top: "71%" }}
+              style={{ left: "55%", top: "93%" }}
             >
               {isNearBazaarToymaker && (
                 <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
@@ -1854,8 +1879,12 @@ export default function VijayanagaraGameScreen() {
               className="absolute transform -translate-x-1/2 -translate-y-[90%] flex flex-col items-center z-10 pointer-events-auto cursor-pointer group"
               style={{ left: "28%", top: "96%" }}
               onClick={() => {
-                setActiveMerchantBubble(1);
-                setTimeout(() => setActiveMerchantBubble(null), 3000);
+                setActiveMerchantId(1);
+                setMerchantSpeechText("Finest spices from Kerala! Come take a look!");
+                setMerchantOptions([{ id: 1, text: "Did you see an old man getting kidnapped?" }]);
+                setMerchantAudioUrl("/merchant_1_intro.mp3");
+                if (typeof soundFx.playDialogueOpen === "function") soundFx.playDialogueOpen();
+                setShowMerchantDialogue(true);
               }}
             >
               {activeMerchantBubble === 1 && (
@@ -1876,8 +1905,12 @@ export default function VijayanagaraGameScreen() {
               className="absolute transform -translate-x-1/2 -translate-y-[90%] flex flex-col items-center z-10 pointer-events-auto cursor-pointer group"
               style={{ left: "48%", top: "88%" }}
               onClick={() => {
-                setActiveMerchantBubble(2);
-                setTimeout(() => setActiveMerchantBubble(null), 3000);
+                setActiveMerchantId(2);
+                setMerchantSpeechText("Precious gems from Golconda! Only for the wealthy!");
+                setMerchantOptions([{ id: 1, text: "Did you see an old man getting kidnapped?" }]);
+                setMerchantAudioUrl("/merchant_2_intro.mp3");
+                if (typeof soundFx.playDialogueOpen === "function") soundFx.playDialogueOpen();
+                setShowMerchantDialogue(true);
               }}
             >
               {activeMerchantBubble === 2 && (
@@ -1898,8 +1931,12 @@ export default function VijayanagaraGameScreen() {
               className="absolute transform -translate-x-1/2 -translate-y-[90%] flex flex-col items-center z-10 pointer-events-auto cursor-pointer group"
               style={{ left: "78%", top: "96%" }}
               onClick={() => {
-                setActiveMerchantBubble(3);
-                setTimeout(() => setActiveMerchantBubble(null), 3000);
+                setActiveMerchantId(3);
+                setMerchantSpeechText("Luxurious silks from Kanchipuram! Feel the texture!");
+                setMerchantOptions([{ id: 1, text: "Did you see an old man getting kidnapped?" }]);
+                setMerchantAudioUrl("/merchant_3_intro.mp3");
+                if (typeof soundFx.playDialogueOpen === "function") soundFx.playDialogueOpen();
+                setShowMerchantDialogue(true);
               }}
             >
               {activeMerchantBubble === 3 && (
@@ -2009,8 +2046,9 @@ export default function VijayanagaraGameScreen() {
             })()}
 
             <div
-              className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
-              style={{ left: "62%", top: "66%" }}
+              className="absolute transform -translate-x-1/2 -translate-y-[90%] flex flex-col items-center pointer-events-auto cursor-pointer z-10 hover:brightness-110 transition-all"
+              style={{ left: "58%", top: "90%" }}
+              onClick={() => setShowToymakerDialogue(true)}
             >
               {isNearToymakerNpc && (
                 <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
@@ -2018,13 +2056,19 @@ export default function VijayanagaraGameScreen() {
                   <span>Speak with Toymaker Kallappa & Inspect Toys</span>
                 </div>
               )}
-              <div className="w-12 h-14 bg-[#2e261f]/90 border-2 border-[#c86446] rounded-2xl flex items-center justify-center shadow-lg">
-                <GameIcon name="artisan" size={22} className="text-[#f59e0b]" />
-              </div>
+              <img
+                src="/kallappa_sprite.png"
+                alt="Master Kallappa"
+                className="w-24 h-36 md:w-28 md:h-44 object-contain object-bottom drop-shadow-[0_8px_16px_rgba(0,0,0,0.85)]"
+                style={{ imageRendering: "pixelated" }}
+              />
               <span className="text-[10px] font-serif font-bold text-[#f6ede0] bg-[#1a1714]/85 px-2 py-0.5 rounded border border-[#5a4d3f] mt-1">
                 Master Kallappa
               </span>
             </div>
+
+
+
 
             <div
               className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
@@ -2418,40 +2462,30 @@ export default function VijayanagaraGameScreen() {
             </div>
 
 
-            {/* --- LINEAR PATROLLING GUARDS --- */}
-            <PedestrianNPC id="guard_m1" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 5, y: 92}, {x: 25, y: 92}]} speed={4} scale={1.2} startDelay={0} />
-            <PedestrianNPC id="guard_m2" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 25, y: 94}, {x: 45, y: 94}]} speed={4.5} scale={1.2} startDelay={500} />
-            <PedestrianNPC id="guard_m3" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 45, y: 92}, {x: 65, y: 92}]} speed={4} scale={1.2} startDelay={200} />
-            <PedestrianNPC id="guard_m4" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 65, y: 94}, {x: 85, y: 94}]} speed={4.2} scale={1.2} startDelay={700} />
-            <PedestrianNPC id="guard_m5" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 85, y: 92}, {x: 98, y: 92}]} speed={3.8} scale={1.2} startDelay={100} />
+                                                {/* --- CIRCULAR MILITARY PARADE GUARDS --- */}
+            <PedestrianNPC id="guard_m1" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 10, y: 75}, {x: 10, y: 95}, {x: 90, y: 95}, {x: 90, y: 75}]} speed={4.5} scale={0.8} circular={true} startDelay={0} />
+            <PedestrianNPC id="guard_m2" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 12.5, y: 73.5}, {x: 12.5, y: 93.5}, {x: 92.5, y: 93.5}, {x: 92.5, y: 73.5}]} speed={4.5} scale={0.8} circular={true} startDelay={0} />
+            <PedestrianNPC id="guard_m3" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 10, y: 95}, {x: 90, y: 95}, {x: 90, y: 75}, {x: 10, y: 75}]} speed={4.5} scale={0.8} circular={true} startDelay={0} />
+            <PedestrianNPC id="guard_m4" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 12.5, y: 93.5}, {x: 92.5, y: 93.5}, {x: 92.5, y: 73.5}, {x: 12.5, y: 73.5}]} speed={4.5} scale={0.8} circular={true} startDelay={0} />
+            <PedestrianNPC id="guard_m5" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 90, y: 95}, {x: 90, y: 75}, {x: 10, y: 75}, {x: 10, y: 95}]} speed={4.5} scale={0.8} circular={true} startDelay={0} />
+            <PedestrianNPC id="guard_m6" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 92.5, y: 93.5}, {x: 92.5, y: 73.5}, {x: 12.5, y: 73.5}, {x: 12.5, y: 93.5}]} speed={4.5} scale={0.8} circular={true} startDelay={0} />
+            <PedestrianNPC id="guard_m7" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 90, y: 75}, {x: 10, y: 75}, {x: 10, y: 95}, {x: 90, y: 95}]} speed={4.5} scale={0.8} circular={true} startDelay={0} />
+            <PedestrianNPC id="guard_m8" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 92.5, y: 73.5}, {x: 12.5, y: 73.5}, {x: 12.5, y: 93.5}, {x: 92.5, y: 93.5}]} speed={4.5} scale={0.8} circular={true} startDelay={0} />
+            </>
+        )}
 
-            {/* --- ANIMATED ELEPHANTS AND HORSES --- */}
-            <AnimatedAnimal
-              type="elephant"
-              path={[{x: 10, y: 85}, {x: 35, y: 85}, {x: 35, y: 88}, {x: 10, y: 88}]}
-              speed={5}
-            />
-            <AnimatedAnimal
-              type="elephant"
-              path={[{x: 90, y: 82}, {x: 65, y: 82}, {x: 65, y: 78}, {x: 90, y: 78}]}
-              speed={4}
-              scaleFactor={0.9}
-            />
-            <AnimatedAnimal
-              type="horse"
-              path={[{x: 15, y: 92}, {x: 40, y: 92}, {x: 80, y: 92}, {x: 80, y: 95}, {x: 15, y: 95}]}
-              speed={8}
-            />
-            <AnimatedAnimal
-              type="horse"
-              path={[{x: 85, y: 75}, {x: 60, y: 75}, {x: 60, y: 72}, {x: 85, y: 72}]}
-              speed={9}
-              scaleFactor={0.8}
-            />
+                                {/* --- MAHANAVAMI CELEBRATION SPECIFIC NPCS & AUDIO --- */}
+        {scene === "mahanavami_celebration" && (
+          <>
+            <audio id="vijayanagara-music" src="/vijayanagara_music.mp3" loop muted={isMusicMuted} className="hidden pointer-events-none" onCanPlay={(e) => { e.currentTarget.volume = 0.5; e.currentTarget.play().catch(() => {}); }} />
+            <PedestrianNPC id="royal_elephant_1" frames={["/royal_elephant_1.png", "/royal_elephant_2.png"]} path={[{x: 5, y: 60}]} speed={0} scale={2.5} circular={true} startDelay={0} animSpeed={800} />
+            <PedestrianNPC id="royal_elephant_2" frames={["/royal_elephant_1.png", "/royal_elephant_2.png"]} path={[{x: 26, y: 48}]} speed={0} scale={2.5} circular={true} startDelay={800} animSpeed={800} />
+            <PedestrianNPC id="dancer_w1" frames={["/kuchipudi_1.png", "/kuchipudi_2.png", "/kuchipudi_3.png", "/kuchipudi_4.png"]} path={[{x: 82, y: 60}]} speed={0} scale={2.0} circular={true} startDelay={0} animSpeed={400} />
+            <PedestrianNPC id="dancer_w2" frames={["/kuchipudi_1.png", "/kuchipudi_2.png", "/kuchipudi_3.png", "/kuchipudi_4.png"]} path={[{x: 88, y: 60}]} speed={0} scale={2.0} circular={true} startDelay={300} animSpeed={400} />
           </>
         )}
 
-        {/* --- STAGE 4 SCENE 2: PUSHKARANI CLOSING REFLECTION HOTSPOTS --- */}
+          {/* --- STAGE 4 SCENE 2: PUSHKARANI CLOSING REFLECTION HOTSPOTS --- */}
         {scene === "closing_reflection" && (
           <>
             {/* Keeper of Memory Elder NPC (x: 35%, y: 68%) */}
@@ -2585,7 +2619,9 @@ export default function VijayanagaraGameScreen() {
                     { id: 2, text: "Where is the missing merchant?" }
                   ];
                 } else if (scene === "toymaker_stall") {
-                  speechText = hasFirstLedgerFragment
+                  speechText = (shoeSequenceState === "genie_activating" || shoeSequenceState === "genie_hint" || shoeSequenceState === "completed")
+                    ? "Mere akka, the given person we are finding is a time traveler. We have to go in our time machine to find this guy."
+                    : hasFirstLedgerFragment
                     ? "You found the first ledger fragment! The merchant hid key records inside these wooden toys."
                     : "Check these wooden Channapatna toys closely! The missing merchant hid a secret clue inside one of them.";
                   customOptions = [
@@ -2714,7 +2750,7 @@ export default function VijayanagaraGameScreen() {
                 }}
                 onClick={(e) => {
                   e.stopPropagation();
-                  setUncleSpeechText("Greetings, traveler. I am also a historian, seeking to understand the tragic fall of such a magnificent empire.");
+                  setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 come here seeking to understand the tragic fall of such a magnificent empire");
                   setUncleOptions([
                     { id: 1, text: "Let us seek the truth together." }
                   ]);
@@ -2726,31 +2762,17 @@ export default function VijayanagaraGameScreen() {
           )}
 
         {/* --- UNCLE COMPANION FOLLOWER --- */}
-        {!isUncleKidnapped && (hasRecruitedHistorian || scene === "hampi_bazaar_entry") && (() => {
-          const uncleFollowX = facingLeft ? playerPos.x - 12 : playerPos.x + 12;
-          const uncleFollowY = playerPos.y;
-          
-          return (
-            <div
-              className="absolute transform -translate-x-1/2 -translate-y-[100%] flex flex-col items-center pointer-events-auto group z-20"
-              style={{
-                left: `${uncleFollowX}%`,
-                top: `${uncleFollowY}%`,
-                transition: "left 0.8s ease-out, top 0.8s ease-out"
-              }}
-            >
-              <img
-                src="/uncle_companion.png"
-                alt="Historian Companion"
-                className="w-20 h-28 object-contain object-bottom transition-all drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]"
-                style={{
-                  transform: `scale(${depthScale}) scaleX(${facingLeft ? -1 : 1})`,
-                  imageRendering: "pixelated"
-                }}
-              />
-            </div>
-          );
-        })()}
+        <UncleFollower
+          playerPos={playerPos}
+          playerFacingLeft={facingLeft}
+          isVisible={!isUncleKidnapped && (hasRecruitedHistorian || scene === "hampi_bazaar_entry")}
+          onClick={() => {
+            setUncleSpeechText("Stay vigilant! We must find out why Ramayya vanished and who those men were!");
+            setUncleOptions([{ id: 1, text: "I'll keep looking." }]);
+            if (typeof soundFx.playDialogueOpen === "function") soundFx.playDialogueOpen();
+            setShowUncleDialogue(true);
+          }}
+        />
 
           {/* --- OPENING ATMOSPHERE FLOATING BANNERS --- */}
         {showOpeningAtmosphere && scene === "anegundi_river_crossing" && (
@@ -2861,7 +2883,13 @@ export default function VijayanagaraGameScreen() {
         {/* --- TOY INSPECTION PUZZLE MODAL --- */}
         <ToyInspectionPuzzle
           isOpen={showToyInspectionModal}
-          onClose={() => setShowToyInspectionModal(false)}
+          onClose={() => {
+            setShowToyInspectionModal(false);
+            if (pendingShoeSequence || (hasFirstLedgerFragment && !hasShoeClue && shoeSequenceState === "idle")) {
+              setPendingShoeSequence(false);
+              startKallappaShoeSequence();
+            }
+          }}
           alreadyFoundFragment={hasFirstLedgerFragment}
           onDiscoverFragment={handleToyFragmentDiscovery}
           onSelectJournalToy={handleSelectJournalToy}
@@ -3014,7 +3042,7 @@ export default function VijayanagaraGameScreen() {
             <div className="relative z-10 flex flex-col items-center max-w-4xl mx-auto w-full">
               <div className="text-[#e5b56a] uppercase tracking-[0.3em] font-mono text-sm font-bold mb-4 drop-shadow-[0_2px_4px_rgba(0,0,0,1)]">
                 Urgent Warning
-                <audio autoPlay src="/kidnap_warning_sarvam.wav" />
+                <audio id="kidnap-warning" src="/kidnap_warning_sarvam.wav" onCanPlay={(e) => { e.currentTarget.play().catch(() => {}); }} />
               </div>
               <h2 className="text-3xl md:text-5xl font-serif font-bold text-white mb-6 drop-shadow-[0_4px_10px_rgba(0,0,0,1)]">
                 While you were busy in your business, your friend was kidnapped!
@@ -3251,6 +3279,40 @@ export default function VijayanagaraGameScreen() {
           />
         )}
 
+        {/* --- BAZAAR MERCHANT DIALOGUE MODAL --- */}
+        {showMerchantDialogue && scene === "hampi_bazaar_entry" && (
+          <DialoguePanel
+            sceneId="hampi_bazaar_entry"
+            currentSceneId={scene}
+            characterName={activeMerchantId === 1 ? "Spice Merchant" : activeMerchantId === 2 ? "Jewelry Merchant" : "Fabric Merchant"}
+            characterTitle="Bazaar Trader"
+            characterId="merchant"
+            dialogueText={merchantSpeechText}
+            isSpeaking={true}
+            showInput={false}
+            options={merchantOptions}
+            preventAiOnOptionSelect={true}
+            audioUrl={merchantAudioUrl}
+            onOptionSelect={(opt) => {
+              if (opt.id === 1) {
+                const response = "Don't disturb me during business";
+                setMerchantSpeechText(response);
+                setMerchantOptions([{ id: 2, text: "(Leave)" }]);
+                setMerchantAudioUrl(`/merchant_${activeMerchantId}_response.mp3`);
+              } else if (opt.id === 2) {
+                setShowMerchantDialogue(false);
+                stopNarration();
+                if (typeof soundFx.playDialogueClose === "function") soundFx.playDialogueClose();
+              }
+            }}
+            onClose={() => {
+              setShowMerchantDialogue(false);
+              stopNarration();
+              if (typeof soundFx.playDialogueClose === "function") soundFx.playDialogueClose();
+            }}
+          />
+        )}
+
         {/* --- FOREIGN TRAVELER DIALOGUE MODAL (OPTIONAL) --- */}
         {showForeignTravelerDialogue && scene === "hampi_bazaar_entry" && (
           <DialoguePanel
@@ -3267,7 +3329,7 @@ export default function VijayanagaraGameScreen() {
               nearby_monuments: "Virupaksha Temple",
               historical_events: "Portuguese horse trade with Vijayanagara"
             }}
-            dialogueText="Bom dia, senhor! In all my voyages across Venice, Cairo, and Lisbon, I have never seen a city of such boundless prosperity. By the way, I saw a suspicious person dragging an older man towards the Toy Street. You might want to check there!"
+            dialogueText="Bom dia, senhor! I sailed from Lisbon for the spices and gems of this land. Here, diamonds are sold like vegetables!\n\nBut listen, my friend. A stranger dragged an older man towards Toy Street. If he is your friend, hurry!"
             audioUrl="/senhor_duarte_hint.wav"
             isSpeaking={true}
             options={[
@@ -3333,15 +3395,14 @@ export default function VijayanagaraGameScreen() {
               />
               
               {/* Content */}
-              <div className="relative z-10 flex flex-col items-center justify-center w-full h-full p-8 bg-black/20">
+              <div className="relative z-10 flex flex-col items-center justify-center w-full h-full p-8">
                 <h2 className="text-3xl md:text-5xl font-serif font-bold text-white mb-6 drop-shadow-[0_4px_10px_rgba(0,0,0,0.9)] uppercase tracking-widest text-center">
                   Clue Discovered: The Time Traveller's Shoe
                 </h2>
                 <img 
-                  src="/sneaker_clue.jpg" 
+                  src="/sneaker_clue.png" 
                   alt="Modern Sneaker Shoe" 
-                  className="w-48 h-48 md:w-64 md:h-64 object-cover rounded-xl border-2 border-[#d4a359] drop-shadow-[0_15px_30px_rgba(0,0,0,0.9)] hover:scale-110 transition-transform duration-500 mb-8"
-                  style={{ mixBlendMode: 'multiply' }}
+                  className="w-48 h-48 md:w-64 md:h-64 object-contain drop-shadow-[0_15px_30px_rgba(0,0,0,0.9)] hover:scale-110 transition-transform duration-500 mb-8"
                 />
                 
                 {/* Continue Button */}
@@ -3350,16 +3411,28 @@ export default function VijayanagaraGameScreen() {
                     setShowShoeUnlockModal(false);
                     // Move to genie activating
                     setShoeSequenceState("genie_activating");
-                    soundFx.playSelect();
+                    if (typeof soundFx.playSelect === "function") soundFx.playSelect();
                     
                     setTimeout(() => {
                        setShoeSequenceState("genie_hint");
-                       playNarration("This person is also a time traveller. Go to a different time period and find out how they are connected to the Vijayanagara Empire.", { speaker: "neha", pace: 0.95, language_code: "en-IN" });
+                       // Automatically trigger Genie Dialogue instead of invisible narrator
+                       setJollySpeechText("Mere akka, the given person we are finding is a time traveler. We have to go in our time machine to find this guy.");
+                       setJollyOptions([
+                         { id: 1, text: "Let's find the time machine!" }
+                       ]);
+                       setShowJollyDialogue(true);
+                       
+                       stopAllCharacterVoice();
+                       void playCharacterDialogue({
+                          character: "jolly",
+                          text: "Mere akka, the given person we are finding is a time traveler. We have to go in our time machine to find this guy.",
+                          onEnd: () => {}
+                       });
                        
                        setTimeout(() => {
                            setShoeSequenceState("completed");
                        }, 7000);
-                    }, 2000);
+                    }, 500);
                   }}
                   className="bg-white/10 hover:bg-white/20 border-2 border-white/50 text-white font-serif font-bold px-12 py-4 rounded-full shadow-lg transition-all cursor-pointer text-lg tracking-[0.2em] backdrop-blur-sm"
                 >
@@ -3687,7 +3760,7 @@ export default function VijayanagaraGameScreen() {
           <DialoguePanel
             sceneId="anegundi_river_crossing"
             currentSceneId={scene}
-            characterName="Historian"
+            characterName="Raju"
             characterTitle="Your Loyal Friend"
             characterId="uncle"
             dialogueText={uncleSpeechText || "Greetings! I am the local historian."}

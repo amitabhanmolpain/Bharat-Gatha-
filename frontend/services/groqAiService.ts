@@ -46,7 +46,7 @@ export async function askHistoricalQuestionDetailed(
   if (networkService.isOnline()) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3500);
+      const timeoutId = setTimeout(() => { controller.abort() }, 15000);
 
       const response = await fetch(`${backendUrl}/api/ai/ask`, {
         method: "POST",

@@ -207,7 +207,7 @@ export const SCENE_CONFIGS: Record<VijayanagaraSceneType, SceneMeta> = {
     defaultObjective: "Ascend the stepped stone plinth and observe the festival layout.",
     minX: 10.0,
     maxX: 90.0,
-    minY: 60.0,
+    minY: 48.0,
     maxY: 100.0,
   },
   final_ledger_fragment: {
