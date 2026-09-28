@@ -142,13 +142,14 @@ export default function VijayanagaraGameScreen() {
     if (!audio) return;
 
     if (scene === "mahanavami_celebration" && !isMusicMuted && !showStage4SuccessModal) {
-      audio.volume = 0.5;
+      audio.volume = 0.18;
       audio.muted = false;
       const playPromise = audio.play();
       if (playPromise !== undefined) {
         playPromise.catch(() => {
           const unlock = () => {
             if (mahanavamiAudioRef.current && scene === "mahanavami_celebration" && !isMusicMuted && !showStage4SuccessModal) {
+              mahanavamiAudioRef.current.volume = 0.18;
               mahanavamiAudioRef.current.play().catch(() => {});
             }
             window.removeEventListener("pointerdown", unlock);
@@ -1779,7 +1780,7 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
 
         {/* --- ANEGUNDI BACKGROUND MUSIC --- */}
         {(scene === "anegundi_river_crossing" || scene === "anegundi_old_fort") && (
-          <audio id="anegundi-music" src="/anegundi_music.mp3" loop muted={isMusicMuted} className="hidden pointer-events-none" onCanPlay={(e) => { e.currentTarget.volume = 0.5; e.currentTarget.play().catch(() => {}); }} />
+          <audio id="anegundi-music" src="/anegundi_music.mp3" loop muted={isMusicMuted} className="hidden pointer-events-none" onCanPlay={(e) => { e.currentTarget.volume = 0.2; e.currentTarget.play().catch(() => {}); }} />
         )}
 
         {/* --- STAGE 1 SCENE 1: ANEGUNDI RIVER CROSSING HOTSPOTS --- */}
