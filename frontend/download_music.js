@@ -8,7 +8,10 @@ try {
   const oldFiles = fs.readdirSync(__dirname).filter(f => f.startsWith('temp_audio.'));
   for (const f of oldFiles) {
     if (/^temp_audio\.[a-z0-9]+$/i.test(f)) {
-      fs.unlinkSync(path.join(__dirname, f));
+      const targetPath = path.resolve(__dirname, f);
+      if (targetPath.startsWith(__dirname)) {
+        fs.unlinkSync(targetPath);
+      }
     }
   }
 
@@ -28,7 +31,10 @@ try {
 
   console.log("Done! Cleaning up...");
   if (/^temp_audio\.[a-z0-9]+$/i.test(audioFile)) {
-    fs.unlinkSync(path.join(__dirname, audioFile));
+    const targetPath = path.resolve(__dirname, audioFile);
+    if (targetPath.startsWith(__dirname)) {
+      fs.unlinkSync(targetPath);
+    }
   }
   
 } catch (e) {

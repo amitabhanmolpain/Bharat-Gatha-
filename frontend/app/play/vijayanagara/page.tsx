@@ -47,6 +47,7 @@ import HistoricalNPCDialogueCard from "./components/HistoricalNPCDialogueCard";
 import AnimatedAnimal from "./components/AnimatedAnimal";
 import PatrollingGuard from "./components/PatrollingGuard";
 import PedestrianNPC from "./components/PedestrianNPC";
+import UncleFollower from "./components/UncleFollower";
 import TempleWallInspectionController from "./components/TempleWallInspectionController";
 
 // Visual scale for player character (enlarged for prominent, clear hero presence)
@@ -126,25 +127,6 @@ export default function VijayanagaraGameScreen() {
   const [showUncleDialogue, setShowUncleDialogue] = useState(false);
   const [uncleSpeechText, setUncleSpeechText] = useState("");
   const [uncleOptions, setUncleOptions] = useState<Array<{ id: number; text: string }>>([]);
-  const [uncleFollowPos, setUncleFollowPos] = useState({ x: 50.0, y: 50.0 });
-  const [uncleFacingLeft, setUncleFacingLeft] = useState(false);
-
-  const [posHistory, setPosHistory] = useState<{x:number, y:number, facingLeft:boolean}[]>([]);
-
-  useEffect(() => {
-    setPosHistory(prev => {
-        const newHistory = [...prev, { x: playerPos.x, y: playerPos.y, facingLeft }];
-        if (newHistory.length > 15) newHistory.shift();
-        return newHistory;
-    });
-  }, [playerPos.x, playerPos.y, facingLeft]);
-
-  useEffect(() => {
-    if (posHistory.length > 10) {
-      setUncleFollowPos({ x: posHistory[0].x, y: posHistory[0].y });
-      setUncleFacingLeft(posHistory[0].facingLeft);
-    }
-  }, [posHistory]);
 
   // Merchant Dialogue State
   const [showMerchantDialogue, setShowMerchantDialogue] = useState(false);
@@ -1623,7 +1605,7 @@ export default function VijayanagaraGameScreen() {
 
         {/* --- ANEGUNDI BACKGROUND MUSIC --- */}
         {(scene === "anegundi_river_crossing" || scene === "anegundi_old_fort") && (
-          <audio src="/anegundi_music.mp3" autoPlay loop muted={isMusicMuted} className="hidden pointer-events-none" onCanPlay={(e) => e.currentTarget.volume = 0.5} />
+          <audio id="anegundi-music" src="/anegundi_music.mp3" loop muted={isMusicMuted} className="hidden pointer-events-none" onCanPlay={(e) => { e.currentTarget.volume = 0.5; e.currentTarget.play().catch(() => {}); }} />
         )}
 
         {/* --- STAGE 1 SCENE 1: ANEGUNDI RIVER CROSSING HOTSPOTS --- */}
@@ -2495,7 +2477,7 @@ export default function VijayanagaraGameScreen() {
                                 {/* --- MAHANAVAMI CELEBRATION SPECIFIC NPCS & AUDIO --- */}
         {scene === "mahanavami_celebration" && (
           <>
-            <audio src="/vijayanagara_music.mp3" autoPlay loop muted={isMusicMuted} className="hidden pointer-events-none" onCanPlay={(e) => e.currentTarget.volume = 0.5} />
+            <audio id="vijayanagara-music" src="/vijayanagara_music.mp3" loop muted={isMusicMuted} className="hidden pointer-events-none" onCanPlay={(e) => { e.currentTarget.volume = 0.5; e.currentTarget.play().catch(() => {}); }} />
             <PedestrianNPC id="royal_elephant_1" frames={["/royal_elephant_1.png", "/royal_elephant_2.png"]} path={[{x: 5, y: 60}]} speed={0} scale={2.5} circular={true} startDelay={0} animSpeed={800} />
             <PedestrianNPC id="royal_elephant_2" frames={["/royal_elephant_1.png", "/royal_elephant_2.png"]} path={[{x: 26, y: 48}]} speed={0} scale={2.5} circular={true} startDelay={800} animSpeed={800} />
             <PedestrianNPC id="dancer_w1" frames={["/kuchipudi_1.png", "/kuchipudi_2.png", "/kuchipudi_3.png", "/kuchipudi_4.png"]} path={[{x: 82, y: 60}]} speed={0} scale={2.0} circular={true} startDelay={0} animSpeed={400} />
@@ -2780,33 +2762,17 @@ export default function VijayanagaraGameScreen() {
           )}
 
         {/* --- UNCLE COMPANION FOLLOWER --- */}
-        {!isUncleKidnapped && (hasRecruitedHistorian || scene === "hampi_bazaar_entry") && (() => {
-          // Use the delayed uncleFollowPos state to follow the exact path the player took
-          // Offset slightly so they don't perfectly overlap when standing still
-          const uncleFollowX = uncleFacingLeft ? uncleFollowPos.x + 5 : uncleFollowPos.x - 5;
-          const uncleFollowY = uncleFollowPos.y;
-          
-          return (
-            <div
-              className="absolute transform -translate-x-1/2 -translate-y-[100%] flex flex-col items-center pointer-events-auto group z-20"
-              style={{
-                left: `${uncleFollowX}%`,
-                top: `${uncleFollowY}%`,
-                transition: "left 0.8s ease-out, top 0.8s ease-out"
-              }}
-            >
-              <img
-                src="/uncle_companion.png"
-                alt="Historian Companion"
-                className="w-20 h-28 object-contain object-bottom transition-all drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]"
-                style={{
-                  transform: `scale(${depthScale}) scaleX(${uncleFacingLeft ? -1 : 1})`,
-                  imageRendering: "pixelated"
-                }}
-              />
-            </div>
-          );
-        })()}
+        <UncleFollower
+          playerPos={playerPos}
+          playerFacingLeft={facingLeft}
+          isVisible={!isUncleKidnapped && (hasRecruitedHistorian || scene === "hampi_bazaar_entry")}
+          onClick={() => {
+            setUncleSpeechText("Stay vigilant! We must find out why Ramayya vanished and who those men were!");
+            setUncleOptions([{ id: 1, text: "I'll keep looking." }]);
+            if (typeof soundFx.playDialogueOpen === "function") soundFx.playDialogueOpen();
+            setShowUncleDialogue(true);
+          }}
+        />
 
           {/* --- OPENING ATMOSPHERE FLOATING BANNERS --- */}
         {showOpeningAtmosphere && scene === "anegundi_river_crossing" && (
@@ -3076,7 +3042,7 @@ export default function VijayanagaraGameScreen() {
             <div className="relative z-10 flex flex-col items-center max-w-4xl mx-auto w-full">
               <div className="text-[#e5b56a] uppercase tracking-[0.3em] font-mono text-sm font-bold mb-4 drop-shadow-[0_2px_4px_rgba(0,0,0,1)]">
                 Urgent Warning
-                <audio autoPlay src="/kidnap_warning_sarvam.wav" />
+                <audio id="kidnap-warning" src="/kidnap_warning_sarvam.wav" onCanPlay={(e) => { e.currentTarget.play().catch(() => {}); }} />
               </div>
               <h2 className="text-3xl md:text-5xl font-serif font-bold text-white mb-6 drop-shadow-[0_4px_10px_rgba(0,0,0,1)]">
                 While you were busy in your business, your friend was kidnapped!
