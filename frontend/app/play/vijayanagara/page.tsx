@@ -1075,7 +1075,7 @@ export default function VijayanagaraGameScreen() {
             }
           }
         } else if (isNearUncle) {
-          setUncleSpeechText("Hello Im raju , a time traveller from 2026 come here seeking to understand the tragic fall of such a magnificant empire");
+setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here seeking to understand the tragic fall of such a magnificent empire.");
           setUncleOptions([
             { id: 1, text: "Let us seek the truth together." }
           ]);
