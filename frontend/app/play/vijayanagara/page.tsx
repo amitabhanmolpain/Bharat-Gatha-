@@ -129,14 +129,22 @@ export default function VijayanagaraGameScreen() {
   const [uncleFollowPos, setUncleFollowPos] = useState({ x: 50.0, y: 50.0 });
   const [uncleFacingLeft, setUncleFacingLeft] = useState(false);
 
+  const [posHistory, setPosHistory] = useState<{x:number, y:number, facingLeft:boolean}[]>([]);
+
   useEffect(() => {
-    // Uncle follows exactly behind the player with a delay so he stays on the path
-    const timer = setTimeout(() => {
-      setUncleFollowPos({ x: playerPos.x, y: playerPos.y });
-      setUncleFacingLeft(facingLeft);
-    }, 400); // 400ms delay
-    return () => clearTimeout(timer);
-  }, [playerPos, facingLeft]);
+    setPosHistory(prev => {
+        const newHistory = [...prev, { x: playerPos.x, y: playerPos.y, facingLeft }];
+        if (newHistory.length > 15) newHistory.shift();
+        return newHistory;
+    });
+  }, [playerPos.x, playerPos.y, facingLeft]);
+
+  useEffect(() => {
+    if (posHistory.length > 10) {
+      setUncleFollowPos({ x: posHistory[0].x, y: posHistory[0].y });
+      setUncleFacingLeft(posHistory[0].facingLeft);
+    }
+  }, [posHistory]);
 
   // Merchant Dialogue State
   const [showMerchantDialogue, setShowMerchantDialogue] = useState(false);
@@ -179,6 +187,7 @@ export default function VijayanagaraGameScreen() {
   // Shoe Sequence State
   const [shoeSequenceState, setShoeSequenceState] = useState<"idle" | "kallappa_speaking" | "shoe_reveal" | "shoe_unlocked" | "genie_activating" | "genie_hint" | "completed">("idle");
   const [hasShoeClue, setHasShoeClue] = useState(false);
+  const [pendingShoeSequence, setPendingShoeSequence] = useState(false);
   const [showShoeUnlockModal, setShowShoeUnlockModal] = useState(false);
   
   // Musical Pillars Sequence State
@@ -679,9 +688,9 @@ export default function VijayanagaraGameScreen() {
 
   const isNearToymakerNpc =
     scene === "toymaker_stall" &&
-    playerPos.x >= 54.0 &&
+    playerPos.x >= 50.0 &&
     playerPos.x <= 70.0 &&
-    playerPos.y >= 80.0 &&
+    playerPos.y >= 70.0 &&
     playerPos.y <= 100.0;
 
   // Stage 3 Proximities
@@ -1494,7 +1503,7 @@ export default function VijayanagaraGameScreen() {
     // As requested: Immediately trigger Stage 2 completion / Stage 3 redirect
     dispatch(setStage2Complete(true));
     
-    startKallappaShoeSequence();
+    setPendingShoeSequence(true);
   };
 
   const startKallappaShoeSequence = () => {
@@ -1505,17 +1514,12 @@ export default function VijayanagaraGameScreen() {
     playNarration("The kidnapper left this behind.", { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
     
     setTimeout(() => {
-       setShoeSequenceState("shoe_reveal");
+       setShoeSequenceState("shoe_unlocked");
+       if (typeof soundFx.playItemUnlock === "function") soundFx.playItemUnlock();
        
-       setTimeout(() => {
-          setShoeSequenceState("shoe_unlocked");
-          soundFx.playItemUnlock();
-          
-          setHasShoeClue(true);
-          setShowShoeUnlockModal(true);
-       }, 1500);
-
-    }, 3000);
+       setHasShoeClue(true);
+       setShowShoeUnlockModal(true);
+    }, 500);
   };
 
   const handleSelectJournalToy = () => {
@@ -2060,8 +2064,9 @@ export default function VijayanagaraGameScreen() {
             })()}
 
             <div
-              className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
-              style={{ left: "62%", top: "66%" }}
+              className="absolute transform -translate-x-1/2 -translate-y-[90%] flex flex-col items-center pointer-events-auto cursor-pointer z-10 hover:brightness-110 transition-all"
+              style={{ left: "58%", top: "90%" }}
+              onClick={() => setShowToymakerDialogue(true)}
             >
               {isNearToymakerNpc && (
                 <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
@@ -2069,13 +2074,31 @@ export default function VijayanagaraGameScreen() {
                   <span>Speak with Toymaker Kallappa & Inspect Toys</span>
                 </div>
               )}
-              <div className="w-12 h-14 bg-[#2e261f]/90 border-2 border-[#c86446] rounded-2xl flex items-center justify-center shadow-lg">
-                <GameIcon name="artisan" size={22} className="text-[#f59e0b]" />
-              </div>
+              <img
+                src="/kallappa_sprite.png"
+                alt="Master Kallappa"
+                className="w-24 h-36 md:w-28 md:h-44 object-contain object-bottom drop-shadow-[0_8px_16px_rgba(0,0,0,0.85)]"
+                style={{ imageRendering: "pixelated" }}
+              />
               <span className="text-[10px] font-serif font-bold text-[#f6ede0] bg-[#1a1714]/85 px-2 py-0.5 rounded border border-[#5a4d3f] mt-1">
                 Master Kallappa
               </span>
             </div>
+
+            {(hasShoeClue || shoeSequenceState === "shoe_unlocked" || shoeSequenceState === "completed") && (
+              <div
+                className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center z-10"
+                style={{ left: "88%", top: "85%" }}
+              >
+                <img
+                  src="/merchant_1.png"
+                  alt="Trader"
+                  className="w-28 h-auto drop-shadow-[0_10px_8px_rgba(0,0,0,0.5)]"
+                  style={{ imageRendering: "pixelated" }}
+                />
+              </div>
+            )}
+
 
             <div
               className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
@@ -2755,7 +2778,7 @@ export default function VijayanagaraGameScreen() {
                 }}
                 onClick={(e) => {
                   e.stopPropagation();
-                  setUncleSpeechText("Hello Im raju , a time traveller from 2026 come here seeking to understand the tragic fall of such a magnificant empire");
+                  setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 come here seeking to understand the tragic fall of such a magnificent empire");
                   setUncleOptions([
                     { id: 1, text: "Let us seek the truth together." }
                   ]);
@@ -2904,7 +2927,13 @@ export default function VijayanagaraGameScreen() {
         {/* --- TOY INSPECTION PUZZLE MODAL --- */}
         <ToyInspectionPuzzle
           isOpen={showToyInspectionModal}
-          onClose={() => setShowToyInspectionModal(false)}
+          onClose={() => {
+            setShowToyInspectionModal(false);
+            if (pendingShoeSequence || (hasFirstLedgerFragment && !hasShoeClue && shoeSequenceState === "idle")) {
+              setPendingShoeSequence(false);
+              startKallappaShoeSequence();
+            }
+          }}
           alreadyFoundFragment={hasFirstLedgerFragment}
           onDiscoverFragment={handleToyFragmentDiscovery}
           onSelectJournalToy={handleSelectJournalToy}
@@ -3310,7 +3339,7 @@ export default function VijayanagaraGameScreen() {
             audioUrl={merchantAudioUrl}
             onOptionSelect={(opt) => {
               if (opt.id === 1) {
-                const response = "Dont disturb me during business";
+                const response = "Don't disturb me during business";
                 setMerchantSpeechText(response);
                 setMerchantOptions([{ id: 2, text: "(Leave)" }]);
                 setMerchantAudioUrl(`/merchant_${activeMerchantId}_response.mp3`);
@@ -3344,7 +3373,7 @@ export default function VijayanagaraGameScreen() {
               nearby_monuments: "Virupaksha Temple",
               historical_events: "Portuguese horse trade with Vijayanagara"
             }}
-            dialogueText="Bom dia, senhor! In all my voyages across Venice, Cairo, and Lisbon, I have never seen a city of such boundless prosperity. By the way, I saw a suspicious person dragging an older man towards the Toy Street. You might want to check there!"
+            dialogueText="Bom dia, senhor! I sailed from Lisbon for the spices and gems of this land. Here, diamonds are sold like vegetables!\n\nBut listen, my friend. A stranger dragged an older man towards Toy Street. If he is your friend, hurry!"
             audioUrl="/senhor_duarte_hint.wav"
             isSpeaking={true}
             options={[

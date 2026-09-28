@@ -22,7 +22,9 @@ try {
   execSync(`"${ffmpeg}" -y -i "${audioFile}" -ss 00:00:00 -to 00:05:00 -c:a libmp3lame -q:a 2 "${output}"`, { stdio: 'inherit' });
 
   console.log("Done! Cleaning up...");
-  fs.unlinkSync(audioFile);
+  if (/^temp_audio\.[a-z0-9]+$/i.test(audioFile)) {
+    fs.unlinkSync(path.join(__dirname, audioFile));
+  }
   
 } catch (e) {
   console.error("Error:", e);
