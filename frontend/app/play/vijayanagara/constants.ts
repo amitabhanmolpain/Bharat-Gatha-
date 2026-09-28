@@ -161,7 +161,7 @@ export const SCENE_CONFIGS: Record<VijayanagaraSceneType, SceneMeta> = {
     defaultObjective: "Approach the iconic Stone Chariot and speak with the royal temple guide.",
     minX: 10.0,
     maxX: 90.0,
-    minY: 68.0,
+    minY: 78.0,
     maxY: 98.0,
   },
   musical_pillars: {

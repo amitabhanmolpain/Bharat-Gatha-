@@ -1003,7 +1003,7 @@ export default function VijayanagaraGameScreen() {
         if (scene === "toymaker_stall") {
           triggerTransition(
             "stone_chariot_entry",
-            { x: 50.0, y: 70.0 },
+            { x: 35.0, y: 85.0 },
             "Traveling to Vittala Temple Complex",
             "Leaving the Toymaker's stall and heading directly to the legendary Stone Chariot in Stage 3.",
             "stone_road"
@@ -1019,7 +1019,7 @@ export default function VijayanagaraGameScreen() {
         } else if (scene === "hazara_rama_walls") {
           triggerTransition(
             "stone_chariot_entry",
-            { x: 32.0, y: 65.0 },
+            { x: 32.0, y: 85.0 },
             "Returning to Vittala Temple Courtyard",
             "Returning to the central stone courtyard of the Stone Chariot.",
             "temple_walk"
@@ -1136,7 +1136,7 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
           if (isStage2Complete || hasFirstLedgerFragment) {
             triggerTransition(
               "stone_chariot_entry",
-              { x: 35.0, y: 78.0 },
+              { x: 35.0, y: 85.0 },
               "Royal Car Street Procession to Vittala Temple (Stage 3)",
               "Journeying along the grand paved ceremonial pathway toward the architectural masterpiece of the Golden Age.",
               "stone_road"
@@ -1188,7 +1188,7 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
         } else if (isNearChariotMandapaExit) {
           triggerTransition(
             "musical_pillars",
-            { x: 35.0, y: 76.0 },
+            { x: 50.0, y: 80.0 },
             "Entering Ranga Mandapa (Musical Pillars)",
             "Stepping onto the polished granite pavilion surrounded by 56 monolithic resonant pillars.",
             "temple_walk"
@@ -1229,7 +1229,7 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
         } else if (isNearMusicalPillarsExit) {
           triggerTransition(
             "stone_chariot_entry",
-            { x: 65.0, y: 68.0 },
+            { x: 65.0, y: 85.0 },
             "Returning to Vittala Temple Courtyard",
             "Stepping back out into the sunlit stone courtyard facing the Garuda Shrine.",
             "temple_walk"
@@ -1263,7 +1263,7 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
         } else if (isNearMahanavamiWestExit) {
           triggerTransition(
             "stone_chariot_entry",
-            { x: 70.0, y: 76.0 },
+            { x: 50.0, y: 85.0 },
             "Returning to Vittala Temple Courtyard",
             "Traveling back along the paved pathway toward the Stone Chariot.",
             "stone_road"
@@ -1572,7 +1572,7 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
   const currentSceneConfig = SCENE_CONFIGS[scene];
 
   // Dynamic Perspective Depth Scaling for Vijayanagara Landscapes
-  const sceneVisualScale = scene === "stone_chariot_entry" ? 1.3 : PLAYER_VISUAL_SCALE;
+  const sceneVisualScale = scene === "stone_chariot_entry" ? 1.15 : PLAYER_VISUAL_SCALE;
   const depthScale = (0.7 + ((playerPos.y - 50.0) / 40.0) * 0.55) * sceneVisualScale;
   const walkBob = isWalking ? Math.sin(walkPhase) * 1.8 : 0;
   const walkSway = isWalking ? Math.sin(walkPhase * 0.5) * 1.5 : 0;
@@ -2546,7 +2546,7 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
 
           // Mode 1: ✨ Glowing (Only for major hidden secrets when nearby)
           const isGlowing = (scene === "toymaker_stall" && shoeSequenceState === "genie_activating") ||
-                            (scene === "musical_pillars" && (musicalPillarsSequenceState === "genie_activating" || musicalPillarsSequenceState === "genie_hint")) ||
+                            (scene === "musical_pillars") ||
                             (scene === "stone_chariot_entry");
                             
           const isGenieHinting = scene === "toymaker_stall" && shoeSequenceState === "genie_hint";
@@ -2558,7 +2558,7 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
               genieY = 58.0; // Directly above Master Kallappa and the toys
             } else if (scene === "musical_pillars") {
               genieX = 50.0;
-              genieY = 55.0; // Center of musical pillars
+              genieY = 60.0; // Hovering above center of musical pillars
             } else if (scene === "stone_chariot_entry") {
               genieX = 38.0;
               genieY = 72.0; // Hovering above the Stone Chariot wheels
@@ -2617,7 +2617,7 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
                     ? "✨ Did you know? The wheels of this Stone Chariot could once spin! They were reportedly able to rotate, and were fixed in place later to protect the structure. Incredible craftsmanship from 1540 AD!"
                     : isMusicalPillarsComplete
                     ? "Great job! The musical pillars sang their notes and revealed the second fragment. We are close to the truth!"
-                    : "This is the Stone Chariot of Vittala Temple from Emperor Krishnadevaraya's golden age. The musical pillars hold your next clue!";
+                    : "✨ Did you know? The musical pillars here can play around 81 different instruments! Each pillar, when struck, produces a unique musical note — an acoustic marvel of Vijayanagara craftsmanship from 1540 AD!";
                   customOptions = [
                     { id: 1, text: "How do musical pillars work?" },
                     { id: 2, text: "Who was Krishnadevaraya?" }
