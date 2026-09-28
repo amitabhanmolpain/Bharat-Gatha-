@@ -138,6 +138,13 @@ export default function VijayanagaraGameScreen() {
     return () => clearTimeout(timer);
   }, [playerPos, facingLeft]);
 
+  // Merchant Dialogue State
+  const [showMerchantDialogue, setShowMerchantDialogue] = useState(false);
+  const [activeMerchantId, setActiveMerchantId] = useState<number | null>(null);
+  const [merchantSpeechText, setMerchantSpeechText] = useState("");
+  const [merchantOptions, setMerchantOptions] = useState<Array<{id: number, text: string}>>([]);
+  const [merchantAudioUrl, setMerchantAudioUrl] = useState<string | undefined>(undefined);
+
   // Jolly Bhai Companion State
   const [showJollyDialogue, setShowJollyDialogue] = useState(false);
   const [jollySpeechText, setJollySpeechText] = useState<string>("");
@@ -1087,7 +1094,7 @@ export default function VijayanagaraGameScreen() {
           if (hasVidyaranyaBlessing) {
             triggerTransition(
               "hampi_bazaar_entry",
-              { x: 33.0, y: 45.0 },
+              { x: 33.0, y: 80.0 }, // Changed y from 45.0 to 80.0 to stand on the ground path
               "Crossing Tungabhadra to Hampi Bazaar (Stage 2)",
               "Skimming across the swirling river rapids as the morning mist parts to reveal the grand Car Street of Virupaksha.",
               "coracle"
@@ -1457,7 +1464,7 @@ export default function VijayanagaraGameScreen() {
     if (scene === "hampi_bazaar_entry" && !isUncleKidnapped) {
       kidnapTimer = window.setTimeout(() => {
         setShowKidnapCutscene(true);
-      }, 10000);
+      }, 6000);
     }
     return () => clearTimeout(kidnapTimer);
   }, [scene, isUncleKidnapped]);
@@ -1886,8 +1893,12 @@ export default function VijayanagaraGameScreen() {
               className="absolute transform -translate-x-1/2 -translate-y-[90%] flex flex-col items-center z-10 pointer-events-auto cursor-pointer group"
               style={{ left: "28%", top: "96%" }}
               onClick={() => {
-                setActiveMerchantBubble(1);
-                setTimeout(() => setActiveMerchantBubble(null), 3000);
+                setActiveMerchantId(1);
+                setMerchantSpeechText("Finest spices from Kerala! Come take a look!");
+                setMerchantOptions([{ id: 1, text: "Did you see an old man getting kidnapped?" }]);
+                setMerchantAudioUrl("/merchant_1_intro.mp3");
+                if (typeof soundFx.playDialogueOpen === "function") soundFx.playDialogueOpen();
+                setShowMerchantDialogue(true);
               }}
             >
               {activeMerchantBubble === 1 && (
@@ -1908,8 +1919,12 @@ export default function VijayanagaraGameScreen() {
               className="absolute transform -translate-x-1/2 -translate-y-[90%] flex flex-col items-center z-10 pointer-events-auto cursor-pointer group"
               style={{ left: "48%", top: "88%" }}
               onClick={() => {
-                setActiveMerchantBubble(2);
-                setTimeout(() => setActiveMerchantBubble(null), 3000);
+                setActiveMerchantId(2);
+                setMerchantSpeechText("Precious gems from Golconda! Only for the wealthy!");
+                setMerchantOptions([{ id: 1, text: "Did you see an old man getting kidnapped?" }]);
+                setMerchantAudioUrl("/merchant_2_intro.mp3");
+                if (typeof soundFx.playDialogueOpen === "function") soundFx.playDialogueOpen();
+                setShowMerchantDialogue(true);
               }}
             >
               {activeMerchantBubble === 2 && (
@@ -1930,8 +1945,12 @@ export default function VijayanagaraGameScreen() {
               className="absolute transform -translate-x-1/2 -translate-y-[90%] flex flex-col items-center z-10 pointer-events-auto cursor-pointer group"
               style={{ left: "78%", top: "96%" }}
               onClick={() => {
-                setActiveMerchantBubble(3);
-                setTimeout(() => setActiveMerchantBubble(null), 3000);
+                setActiveMerchantId(3);
+                setMerchantSpeechText("Luxurious silks from Kanchipuram! Feel the texture!");
+                setMerchantOptions([{ id: 1, text: "Did you see an old man getting kidnapped?" }]);
+                setMerchantAudioUrl("/merchant_3_intro.mp3");
+                if (typeof soundFx.playDialogueOpen === "function") soundFx.playDialogueOpen();
+                setShowMerchantDialogue(true);
               }}
             >
               {activeMerchantBubble === 3 && (
@@ -3275,6 +3294,40 @@ export default function VijayanagaraGameScreen() {
           />
         )}
 
+        {/* --- BAZAAR MERCHANT DIALOGUE MODAL --- */}
+        {showMerchantDialogue && scene === "hampi_bazaar_entry" && (
+          <DialoguePanel
+            sceneId="hampi_bazaar_entry"
+            currentSceneId={scene}
+            characterName={activeMerchantId === 1 ? "Spice Merchant" : activeMerchantId === 2 ? "Jewelry Merchant" : "Fabric Merchant"}
+            characterTitle="Bazaar Trader"
+            characterId="merchant"
+            dialogueText={merchantSpeechText}
+            isSpeaking={true}
+            showInput={false}
+            options={merchantOptions}
+            preventAiOnOptionSelect={true}
+            audioUrl={merchantAudioUrl}
+            onOptionSelect={(opt) => {
+              if (opt.id === 1) {
+                const response = "Dont disturb me during business";
+                setMerchantSpeechText(response);
+                setMerchantOptions([{ id: 2, text: "(Leave)" }]);
+                setMerchantAudioUrl(`/merchant_${activeMerchantId}_response.mp3`);
+              } else if (opt.id === 2) {
+                setShowMerchantDialogue(false);
+                stopNarration();
+                if (typeof soundFx.playDialogueClose === "function") soundFx.playDialogueClose();
+              }
+            }}
+            onClose={() => {
+              setShowMerchantDialogue(false);
+              stopNarration();
+              if (typeof soundFx.playDialogueClose === "function") soundFx.playDialogueClose();
+            }}
+          />
+        )}
+
         {/* --- FOREIGN TRAVELER DIALOGUE MODAL (OPTIONAL) --- */}
         {showForeignTravelerDialogue && scene === "hampi_bazaar_entry" && (
           <DialoguePanel
@@ -3357,15 +3410,14 @@ export default function VijayanagaraGameScreen() {
               />
               
               {/* Content */}
-              <div className="relative z-10 flex flex-col items-center justify-center w-full h-full p-8 bg-black/20">
+              <div className="relative z-10 flex flex-col items-center justify-center w-full h-full p-8">
                 <h2 className="text-3xl md:text-5xl font-serif font-bold text-white mb-6 drop-shadow-[0_4px_10px_rgba(0,0,0,0.9)] uppercase tracking-widest text-center">
                   Clue Discovered: The Time Traveller's Shoe
                 </h2>
                 <img 
-                  src="/sneaker_clue.jpg" 
+                  src="/sneaker_clue.png" 
                   alt="Modern Sneaker Shoe" 
-                  className="w-48 h-48 md:w-64 md:h-64 object-cover rounded-xl border-2 border-[#d4a359] drop-shadow-[0_15px_30px_rgba(0,0,0,0.9)] hover:scale-110 transition-transform duration-500 mb-8"
-                  style={{ mixBlendMode: 'multiply' }}
+                  className="w-48 h-48 md:w-64 md:h-64 object-contain drop-shadow-[0_15px_30px_rgba(0,0,0,0.9)] hover:scale-110 transition-transform duration-500 mb-8"
                 />
                 
                 {/* Continue Button */}
