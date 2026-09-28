@@ -1,4 +1,5 @@
 import os
+
 from PIL import Image
 
 output_dir = r"c:\Users\ami05\OneDrive\Desktop\BHARAT_GATHA\frontend\public"

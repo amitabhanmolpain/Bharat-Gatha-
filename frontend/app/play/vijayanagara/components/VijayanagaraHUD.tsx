@@ -76,7 +76,11 @@ export default function VijayanagaraHUD({
       <div className="absolute top-6 right-6 flex flex-col items-end gap-3 pointer-events-auto">
         <div className="flex items-center gap-2.5">
           <button 
-            onClick={() => !isStage4Countdown && setIsTimerVisible(!isTimerVisible)}
+            onClick={() => {
+              if (!isStage4Countdown) {
+                setIsTimerVisible(!isTimerVisible);
+              }
+            }}
             title={
               isStage4Countdown
                 ? `Stage 4: ${stage4Timer}s left — ${stage4Attempts} chance${stage4Attempts === 1 ? '' : 's'} remaining`
@@ -84,7 +88,7 @@ export default function VijayanagaraHUD({
             }
             className={`h-10 px-3.5 border-2 border-black rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all flex items-center justify-center gap-1.5 font-black text-xs cursor-pointer ${
               isStage4Countdown
-                ? (stage4Timer !== null && stage4Timer <= 15
+                ? ((stage4Timer ?? 0) <= 15
                     ? "bg-red-500 text-white animate-pulse border-red-700"
                     : "bg-[#fcd34d] text-black")
                 : isTimerVisible
@@ -93,9 +97,9 @@ export default function VijayanagaraHUD({
             }`}
           >
             <span>⏱️</span>
-            {isStage4Countdown ? (
+            {isStage4Countdown && typeof stage4Timer === "number" ? (
               <span className="font-mono tracking-tight">
-                00:{String((stage4Timer ?? 0) % 60).padStart(2, '0')}
+                00:{String(stage4Timer % 60).padStart(2, '0')}
                 <span className="ml-2 text-[10px] opacity-80">🕵️{stage4Attempts}/2</span>
               </span>
             ) : isTimerVisible ? (
