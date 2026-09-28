@@ -2085,19 +2085,7 @@ export default function VijayanagaraGameScreen() {
               </span>
             </div>
 
-            {(hasShoeClue || shoeSequenceState === "shoe_unlocked" || shoeSequenceState === "completed") && (
-              <div
-                className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center z-10"
-                style={{ left: "88%", top: "85%" }}
-              >
-                <img
-                  src="/merchant_1.png"
-                  alt="Trader"
-                  className="w-28 h-auto drop-shadow-[0_10px_8px_rgba(0,0,0,0.5)]"
-                  style={{ imageRendering: "pixelated" }}
-                />
-              </div>
-            )}
+
 
 
             <div
@@ -2649,7 +2637,9 @@ export default function VijayanagaraGameScreen() {
                     { id: 2, text: "Where is the missing merchant?" }
                   ];
                 } else if (scene === "toymaker_stall") {
-                  speechText = hasFirstLedgerFragment
+                  speechText = (shoeSequenceState === "genie_activating" || shoeSequenceState === "genie_hint" || shoeSequenceState === "completed")
+                    ? "Mere akka, the given person we are finding is a time traveler. We have to go in our time machine to find this guy."
+                    : hasFirstLedgerFragment
                     ? "You found the first ledger fragment! The merchant hid key records inside these wooden toys."
                     : "Check these wooden Channapatna toys closely! The missing merchant hid a secret clue inside one of them.";
                   customOptions = [
@@ -3455,16 +3445,28 @@ export default function VijayanagaraGameScreen() {
                     setShowShoeUnlockModal(false);
                     // Move to genie activating
                     setShoeSequenceState("genie_activating");
-                    soundFx.playSelect();
+                    if (typeof soundFx.playSelect === "function") soundFx.playSelect();
                     
                     setTimeout(() => {
                        setShoeSequenceState("genie_hint");
-                       playNarration("This person is also a time traveller. Go to a different time period and find out how they are connected to the Vijayanagara Empire.", { speaker: "neha", pace: 0.95, language_code: "en-IN" });
+                       // Automatically trigger Genie Dialogue instead of invisible narrator
+                       setJollySpeechText("Mere akka, the given person we are finding is a time traveler. We have to go in our time machine to find this guy.");
+                       setJollyOptions([
+                         { id: 1, text: "Let's find the time machine!" }
+                       ]);
+                       setShowJollyDialogue(true);
+                       
+                       stopAllCharacterVoice();
+                       void playCharacterDialogue({
+                          character: "jolly",
+                          text: "Mere akka, the given person we are finding is a time traveler. We have to go in our time machine to find this guy.",
+                          onEnd: () => {}
+                       });
                        
                        setTimeout(() => {
                            setShoeSequenceState("completed");
                        }, 7000);
-                    }, 2000);
+                    }, 500);
                   }}
                   className="bg-white/10 hover:bg-white/20 border-2 border-white/50 text-white font-serif font-bold px-12 py-4 rounded-full shadow-lg transition-all cursor-pointer text-lg tracking-[0.2em] backdrop-blur-sm"
                 >
