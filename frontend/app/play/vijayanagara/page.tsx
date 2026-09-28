@@ -705,10 +705,10 @@ export default function VijayanagaraGameScreen() {
 
   const isNearMusicalPillarsCenter =
     scene === "musical_pillars" &&
-    playerPos.x >= 40.0 &&
-    playerPos.x <= 60.0 &&
-    playerPos.y >= 58.0 &&
-    playerPos.y <= 76.0;
+    playerPos.x >= 38.0 &&
+    playerPos.x <= 62.0 &&
+    playerPos.y >= 65.0 &&
+    playerPos.y <= 90.0;
 
   const isNearMusicalPillarsExit =
     scene === "musical_pillars" &&
@@ -1188,7 +1188,7 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
         } else if (isNearChariotMandapaExit) {
           triggerTransition(
             "musical_pillars",
-            { x: 50.0, y: 80.0 },
+            { x: 75.0, y: 80.0 },
             "Entering Ranga Mandapa (Musical Pillars)",
             "Stepping onto the polished granite pavilion surrounded by 56 monolithic resonant pillars.",
             "temple_walk"
@@ -1521,7 +1521,7 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
 
     setTimeout(() => {
       setMusicalPillarsSequenceState("genie_hint");
-      playNarration("Listen closely. These remarkable pillars are traditionally said to reproduce the sounds of around 81 different instruments, creating music for religious functions.", { speaker: "ratan", pace: 0.9, language_code: "en-IN" });
+      playNarration("Good job you played well", { speaker: "ratan", pace: 0.9, language_code: "en-IN" });
       
       setTimeout(() => {
         setMusicalPillarsSequenceState("time_coin_reveal");
@@ -1531,9 +1531,9 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
           soundFx.playItemUnlock();
           
           setShowTimeCoinUnlockModal(true);
-        }, 1500);
-      }, 8000); // Wait for TTS to finish (around 7-8 seconds)
-    }, 2000);
+        }, 1000);
+      }, 3000);
+    }, 1000);
   };
 
   // Stage 4 Handlers
@@ -1572,7 +1572,7 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
   const currentSceneConfig = SCENE_CONFIGS[scene];
 
   // Dynamic Perspective Depth Scaling for Vijayanagara Landscapes
-  const sceneVisualScale = scene === "stone_chariot_entry" ? 1.15 : PLAYER_VISUAL_SCALE;
+  const sceneVisualScale = PLAYER_VISUAL_SCALE;
   const depthScale = (0.7 + ((playerPos.y - 50.0) / 40.0) * 0.55) * sceneVisualScale;
   const walkBob = isWalking ? Math.sin(walkPhase) * 1.8 : 0;
   const walkSway = isWalking ? Math.sin(walkPhase * 0.5) * 1.5 : 0;
@@ -2617,7 +2617,7 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
                     ? "✨ Did you know? The wheels of this Stone Chariot could once spin! They were reportedly able to rotate, and were fixed in place later to protect the structure. Incredible craftsmanship from 1540 AD!"
                     : isMusicalPillarsComplete
                     ? "Great job! The musical pillars sang their notes and revealed the second fragment. We are close to the truth!"
-                    : "✨ Did you know? The musical pillars here can play around 81 different instruments! Each pillar, when struck, produces a unique musical note — an acoustic marvel of Vijayanagara craftsmanship from 1540 AD!";
+                    : "✨ Did you know? The musical pillars here can play around 81 different instruments! Each pillar, when struck, produces a unique musical note.";
                   customOptions = [
                     { id: 1, text: "How do musical pillars work?" },
                     { id: 2, text: "Who was Krishnadevaraya?" }
@@ -2884,36 +2884,44 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
 
         {/* --- TIME COIN REWARD MODAL --- */}
         {showTimeCoinUnlockModal && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm pointer-events-auto">
-            <div className="w-[450px] bg-[#1a1714] border-2 border-[#d4a359] rounded-xl shadow-[0_0_50px_rgba(212,163,89,0.3)] overflow-hidden flex flex-col items-center p-8 animate-[popIn_0.5s_cubic-bezier(0.175,0.885,0.32,1.275)]">
-              <h2 className="text-3xl font-serif text-[#d4a359] mb-2 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] text-center">
-                VIJAYANAGARA EMPIRE TIME COIN
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 backdrop-blur-md pointer-events-auto">
+            <audio autoPlay loop src="https://www.myinstants.com/media/sounds/subway-surfers-theme-song.mp3" />
+            
+            {/* Background Glow Effect */}
+            <div className="absolute w-[500px] h-[500px] bg-[radial-gradient(circle,_rgba(212,163,89,0.3)_0%,_transparent_70%)] pointer-events-none animate-pulse"></div>
+
+            <div className="relative w-[460px] bg-gradient-to-b from-[#251f18] via-[#1a1714] to-[#110e0c] border-2 border-[#d4a359] rounded-2xl shadow-[0_0_60px_rgba(212,163,89,0.4)] overflow-hidden flex flex-col items-center p-8 animate-[popIn_0.5s_cubic-bezier(0.175,0.885,0.32,1.275)] z-10">
+              <div className="text-xs font-mono font-bold tracking-[0.3em] text-[#d4a359]/80 uppercase mb-1">
+                ANCIENT REWARD
+              </div>
+              <h2 className="text-3xl font-serif font-bold text-[#f5d78e] mb-2 drop-shadow-[0_2px_10px_rgba(212,163,89,0.5)] text-center tracking-wider">
+                VARAHA GOLD COIN
               </h2>
-              <div className="text-[#8cd98c] font-bold tracking-widest text-lg mb-6 flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+              <div className="text-[#8cd98c] font-bold tracking-widest text-sm mb-6 flex items-center gap-2 bg-[#8cd98c]/10 border border-[#8cd98c]/30 px-3.5 py-1 rounded-full shadow-inner">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"></path></svg>
                 UNLOCKED
               </div>
 
-              <div className="w-40 h-40 rounded-full border-4 border-[#d4a359] shadow-[0_0_30px_rgba(212,163,89,0.6)] bg-gradient-to-br from-[#d4a359]/20 to-transparent flex items-center justify-center mb-6 relative group overflow-hidden">
-                <div className="absolute inset-0 bg-[#d4a359]/10 rounded-full animate-pulse"></div>
-                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30 mix-blend-overlay"></div>
-                <GameIcon name="artifact" size={80} className="text-[#d4a359] drop-shadow-[0_5px_10px_rgba(0,0,0,0.8)] z-10" />
-                <div className="absolute inset-0 rounded-full border border-white/20 z-20"></div>
+              {/* Nano-generated Varaha Gold Coin */}
+              <div className="w-44 h-44 rounded-full border-4 border-[#d4a359] shadow-[0_0_40px_rgba(212,163,89,0.7)] bg-gradient-to-br from-[#d4a359]/30 to-black flex items-center justify-center mb-6 relative group overflow-hidden">
+                <div className="absolute inset-0 bg-[#d4a359]/20 rounded-full animate-pulse"></div>
+                <img src="/varaha_coin.jpg?v=2" alt="Varaha Gold Coin" className="w-full h-full object-cover z-10 rounded-full drop-shadow-[0_5px_15px_rgba(0,0,0,0.9)] transition-transform duration-500 hover:scale-105" />
+                <div className="absolute inset-0 rounded-full border-2 border-white/20 z-20 pointer-events-none"></div>
               </div>
 
-              <div className="w-full bg-[#2b2520] border border-[#5a4d3f] p-4 rounded-lg mb-6 flex items-center justify-between">
+              <div className="w-full bg-[#2b2520]/90 border border-[#5a4d3f] p-4 rounded-xl mb-6 flex items-center justify-between shadow-inner">
                 <div>
-                  <h3 className="text-[#f6ede0] font-serif font-bold text-lg">LEDGER I</h3>
-                  <p className="text-[#d6c7b2] text-sm">Second Fragment Recovered</p>
+                  <h3 className="text-[#f6ede0] font-serif font-bold text-base">LEDGER I</h3>
+                  <p className="text-[#d6c7b2] text-xs">Second Fragment Recovered</p>
                 </div>
-                <div className="text-[#8cd98c] font-bold flex items-center gap-1">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                <div className="text-[#8cd98c] font-bold text-xs flex items-center gap-1 bg-[#8cd98c]/15 px-2.5 py-1 rounded">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"></path></svg>
                   UNLOCKED
                 </div>
               </div>
               
               <button
-                className="w-full py-3 bg-gradient-to-r from-[#d4a359] to-[#b38645] hover:from-[#e5b971] hover:to-[#c69a57] text-[#141210] font-bold font-serif uppercase tracking-widest rounded-lg shadow-lg transition-transform hover:scale-105 active:scale-95"
+                className="w-full py-3.5 bg-gradient-to-r from-[#d4a359] via-[#e5b971] to-[#b38645] hover:from-[#e5b971] hover:to-[#c69a57] text-[#141210] font-bold font-serif uppercase tracking-widest rounded-xl shadow-[0_4px_20px_rgba(212,163,89,0.4)] transition-all transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
                 onClick={() => {
                   setShowTimeCoinUnlockModal(false);
                   setMusicalPillarsSequenceState("completed");
@@ -3834,6 +3842,18 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
 
         {/* --- NARRATOR SUBTITLE OVERLAY --- */}
         <NarratorSubtitle />
+
+        {/* Stone Chariot Entry specific YouTube Background Music (2 mins max) */}
+        {scene === "stone_chariot_entry" && (
+          <iframe
+            width="0"
+            height="0"
+            src="https://www.youtube.com/embed/Y-rFA7Sio-c?autoplay=1&end=120&controls=0"
+            title="Stone Chariot Music"
+            allow="autoplay"
+            style={{ display: "none" }}
+          />
+        )}
 
       </div>
     </div>
