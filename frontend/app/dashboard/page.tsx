@@ -91,6 +91,18 @@ export default function GamesDashboard() {
 
   const campaigns: CampaignMeta[] = [
     {
+      id: "vijayanagara",
+      region: "Hampi · Vitthala · Tungabhadra",
+      title: "Rise of a Legend: Vijayanagara",
+      subtitle: "Vijayanagara Empire",
+      tagline: "The City That Dreamed Eternal",
+      description:
+        "Stone. Splendor. Stories. Walk through a civilization that still lives in legends. Explore musical mandapas, stone chariots, and the lost ledger of Vittala.",
+      image: "/poster-rise-of-vijayanagara.jpg",
+      href: "/play/vijayanagara",
+      features: ["Virupaksha Temple", "Stone Chariot", "Musical Pillars", "Anegundi River"],
+    },
+    {
       id: "indus",
       region: "Mohenjo-daro · Harappa · Dholavira",
       title: "The First Urban Dawn",
@@ -113,18 +125,6 @@ export default function GamesDashboard() {
       image: "/poster-marubhoomi-ka-rahasya.jpg",
       href: "/play/rajasthan",
       features: ["Chittorgarh Fort", "Bhangarh Ruins", "Kuldhara Village", "Desert Chaupar"],
-    },
-    {
-      id: "vijayanagara",
-      region: "Hampi · Vitthala · Tungabhadra",
-      title: "Rise of a Legend: Vijayanagara",
-      subtitle: "Vijayanagara Empire",
-      tagline: "The City That Dreamed Eternal",
-      description:
-        "Stone. Splendor. Stories. Walk through a civilization that still lives in legends. Explore musical mandapas, stone chariots, and the lost ledger of Vittala.",
-      image: "/poster-rise-of-vijayanagara.jpg",
-      href: "/play/vijayanagara",
-      features: ["Virupaksha Temple", "Stone Chariot", "Musical Pillars", "Anegundi River"],
     },
     {
       id: "mughal",
