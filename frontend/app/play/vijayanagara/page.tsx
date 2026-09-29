@@ -377,7 +377,12 @@ export default function VijayanagaraGameScreen() {
         "The year is 1336 AD. On the banks of the Tungabhadra river stands Anegundi — the seat of a new empire, Vijayanagara, ruled by two brothers, Harihara I and Bukka Raya I.\n\nYou are a historian from the year 2026. A time machine has brought you here — but no one in this era can ever know that truth. Reveal it, and the consequences will be far worse than disbelief.";
       const timer = setTimeout(() => {
         setShowOpeningAtmosphere(false);
-        void playNarration(introText, { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
+        void playNarration(introText, {
+          audioUrl: "/vijayanagara_intro_narration.wav",
+          speaker: "ratan",
+          pace: 0.88,
+          language_code: "en-IN",
+        });
       }, 2500);
       return () => clearTimeout(timer);
     }

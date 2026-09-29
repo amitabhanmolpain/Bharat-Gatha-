@@ -465,8 +465,9 @@ function IndusValleyGameComponent() {
         "Time traveler, modern media often highlights the negatives to make India look backward. Your mission is to collect proof within this city to show the world exactly how advanced our ancestors were 5,000 years ago.";
       const timer = setTimeout(() => {
         void playNarration(introText, {
+          audioUrl: "/indus_intro_narration.wav",
           speaker: "ratan",
-          pace: 0.9,
+          pace: 0.88,
           language_code: "en-IN",
         });
       }, 900);

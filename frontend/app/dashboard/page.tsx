@@ -148,7 +148,7 @@ export default function GamesDashboard() {
             isDark ? "text-[#e4c794]" : "text-[#8a6835]"
           }`}
         >
-          Games Dashboard
+          Kaal Chakra
         </h2>
         <div
           className={`flex items-center gap-3 mt-4 w-full max-w-sm opacity-60 transition-colors duration-500 ${
