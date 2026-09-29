@@ -109,6 +109,18 @@ export default function VijayanagaraGameScreen() {
   const isUncleKidnapped = useAppSelector(state => state.progression.isUncleKidnapped);
   const [showStage4OpeningBanner, setShowStage4OpeningBanner] = useState(true);
 
+  // Stage 4 Kidnapper Mini-Game State (1-Minute Timer & 2 Chances)
+  const [stage4Timer, setStage4Timer] = useState<number | null>(null);
+  const [stage4Attempts, setStage4Attempts] = useState<number>(2);
+  const [stage4KidnapperFound, setStage4KidnapperFound] = useState<boolean>(false);
+  const [showStage4FailModal, setShowStage4FailModal] = useState<boolean>(false);
+  const [showStage4SuccessModal, setShowStage4SuccessModal] = useState<boolean>(false);
+  const [activeCitizenDialogue, setActiveCitizenDialogue] = useState<{
+    name: string;
+    title: string;
+    text: string;
+  } | null>(null);
+
   // Kidnap Event State
   const [showKidnapCutscene, setShowKidnapCutscene] = useState(false);
 
@@ -122,6 +134,35 @@ export default function VijayanagaraGameScreen() {
   // Journal Unlocks State
   const unlockedJournalEntries = useAppSelector(state => state.inventory.unlockedJournalEntries);
   const isMusicMuted = useAppSelector(state => state.settings.isMusicMuted);
+  const mahanavamiAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Reliable background music playback for Mahanavami scene (pauses during Talikota victory screen)
+  useEffect(() => {
+    const audio = mahanavamiAudioRef.current;
+    if (!audio) return;
+
+    if (scene === "mahanavami_celebration" && !isMusicMuted && !showStage4SuccessModal) {
+      audio.volume = 0.18;
+      audio.muted = false;
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          const unlock = () => {
+            if (mahanavamiAudioRef.current && scene === "mahanavami_celebration" && !isMusicMuted && !showStage4SuccessModal) {
+              mahanavamiAudioRef.current.volume = 0.18;
+              mahanavamiAudioRef.current.play().catch(() => {});
+            }
+            window.removeEventListener("pointerdown", unlock);
+            window.removeEventListener("keydown", unlock);
+          };
+          window.addEventListener("pointerdown", unlock, { once: true });
+          window.addEventListener("keydown", unlock, { once: true });
+        });
+      }
+    } else {
+      audio.pause();
+    }
+  }, [scene, isMusicMuted, showStage4SuccessModal]);
 
   // Uncle Companion State
   const [showUncleDialogue, setShowUncleDialogue] = useState(false);
@@ -378,19 +419,153 @@ export default function VijayanagaraGameScreen() {
     }
   }, [isLoading, stage]);
 
+  // Helper to trigger Jolly Genie's speech & start the 1-minute timer (60s)
+  const triggerStage4KidnapperGeniePrompt = useCallback(() => {
+    const genieSpeech =
+      "Listen to me, akka—one of these people in the crowd is the kidnapper! You only have two chances to spot them. Hurry up, find them before the Deccan army gets here and blows this whole place apart!";
+
+    setJollySpeechText(genieSpeech);
+    setJollyDialogueScene("mahanavami_celebration");
+    setShowJollyDialogue(true);
+    setStage4Attempts(2);
+    setStage4KidnapperFound(false);
+    setShowStage4FailModal(false);
+    // NOTE: timer starts in onEnd so it only begins AFTER narrator finishes speaking
+
+    void playCharacterDialogue({
+      character: "jolly",
+      text: genieSpeech,
+      onEnd: () => {
+        // Start the 60-second countdown only after Genie finishes
+        setStage4Timer(60);
+      },
+    });
+
+    // Fallback: if character voice onEnd never fires, start timer after ~10s
+    setTimeout(() => {
+      setStage4Timer((prev) => (prev === null ? 60 : prev));
+    }, 10000);
+  }, []);
+
+  const handleRestartStage4Checkpoint = () => {
+    if (typeof (soundFx as any).playKeyboardClick === "function") (soundFx as any).playKeyboardClick();
+    setShowStage4FailModal(false);
+    setShowStage4SuccessModal(false);
+    setActiveCitizenDialogue(null);
+    setStage4KidnapperFound(false);
+    setPlayerPos({ x: 50.0, y: 80.0 });
+    triggerStage4KidnapperGeniePrompt();
+  };
+
+  const handleCrowdCitizenClick = (
+    isKidnapper: boolean,
+    citizenName: string,
+    defaultDialogue: string,
+    citizenTitle: string = "Festival Attendee"
+  ) => {
+    if (stage === 4 && scene === "mahanavami_celebration" && !stage4KidnapperFound && !showStage4FailModal) {
+      if (isKidnapper) {
+        setStage4KidnapperFound(true);
+        setStage4Timer(null);
+        setActiveCitizenDialogue(null);
+        setShowStage4SuccessModal(true);
+        stopAllCharacterVoice();
+        if (mahanavamiAudioRef.current) {
+          mahanavamiAudioRef.current.pause();
+        }
+
+        const victoryNarration =
+          "You saved your friend from getting killed, leaving the jealous kidnapper behind to perish in the Battle of Talikota—a catastrophic war where such a massive empire was destroyed because generals turned traitor, enemy cannons tore through the army, and King Rama Raya was beheaded on the battlefield.";
+        void playNarration(victoryNarration, { speaker: "ratan", pace: 0.9, language_code: "en-IN", hideSubtitle: true });
+      } else {
+        const remainingAttempts = stage4Attempts - 1;
+        setStage4Attempts(remainingAttempts);
+
+        if (remainingAttempts <= 0) {
+          setStage4Timer(null);
+          setActiveCitizenDialogue(null);
+          setShowStage4FailModal(true);
+          const failText = "Oh no, akka! That was your last chance! The kidnapper escaped into the festival crowd!";
+          setJollySpeechText(failText);
+          setShowJollyDialogue(true);
+          void playCharacterDialogue({ character: "jolly", text: failText });
+        } else {
+          setActiveCitizenDialogue({
+            name: citizenName,
+            title: citizenTitle,
+            text: `${defaultDialogue}\n\n⚠️ (Jolly Bhai: "That is NOT the kidnapper! You have only ${remainingAttempts} chance left!")`,
+          });
+          const warningText = `That's not the kidnapper! Be careful, akka—you only have ${remainingAttempts} chance left to spot them!`;
+          setJollySpeechText(warningText);
+          void playCharacterDialogue({ character: "jolly", text: warningText });
+        }
+      }
+      return;
+    }
+
+    setActiveCitizenDialogue({
+      name: citizenName,
+      title: citizenTitle,
+      text: defaultDialogue,
+    });
+    if (typeof soundFx.playDialogueOpen === "function") soundFx.playDialogueOpen();
+  };
+
   const hasPlayedStage4NarrationRef = useRef(false);
   useEffect(() => {
     if (!isLoading && stage === 4 && !hasPlayedStage4NarrationRef.current) {
       hasPlayedStage4NarrationRef.current = true;
       const text =
-        "The year is 1565 AD at Mahanavami Dibba. Find the last ledger fragment to preserve the story of Vijayanagara.";
+        "The year is 1565. It is the final celebration of the Vijayanagara Empire. Soon, the Deccan Sultanates will arrive and reduce this city to ruins. Your mission begins now: find your friend before the empire collapses.";
+
       const timer = setTimeout(() => {
         setShowStage4OpeningBanner(false);
-        void playNarration(text, { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
+        void playNarration(text, {
+          speaker: "ratan",
+          pace: 0.88,
+          language_code: "en-IN",
+          onEnd: () => {
+            triggerStage4KidnapperGeniePrompt();
+          },
+        });
+
+        // Fallback timer in case narration onEnd does not trigger
+        const fallbackTimer = setTimeout(() => {
+          if (stage4Timer === null && !stage4KidnapperFound && !showStage4FailModal) {
+            triggerStage4KidnapperGeniePrompt();
+          }
+        }, 14000);
+        return () => clearTimeout(fallbackTimer);
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [isLoading, stage]);
+  }, [isLoading, stage, triggerStage4KidnapperGeniePrompt, stage4Timer, stage4KidnapperFound, showStage4FailModal]);
+
+  // Stage 4 Countdown Timer Logic (1 minute = 60s)
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (
+      stage4Timer !== null &&
+      stage4Timer > 0 &&
+      !showStage4FailModal &&
+      !stage4KidnapperFound &&
+      stage === 4 &&
+      scene === "mahanavami_celebration"
+    ) {
+      interval = setInterval(() => {
+        setStage4Timer((prev) => {
+          if (prev === null) return null;
+          if (prev <= 1) {
+            clearInterval(interval);
+            setShowStage4FailModal(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [stage4Timer, showStage4FailModal, stage4KidnapperFound, stage, scene]);
 
   // Stage 3 Countdown Timer Logic
   useEffect(() => {
@@ -705,10 +880,10 @@ export default function VijayanagaraGameScreen() {
 
   const isNearMusicalPillarsCenter =
     scene === "musical_pillars" &&
-    playerPos.x >= 40.0 &&
-    playerPos.x <= 60.0 &&
-    playerPos.y >= 58.0 &&
-    playerPos.y <= 76.0;
+    playerPos.x >= 38.0 &&
+    playerPos.x <= 62.0 &&
+    playerPos.y >= 65.0 &&
+    playerPos.y <= 90.0;
 
   const isNearMusicalPillarsExit =
     scene === "musical_pillars" &&
@@ -1188,7 +1363,7 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
         } else if (isNearChariotMandapaExit) {
           triggerTransition(
             "musical_pillars",
-            { x: 50.0, y: 80.0 },
+            { x: 75.0, y: 80.0 },
             "Entering Ranga Mandapa (Musical Pillars)",
             "Stepping onto the polished granite pavilion surrounded by 56 monolithic resonant pillars.",
             "temple_walk"
@@ -1205,7 +1380,7 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
           if (isStage3Complete || hasSecondLedgerFragment) {
             triggerTransition(
               "mahanavami_celebration",
-              { x: 50.0, y: 80.0 },
+              { x: 50.0, y: 66.0 },
               "Approaching Mahanavami Dibba (Stage 4)",
               "Ascending toward the multi-tiered royal ceremonial platform as evening shadows stretch across the granite landscape.",
               "stone_road"
@@ -1521,7 +1696,7 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
 
     setTimeout(() => {
       setMusicalPillarsSequenceState("genie_hint");
-      playNarration("Listen closely. These remarkable pillars are traditionally said to reproduce the sounds of around 81 different instruments, creating music for religious functions.", { speaker: "ratan", pace: 0.9, language_code: "en-IN" });
+      playNarration("Good job you played well", { speaker: "ratan", pace: 0.9, language_code: "en-IN" });
       
       setTimeout(() => {
         setMusicalPillarsSequenceState("time_coin_reveal");
@@ -1531,9 +1706,9 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
           soundFx.playItemUnlock();
           
           setShowTimeCoinUnlockModal(true);
-        }, 1500);
-      }, 8000); // Wait for TTS to finish (around 7-8 seconds)
-    }, 2000);
+        }, 1000);
+      }, 3000);
+    }, 1000);
   };
 
   // Stage 4 Handlers
@@ -1572,7 +1747,7 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
   const currentSceneConfig = SCENE_CONFIGS[scene];
 
   // Dynamic Perspective Depth Scaling for Vijayanagara Landscapes
-  const sceneVisualScale = scene === "stone_chariot_entry" ? 1.15 : PLAYER_VISUAL_SCALE;
+  const sceneVisualScale = PLAYER_VISUAL_SCALE;
   const depthScale = (0.7 + ((playerPos.y - 50.0) / 40.0) * 0.55) * sceneVisualScale;
   const walkBob = isWalking ? Math.sin(walkPhase) * 1.8 : 0;
   const walkSway = isWalking ? Math.sin(walkPhase * 0.5) * 1.5 : 0;
@@ -1605,7 +1780,7 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
 
         {/* --- ANEGUNDI BACKGROUND MUSIC --- */}
         {(scene === "anegundi_river_crossing" || scene === "anegundi_old_fort") && (
-          <audio id="anegundi-music" src="/anegundi_music.mp3" loop muted={isMusicMuted} className="hidden pointer-events-none" onCanPlay={(e) => { e.currentTarget.volume = 0.5; e.currentTarget.play().catch(() => {}); }} />
+          <audio id="anegundi-music" src="/anegundi_music.mp3" loop muted={isMusicMuted} className="hidden pointer-events-none" onCanPlay={(e) => { e.currentTarget.volume = 0.2; e.currentTarget.play().catch(() => {}); }} />
         )}
 
         {/* --- STAGE 1 SCENE 1: ANEGUNDI RIVER CROSSING HOTSPOTS --- */}
@@ -2343,7 +2518,7 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
                 soundFx.playSelect();
                 triggerTransition(
                   "mahanavami_celebration",
-                  { x: 50.0, y: 80.0 },
+                  { x: 50.0, y: 66.0 },
                   "Approaching Mahanavami Dibba (Stage 4)",
                   "Ascending toward the multi-tiered royal ceremonial platform as evening shadows stretch across the granite landscape.",
                   "stone_road"
@@ -2376,47 +2551,17 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
         {/* --- STAGE 4 SCENE 1: MAHANAVAMI CELEBRATION HOTSPOTS --- */}
         {scene === "mahanavami_celebration" && (
           <>
-            {/* Upper Tier Interaction / Flashback Trigger */}
+            {/* Upper Tier Interaction / Flashba            {/* Imperial Dais Hotspot */}
             <div
               className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
-              style={{ left: "50%", top: "64%" }}
+              style={{ left: "42%", top: "78%" }}
             >
-              {isNearMahanavamiTierTrigger && (
-                <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                  <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">E</kbd>
-                  <span>
-                    {!isFestivalSceneRestored
-                      ? "Witness 1565 Festival Flashback"
-                      : !hasFinalLedgerFragment
-                      ? "Unseal Royal Niche for Final Fragment"
-                      : "Inspect Master Ledger Niche"}
-                  </span>
-                </div>
-              )}
+              {/* E-prompt tooltip removed per user request */}
               <div className="w-14 h-14 bg-[#3d3328]/90 border-2 border-[#d4a359] rounded-2xl flex items-center justify-center shadow-lg animate-pulse">
                 <GameIcon name={isFestivalSceneRestored ? "ledger" : "temple"} size={26} className="text-[#d4a359]" />
               </div>
               <span className="text-[10px] font-serif font-bold text-[#f6ede0] bg-[#1a1714]/85 px-2 py-0.5 rounded border border-[#5a4d3f] mt-1">
                 {isFestivalSceneRestored ? "Stone Vault Niche" : "Imperial Dais"}
-              </span>
-            </div>
-
-            {/* South Exit to Pushkarani Stepped Tank */}
-            <div
-              className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
-              style={{ left: "50%", top: "82%" }}
-            >
-              {isNearMahanavamiSouthExit && (
-                <div className="mb-2 bg-[#1a1714]/90 border-2 border-[#d4a359] text-[#f6ede0] px-3 py-1 rounded-lg text-xs font-serif shadow-[0_4px_15px_rgba(0,0,0,0.8)] animate-bounce flex items-center gap-1.5 whitespace-nowrap">
-                  <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] bg-[#2b2520] border border-[#d4a359] text-[#d4a359] px-1 rounded text-[10px] font-mono font-bold shadow-[0_1px_0_1px_rgba(0,0,0,0.8)]">E</kbd>
-                  <span>Walk to Pushkarani Stepped Tank (Closing Reflection)</span>
-                </div>
-              )}
-              <div className="w-10 h-10 bg-[#233538]/85 border-2 border-[#1b4d52] rounded-xl flex items-center justify-center shadow">
-                <GameIcon name="sunset" size={18} className="text-[#f59e0b]" />
-              </div>
-              <span className="text-[10px] font-serif font-bold text-[#f6ede0] bg-[#1a1714]/80 px-2 py-0.5 rounded border border-[#384e50] mt-1">
-                Pushkarani Path
               </span>
             </div>
 
@@ -2440,26 +2585,150 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
             </div>
 
 
-                                                {/* --- CIRCULAR MILITARY PARADE GUARDS --- */}
-            <PedestrianNPC id="guard_m1" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 10, y: 75}, {x: 10, y: 95}, {x: 90, y: 95}, {x: 90, y: 75}]} speed={4.5} scale={0.8} circular={true} startDelay={0} />
-            <PedestrianNPC id="guard_m2" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 12.5, y: 73.5}, {x: 12.5, y: 93.5}, {x: 92.5, y: 93.5}, {x: 92.5, y: 73.5}]} speed={4.5} scale={0.8} circular={true} startDelay={0} />
-            <PedestrianNPC id="guard_m3" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 10, y: 95}, {x: 90, y: 95}, {x: 90, y: 75}, {x: 10, y: 75}]} speed={4.5} scale={0.8} circular={true} startDelay={0} />
-            <PedestrianNPC id="guard_m4" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 12.5, y: 93.5}, {x: 92.5, y: 93.5}, {x: 92.5, y: 73.5}, {x: 12.5, y: 73.5}]} speed={4.5} scale={0.8} circular={true} startDelay={0} />
-            <PedestrianNPC id="guard_m5" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 90, y: 95}, {x: 90, y: 75}, {x: 10, y: 75}, {x: 10, y: 95}]} speed={4.5} scale={0.8} circular={true} startDelay={0} />
-            <PedestrianNPC id="guard_m6" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 92.5, y: 93.5}, {x: 92.5, y: 73.5}, {x: 12.5, y: 73.5}, {x: 12.5, y: 93.5}]} speed={4.5} scale={0.8} circular={true} startDelay={0} />
-            <PedestrianNPC id="guard_m7" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 90, y: 75}, {x: 10, y: 75}, {x: 10, y: 95}, {x: 90, y: 95}]} speed={4.5} scale={0.8} circular={true} startDelay={0} />
-            <PedestrianNPC id="guard_m8" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 92.5, y: 73.5}, {x: 12.5, y: 73.5}, {x: 12.5, y: 93.5}, {x: 92.5, y: 93.5}]} speed={4.5} scale={0.8} circular={true} startDelay={0} />
-            </>
-        )}
+            {/* --- COURTYARD PATROL GUARDS (4 INDEPENDENT SQUADS, NEVER OVERLAPPING) --- */}
+            {/* Squad A: Left Courtyard Patrol */}
+            <PedestrianNPC id="guard_m1" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 8, y: 76}, {x: 18, y: 76}]} speed={3.0} scale={0.8} loop={true} startDelay={0} />
+            <PedestrianNPC id="guard_m2" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 10, y: 74}, {x: 20, y: 74}]} speed={3.0} scale={0.8} loop={true} startDelay={0} />
 
-                                {/* --- MAHANAVAMI CELEBRATION SPECIFIC NPCS & AUDIO --- */}
-        {scene === "mahanavami_celebration" && (
-          <>
-            <audio id="vijayanagara-music" src="/vijayanagara_music.mp3" loop muted={isMusicMuted} className="hidden pointer-events-none" onCanPlay={(e) => { e.currentTarget.volume = 0.5; e.currentTarget.play().catch(() => {}); }} />
+            {/* Squad B: Lower Left Gateway Patrol */}
+            <PedestrianNPC id="guard_m3" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 12, y: 92}, {x: 24, y: 92}]} speed={3.0} scale={0.8} loop={true} startDelay={0} />
+            <PedestrianNPC id="guard_m4" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 14, y: 90}, {x: 26, y: 90}]} speed={3.0} scale={0.8} loop={true} startDelay={0} />
+
+            {/* Squad C: Lower Right Gateway Patrol */}
+            <PedestrianNPC id="guard_m5" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 74, y: 92}, {x: 86, y: 92}]} speed={3.0} scale={0.8} loop={true} startDelay={0} />
+            <PedestrianNPC id="guard_m6" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 76, y: 90}, {x: 88, y: 90}]} speed={3.0} scale={0.8} loop={true} startDelay={0} />
+
+            {/* Squad D: Right Courtyard Patrol */}
+            <PedestrianNPC id="guard_m7" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 82, y: 76}, {x: 92, y: 76}]} speed={3.0} scale={0.8} loop={true} startDelay={0} />
+            <PedestrianNPC id="guard_m8" frames={["/guard_anim_1.png", "/guard_anim_2.png", "/guard_anim_3.png"]} path={[{x: 84, y: 74}, {x: 94, y: 74}]} speed={3.0} scale={0.8} loop={true} startDelay={0} />
+
+            <audio
+              ref={mahanavamiAudioRef}
+              id="vijayanagara-music"
+              src="/vijayanagara_music.mp3"
+              loop
+              preload="auto"
+              muted={isMusicMuted}
+              className="hidden pointer-events-none"
+            />
             <PedestrianNPC id="royal_elephant_1" frames={["/royal_elephant_1.png", "/royal_elephant_2.png"]} path={[{x: 5, y: 60}]} speed={0} scale={2.5} circular={true} startDelay={0} animSpeed={800} />
             <PedestrianNPC id="royal_elephant_2" frames={["/royal_elephant_1.png", "/royal_elephant_2.png"]} path={[{x: 26, y: 48}]} speed={0} scale={2.5} circular={true} startDelay={800} animSpeed={800} />
             <PedestrianNPC id="dancer_w1" frames={["/kuchipudi_1.png", "/kuchipudi_2.png", "/kuchipudi_3.png", "/kuchipudi_4.png"]} path={[{x: 82, y: 60}]} speed={0} scale={2.0} circular={true} startDelay={0} animSpeed={400} />
             <PedestrianNPC id="dancer_w2" frames={["/kuchipudi_1.png", "/kuchipudi_2.png", "/kuchipudi_3.png", "/kuchipudi_4.png"]} path={[{x: 88, y: 60}]} speed={0} scale={2.0} circular={true} startDelay={300} animSpeed={400} />
+
+            {/* --- CROWD CITIZENS STANDING DOWN ON THE GROUND FLOOR (LEFT GROUP) --- */}
+            <div
+              className="absolute z-15 pointer-events-auto cursor-pointer group hover:scale-110 transition-transform duration-200"
+              style={{ left: "30.0%", top: "60.0%", transform: "translate(-50%, -100%) scale(1.72)" }}
+              title="Click to talk with Scholar Somappa"
+              onClick={() => {
+                handleCrowdCitizenClick(
+                  false,
+                  "Scholar Somappa",
+                  "Greetings! The grand Mahanavami festival lasts for nine days. Rulers, foreign ambassadors, and merchants travel thousands of leagues to witness our Emperor's grand procession!",
+                  "Royal Scholar"
+                );
+              }}
+            >
+              <img src="/crowd_citizen_1.png" alt="Scholar Somappa" className="w-20 h-28 object-contain object-bottom drop-shadow-[0_8px_16px_rgba(0,0,0,0.95)]" />
+            </div>
+
+            <div
+              className="absolute z-15 pointer-events-auto cursor-pointer group hover:scale-110 transition-transform duration-200"
+              style={{ left: "36.0%", top: "60.0%", transform: "translate(-50%, -100%) scale(1.72)" }}
+              title="Click to talk with Lady Annapurna"
+              onClick={() => {
+                handleCrowdCitizenClick(
+                  false,
+                  "Lady Annapurna",
+                  "Look at the magnificent Kuchipudi dancers and war elephants! During this sacred festival, music and dance fill every corner of the capital.",
+                  "Festival Noblewoman"
+                );
+              }}
+            >
+              <img src="/crowd_citizen_2.png" alt="Lady Annapurna" className="w-20 h-28 object-contain object-bottom drop-shadow-[0_8px_16px_rgba(0,0,0,0.95)]" />
+            </div>
+
+            <div
+              className="absolute z-15 pointer-events-auto cursor-pointer group hover:scale-110 transition-transform duration-200"
+              style={{ left: "41.0%", top: "60.0%", transform: "translate(-50%, -100%) scale(1.72)" }}
+              title="Click to talk with Merchant Devayya"
+              onClick={() => {
+                handleCrowdCitizenClick(
+                  false,
+                  "Merchant Devayya",
+                  "Our markets thrive under the Emperor's patronage. Gems, gold coins, and spices from across the ocean are traded freely here in Vijayanagara!",
+                  "Gem Merchant"
+                );
+              }}
+            >
+              <img src="/crowd_citizen_3.png" alt="Merchant Devayya" className="w-20 h-28 object-contain object-bottom drop-shadow-[0_8px_16px_rgba(0,0,0,0.95)]" />
+            </div>
+
+            <div
+              className="absolute z-15 pointer-events-auto cursor-pointer group hover:scale-110 transition-transform duration-200"
+              style={{ left: "46.0%", top: "60.0%", transform: "translate(-50%, -100%) scale(1.72)" }}
+              title="Click to talk with Lady Lakshmi"
+              onClick={() => {
+                handleCrowdCitizenClick(
+                  false,
+                  "Lady Lakshmi",
+                  "The stepped stone carvings on this Dibba plinth depict continuous stories of army parades, royal hunts, and ancient legends. It is a masterpiece of granite artwork!",
+                  "Temple Devotee"
+                );
+              }}
+            >
+              <img src="/crowd_citizen_4.png" alt="Lady Lakshmi" className="w-20 h-28 object-contain object-bottom drop-shadow-[0_8px_16px_rgba(0,0,0,0.95)]" />
+            </div>
+
+            {/* --- CROWD CITIZENS STANDING DOWN ON THE GROUND FLOOR (RIGHT GROUP) --- */}
+            <div
+              className="absolute z-15 pointer-events-auto cursor-pointer group hover:scale-110 transition-transform duration-200"
+              style={{ left: "62.0%", top: "57.0%", transform: "translate(-50%, -100%) scale(1.72)" }}
+              title="Click to inspect the Suspicious Man with Blue Sneakers"
+              onClick={() => {
+                handleCrowdCitizenClick(
+                  true,
+                  "The Sneaker-Wearing Kidnapper",
+                  "Wait! How did you notice my modern Nike blue sneakers?! I hid right inside the 1565 Mahanavami festival crowd!",
+                  "The Kidnapper (In Disguise)"
+                );
+              }}
+            >
+              <img src="/jordan_man.png" alt="Suspicious Man with Blue Sneakers" className="w-20 h-28 object-contain object-bottom drop-shadow-[0_8px_16px_rgba(0,0,0,0.95)]" />
+            </div>
+
+            <div
+              className="absolute z-15 pointer-events-auto cursor-pointer group hover:scale-110 transition-transform duration-200"
+              style={{ left: "68.0%", top: "57.0%", transform: "translate(-50%, -100%) scale(1.72)" }}
+              title="Click to talk with Sage Someshwara"
+              onClick={() => {
+                handleCrowdCitizenClick(
+                  false,
+                  "Sage Someshwara",
+                  "Greetings, traveler! I am Sage Someshwara. The Emperor Krishnadevaraya has gathered scholars and nobles from all 70 provinces of the kingdom for this grand event.",
+                  "Court Sage"
+                );
+              }}
+            >
+              <img src="/trad_scholar.png" alt="Sage Someshwara" className="w-20 h-28 object-contain object-bottom drop-shadow-[0_8px_16px_rgba(0,0,0,0.95)]" />
+            </div>
+
+            <div
+              className="absolute z-15 pointer-events-auto cursor-pointer group hover:scale-110 transition-transform duration-200"
+              style={{ left: "74.0%", top: "57.0%", transform: "translate(-50%, -100%) scale(1.72)" }}
+              title="Click to talk with Royal Musician"
+              onClick={() => {
+                handleCrowdCitizenClick(
+                  false,
+                  "Royal Musician",
+                  "The melodies of the Veena echo across the granite pavilion! Music is the heartbeat of Vijayanagara's eternal culture.",
+                  "Court Musician"
+                );
+              }}
+            >
+              <img src="/trad_musician.png" alt="Royal Musician" className="w-20 h-28 object-contain object-bottom drop-shadow-[0_8px_16px_rgba(0,0,0,0.95)]" />
+            </div>
           </>
         )}
 
@@ -2617,7 +2886,7 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
                     ? "✨ Did you know? The wheels of this Stone Chariot could once spin! They were reportedly able to rotate, and were fixed in place later to protect the structure. Incredible craftsmanship from 1540 AD!"
                     : isMusicalPillarsComplete
                     ? "Great job! The musical pillars sang their notes and revealed the second fragment. We are close to the truth!"
-                    : "✨ Did you know? The musical pillars here can play around 81 different instruments! Each pillar, when struck, produces a unique musical note — an acoustic marvel of Vijayanagara craftsmanship from 1540 AD!";
+                    : "✨ Did you know? The musical pillars here can play around 81 different instruments! Each pillar, when struck, produces a unique musical note.";
                   customOptions = [
                     { id: 1, text: "How do musical pillars work?" },
                     { id: 2, text: "Who was Krishnadevaraya?" }
@@ -2817,31 +3086,35 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
           </div>
         )}
 
-        {/* --- HUD OVERLAY --- */}
-        <VijayanagaraHUD
-          stage={stage}
-          scene={scene}
-          objective={
-            isCampaignComplete
-              ? "Campaign Complete: Vijayanagara Legacy Preserved across stone and memory."
-              : scene === "toymaker_stall" && shoeSequenceState === "completed"
-              ? "Travel to another time period and uncover the time traveller's connection to the Vijayanagara Empire."
-              : scene === "musical_pillars" && musicalPillarsSequenceState === "completed"
-              ? "Ledger I recovered. Continue the investigation."
-              : isStage3Complete && stage === 3
-              ? "Stage 3 Complete! Follow the road to Mahanavami Dibba (Stage 4)."
-              : isStage2Complete && stage === 2
-              ? "Stage 2 Complete! Travel along the Procession Road to Vittala Temple (Stage 3)."
-              : isStage1Complete && stage === 1
-              ? "Stage 1 Complete! Board the coracle ferry to cross into Hampi Bazaar (Stage 2)."
-              : currentSceneConfig.defaultObjective
-          }
-          fragmentsCollectedCount={collectedFragments.length}
-          unlockedJournalCount={unlockedJournalEntries.length}
-          onOpenJournal={() => setIsJournalOpen(true)}
-          onResetCampaign={handleResetCampaign}
-          isTransitioning={isTransitioning}
-        />
+        {/* --- HUD OVERLAY (Hidden during Battle of Talikota Aftermath Fullscreen) --- */}
+        {!showStage4SuccessModal && (
+          <VijayanagaraHUD
+            stage={stage}
+            scene={scene}
+            objective={
+              isCampaignComplete
+                ? "Campaign Complete: Vijayanagara Legacy Preserved across stone and memory."
+                : scene === "toymaker_stall" && shoeSequenceState === "completed"
+                ? "Travel to another time period and uncover the time traveller's connection to the Vijayanagara Empire."
+                : scene === "musical_pillars" && musicalPillarsSequenceState === "completed"
+                ? "Ledger I recovered. Continue the investigation."
+                : isStage3Complete && stage === 3
+                ? "Stage 3 Complete! Follow the road to Mahanavami Dibba (Stage 4)."
+                : isStage2Complete && stage === 2
+                ? "Stage 2 Complete! Travel along the Procession Road to Vittala Temple (Stage 3)."
+                : isStage1Complete && stage === 1
+                ? "Stage 1 Complete! Board the coracle ferry to cross into Hampi Bazaar (Stage 2)."
+                : currentSceneConfig.defaultObjective
+            }
+            fragmentsCollectedCount={collectedFragments.length}
+            unlockedJournalCount={unlockedJournalEntries.length}
+            onOpenJournal={() => setIsJournalOpen(true)}
+            onResetCampaign={handleResetCampaign}
+            isTransitioning={isTransitioning}
+            stage4Timer={stage === 4 && scene === "mahanavami_celebration" && !stage4KidnapperFound ? stage4Timer : null}
+            stage4Attempts={stage4Attempts}
+          />
+        )}
 
         {/* --- JOURNAL MODAL --- */}
         <JournalModal
@@ -2884,36 +3157,44 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
 
         {/* --- TIME COIN REWARD MODAL --- */}
         {showTimeCoinUnlockModal && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm pointer-events-auto">
-            <div className="w-[450px] bg-[#1a1714] border-2 border-[#d4a359] rounded-xl shadow-[0_0_50px_rgba(212,163,89,0.3)] overflow-hidden flex flex-col items-center p-8 animate-[popIn_0.5s_cubic-bezier(0.175,0.885,0.32,1.275)]">
-              <h2 className="text-3xl font-serif text-[#d4a359] mb-2 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] text-center">
-                VIJAYANAGARA EMPIRE TIME COIN
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 backdrop-blur-md pointer-events-auto">
+            <audio autoPlay loop src="https://www.myinstants.com/media/sounds/subway-surfers-theme-song.mp3" />
+            
+            {/* Background Glow Effect */}
+            <div className="absolute w-[500px] h-[500px] bg-[radial-gradient(circle,_rgba(212,163,89,0.3)_0%,_transparent_70%)] pointer-events-none animate-pulse"></div>
+
+            <div className="relative w-[460px] bg-gradient-to-b from-[#251f18] via-[#1a1714] to-[#110e0c] border-2 border-[#d4a359] rounded-2xl shadow-[0_0_60px_rgba(212,163,89,0.4)] overflow-hidden flex flex-col items-center p-8 animate-[popIn_0.5s_cubic-bezier(0.175,0.885,0.32,1.275)] z-10">
+              <div className="text-xs font-mono font-bold tracking-[0.3em] text-[#d4a359]/80 uppercase mb-1">
+                ANCIENT REWARD
+              </div>
+              <h2 className="text-3xl font-serif font-bold text-[#f5d78e] mb-2 drop-shadow-[0_2px_10px_rgba(212,163,89,0.5)] text-center tracking-wider">
+                VARAHA GOLD COIN
               </h2>
-              <div className="text-[#8cd98c] font-bold tracking-widest text-lg mb-6 flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+              <div className="text-[#8cd98c] font-bold tracking-widest text-sm mb-6 flex items-center gap-2 bg-[#8cd98c]/10 border border-[#8cd98c]/30 px-3.5 py-1 rounded-full shadow-inner">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"></path></svg>
                 UNLOCKED
               </div>
 
-              <div className="w-40 h-40 rounded-full border-4 border-[#d4a359] shadow-[0_0_30px_rgba(212,163,89,0.6)] bg-gradient-to-br from-[#d4a359]/20 to-transparent flex items-center justify-center mb-6 relative group overflow-hidden">
-                <div className="absolute inset-0 bg-[#d4a359]/10 rounded-full animate-pulse"></div>
-                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30 mix-blend-overlay"></div>
-                <GameIcon name="artifact" size={80} className="text-[#d4a359] drop-shadow-[0_5px_10px_rgba(0,0,0,0.8)] z-10" />
-                <div className="absolute inset-0 rounded-full border border-white/20 z-20"></div>
+              {/* Nano-generated Varaha Gold Coin */}
+              <div className="w-44 h-44 rounded-full border-4 border-[#d4a359] shadow-[0_0_40px_rgba(212,163,89,0.7)] bg-gradient-to-br from-[#d4a359]/30 to-black flex items-center justify-center mb-6 relative group overflow-hidden">
+                <div className="absolute inset-0 bg-[#d4a359]/20 rounded-full animate-pulse"></div>
+                <img src="/varaha_coin.jpg?v=2" alt="Varaha Gold Coin" className="w-full h-full object-cover z-10 rounded-full drop-shadow-[0_5px_15px_rgba(0,0,0,0.9)] transition-transform duration-500 hover:scale-105" />
+                <div className="absolute inset-0 rounded-full border-2 border-white/20 z-20 pointer-events-none"></div>
               </div>
 
-              <div className="w-full bg-[#2b2520] border border-[#5a4d3f] p-4 rounded-lg mb-6 flex items-center justify-between">
+              <div className="w-full bg-[#2b2520]/90 border border-[#5a4d3f] p-4 rounded-xl mb-6 flex items-center justify-between shadow-inner">
                 <div>
-                  <h3 className="text-[#f6ede0] font-serif font-bold text-lg">LEDGER I</h3>
-                  <p className="text-[#d6c7b2] text-sm">Second Fragment Recovered</p>
+                  <h3 className="text-[#f6ede0] font-serif font-bold text-base">LEDGER I</h3>
+                  <p className="text-[#d6c7b2] text-xs">Second Fragment Recovered</p>
                 </div>
-                <div className="text-[#8cd98c] font-bold flex items-center gap-1">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                <div className="text-[#8cd98c] font-bold text-xs flex items-center gap-1 bg-[#8cd98c]/15 px-2.5 py-1 rounded">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"></path></svg>
                   UNLOCKED
                 </div>
               </div>
               
               <button
-                className="w-full py-3 bg-gradient-to-r from-[#d4a359] to-[#b38645] hover:from-[#e5b971] hover:to-[#c69a57] text-[#141210] font-bold font-serif uppercase tracking-widest rounded-lg shadow-lg transition-transform hover:scale-105 active:scale-95"
+                className="w-full py-3.5 bg-gradient-to-r from-[#d4a359] via-[#e5b971] to-[#b38645] hover:from-[#e5b971] hover:to-[#c69a57] text-[#141210] font-bold font-serif uppercase tracking-widest rounded-xl shadow-[0_4px_20px_rgba(212,163,89,0.4)] transition-all transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
                 onClick={() => {
                   setShowTimeCoinUnlockModal(false);
                   setMusicalPillarsSequenceState("completed");
@@ -3288,13 +3569,13 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
               } else if (opt.id === 2) {
                 setShowMerchantDialogue(false);
                 stopNarration();
-                if (typeof soundFx.playDialogueClose === "function") soundFx.playDialogueClose();
+                if (typeof (soundFx as any).playDialogueClose === "function") (soundFx as any).playDialogueClose();
               }
             }}
             onClose={() => {
               setShowMerchantDialogue(false);
               stopNarration();
-              if (typeof soundFx.playDialogueClose === "function") soundFx.playDialogueClose();
+              if (typeof (soundFx as any).playDialogueClose === "function") (soundFx as any).playDialogueClose();
             }}
           />
         )}
@@ -3741,6 +4022,107 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
           </div>
         )}
 
+        {/* --- STAGE 4 KIDNAPPER CHECKPOINT FAIL MODAL --- */}
+        {showStage4FailModal && (
+          <div className="absolute inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-50 pointer-events-auto">
+            <div className="bg-[#1a0f0f] border-2 border-red-600 rounded-2xl p-6 max-w-md w-full shadow-[0_0_50px_rgba(220,38,38,0.6)] text-center animate-scaleUp">
+              <div className="w-16 h-16 bg-red-950 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-red-600 animate-pulse">
+                <span className="text-3xl">⚔️</span>
+              </div>
+              <h3 className="text-2xl font-serif font-black text-red-500 mb-2 uppercase tracking-wide">
+                CHECKPOINT FAILED
+              </h3>
+              <p className="text-sm font-serif text-red-200/90 leading-relaxed mb-6">
+                {stage4Timer === 0
+                  ? "Time expired! The Deccan Sultanate forces arrived before you could spot the kidnapper."
+                  : "You ran out of chances! The kidnapper escaped into the festival crowd."}
+              </p>
+              <button
+                onClick={handleRestartStage4Checkpoint}
+                className="w-full bg-gradient-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 text-white font-bold py-3.5 px-6 rounded-xl border border-red-400 shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2 text-sm uppercase tracking-wider"
+              >
+                <span>🔄 Restart Checkpoint</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* --- STAGE 4 KIDNAPPER SUCCESS / BATTLE OF TALIKOTA FULLSCREEN AFTERMATH SCREEN --- */}
+        {showStage4SuccessModal && (
+          <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center p-6 bg-black pointer-events-auto select-none animate-fadeIn">
+            {/* Fullscreen background artwork */}
+            <div className="absolute inset-0 overflow-hidden">
+              <img
+                src="/battle_of_talikota.jpg"
+                alt="Battle of Talikota"
+                className="w-full h-full object-cover object-center filter brightness-[0.50] contrast-[1.15] scale-105 transition-transform duration-1000"
+              />
+              {/* Dark atmospheric vignette & radial lighting overlay matching Rusticated reference UI */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/80" />
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(0,0,0,0)_0%,_rgba(0,0,0,0.75)_100%)]" />
+            </div>
+
+            {/* Central Narrative Card */}
+            <div className="relative z-10 max-w-2xl w-full text-center px-4 flex flex-col items-center">
+              {/* Category / Subtitle */}
+              <span className="text-xs uppercase tracking-[0.3em] font-mono text-[#f59e0b] font-bold mb-3 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                THE AFTERMATH • 1565 AD
+              </span>
+
+              {/* Title */}
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-serif font-black text-white tracking-tight mb-6 drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)]">
+                The Fall of Vijayanagara
+              </h2>
+
+              {/* Main Narrative Text */}
+              <p className="text-sm sm:text-base md:text-lg font-serif text-[#f0e6d6] leading-relaxed mb-8 drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)] max-w-xl">
+                You saved your friend from getting killed, leaving the jealous kidnapper behind to perish in the Battle of Talikota—a catastrophic war where such a massive empire was destroyed because generals turned traitor, enemy cannons tore through the army, and King Rama Raya was beheaded on the battlefield.
+              </p>
+
+              {/* Golden Action Button matching 3rd reference image */}
+              <button
+                onClick={() => {
+                  if (typeof (soundFx as any).playKeyboardClick === "function") (soundFx as any).playKeyboardClick();
+                  stopNarration();
+                  setShowStage4SuccessModal(false);
+                  dispatch(setStage4Complete(true));
+                  triggerTransition(
+                    "closing_reflection",
+                    { x: 35.0, y: 68.0 },
+                    "Sacred Pushkarani - Final Reflection",
+                    "Reflecting at the sacred Pushkarani on the golden era of Vijayanagara...",
+                    "temple_walk"
+                  );
+                }}
+                className="bg-[#f59e0b] hover:bg-[#fbbf24] text-black font-serif font-bold text-xs sm:text-sm tracking-wider uppercase py-3 px-8 rounded-md shadow-[0_4px_20px_rgba(245,158,11,0.5)] hover:shadow-[0_4px_30px_rgba(245,158,11,0.8)] transform hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
+              >
+                Continue to Reflection
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* --- STAGE 4 CROWD CITIZEN DIALOGUE MODAL --- */}
+        {activeCitizenDialogue && scene === "mahanavami_celebration" && (
+          <DialoguePanel
+            sceneId="mahanavami_celebration"
+            currentSceneId={scene}
+            characterName={activeCitizenDialogue.name}
+            characterTitle={activeCitizenDialogue.title}
+            dialogueText={activeCitizenDialogue.text}
+            isSpeaking={true}
+            showInput={false}
+            options={[{ id: 1, text: "Continue Search" }]}
+            onOptionSelect={() => {
+              if (typeof soundFx.playSelect === "function") soundFx.playSelect();
+              setActiveCitizenDialogue(null);
+            }}
+            onClose={() => {
+              setActiveCitizenDialogue(null);
+            }}
+          />
+        )}
+
         {/* --- UNCLE DIALOGUE MODAL --- */}
         {showUncleDialogue && scene === "anegundi_river_crossing" && (
           <DialoguePanel
@@ -3832,8 +4214,20 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
           />
         )}
 
-        {/* --- NARRATOR SUBTITLE OVERLAY --- */}
-        <NarratorSubtitle />
+        {/* --- NARRATOR SUBTITLE OVERLAY (Hidden only on the Battle of Talikota Aftermath Screen) --- */}
+        {!showStage4SuccessModal && <NarratorSubtitle />}
+
+        {/* Stone Chariot Entry specific YouTube Background Music (2 mins max) */}
+        {scene === "stone_chariot_entry" && (
+          <iframe
+            width="0"
+            height="0"
+            src="https://www.youtube.com/embed/Y-rFA7Sio-c?autoplay=1&end=120&controls=0"
+            title="Stone Chariot Music"
+            allow="autoplay"
+            style={{ display: "none" }}
+          />
+        )}
 
       </div>
     </div>

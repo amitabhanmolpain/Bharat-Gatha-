@@ -19,6 +19,10 @@ interface VijayanagaraHUDProps {
   onOpenJournal: () => void;
   onResetCampaign: () => void;
   isTransitioning?: boolean;
+  /** When non-null: active Stage 4 kidnapper countdown (seconds). Drives TIMER button. */
+  stage4Timer?: number | null;
+  /** Remaining guesses in the Stage 4 kidnapper challenge */
+  stage4Attempts?: number;
 }
 
 export default function VijayanagaraHUD({
@@ -30,7 +34,10 @@ export default function VijayanagaraHUD({
   onOpenJournal,
   onResetCampaign,
   isTransitioning = false,
+  stage4Timer = null,
+  stage4Attempts = 2,
 }: VijayanagaraHUDProps) {
+  const isStage4Countdown = stage4Timer !== null;
   const currentStageMeta = STAGE_METAS[stage];
   const currentSceneMeta = SCENE_CONFIGS[scene];
 
@@ -69,14 +76,33 @@ export default function VijayanagaraHUD({
       <div className="absolute top-6 right-6 flex flex-col items-end gap-3 pointer-events-auto">
         <div className="flex items-center gap-2.5">
           <button 
-            onClick={() => setIsTimerVisible(!isTimerVisible)}
-            title={isTimerVisible ? "Timer Active (Click to hide)" : "Click to view session timer"}
+            onClick={() => {
+              if (!isStage4Countdown) {
+                setIsTimerVisible(!isTimerVisible);
+              }
+            }}
+            title={
+              isStage4Countdown
+                ? `Stage 4: ${stage4Timer}s left — ${stage4Attempts} chance${stage4Attempts === 1 ? '' : 's'} remaining`
+                : isTimerVisible ? "Timer Active (Click to hide)" : "Click to view session timer"
+            }
             className={`h-10 px-3.5 border-2 border-black rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all flex items-center justify-center gap-1.5 font-black text-xs cursor-pointer ${
-              isTimerVisible ? "bg-[#fcd34d] text-black" : "bg-white/90 hover:bg-white text-gray-800"
+              isStage4Countdown
+                ? ((stage4Timer ?? 0) <= 15
+                    ? "bg-red-500 text-white animate-pulse border-red-700"
+                    : "bg-[#fcd34d] text-black")
+                : isTimerVisible
+                ? "bg-[#fcd34d] text-black"
+                : "bg-white/90 hover:bg-white text-gray-800"
             }`}
           >
             <span>⏱️</span>
-            {isTimerVisible ? (
+            {isStage4Countdown && typeof stage4Timer === "number" ? (
+              <span className="font-mono tracking-tight">
+                00:{String(stage4Timer % 60).padStart(2, '0')}
+                <span className="ml-2 text-[10px] opacity-80">🕵️{stage4Attempts}/2</span>
+              </span>
+            ) : isTimerVisible ? (
               <span>
                 {String(Math.floor(elapsedSeconds / 60)).padStart(2, '0')}:
                 {String(elapsedSeconds % 60).padStart(2, '0')}

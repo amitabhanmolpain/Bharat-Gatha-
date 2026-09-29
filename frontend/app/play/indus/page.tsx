@@ -24,9 +24,11 @@ import IndusHUD from "./components/IndusHUD";
 import IndusJournalModal from "./components/IndusJournalModal";
 import GreatBathDrainagePuzzle from "./components/GreatBathDrainagePuzzle";
 import SteatiteSealPuzzle from "./components/SteatiteSealPuzzle";
+import NarratorSubtitle from "../../../components/NarratorSubtitle";
+import DialoguePanel from "../../components/DialoguePanel";
 
-// TTS is strictly disabled in Indus Valley per user instruction until explicit permission is given
-const ALLOW_INDUS_TTS = false;
+// TTS enabled in Indus Valley
+const ALLOW_INDUS_TTS = true;
 const triggerIndusNarration = (
   text: string,
   options?: { speaker?: string; pace?: number; language_code?: string }
@@ -449,6 +451,28 @@ function IndusValleyGameComponent() {
   const [isMusicMuted, setIsMusicMuted] = useState(false);
   const [isSoundMuted, setIsSoundMuted] = useState(false);
   const [showRestartConfirmModal, setShowRestartConfirmModal] = useState(false);
+
+  // Jolly Bhai Companion State
+  const [showJollyDialogue, setShowJollyDialogue] = useState(false);
+  const [jollySpeechText, setJollySpeechText] = useState("");
+  const hasPlayedIndusIntroRef = useRef(false);
+
+  // Auto-play intro narration on arrival
+  useEffect(() => {
+    if (!isLoading && !hasPlayedIndusIntroRef.current) {
+      hasPlayedIndusIntroRef.current = true;
+      const introText =
+        "Time traveler, modern media often highlights the negatives to make India look backward. Your mission is to collect proof within this city to show the world exactly how advanced our ancestors were 5,000 years ago.";
+      const timer = setTimeout(() => {
+        void playNarration(introText, {
+          speaker: "ratan",
+          pace: 0.9,
+          language_code: "en-IN",
+        });
+      }, 900);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading]);
 
   // Core Progression State
   const [stage, setStage] = useState<IndusStage>(INITIAL_INDUS_STATE.stage);
@@ -4729,6 +4753,44 @@ function IndusValleyGameComponent() {
             }}
           />
         </div>
+
+        {/* --- FLOATING GENIE COMPANION (JOLLY BHAI) --- */}
+        {(() => {
+          const genieX = facingLeft ? playerPos.x + 4.5 : playerPos.x - 4.5;
+          const genieY = playerPos.y - 7.5;
+
+          return (
+            <div
+              className="absolute z-20 pointer-events-auto cursor-pointer group transition-all duration-700 ease-out"
+              onClick={() => {
+                const jollySpeech =
+                  "Hello time traveler! I am Jolly Bhai. Walk around this ancient planned city of Mohenjo-daro with me. Notice the baked brick drains, granaries, and precision stone weights!";
+                setJollySpeechText(jollySpeech);
+                setShowJollyDialogue(true);
+                stopAllCharacterVoice();
+                void playCharacterDialogue({ character: "jolly", text: jollySpeech });
+              }}
+              style={{
+                left: `${genieX}%`,
+                top: `${genieY}%`,
+                transform: "translate(-50%, -50%)",
+              }}
+              title="🧞 Jolly Bhai (Genie Guide - Click for Story)"
+            >
+              <div className="relative animate-bounce" style={{ animationDuration: "3.5s" }}>
+                <img
+                  src="/genie_rajasthani_transparent.png"
+                  alt="Jolly Bhai Genie"
+                  className="w-24 h-24 md:w-28 md:h-28 object-contain transition-all group-hover:scale-110 drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]"
+                  style={{
+                    imageRendering: "pixelated",
+                    transform: facingLeft ? "scaleX(1)" : "scaleX(-1)",
+                  }}
+                />
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* ========================================================= */}
@@ -5900,6 +5962,46 @@ function IndusValleyGameComponent() {
           </div>
         </div>
       )}
+
+      {/* --- JOLLY BHAI DIALOGUE MODAL --- */}
+      {showJollyDialogue && (
+        <DialoguePanel 
+          sceneId={scene}
+          currentSceneId={scene}
+          characterName="Jolly Bhai"
+          characterTitle="Ancient Time-Traveling Genie Companion"
+          characterId="jolly"
+          historicalContext={{
+            current_year: 2500,
+            era: "Indus Valley Civilisation (Bronze Age)",
+            location: "Mohenjo-daro / Harappa",
+            nearby_monuments: "The Great Bath, Granary, Grid City Avenues, Priest-King Sanctuary",
+            historical_events: "Planned urbanization, standardized weights, maritime trade"
+          }}
+          dialogueText={
+            jollySpeechText || "Hello, friend! I am Jolly Bhai. Notice how advanced this 5,000-year-old city is!"
+          }
+          isSpeaking={true}
+          showInput={true}
+          options={[
+            { id: 1, text: "How old is Mohenjo-daro?" },
+            { id: 2, text: "How did the Great Bath drainage work?" },
+            { id: 3, text: "Tell me about Indus seals and scripts." }
+          ]}
+          onOptionSelect={() => {
+            if (typeof soundFx.playSelect === "function") soundFx.playSelect();
+            stopAllCharacterVoice();
+            setShowJollyDialogue(false);
+          }}
+          onClose={() => {
+            stopAllCharacterVoice();
+            setShowJollyDialogue(false);
+          }}
+        />
+      )}
+
+      {/* --- NARRATOR SUBTITLE OVERLAY --- */}
+      <NarratorSubtitle />
     </div>
   );
 }
