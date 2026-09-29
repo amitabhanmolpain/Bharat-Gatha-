@@ -847,11 +847,11 @@ function IndusValleyGameComponent() {
     Math.hypot(playerPos.x - boatState.x, playerPos.y - boatState.y) <= 24.0;
   const isNearGranaryExit =
     scene === "lower_town_gate" &&
-    hasFirstRelicChertWeight &&
-    playerPos.x >= 67.0 &&
-    playerPos.x <= 76.0 &&
-    playerPos.y >= 32.0 &&
-    playerPos.y <= 38.0;
+    (hasCollectedSeal || hasUnicornSeal) &&
+    playerPos.x >= 64.0 &&
+    playerPos.x <= 78.0 &&
+    playerPos.y >= 28.0 &&
+    playerPos.y <= 44.0;
 
   // Stage 1.5: Residential Grid - Covered Drains inspection (at x: 62%, y: 58%)
   const isNearResidentialDrains =
@@ -2528,6 +2528,7 @@ function IndusValleyGameComponent() {
               soundFx.playItemUnlock();
               setShowSealUnlockModal(true);
               setHasCollectedSeal(true);
+              setHasUnicornSeal(true);
             }}
           >
             <img
@@ -2540,14 +2541,15 @@ function IndusValleyGameComponent() {
         )}
 
         {/* Stage 1: Mohenjo-daro City Gateway Trigger to Residential Grid */}
-        {scene === "lower_town_gate" && hasFirstRelicChertWeight && isNearGranaryExit && (
+        {scene === "lower_town_gate" && isNearGranaryExit && (
           <div
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer z-10"
             style={{ left: "71.5%", top: "31%" }}
+            onClick={() => triggerTransition("residential_grid", { x: 80.0, y: 38.0 })}
           >
-            <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
-              <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">E</div>
-                <span>Enter City Gate to Residential Grid</span>
+            <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-2 py-1 rounded text-[11px] font-bold shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-2 whitespace-nowrap hover:scale-105 transition-transform">
+              <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded px-1.5 py-0.5 text-[9px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">E</div>
+              <span>Enter City Gate to Residential Grid</span>
             </div>
           </div>
         )}
