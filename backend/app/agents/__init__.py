@@ -1,21 +1,28 @@
 """Bharat Gatha AI Agents Module.
 
 This package contains all in-game intelligent conversational agents,
-guardrail engines, and era-aware historical prompt pipelines:
+guardrail engines, era-aware historical prompt pipelines, and standalone agent modules:
 
 1. Genie Agent (Jolly Bhai):
    - Multi-campaign historical storytelling companion.
-   - Guardrails against off-topic queries and campaign spoiler protection
-     (e.g., Kuldhara abandonment deduction and Bhangarh Fort curse secrets).
-   - Dynamic behavior classification: 'glowing' for architectural/historical lore,
-     'shaking' for urgent puzzle clues, and 'normal' for regular dialogue.
 
 2. Guard Agent (Amar Singh Gate Sentry):
    - Commanding, authoritative Royal Mughal sentry protecting the inner sanctum.
-   - Sentry security guardrails, profanity filtering, and warning escalation.
 
-3. Base Agent Utilities:
-   - Shared model configuration, prompt sanitization, and interface utilities.
+3. Game Generator Package (GameGeneratorAgent & GameGeneratorChain):
+   - LangChain LCEL pipeline for dynamic game blueprint generation.
+
+4. Portuguese Traveler Agent (PortugueseTravelerAgent):
+   - LangChain agent observing 16th-century Vijayanagara Empire (Domingo Paes).
+
+5. Chowka Bara Game Agent (ChowkaBaraAgent):
+   - LangChain agent executing ancient board game strategy & cowrie roll logic.
+
+6. Channapatna Toys Master Agent (ChannapatnaToysMasterAgent):
+   - LangChain master artisan agent designing GI-tagged lacquerware woodcraft.
+
+7. Vijayanagara Guard Agent (VijayanagaraGuardAgent):
+   - LangChain imperial sentry agent protecting the King's Gate at Hampi.
 """
 
 from app.agents.base_agent import (
@@ -52,4 +59,3 @@ __all__ = [
     "ask_guard_agent",
     "verify_fact_grounding",
 ]
-
