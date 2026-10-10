@@ -465,8 +465,9 @@ function IndusValleyGameComponent() {
         "Time traveler, modern media often highlights the negatives to make India look backward. Your mission is to collect proof within this city to show the world exactly how advanced our ancestors were 5,000 years ago.";
       const timer = setTimeout(() => {
         void playNarration(introText, {
+          audioUrl: "/indus_intro_narration.wav",
           speaker: "ratan",
-          pace: 0.9,
+          pace: 0.88,
           language_code: "en-IN",
         });
       }, 900);
@@ -478,6 +479,27 @@ function IndusValleyGameComponent() {
   const [stage, setStage] = useState<IndusStage>(INITIAL_INDUS_STATE.stage);
   const urlScene = searchParams.get("scene") as IndusSceneType | null;
   const [scene, setScene] = useState<IndusSceneType>(urlScene || INITIAL_INDUS_STATE.scene);
+
+  // Auto-trigger Jolly Bhai's Stone Grids Drainage Fact upon entering Residential Grid
+  const hasPlayedResidentialGridFactRef = useRef(false);
+  useEffect(() => {
+    if (!isLoading && scene === "residential_grid" && !hasPlayedResidentialGridFactRef.current) {
+      hasPlayedResidentialGridFactRef.current = true;
+      const drainageFactText =
+        "Look closer at these stone grids mere akka Thousands of years ago, when the rest of the world lived in dirt, the Harappans built a fully covered, interconnected city drainage system. To them, absolute cleanliness wasn't just city planning—it was a sacred cultural tradition!";
+      const timer = setTimeout(() => {
+        setJollySpeechText(drainageFactText);
+        setShowJollyDialogue(true);
+        stopAllCharacterVoice();
+        void playCharacterDialogue({
+          character: "jolly",
+          text: drainageFactText,
+          audioUrl: "/jolly_drainage_fact.wav",
+        });
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, scene]);
 
   // Sync scene state to URL query parameter
   useEffect(() => {
@@ -847,11 +869,11 @@ function IndusValleyGameComponent() {
     Math.hypot(playerPos.x - boatState.x, playerPos.y - boatState.y) <= 24.0;
   const isNearGranaryExit =
     scene === "lower_town_gate" &&
-    hasFirstRelicChertWeight &&
-    playerPos.x >= 67.0 &&
-    playerPos.x <= 76.0 &&
-    playerPos.y >= 32.0 &&
-    playerPos.y <= 38.0;
+    (hasCollectedSeal || hasUnicornSeal) &&
+    playerPos.x >= 64.0 &&
+    playerPos.x <= 78.0 &&
+    playerPos.y >= 28.0 &&
+    playerPos.y <= 44.0;
 
   // Stage 1.5: Residential Grid - Covered Drains inspection (at x: 62%, y: 58%)
   const isNearResidentialDrains =
@@ -2528,6 +2550,7 @@ function IndusValleyGameComponent() {
               soundFx.playItemUnlock();
               setShowSealUnlockModal(true);
               setHasCollectedSeal(true);
+              setHasUnicornSeal(true);
             }}
           >
             <img
@@ -2540,14 +2563,15 @@ function IndusValleyGameComponent() {
         )}
 
         {/* Stage 1: Mohenjo-daro City Gateway Trigger to Residential Grid */}
-        {scene === "lower_town_gate" && hasFirstRelicChertWeight && isNearGranaryExit && (
+        {scene === "lower_town_gate" && isNearGranaryExit && (
           <div
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10"
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto cursor-pointer z-10"
             style={{ left: "71.5%", top: "31%" }}
+            onClick={() => triggerTransition("residential_grid", { x: 80.0, y: 38.0 })}
           >
-            <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-1.5 py-0.5 rounded text-[10px] font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-1.5 whitespace-nowrap transition-transform hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
-              <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded-sm px-1 py-0 text-[8px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">E</div>
-                <span>Enter City Gate to Residential Grid</span>
+            <div className="bg-[#fffdf5] border-[1.5px] border-black text-black px-2 py-1 rounded text-[11px] font-bold shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] animate-bounce flex items-center gap-2 whitespace-nowrap hover:scale-105 transition-transform">
+              <div className="bg-[#ffb000] border-[1.5px] border-black text-black rounded px-1.5 py-0.5 text-[9px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">E</div>
+              <span>Enter City Gate to Residential Grid</span>
             </div>
           </div>
         )}
@@ -4758,33 +4782,61 @@ function IndusValleyGameComponent() {
         {(() => {
           const genieX = facingLeft ? playerPos.x + 4.5 : playerPos.x - 4.5;
           const genieY = playerPos.y - 7.5;
+          const isResidentialFactScene = scene === "residential_grid";
 
           return (
             <div
               className="absolute z-20 pointer-events-auto cursor-pointer group transition-all duration-700 ease-out"
               onClick={() => {
-                const jollySpeech =
-                  "Hello time traveler! I am Jolly Bhai. Walk around this ancient planned city of Mohenjo-daro with me. Notice the baked brick drains, granaries, and precision stone weights!";
+                const jollySpeech = isResidentialFactScene
+                  ? "Look closer at these stone grids mere akka Thousands of years ago, when the rest of the world lived in dirt, the Harappans built a fully covered, interconnected city drainage system. To them, absolute cleanliness wasn't just city planning—it was a sacred cultural tradition!"
+                  : "Hello time traveler! I am Jolly Bhai. Walk around this ancient planned city of Mohenjo-daro with me. Notice the baked brick drains, granaries, and precision stone weights!";
                 setJollySpeechText(jollySpeech);
                 setShowJollyDialogue(true);
                 stopAllCharacterVoice();
-                void playCharacterDialogue({ character: "jolly", text: jollySpeech });
+                void playCharacterDialogue({
+                  character: "jolly",
+                  text: jollySpeech,
+                  audioUrl: isResidentialFactScene ? "/jolly_drainage_fact.wav" : undefined,
+                });
               }}
               style={{
                 left: `${genieX}%`,
                 top: `${genieY}%`,
                 transform: "translate(-50%, -50%)",
               }}
-              title="🧞 Jolly Bhai (Genie Guide - Click for Story)"
+              title="🧞 Jolly Bhai (Genie Guide - Click for Historical Fact)"
             >
+              {/* Floating Golden Indicator Badge when in Residential Grid */}
+              {isResidentialFactScene && (
+                <div className="absolute -top-7 left-1/2 transform -translate-x-1/2 whitespace-nowrap px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-black text-[9px] font-black tracking-wider uppercase shadow-[0_0_12px_rgba(255,215,0,0.9)] border border-yellow-200 animate-pulse pointer-events-none flex items-center gap-1">
+                  <span>✨</span>
+                  <span>Ancient Fact</span>
+                  <span>✨</span>
+                </div>
+              )}
+
               <div className="relative animate-bounce" style={{ animationDuration: "3.5s" }}>
+                {/* Luminous Golden Radiant Aura - strictly in drainage area where fact is given */}
+                {isResidentialFactScene && (
+                  <>
+                    <div className="absolute inset-0 -m-3 rounded-full bg-radial from-amber-400/60 via-yellow-300/40 to-transparent blur-md animate-pulse pointer-events-none" />
+                    <div className="absolute inset-0 -m-1 rounded-full bg-amber-400/40 blur-sm pointer-events-none" />
+                  </>
+                )}
+
                 <img
                   src="/genie_rajasthani_transparent.png"
                   alt="Jolly Bhai Genie"
-                  className="w-24 h-24 md:w-28 md:h-28 object-contain transition-all group-hover:scale-110 drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]"
+                  className={`relative z-10 w-24 h-24 md:w-28 md:h-28 object-contain transition-all duration-300 group-hover:scale-110 ${
+                    !isResidentialFactScene ? "drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]" : ""
+                  }`}
                   style={{
                     imageRendering: "pixelated",
                     transform: facingLeft ? "scaleX(1)" : "scaleX(-1)",
+                    filter: isResidentialFactScene
+                      ? "drop-shadow(0 0 10px #ffd700) drop-shadow(0 0 20px #ffb700) drop-shadow(0 0 35px rgba(255,215,0,0.85)) drop-shadow(0 4px 10px rgba(0,0,0,0.6))"
+                      : undefined,
                   }}
                 />
               </div>

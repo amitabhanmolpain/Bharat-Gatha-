@@ -187,7 +187,30 @@ class NarratorManager {
       const lowerText = trimmed.toLowerCase();
 
       if (!audioSrc) {
-        if (lowerText.includes("you have entered the year 1653") || lowerText.includes("heart of the mughal empire")) {
+        if (
+          lowerText.includes("look closer at these stone grids") ||
+          lowerText.includes("interconnected city drainage system") ||
+          (lowerText.includes("harappans built") && lowerText.includes("drainage")) ||
+          (lowerText.includes("sacred cultural tradition") && lowerText.includes("cleanliness"))
+        ) {
+          audioSrc = "/jolly_drainage_fact.wav";
+        } else if (
+          lowerText.includes("time traveler, modern media often highlights") ||
+          lowerText.includes("show the world exactly how advanced our ancestors were 5,000 years ago")
+        ) {
+          audioSrc = "/indus_intro_narration.wav";
+        } else if (
+          lowerText.includes("the year is 1336 ad") ||
+          (lowerText.includes("tungabhadra river") && lowerText.includes("anegundi")) ||
+          (lowerText.includes("harihara i") && lowerText.includes("bukka raya i"))
+        ) {
+          audioSrc = "/vijayanagara_intro_narration.wav";
+        } else if (
+          lowerText.includes("battle of talikota") ||
+          lowerText.includes("leaving the jealous kidnapper behind to perish")
+        ) {
+          audioSrc = "/battle_of_talikota_narration.wav";
+        } else if (lowerText.includes("you have entered the year 1653") || lowerText.includes("heart of the mughal empire")) {
           audioSrc = "/mughal_intro_narration.wav";
         } else if (lowerText.includes("starlight reflections in the sheesh mahal") || lowerText.includes("royal passage to khas mahal")) {
           audioSrc = "/sheesh_mahal_solved_narration.wav";
@@ -272,6 +295,17 @@ class NarratorManager {
           const utterance = new SpeechSynthesisUtterance(trimmed);
           utterance.rate = 0.88;
           utterance.pitch = 0.95;
+          utterance.lang = options?.language_code || "en-IN";
+          const voices = window.speechSynthesis.getVoices();
+          const indianVoice = voices.find(
+            (v) =>
+              v.lang.toLowerCase().includes("en-in") ||
+              v.name.toLowerCase().includes("india") ||
+              v.lang.toLowerCase().includes("hi-in")
+          );
+          if (indianVoice) {
+            utterance.voice = indianVoice;
+          }
           utterance.onstart = () => {
             if (this.currentSessionId === sessionId) {
               this.updateState({ isPlaying: true, isLoading: false });
@@ -376,6 +410,17 @@ class NarratorManager {
               const utterance = new SpeechSynthesisUtterance(trimmed);
               utterance.rate = 0.88;
               utterance.pitch = 0.95;
+              utterance.lang = options?.language_code || "en-IN";
+              const voices = window.speechSynthesis.getVoices();
+              const indianVoice = voices.find(
+                (v) =>
+                  v.lang.toLowerCase().includes("en-in") ||
+                  v.name.toLowerCase().includes("india") ||
+                  v.lang.toLowerCase().includes("hi-in")
+              );
+              if (indianVoice) {
+                utterance.voice = indianVoice;
+              }
               utterance.onstart = () => {
                 this.updateState({ isPlaying: true, isLoading: false });
                 options?.onStart?.();

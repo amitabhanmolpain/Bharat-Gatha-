@@ -298,6 +298,14 @@ class CharacterVoiceManager {
       if (lower.includes("golden domes") || lower.includes("bittersweet truth") || lower.includes("pure, solid gold") || lower.includes("shadow of our lost mughal splendour")) {
         return "/jolly_khas_mahal_gold.wav";
       }
+      if (
+        lower.includes("look closer at these stone grids") ||
+        lower.includes("interconnected city drainage system") ||
+        (lower.includes("harappans built") && lower.includes("drainage")) ||
+        (lower.includes("sacred cultural tradition") && lower.includes("cleanliness"))
+      ) {
+        return "/jolly_drainage_fact.wav";
+      }
       if (lower.includes("jolly bhai") && (lower.includes("born many centuries") || lower.includes("witnessed great wars") || lower.includes("madman"))) {
         return "/jolly_intro.wav";
       }

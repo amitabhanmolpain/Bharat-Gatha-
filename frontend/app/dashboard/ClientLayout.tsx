@@ -56,7 +56,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         </div>
 
         <nav className="flex-1 p-6 space-y-2 overflow-y-auto">
-          {/* Games Link */}
+          {/* Kaal Chakra Link */}
           <Link href="/dashboard" className={`flex items-center gap-4 px-4 py-3.5 rounded-lg font-medium text-[14px] tracking-wide transition-all ${
             pathname === '/dashboard'
               ? isDark 
@@ -67,7 +67,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 : 'text-[#7a6f5e] hover:text-[#8a6835] hover:bg-[#c9a776]/10'
           }`}>
             <Gamepad2 className={`w-5 h-5 ${pathname === '/dashboard' ? (isDark ? 'text-[#b4986b]' : 'text-[#b38848]') : 'opacity-70'}`} />
-            Games
+            Kaal Chakra
           </Link>
 
           {/* AI Expedition Link */}

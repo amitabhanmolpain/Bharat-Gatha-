@@ -19,6 +19,7 @@ import { playNarration, stopNarration } from "../../../services/narratorService"
 import { playCharacterDialogue, stopCharacterDialogue, stopAllCharacterVoice } from "../../../services/characterVoiceService";
 import { soundFx } from "../../../services/soundService";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   VijayanagaraStage,
   VijayanagaraSceneType,
@@ -54,6 +55,7 @@ import TempleWallInspectionController from "./components/TempleWallInspectionCon
 const PLAYER_VISUAL_SCALE = 2.2;
 
 export default function VijayanagaraGameScreen() {
+  const router = useRouter();
   const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -306,12 +308,30 @@ export default function VijayanagaraGameScreen() {
     if (typeof window !== "undefined") {
       const timer = setTimeout(() => {
         try {
+          // Check URL query parameters
+          const urlParams = new URLSearchParams(window.location.search);
+          const urlScene = urlParams.get("scene");
+
           const saved = localStorage.getItem(VIJAYANAGARA_STORAGE_KEY);
           if (saved) {
             const parsed: VijayanagaraSaveState = JSON.parse(saved);
             if (parsed.stage) setStage(parsed.stage);
-            if (parsed.scene) setScene(parsed.scene);
-            if (parsed.playerPos) setPlayerPos(parsed.playerPos);
+            if (parsed.scene) {
+              if ((parsed.scene as string) === "closing_reflection" || urlScene === "closing_reflection") {
+                setStage(4);
+                setScene("mahanavami_celebration");
+                setPlayerPos({ x: 50.0, y: 80.0 });
+                parsed.scene = "mahanavami_celebration";
+                parsed.stage = 4;
+                parsed.playerPos = { x: 50.0, y: 80.0 };
+                localStorage.setItem(VIJAYANAGARA_STORAGE_KEY, JSON.stringify(parsed));
+              } else {
+                setScene(parsed.scene);
+                if (parsed.playerPos) {
+                  setPlayerPos(parsed.playerPos);
+                }
+              }
+            }
             if (parsed.hasMetVidyaranya !== undefined) dispatch(setHasMetVidyaranya(parsed.hasMetVidyaranya));
             if (parsed.chowkaBaraAttempts !== undefined) setChowkaBaraAttempts(parsed.chowkaBaraAttempts);
             if (parsed.isChowkaBaraComplete !== undefined) dispatch(setIsChowkaBaraComplete(parsed.isChowkaBaraComplete));
@@ -368,6 +388,35 @@ export default function VijayanagaraGameScreen() {
     };
   }, []);
 
+  // --- AUTOMATIC REDIRECT: ALWAYS REDIRECT CLOSING_REFLECTION TO MAHANAVAMI CELEBRATION ---
+  useEffect(() => {
+    if (scene === "closing_reflection") {
+      setStage(4);
+      setScene("mahanavami_celebration");
+      setPlayerPos({ x: 50.0, y: 80.0 });
+      if (typeof window !== "undefined") {
+        try {
+          const url = new URL(window.location.href);
+          if (url.searchParams.get("scene") === "closing_reflection") {
+            url.searchParams.set("scene", "mahanavami_celebration");
+            url.searchParams.set("stage", "4");
+            window.history.replaceState({}, "", url.toString());
+          }
+          const saved = localStorage.getItem(VIJAYANAGARA_STORAGE_KEY);
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            parsed.scene = "mahanavami_celebration";
+            parsed.stage = 4;
+            parsed.playerPos = { x: 50.0, y: 80.0 };
+            localStorage.setItem(VIJAYANAGARA_STORAGE_KEY, JSON.stringify(parsed));
+          }
+        } catch (e) {
+          console.error("Failed to redirect from closing_reflection", e);
+        }
+      }
+    }
+  }, [scene]);
+
   // Intro narration for Vijayanagara Empire (Stage 1: 1336 AD)
   const hasPlayedIntroNarrationRef = useRef(false);
   useEffect(() => {
@@ -377,7 +426,12 @@ export default function VijayanagaraGameScreen() {
         "The year is 1336 AD. On the banks of the Tungabhadra river stands Anegundi — the seat of a new empire, Vijayanagara, ruled by two brothers, Harihara I and Bukka Raya I.\n\nYou are a historian from the year 2026. A time machine has brought you here — but no one in this era can ever know that truth. Reveal it, and the consequences will be far worse than disbelief.";
       const timer = setTimeout(() => {
         setShowOpeningAtmosphere(false);
-        void playNarration(introText, { speaker: "ratan", pace: 0.88, language_code: "en-IN" });
+        void playNarration(introText, {
+          audioUrl: "/vijayanagara_intro_narration.wav",
+          speaker: "ratan",
+          pace: 0.88,
+          language_code: "en-IN",
+        });
       }, 2500);
       return () => clearTimeout(timer);
     }
@@ -484,11 +538,10 @@ export default function VijayanagaraGameScreen() {
         if (remainingAttempts <= 0) {
           setStage4Timer(null);
           setActiveCitizenDialogue(null);
+          setShowJollyDialogue(false);
+          stopNarration(true);
+          stopAllCharacterVoice();
           setShowStage4FailModal(true);
-          const failText = "Oh no, akka! That was your last chance! The kidnapper escaped into the festival crowd!";
-          setJollySpeechText(failText);
-          setShowJollyDialogue(true);
-          void playCharacterDialogue({ character: "jolly", text: failText });
         } else {
           setActiveCitizenDialogue({
             name: citizenName,
@@ -557,6 +610,10 @@ export default function VijayanagaraGameScreen() {
           if (prev === null) return null;
           if (prev <= 1) {
             clearInterval(interval);
+            stopNarration(true);
+            stopAllCharacterVoice();
+            setShowJollyDialogue(false);
+            setActiveCitizenDialogue(null);
             setShowStage4FailModal(true);
             return 0;
           }
@@ -1428,13 +1485,7 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
         } else if (isNearMahanavamiTierTrigger && !isFestivalSceneRestored) {
           setShowFestivalPuzzleModal(true);
         } else if (isNearMahanavamiSouthExit) {
-          triggerTransition(
-            "closing_reflection",
-            { x: 35.0, y: 70.0 },
-            "Walking to Pushkarani Stepped Tank",
-            "Descending the stone steps to the quiet waters of the royal stepped tank under sunset.",
-            "temple_walk"
-          );
+          // South exit to closing_reflection disabled per user request
         } else if (isNearMahanavamiWestExit) {
           triggerTransition(
             "stone_chariot_entry",
@@ -3086,8 +3137,8 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
           </div>
         )}
 
-        {/* --- HUD OVERLAY (Hidden during Battle of Talikota Aftermath Fullscreen) --- */}
-        {!showStage4SuccessModal && (
+        {/* --- HUD OVERLAY (Hidden during Battle of Talikota Aftermath or Captured Fullscreen) --- */}
+        {!showStage4SuccessModal && !showStage4FailModal && (
           <VijayanagaraHUD
             stage={stage}
             scene={scene}
@@ -3246,10 +3297,10 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
               dispatch(addJournalEntry("battle_of_talikota"));
             }
             triggerTransition(
-              "closing_reflection",
-              { x: 35.0, y: 70.0 },
-              "Walking to Pushkarani Stepped Tank",
-              "Descending the stone steps to the quiet waters of the royal stepped tank under sunset.",
+              "mahanavami_celebration",
+              { x: 50.0, y: 80.0 },
+              "Returning to Mahanavami Celebration",
+              "Returning to the ceremonial festival grounds...",
               "temple_walk"
             );
           }}
@@ -4022,26 +4073,47 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
           </div>
         )}
 
-        {/* --- STAGE 4 KIDNAPPER CHECKPOINT FAIL MODAL --- */}
+        {/* --- STAGE 4 KIDNAPPER CHECKPOINT FAIL / BATTLE OF TALIKOTA CAPTURED FULLSCREEN SCREEN --- */}
         {showStage4FailModal && (
-          <div className="absolute inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-50 pointer-events-auto">
-            <div className="bg-[#1a0f0f] border-2 border-red-600 rounded-2xl p-6 max-w-md w-full shadow-[0_0_50px_rgba(220,38,38,0.6)] text-center animate-scaleUp">
-              <div className="w-16 h-16 bg-red-950 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-red-600 animate-pulse">
-                <span className="text-3xl">⚔️</span>
+          <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center p-6 bg-black pointer-events-auto select-none animate-fadeIn">
+            {/* Fullscreen background artwork generated from Nano Banana featuring the main hero */}
+            <div className="absolute inset-0 overflow-hidden">
+              <img
+                src="/battle_of_talikota_captured.jpg"
+                alt="Captured in the Battle of Talikota"
+                className="w-full h-full object-cover object-center filter brightness-[0.92] contrast-[1.05] scale-100 transition-transform duration-1000"
+              />
+              {/* Subtle lighting overlay that keeps the main hero and battle vividly clear */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/30" />
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(0,0,0,0)_25%,_rgba(0,0,0,0.6)_100%)]" />
+            </div>
+
+            {/* Central Narrative Glass Card for crisp readability while showcasing the background */}
+            <div className="relative z-10 max-w-xl w-full text-center px-6 py-7 sm:py-8 rounded-2xl bg-black/65 backdrop-blur-md border border-red-500/50 shadow-[0_0_60px_rgba(0,0,0,0.95)] flex flex-col items-center">
+              {/* Category / Subtitle */}
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-red-950/80 border border-red-600/70 mb-3.5 backdrop-blur-sm shadow-[0_0_15px_rgba(220,38,38,0.5)]">
+                <span className="text-sm">⚔️</span>
+                <span className="text-xs uppercase tracking-[0.25em] font-mono text-red-400 font-bold drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                  BATTLE OF TALIKOTA • 1565 AD
+                </span>
               </div>
-              <h3 className="text-2xl font-serif font-black text-red-500 mb-2 uppercase tracking-wide">
-                CHECKPOINT FAILED
-              </h3>
-              <p className="text-sm font-serif text-red-200/90 leading-relaxed mb-6">
-                {stage4Timer === 0
-                  ? "Time expired! The Deccan Sultanate forces arrived before you could spot the kidnapper."
-                  : "You ran out of chances! The kidnapper escaped into the festival crowd."}
+
+              {/* Title */}
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif font-black text-white tracking-tight mb-4 drop-shadow-[0_4px_12px_rgba(0,0,0,0.95)]">
+                Captured by the Deccan Sultanates
+              </h2>
+
+              {/* Main Narrative Text - Requested by User */}
+              <p className="text-base sm:text-lg md:text-xl font-serif text-[#f6ede0] leading-relaxed mb-7 drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)] font-medium">
+                You could not save your friend. He got killed in the battle of Talikotta, and you got captured by the Deccan Sultanates.
               </p>
+
+              {/* Action Button to restart from previous checkpoint */}
               <button
                 onClick={handleRestartStage4Checkpoint}
-                className="w-full bg-gradient-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 text-white font-bold py-3.5 px-6 rounded-xl border border-red-400 shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2 text-sm uppercase tracking-wider"
+                className="bg-gradient-to-r from-red-700 via-red-600 to-amber-600 hover:from-red-600 hover:via-red-500 hover:to-amber-500 text-white font-serif font-bold text-xs sm:text-sm tracking-wider uppercase py-3.5 px-8 rounded-lg shadow-[0_4px_25px_rgba(220,38,38,0.7)] hover:shadow-[0_4px_35px_rgba(245,158,11,0.9)] transform hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 border border-red-400/50"
               >
-                <span>🔄 Restart Checkpoint</span>
+                <span>🔄 Restart from Previous Checkpoint</span>
               </button>
             </div>
           </div>
@@ -4079,24 +4151,33 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
                 You saved your friend from getting killed, leaving the jealous kidnapper behind to perish in the Battle of Talikota—a catastrophic war where such a massive empire was destroyed because generals turned traitor, enemy cannons tore through the army, and King Rama Raya was beheaded on the battlefield.
               </p>
 
-              {/* Golden Action Button matching 3rd reference image */}
+              {/* Action Button: Directly Return to Dashboard & Conclude Campaign */}
               <button
                 onClick={() => {
                   if (typeof (soundFx as any).playKeyboardClick === "function") (soundFx as any).playKeyboardClick();
                   stopNarration();
+                  stopAllCharacterVoice();
                   setShowStage4SuccessModal(false);
                   dispatch(setStage4Complete(true));
-                  triggerTransition(
-                    "closing_reflection",
-                    { x: 35.0, y: 68.0 },
-                    "Sacred Pushkarani - Final Reflection",
-                    "Reflecting at the sacred Pushkarani on the golden era of Vijayanagara...",
-                    "temple_walk"
-                  );
+                  dispatch(setIsCampaignComplete(true));
+
+                  // Persist completion state to localStorage
+                  try {
+                    const saved = localStorage.getItem(VIJAYANAGARA_STORAGE_KEY);
+                    const parsed = saved ? JSON.parse(saved) : {};
+                    parsed.stage = 4;
+                    parsed.isStage4Complete = true;
+                    parsed.isCampaignComplete = true;
+                    localStorage.setItem(VIJAYANAGARA_STORAGE_KEY, JSON.stringify(parsed));
+                  } catch (e) {
+                    console.error("Failed to update save state", e);
+                  }
+
+                  router.push("/dashboard");
                 }}
-                className="bg-[#f59e0b] hover:bg-[#fbbf24] text-black font-serif font-bold text-xs sm:text-sm tracking-wider uppercase py-3 px-8 rounded-md shadow-[0_4px_20px_rgba(245,158,11,0.5)] hover:shadow-[0_4px_30px_rgba(245,158,11,0.8)] transform hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
+                className="bg-[#f59e0b] hover:bg-[#fbbf24] text-black font-serif font-bold text-xs sm:text-sm tracking-wider uppercase py-3.5 px-8 rounded-md shadow-[0_4px_20px_rgba(245,158,11,0.5)] hover:shadow-[0_4px_30px_rgba(245,158,11,0.8)] transform hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer flex items-center justify-center gap-2"
               >
-                Continue to Reflection
+                <span>🏛️ Return to Dashboard</span>
               </button>
             </div>
           </div>
@@ -4214,8 +4295,8 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
           />
         )}
 
-        {/* --- NARRATOR SUBTITLE OVERLAY (Hidden only on the Battle of Talikota Aftermath Screen) --- */}
-        {!showStage4SuccessModal && <NarratorSubtitle />}
+        {/* --- NARRATOR SUBTITLE OVERLAY (Hidden on Battle of Talikota Aftermath or Captured Screen) --- */}
+        {!showStage4SuccessModal && !showStage4FailModal && <NarratorSubtitle />}
 
         {/* Stone Chariot Entry specific YouTube Background Music (2 mins max) */}
         {scene === "stone_chariot_entry" && (
