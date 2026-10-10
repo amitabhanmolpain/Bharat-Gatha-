@@ -188,6 +188,13 @@ class NarratorManager {
 
       if (!audioSrc) {
         if (
+          lowerText.includes("look closer at these stone grids") ||
+          lowerText.includes("interconnected city drainage system") ||
+          (lowerText.includes("harappans built") && lowerText.includes("drainage")) ||
+          (lowerText.includes("sacred cultural tradition") && lowerText.includes("cleanliness"))
+        ) {
+          audioSrc = "/jolly_drainage_fact.wav";
+        } else if (
           lowerText.includes("time traveler, modern media often highlights") ||
           lowerText.includes("show the world exactly how advanced our ancestors were 5,000 years ago")
         ) {

@@ -480,6 +480,27 @@ function IndusValleyGameComponent() {
   const urlScene = searchParams.get("scene") as IndusSceneType | null;
   const [scene, setScene] = useState<IndusSceneType>(urlScene || INITIAL_INDUS_STATE.scene);
 
+  // Auto-trigger Jolly Bhai's Stone Grids Drainage Fact upon entering Residential Grid
+  const hasPlayedResidentialGridFactRef = useRef(false);
+  useEffect(() => {
+    if (!isLoading && scene === "residential_grid" && !hasPlayedResidentialGridFactRef.current) {
+      hasPlayedResidentialGridFactRef.current = true;
+      const drainageFactText =
+        "Look closer at these stone grids mere akka Thousands of years ago, when the rest of the world lived in dirt, the Harappans built a fully covered, interconnected city drainage system. To them, absolute cleanliness wasn't just city planning—it was a sacred cultural tradition!";
+      const timer = setTimeout(() => {
+        setJollySpeechText(drainageFactText);
+        setShowJollyDialogue(true);
+        stopAllCharacterVoice();
+        void playCharacterDialogue({
+          character: "jolly",
+          text: drainageFactText,
+          audioUrl: "/jolly_drainage_fact.wav",
+        });
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, scene]);
+
   // Sync scene state to URL query parameter
   useEffect(() => {
     const currentParams = new URLSearchParams(Array.from(searchParams.entries()));
@@ -4761,33 +4782,61 @@ function IndusValleyGameComponent() {
         {(() => {
           const genieX = facingLeft ? playerPos.x + 4.5 : playerPos.x - 4.5;
           const genieY = playerPos.y - 7.5;
+          const isResidentialFactScene = scene === "residential_grid";
 
           return (
             <div
               className="absolute z-20 pointer-events-auto cursor-pointer group transition-all duration-700 ease-out"
               onClick={() => {
-                const jollySpeech =
-                  "Hello time traveler! I am Jolly Bhai. Walk around this ancient planned city of Mohenjo-daro with me. Notice the baked brick drains, granaries, and precision stone weights!";
+                const jollySpeech = isResidentialFactScene
+                  ? "Look closer at these stone grids mere akka Thousands of years ago, when the rest of the world lived in dirt, the Harappans built a fully covered, interconnected city drainage system. To them, absolute cleanliness wasn't just city planning—it was a sacred cultural tradition!"
+                  : "Hello time traveler! I am Jolly Bhai. Walk around this ancient planned city of Mohenjo-daro with me. Notice the baked brick drains, granaries, and precision stone weights!";
                 setJollySpeechText(jollySpeech);
                 setShowJollyDialogue(true);
                 stopAllCharacterVoice();
-                void playCharacterDialogue({ character: "jolly", text: jollySpeech });
+                void playCharacterDialogue({
+                  character: "jolly",
+                  text: jollySpeech,
+                  audioUrl: isResidentialFactScene ? "/jolly_drainage_fact.wav" : undefined,
+                });
               }}
               style={{
                 left: `${genieX}%`,
                 top: `${genieY}%`,
                 transform: "translate(-50%, -50%)",
               }}
-              title="🧞 Jolly Bhai (Genie Guide - Click for Story)"
+              title="🧞 Jolly Bhai (Genie Guide - Click for Historical Fact)"
             >
+              {/* Floating Golden Indicator Badge when in Residential Grid */}
+              {isResidentialFactScene && (
+                <div className="absolute -top-7 left-1/2 transform -translate-x-1/2 whitespace-nowrap px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-black text-[9px] font-black tracking-wider uppercase shadow-[0_0_12px_rgba(255,215,0,0.9)] border border-yellow-200 animate-pulse pointer-events-none flex items-center gap-1">
+                  <span>✨</span>
+                  <span>Ancient Fact</span>
+                  <span>✨</span>
+                </div>
+              )}
+
               <div className="relative animate-bounce" style={{ animationDuration: "3.5s" }}>
+                {/* Luminous Golden Radiant Aura - strictly in drainage area where fact is given */}
+                {isResidentialFactScene && (
+                  <>
+                    <div className="absolute inset-0 -m-3 rounded-full bg-radial from-amber-400/60 via-yellow-300/40 to-transparent blur-md animate-pulse pointer-events-none" />
+                    <div className="absolute inset-0 -m-1 rounded-full bg-amber-400/40 blur-sm pointer-events-none" />
+                  </>
+                )}
+
                 <img
                   src="/genie_rajasthani_transparent.png"
                   alt="Jolly Bhai Genie"
-                  className="w-24 h-24 md:w-28 md:h-28 object-contain transition-all group-hover:scale-110 drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]"
+                  className={`relative z-10 w-24 h-24 md:w-28 md:h-28 object-contain transition-all duration-300 group-hover:scale-110 ${
+                    !isResidentialFactScene ? "drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]" : ""
+                  }`}
                   style={{
                     imageRendering: "pixelated",
                     transform: facingLeft ? "scaleX(1)" : "scaleX(-1)",
+                    filter: isResidentialFactScene
+                      ? "drop-shadow(0 0 10px #ffd700) drop-shadow(0 0 20px #ffb700) drop-shadow(0 0 35px rgba(255,215,0,0.85)) drop-shadow(0 4px 10px rgba(0,0,0,0.6))"
+                      : undefined,
                   }}
                 />
               </div>
