@@ -4,7 +4,7 @@ Channapatna Toys Master Agent implementation.
 """
 from __future__ import annotations
 
-from typing import Dict, Any
+from typing import Any
 
 try:
     from .chain import ChannapatnaToysChain
@@ -24,7 +24,7 @@ class ChannapatnaToysMasterAgent:
         self.artisan_name = artisan_name
         self.chain = ChannapatnaToysChain()
 
-    def craft_toy_blueprint(self, prompt: str) -> Dict[str, Any]:
+    def craft_toy_blueprint(self, prompt: str) -> dict[str, Any]:
         """Generate a complete craft blueprint for a custom wooden toy."""
         return self.chain.design_toy(prompt)
 

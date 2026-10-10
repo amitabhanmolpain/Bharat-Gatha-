@@ -124,7 +124,7 @@ class WorldGenerator:
 
     def __init__(self, intent: dict, seed: int | None = None) -> None:
         self.intent = intent
-        self._rng   = random.Random(seed)
+        self._rng   = random.Random(seed)  # nosec B311 # nosec S311
         self.chain  = GameGeneratorChain()
 
     def _choice(self, lst: list[Any]) -> Any:

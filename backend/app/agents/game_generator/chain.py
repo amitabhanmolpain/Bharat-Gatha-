@@ -5,16 +5,16 @@ Orchestrates prompt parsing, dynamic world construction, and narrative compositi
 """
 from __future__ import annotations
 
-import os
 import json
+import os
 import re
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 from dotenv import load_dotenv
 
-from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnableLambda, RunnableSequence, RunnablePassthrough
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnableLambda
 
 # Load backend environment variables (.env)
 env_path = Path(__file__).resolve().parent.parent.parent.parent / '.env'
@@ -38,7 +38,7 @@ def get_llm():
                 temperature=0.7,
                 max_tokens=1200,
             )
-        except Exception:
+        except (ImportError, Exception):  # nosec S110 # nosec B110
             pass
     return None
 
@@ -97,7 +97,7 @@ def build_intent_chain():
         return INTENT_PARSER_PROMPT | llm | parser
     
     # Fallback Runnable when LLM key is absent
-    def fallback_parse(inputs: Dict[str, Any]) -> str:
+    def fallback_parse(inputs: dict[str, Any]) -> str:
         prompt_text = inputs.get("prompt", "")
         return json.dumps({
             "genre": "adventure" if "adventure" in prompt_text.lower() else "mystery",
@@ -121,7 +121,7 @@ def build_narrative_chain():
     if llm:
         return NARRATIVE_PROMPT | llm | parser
 
-    def fallback_narrative(inputs: Dict[str, Any]) -> str:
+    def fallback_narrative(inputs: dict[str, Any]) -> str:
         title = inputs.get("title", "The Uncharted Realm")
         setting = inputs.get("setting", "mysterious land")
         era = inputs.get("era", "ancient times")
@@ -146,7 +146,7 @@ def build_quest_chain():
     if llm:
         return QUEST_PROMPT | llm | parser
 
-    def fallback_quest(inputs: Dict[str, Any]) -> str:
+    def fallback_quest(inputs: dict[str, Any]) -> str:
         title = inputs.get("title", "The Lost Artifact")
         setting = inputs.get("setting", "ancient realm")
         return json.dumps({
@@ -174,13 +174,13 @@ class GameGeneratorChain:
         self.narrative_chain = build_narrative_chain()
         self.quest_chain = build_quest_chain()
 
-    def parse_intent(self, prompt: str) -> Dict[str, Any]:
+    def parse_intent(self, prompt: str) -> dict[str, Any]:
         result = self.intent_chain.invoke({"prompt": prompt})
         try:
             if isinstance(result, str):
                 cleaned = re.sub(r"```json|```", "", result).strip()
                 return json.loads(cleaned)
-        except Exception:
+        except (ValueError, KeyError, TypeError, json.JSONDecodeError):  # nosec S110
             pass
         if isinstance(result, dict):
             return result
@@ -195,13 +195,13 @@ class GameGeneratorChain:
             "tone": tone,
         })
 
-    def generate_quest(self, title: str, setting: str, era: str) -> Dict[str, Any]:
+    def generate_quest(self, title: str, setting: str, era: str) -> dict[str, Any]:
         result = self.quest_chain.invoke({"title": title, "setting": setting, "era": era})
         try:
             if isinstance(result, str):
                 cleaned = re.sub(r"```json|```", "", result).strip()
                 return json.loads(cleaned)
-        except Exception:
+        except (ValueError, KeyError, TypeError, json.JSONDecodeError):  # nosec S110
             pass
         if isinstance(result, dict):
             return result

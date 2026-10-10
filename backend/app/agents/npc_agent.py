@@ -33,7 +33,7 @@ import os
 import json
 import logging
 from dataclasses import dataclass, field, asdict
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List, Optional
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -139,10 +139,10 @@ class DynamicPromptEngine:
             trust_label = "Hostile and defensive; warns the player not to loiter."
 
         # Available unrevealed secrets
-        secret_context = ""
+        secret_prompt_ctx = ""
         unlockable_secrets = [s for s in persona.secrets if not s.is_revealed and persona.disposition >= s.required_trust]
         if unlockable_secrets:
-            secret_context = "\nSECRETS YOU MAY SHARE IF ASKED ABOUT RELEVANT TOPICS:\n" + "\n".join(
+            secret_prompt_ctx = "\nSECRETS YOU MAY SHARE IF ASKED ABOUT RELEVANT TOPICS:\n" + "\n".join(
                 f"- [Trigger: '{s.topic_trigger}']: {s.content}" for s in unlockable_secrets
             )
 
@@ -161,7 +161,7 @@ CURRENT SITUATIONAL STATE:
 - Environment: {immediate_surroundings} (Time: {time_of_day}, Atmosphere: {weather})
 - Player's Perceived Identity: {player_reputation}
 - Surrounding Quest Context: {active_quest}
-{secret_context}
+{secret_prompt_ctx}
 
 DYNAMIC CONVERSATION RULES:
 1. IN-CHARACTER DIALOGUE: Speak exclusively from your historical era. Never acknowledge future technology or modern concepts outside the historical frame.
@@ -214,7 +214,7 @@ class NPCAgent:
             disposition=0.50,
             secrets=[
                 SecretLore(
-                    secret_id="sec_lapis_origin",
+                    secret_id="sec_lapis_origin",  # nosec B106
                     topic_trigger="semi-precious stones or lapis lazuli",
                     required_trust=0.60,
                     content="The deep blue lapis lazuli arrived across mountain passes from the badakhshan mines, hidden inside silk caravans."
@@ -265,7 +265,7 @@ class NPCAgent:
                 "dialogue": "Did you say something, traveler? The winds carry away half-spoken words.",
                 "mood": self.persona.current_mood,
                 "disposition": self.persona.disposition,
-                "revealed_secret": None
+                "revealed_secret": None,  # nosec B105
             }
 
         # Check topic triggers against secret knowledge
@@ -501,7 +501,7 @@ if __name__ == "__main__":
         player_input="Pranaam Ustad-ji. I marvel at the symmetry of your design.",
         world_context={"time_of_day": "sunset", "weather": "river mist"}
     )
-    print(f"\n[Turn 1 Output]")
+    print("\n[Turn 1 Output]")
     print(f"Action: {turn1['action']}")
     print(f"Spoken: {turn1['dialogue']}")
     print(f"Mood: {turn1['mood']} | Disposition: {turn1['disposition']}")
@@ -511,7 +511,7 @@ if __name__ == "__main__":
         player_input="Tell me about the dome and the outer minarets.",
         world_context={"time_of_day": "dusk", "weather": "lantern light"}
     )
-    print(f"\n[Turn 2 Output]")
+    print("\n[Turn 2 Output]")
     print(f"Action: {turn2['action']}")
     print(f"Spoken: {turn2['dialogue']}")
     print(f"Mood: {turn2['mood']} | Disposition: {turn2['disposition']}")

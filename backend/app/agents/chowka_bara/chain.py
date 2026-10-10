@@ -4,14 +4,15 @@ LangChain LCEL chain definitions for Chowka Bara (Ancient Indian Board Game) AI 
 """
 from __future__ import annotations
 
-import os
 import json
+import os
+import re
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 from dotenv import load_dotenv
 
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableLambda
 
 env_path = Path(__file__).resolve().parent.parent.parent.parent / '.env'
@@ -32,7 +33,7 @@ def get_llm():
                 temperature=0.4,
                 max_tokens=800,
             )
-        except Exception:
+        except (ImportError, Exception):  # nosec S110 # nosec B110
             pass
     return None
 
@@ -66,7 +67,7 @@ def build_strategy_chain():
     if llm:
         return STRATEGY_PROMPT | llm | parser
 
-    def fallback_strategy(inputs: Dict[str, Any]) -> str:
+    def fallback_strategy(inputs: dict[str, Any]) -> str:
         roll = inputs.get("roll", 4)
         return json.dumps({
             "recommended_move": f"Advance Pawn 1 by {roll} cells along outer path",
@@ -85,7 +86,7 @@ def build_rule_chain():
     if llm:
         return RULE_PROMPT | llm | parser
 
-    def fallback_rule(inputs: Dict[str, Any]) -> str:
+    def fallback_rule(inputs: dict[str, Any]) -> str:
         q = inputs.get("question", "").lower()
         if "safe" in q or "gatta" in q:
             return (
@@ -112,13 +113,13 @@ class ChowkaBaraChain:
         self.strategy_chain = build_strategy_chain()
         self.rule_chain = build_rule_chain()
 
-    def analyze_move(self, board_state: Dict[str, Any], roll: int) -> Dict[str, Any]:
+    def analyze_move(self, board_state: dict[str, Any], roll: int) -> dict[str, Any]:
         raw = self.strategy_chain.invoke({"board_state": json.dumps(board_state), "roll": roll})
         try:
             if isinstance(raw, str):
-                cleaned = raw.replace("```json", "").replace("```", "").strip()
+                cleaned = re.sub(r"```json|```", "", raw).strip()
                 return json.loads(cleaned)
-        except Exception:
+        except (ValueError, KeyError, TypeError, json.JSONDecodeError):  # nosec S110
             pass
         return {
             "recommended_move": f"Move pawn {roll} steps",

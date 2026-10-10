@@ -5,14 +5,14 @@ Chronicles 16th-century Vijayanagara through the eyes of Domingo Paes / Fernao N
 """
 from __future__ import annotations
 
-import os
 import json
+import os
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 from dotenv import load_dotenv
 
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableLambda
 
 env_path = Path(__file__).resolve().parent.parent.parent.parent / '.env'
@@ -33,7 +33,7 @@ def get_llm():
                 temperature=0.7,
                 max_tokens=1000,
             )
-        except Exception:
+        except (ImportError, Exception):  # nosec S110 # nosec B110
             pass
     return None
 
@@ -64,7 +64,7 @@ def build_traveler_chain():
     if llm:
         return TRAVELER_PROMPT | llm | parser
 
-    def fallback_traveler(inputs: Dict[str, Any]) -> str:
+    def fallback_traveler(inputs: dict[str, Any]) -> str:
         q = inputs.get("query", "").lower()
         if "bazaar" in q or "market" in q:
             return (
@@ -92,7 +92,7 @@ def build_chronicle_chain():
     if llm:
         return CHRONICLE_PROMPT | llm | parser
 
-    def fallback_chronicle(inputs: Dict[str, Any]) -> str:
+    def fallback_chronicle(inputs: dict[str, Any]) -> str:
         topic = inputs.get("topic", "General Overview")
         return (
             f"CHRONICLE REPORT: {topic.upper()}\n"

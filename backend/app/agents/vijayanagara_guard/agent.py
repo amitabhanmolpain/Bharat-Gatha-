@@ -4,7 +4,7 @@ Vijayanagara Guard Agent implementation.
 """
 from __future__ import annotations
 
-from typing import Dict, Any
+from typing import Any
 
 try:
     from .chain import VijayanagaraGuardChain
@@ -28,7 +28,7 @@ class VijayanagaraGuardAgent:
         """Challenge a visitor trying to enter the gate."""
         return self.chain.challenge_visitor(statement)
 
-    def inspect(self, credentials: str) -> Dict[str, Any]:
+    def inspect(self, credentials: str) -> dict[str, Any]:
         """Perform formal credential inspection."""
         return self.chain.inspect_credentials(credentials)
 

@@ -1,7 +1,9 @@
 """
 Runner for PortugueseTravelerAgent.
 """
-import sys, os, json
+import json
+import os
+import sys
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(_HERE))

@@ -25,37 +25,50 @@ guardrail engines, era-aware historical prompt pipelines, and standalone agent m
    - LangChain imperial sentry agent protecting the King's Gate at Hampi.
 """
 
-from app.agents.base_agent import (
-    get_default_llm_model,
-    sanitize_input_text,
-)
-
-from app.agents.genie_agent import (
-    get_genie_agent,
-    ask_genie_agent,
-    resolve_campaign_context,
-    classify_genie_behavior,
-    CAMPAIGN_REGISTRY,
-)
-
-from app.agents.guard_agent import (
-    get_guard_agent,
-    ask_guard_agent,
-    verify_fact_grounding,
-)
+try:
+    from .base_agent import (
+        get_default_llm_model,
+        sanitize_input_text,
+    )
+    from .genie_agent import (
+        CAMPAIGN_REGISTRY,
+        ask_genie_agent,
+        classify_genie_behavior,
+        get_genie_agent,
+        resolve_campaign_context,
+    )
+    from .guard_agent import (
+        ask_guard_agent,
+        get_guard_agent,
+        verify_fact_grounding,
+    )
+except ImportError:
+    from app.agents.base_agent import (
+        get_default_llm_model,
+        sanitize_input_text,
+    )
+    from app.agents.genie_agent import (
+        CAMPAIGN_REGISTRY,
+        ask_genie_agent,
+        classify_genie_behavior,
+        get_genie_agent,
+        resolve_campaign_context,
+    )
+    from app.agents.guard_agent import (
+        ask_guard_agent,
+        get_guard_agent,
+        verify_fact_grounding,
+    )
 
 __all__ = [
-    # Base utilities
-    "get_default_llm_model",
-    "sanitize_input_text",
-    # Genie Agent
-    "get_genie_agent",
-    "ask_genie_agent",
-    "resolve_campaign_context",
-    "classify_genie_behavior",
     "CAMPAIGN_REGISTRY",
-    # Guard Agent
-    "get_guard_agent",
+    "ask_genie_agent",
     "ask_guard_agent",
+    "classify_genie_behavior",
+    "get_default_llm_model",
+    "get_genie_agent",
+    "get_guard_agent",
+    "resolve_campaign_context",
+    "sanitize_input_text",
     "verify_fact_grounding",
 ]

@@ -5,7 +5,6 @@ Top-level orchestrator for the game-generation pipeline.
 from __future__ import annotations
 
 import uuid
-from typing import Optional
 
 try:
     from .parser        import PromptParser

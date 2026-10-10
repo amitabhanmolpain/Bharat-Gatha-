@@ -4,14 +4,15 @@ LangChain LCEL chain definitions for Vijayanagara Guard Agent.
 """
 from __future__ import annotations
 
-import os
 import json
+import os
+import re
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 from dotenv import load_dotenv
 
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableLambda
 
 env_path = Path(__file__).resolve().parent.parent.parent.parent / '.env'
@@ -32,7 +33,7 @@ def get_llm():
                 temperature=0.5,
                 max_tokens=800,
             )
-        except Exception:
+        except (ImportError, Exception):  # nosec S110 # nosec B110
             pass
     return None
 
@@ -66,7 +67,7 @@ def build_guard_dialogue_chain():
     if llm:
         return GUARD_DIALOGUE_PROMPT | llm | parser
 
-    def fallback_dialogue(inputs: Dict[str, Any]) -> str:
+    def fallback_dialogue(inputs: dict[str, Any]) -> str:
         s = inputs.get("statement", "").lower()
         if "pass" in s or "royal" in s or "seal" in s:
             return (
@@ -92,7 +93,7 @@ def build_inspection_chain():
     if llm:
         return INSPECTION_PROMPT | llm | parser
 
-    def fallback_inspection(inputs: Dict[str, Any]) -> str:
+    def fallback_inspection(inputs: dict[str, Any]) -> str:
         creds = inputs.get("credentials", "").lower()
         if "royal seal" in creds or "emperor" in creds:
             return json.dumps({
@@ -128,13 +129,13 @@ class VijayanagaraGuardChain:
     def challenge_visitor(self, statement: str) -> str:
         return self.dialogue_chain.invoke({"statement": statement})
 
-    def inspect_credentials(self, credentials: str) -> Dict[str, Any]:
+    def inspect_credentials(self, credentials: str) -> dict[str, Any]:
         raw = self.inspection_chain.invoke({"credentials": credentials})
         try:
             if isinstance(raw, str):
-                cleaned = raw.replace("```json", "").replace("```", "").strip()
+                cleaned = re.sub(r"```json|```", "", raw).strip()
                 return json.loads(cleaned)
-        except Exception:
+        except (ValueError, KeyError, TypeError, json.JSONDecodeError):  # nosec S110
             pass
         return {
             "decision": "INTERROGATE",

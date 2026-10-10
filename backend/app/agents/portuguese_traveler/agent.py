@@ -4,7 +4,7 @@ Portuguese Traveler Agent implementation.
 """
 from __future__ import annotations
 
-from typing import Dict, Any
+from typing import Any
 
 try:
     from .chain import PortugueseTravelerChain
@@ -28,7 +28,7 @@ class PortugueseTravelerAgent:
         """Return an in-character observation response."""
         return self.chain.answer_query(query)
 
-    def generate_report(self, topic: str) -> Dict[str, Any]:
+    def generate_report(self, topic: str) -> dict[str, Any]:
         """Generate a structured historical travel report."""
         content = self.chain.write_chronicle(topic)
         return {

@@ -1,5 +1,3 @@
-import os
-
 file_path = r"c:\Users\ami05\OneDrive\Desktop\BHARAT_GATHA\frontend\app\play\indus\page.tsx"
 
 with open(file_path, "r", encoding="utf-8") as f:

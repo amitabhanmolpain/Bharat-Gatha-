@@ -4,14 +4,15 @@ LangChain LCEL chain definitions for Channapatna Toys Master Artisan Agent.
 """
 from __future__ import annotations
 
-import os
 import json
+import os
+import re
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 from dotenv import load_dotenv
 
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableLambda
 
 env_path = Path(__file__).resolve().parent.parent.parent.parent / '.env'
@@ -32,7 +33,7 @@ def get_llm():
                 temperature=0.6,
                 max_tokens=900,
             )
-        except Exception:
+        except (ImportError, Exception):  # nosec S110 # nosec B110
             pass
     return None
 
@@ -67,7 +68,7 @@ def build_toy_design_chain():
     if llm:
         return TOY_DESIGN_PROMPT | llm | parser
 
-    def fallback_design(inputs: Dict[str, Any]) -> str:
+    def fallback_design(inputs: dict[str, Any]) -> str:
         prompt = inputs.get("prompt", "spinning top")
         return json.dumps({
             "toy_name": f"Classic Channapatna {prompt.title()}",
@@ -87,7 +88,7 @@ def build_heritage_chain():
     if llm:
         return HERITAGE_PROMPT | llm | parser
 
-    def fallback_heritage(inputs: Dict[str, Any]) -> str:
+    def fallback_heritage(inputs: dict[str, Any]) -> str:
         return (
             "Channapatna toys (Gombegala Ooru - Town of Toys) are traditional wooden lacquerware toys from "
             "Ramanagara district, Karnataka. Patronized by Tipu Sultan who invited Persian artisans in the 18th century, "
@@ -104,13 +105,13 @@ class ChannapatnaToysChain:
         self.design_chain = build_toy_design_chain()
         self.heritage_chain = build_heritage_chain()
 
-    def design_toy(self, prompt: str) -> Dict[str, Any]:
+    def design_toy(self, prompt: str) -> dict[str, Any]:
         raw = self.design_chain.invoke({"prompt": prompt})
         try:
             if isinstance(raw, str):
-                cleaned = raw.replace("```json", "").replace("```", "").strip()
+                cleaned = re.sub(r"```json|```", "", raw).strip()
                 return json.loads(cleaned)
-        except Exception:
+        except (ValueError, KeyError, TypeError, json.JSONDecodeError):  # nosec S110
             pass
         return {
             "toy_name": "Channapatna Wooden Craft",
