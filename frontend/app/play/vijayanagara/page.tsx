@@ -489,11 +489,10 @@ export default function VijayanagaraGameScreen() {
         if (remainingAttempts <= 0) {
           setStage4Timer(null);
           setActiveCitizenDialogue(null);
+          setShowJollyDialogue(false);
+          stopNarration(true);
+          stopAllCharacterVoice();
           setShowStage4FailModal(true);
-          const failText = "Oh no, akka! That was your last chance! The kidnapper escaped into the festival crowd!";
-          setJollySpeechText(failText);
-          setShowJollyDialogue(true);
-          void playCharacterDialogue({ character: "jolly", text: failText });
         } else {
           setActiveCitizenDialogue({
             name: citizenName,
@@ -562,6 +561,10 @@ export default function VijayanagaraGameScreen() {
           if (prev === null) return null;
           if (prev <= 1) {
             clearInterval(interval);
+            stopNarration(true);
+            stopAllCharacterVoice();
+            setShowJollyDialogue(false);
+            setActiveCitizenDialogue(null);
             setShowStage4FailModal(true);
             return 0;
           }
@@ -3091,8 +3094,8 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
           </div>
         )}
 
-        {/* --- HUD OVERLAY (Hidden during Battle of Talikota Aftermath Fullscreen) --- */}
-        {!showStage4SuccessModal && (
+        {/* --- HUD OVERLAY (Hidden during Battle of Talikota Aftermath or Captured Fullscreen) --- */}
+        {!showStage4SuccessModal && !showStage4FailModal && (
           <VijayanagaraHUD
             stage={stage}
             scene={scene}
@@ -4027,26 +4030,47 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
           </div>
         )}
 
-        {/* --- STAGE 4 KIDNAPPER CHECKPOINT FAIL MODAL --- */}
+        {/* --- STAGE 4 KIDNAPPER CHECKPOINT FAIL / BATTLE OF TALIKOTA CAPTURED FULLSCREEN SCREEN --- */}
         {showStage4FailModal && (
-          <div className="absolute inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-50 pointer-events-auto">
-            <div className="bg-[#1a0f0f] border-2 border-red-600 rounded-2xl p-6 max-w-md w-full shadow-[0_0_50px_rgba(220,38,38,0.6)] text-center animate-scaleUp">
-              <div className="w-16 h-16 bg-red-950 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-red-600 animate-pulse">
-                <span className="text-3xl">⚔️</span>
+          <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center p-6 bg-black pointer-events-auto select-none animate-fadeIn">
+            {/* Fullscreen background artwork generated from Nano Banana featuring the main hero */}
+            <div className="absolute inset-0 overflow-hidden">
+              <img
+                src="/battle_of_talikota_captured.jpg"
+                alt="Captured in the Battle of Talikota"
+                className="w-full h-full object-cover object-center filter brightness-[0.92] contrast-[1.05] scale-100 transition-transform duration-1000"
+              />
+              {/* Subtle lighting overlay that keeps the main hero and battle vividly clear */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/30" />
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(0,0,0,0)_25%,_rgba(0,0,0,0.6)_100%)]" />
+            </div>
+
+            {/* Central Narrative Glass Card for crisp readability while showcasing the background */}
+            <div className="relative z-10 max-w-xl w-full text-center px-6 py-7 sm:py-8 rounded-2xl bg-black/65 backdrop-blur-md border border-red-500/50 shadow-[0_0_60px_rgba(0,0,0,0.95)] flex flex-col items-center">
+              {/* Category / Subtitle */}
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-red-950/80 border border-red-600/70 mb-3.5 backdrop-blur-sm shadow-[0_0_15px_rgba(220,38,38,0.5)]">
+                <span className="text-sm">⚔️</span>
+                <span className="text-xs uppercase tracking-[0.25em] font-mono text-red-400 font-bold drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                  BATTLE OF TALIKOTA • 1565 AD
+                </span>
               </div>
-              <h3 className="text-2xl font-serif font-black text-red-500 mb-2 uppercase tracking-wide">
-                CHECKPOINT FAILED
-              </h3>
-              <p className="text-sm font-serif text-red-200/90 leading-relaxed mb-6">
-                {stage4Timer === 0
-                  ? "Time expired! The Deccan Sultanate forces arrived before you could spot the kidnapper."
-                  : "You ran out of chances! The kidnapper escaped into the festival crowd."}
+
+              {/* Title */}
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif font-black text-white tracking-tight mb-4 drop-shadow-[0_4px_12px_rgba(0,0,0,0.95)]">
+                Captured by the Deccan Sultanates
+              </h2>
+
+              {/* Main Narrative Text - Requested by User */}
+              <p className="text-base sm:text-lg md:text-xl font-serif text-[#f6ede0] leading-relaxed mb-7 drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)] font-medium">
+                You could not save your friend. He got killed in the battle of Talikotta, and you got captured by the Deccan Sultanates.
               </p>
+
+              {/* Action Button to restart from previous checkpoint */}
               <button
                 onClick={handleRestartStage4Checkpoint}
-                className="w-full bg-gradient-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 text-white font-bold py-3.5 px-6 rounded-xl border border-red-400 shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2 text-sm uppercase tracking-wider"
+                className="bg-gradient-to-r from-red-700 via-red-600 to-amber-600 hover:from-red-600 hover:via-red-500 hover:to-amber-500 text-white font-serif font-bold text-xs sm:text-sm tracking-wider uppercase py-3.5 px-8 rounded-lg shadow-[0_4px_25px_rgba(220,38,38,0.7)] hover:shadow-[0_4px_35px_rgba(245,158,11,0.9)] transform hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 border border-red-400/50"
               >
-                <span>🔄 Restart Checkpoint</span>
+                <span>🔄 Restart from Previous Checkpoint</span>
               </button>
             </div>
           </div>
@@ -4219,8 +4243,8 @@ setUncleSpeechText("Hello, I'm Raju, a time traveller from 2026 who came here se
           />
         )}
 
-        {/* --- NARRATOR SUBTITLE OVERLAY (Hidden only on the Battle of Talikota Aftermath Screen) --- */}
-        {!showStage4SuccessModal && <NarratorSubtitle />}
+        {/* --- NARRATOR SUBTITLE OVERLAY (Hidden on Battle of Talikota Aftermath or Captured Screen) --- */}
+        {!showStage4SuccessModal && !showStage4FailModal && <NarratorSubtitle />}
 
         {/* Stone Chariot Entry specific YouTube Background Music (2 mins max) */}
         {scene === "stone_chariot_entry" && (
