@@ -1,52 +1,83 @@
 # 🏛️ Bharat Gatha (भारत गाथा)
 
-> **An AI story you play.**  
-> *A fast, image-first game set in India — every scene generated as you play. Step into history. Live the legend.*
+> **An  story you play.**
 
-[![Next.js](https://img.shields.io/badge/Next.js-16.3.3-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
-[![React](https://img.shields.io/badge/React-19.2.8-blue?style=for-the-badge&logo=react)](https://react.dev/)
-[![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-v4-38bdf8?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
-
----
-
-### 📚 Team Documentation & Codebase Guide
-> Looking to understand the architecture, game mechanics, AI agents, and code structure in simple words?  
-> 📖 **Read our [Team Codebase Guide (TEAM_CODEBASE_GUIDE.md)](TEAM_CODEBASE_GUIDE.md)**!
+![LangChain](https://img.shields.io/badge/LangChain-1C3C3C?style=for-the-badge)
+![Qwen](https://img.shields.io/badge/Qwen-615CED?style=for-the-badge)
+![RAG](https://img.shields.io/badge/RAG-Enabled-orange?style=for-the-badge)
 
 ---
 
 ## 🚀 Quick Start
 
-### 1. Clone & Navigate
+### 1. Clone the repo
 ```bash
 git clone https://github.com/<your-repo>/Bharat-Gatha-.git
-cd Bharat-Gatha-/frontend
+cd Bharat-Gatha-
 ```
 
-### 2. Install Dependencies
+### 2. Run the backend
 ```bash
+cd backend
+```
+
+Create and activate a virtual environment:
+
+```bash
+# Windows
+python -m venv venv
+venv\Scripts\activate
+
+# macOS / Linux
+python3 -m venv venv
+source venv/bin/activate
+```
+
+Install dependencies and set up your environment file:
+
+```bash
+pip install -r requirements.txt
+cp .env.example .env        # Windows (cmd): copy .env.example .env
+```
+
+Open `.env` and add your keys:
+
+| Purpose | Where to get the key |
+|---|---|
+| Qwen LLM (via Groq) | [Groq Console](https://console.groq.com) |
+| Nano Banana (image model) | Google AI Studio |
+| Sarvam (voice / TTS) | [Sarvam AI Dashboard](https://dashboard.sarvam.ai) |
+
+Use the variable names already listed in `.env.example`.
+
+Start the server:
+
+```bash
+python run.py
+```
+
+### 3. Run the frontend
+Open a new terminal:
+
+```bash
+cd frontend
 npm install
-```
-
-### 3. Start Development Server
-```bash
 npm run dev
 ```
-Open **[http://localhost:3000](http://localhost:3000)** in your browser.
+
+Open **http://localhost:3000** in your browser.
 
 ---
 
-## 🎮 Game Controls
-* **WASD / Arrow Keys:** Move character with real-time perspective scaling and footstep cadence.
-* **E Key:** Interact with NPCs, inspect historical relics, board carriages, solve puzzles.
-* **F Key:** Cross river / alternative pathway actions.
-* **Esc Key:** Close open dialogs, scrolls, and puzzle modals.
-* **Restart Button:** Reset game progress to the entrance.
+## 🎮 Controls
+
+- **WASD / Arrow Keys:** Move
+- **E:** Interact (talk, inspect, solve puzzles)
+- **F:** Alternate actions (e.g. cross the river)
+- **Esc:** Close dialogs and puzzles
 
 ---
 
-## 🗺️ Campaign Overview (Mughal Empire)
-1. **Agra Fort Complex:** Amar Singh Gate $\rightarrow$ Ramp Passage $\rightarrow$ Anguri Bagh $\rightarrow$ Diwan-i-Aam $\rightarrow$ Sheesh Mahal $\rightarrow$ Jahangiri Mahal $\rightarrow$ Khas Mahal.
-2. **Taj Mahal Complex:** Darwaza-i-Rauza (Calligraphy Puzzle) $\rightarrow$ Charbagh (Symmetry Puzzle) $\rightarrow$ Outside Terrace $\rightarrow$ Main Mausoleum $\rightarrow$ Mehtab Bagh.
-3. **Delhi Red Fort Complex:** Carriage Journey $\rightarrow$ Lahori Gate $\rightarrow$ Red Fort Plaza $\rightarrow$ Chatta Chowk.
+
+
+📖 For architecture and code structure, see the [Team Codebase Guide](TEAM_CODEBASE_GUIDE.md).
